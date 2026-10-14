@@ -1,0 +1,1 @@
+export { GameDialog } from './GameDialog';

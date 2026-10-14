@@ -1,0 +1,14 @@
+{
+  "name": "@ba/server",
+  "private": true,
+  "version": "4.0.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "vite build --config vite.config.ts"
+  },
+  "dependencies": {
+    "@ba/contracts": "workspace:*",
+    "@ba/shared": "workspace:*"
+  }
+}

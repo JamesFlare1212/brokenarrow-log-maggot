@@ -1,139 +1,63 @@
-# 🐛 断箭蛆工具 byZola（Broken Arrow Log Assistant）
+# 断箭蛆工具 byZola · v4
 
-[中文](#中文) · [English](#english) · [日本語](#日本語) · [Русский](#русский)
+本地 Broken Arrow 对局助手，使用 React + Vite + Electron + Node.js + TypeScript + SQLite，以及 pnpm。
 
----
+[中文使用说明](使用说明.md) · [架构](docs/architecture.md) · [数据迁移](docs/migration.md) · [审查问题处理](docs/audit-resolution.md)
 
-## 中文
+## 功能
 
-基于游戏官方 GameLogs 日志 + [BATrace](https://app.batrace.top/) 公开数据的本地复盘辅助工具。
-只读公开日志与公开接口：不碰内存、不注入进程、不影响反作弊。
+- GameLogs 增量监听：房间、队伍、地图、账号、卡组、晚到的对局 ID 和真实时长。
+- 玩家搜索、粗查报告、最近对局、12 场 MVP 蛆指数、调查羁绊和改名历史。
+- 对局档案、完整评分、手动收录、刷新、删除和多个录像视角。
+- 卡组备份 / 部署、实时开局自动覆盖唯一的“上一局卡组包”、换号提醒。
+- 本地录像：240–1080p、30–60 fps、3–10 Mbps、可选系统声音、预览、播放和目录迁移。
+- 可选真实输入 APM、封禁提醒、在线统计、版本公告、小游戏。
+- 七套主题、四种界面语言、保存面板顺序和折叠状态。
 
-### 功能
-- **日志实时监听**：自动识别当前对局、房间内玩家名单（开战前即可查看）
-- **自动粗查**：对局玩家 ELO / 胜率 / 偏好兵种 / 最爱单位，每局约 10 次调用，内置 24h 配额保护
-- **查蛆指数**：单人触发，算法与断箭蛆指数网站同步（MVP 名次 → 1~10 分）
-- **对局录像（行车记录仪）**：每局自动录制**你自己的屏幕视角**（1080p、1 秒 1 帧），纯本地保存，可在「对局档案」里直接播放
-- **卡组工具**：备份 / 恢复游戏卡组，支持一键备份全部
-- **玩家追踪（仿 VRCX）**：本地数据库持续记录见过的玩家；右键「调查」查看相遇次数、同队/敌对胜负、改名历史、是否被封
-- **封禁监控**：每小时检查 BATrace 封禁名单，发现新被封玩家弹窗提醒
-- **房间工具用户**：同一房间里谁也在用本工具（隐私保护，只显示匹配结果）
-- **上一局**：当前房间卡片可一键查看上一局名单并自动粗查
-- **四主题 + 四语言**：黑 / 白 / 青 / 橙 主题；中文 / English / 日本語 / Русский 界面切换
-- **心跳统计**：匿名在线人数（默认开启，可关闭）
+BATrace 是历史数据，可能延迟数天。蛆指数需要最近 12 场有效五人队排位；缺本人、完整 MVP 或足够样本时不生成替代分数。
 
-### 下载
+## 开发
 
-最新版本见 **[Releases](https://github.com/Zawinzala/brokenarrow-log-maggot/releases)**，推荐下载普通版（免安装）。
+安装 Node.js 24 LTS 与 pnpm 10.34.6（最低 Node.js 22.16）：
 
-### 快速开始
-1. 安装后打开软件，点右上角「设置」
-2. 选择断箭的日志目录（`...\broken_arrow\GameLogs`），可点「自动检测 Steam 目录」
-3. 进入对局即自动粗查玩家；搜索玩家后点「🐛 查蛆指数」看蛆指数
+```sh
+pnpm install
+pnpm dev
+```
 
-> ⚠️ 粗查数据来自 BATrace 历史数据，存在数天延迟，并非实时对战数据。
+Electron 44 的运行时由 postinstall 显式安装。开发启动器先构建，再启动 Vite 和 Electron。
 
-### 致谢
-玩家数据由 [BATrace 查询站](https://app.batrace.top/) 提供；蛆指数算法与 [断箭蛆指数网站](https://github.com/Zawinzala/Broken-Arrow-Maggot) 保持同步。
+| 命令                | 用途                                                       |
+| ------------------- | ---------------------------------------------------------- |
+| `pnpm dev:web`      | 前端开发服务器；`/?demo` 是明确标识的内存演示              |
+| `pnpm check`        | 严格类型检查、回归测试、三个应用构建                       |
+| `pnpm smoke`        | 隔离数据目录的真实 Electron 冒烟；不联网、录屏或开输入钩子 |
+| `pnpm format:check` | 格式检查                                                   |
+| `pnpm pack:desktop` | Windows 解包目录                                           |
+| `pnpm dist`         | NSIS 安装包与便携版                                        |
 
----
+生产前端通过 sandboxed preload 的类型化 IPC 访问服务；普通浏览器不访问本地数据，也不自动开启演示。
+
+## 请求与数据
+
+所有实际 BATrace 内容请求尝试，包括后台同步和重试，计入滚动 24 小时 400 次额度。缓存命中不计，健康探测独立。请求统一排队，默认间隔至少 1200ms；手动刷新绕过缓存。
+
+数据保存在原 `broken-arrow-log-assistant` 用户目录中的 SQLite。旧 JSON 在首次启动备份并事务导入，原文件保留。录像仍是本地 WebM，播放通过受控 Range 协议按需读取。
+
+在线统计可关闭，默认每 10 分钟上报安装 ID 和版本；房间身份开关另外控制名字和游戏 ID。APM 和录像默认关闭。APM 仅统计进行中对局、游戏在前台时的真实输入；录像捕获所选显示器完整画面。
 
 ## English
 
-A local post-match review tool based on the official GameLogs + [BATrace](https://app.batrace.top/) public data.
-Read-only: no memory access, no injection, no effect on anti-cheat.
-
-### Features
-- **Live log monitoring**: auto-detect the current match and lobby players (visible before the battle starts)
-- **Auto player query**: ELO / win rate / favorite units per match (~10 calls per match, built-in 24h quota guard)
-- **Maggot Index**: per-player trigger, algorithm synced with the Maggot Index website (MVP rank → 1~10)
-- **Dashcam recordings**: auto-record **your own screen** every match (1080p, 1 frame/sec), stored locally and playable from the Match Archive
-- **Deck tools**: backup / restore game decks, one-click full backup
-- **Player tracker (VRCX-like)**: keeps a local database of players you met; right-click "Investigate" for encounters, W/L vs teammates/enemies, name history, bans
-- **Ban monitor**: checks the BATrace ban list hourly, alerts on newly banned players you met
-- **Room tool users**: shows who else in the room is using this tool (privacy-preserving, only matching results)
-- **Previous match**: one-click view of the previous match roster with auto-query
-- **4 themes + 4 languages**: dark / light / cyan / orange; UI in 中文 / English / 日本語 / Русский
-- **Heartbeat stats**: anonymous online count (on by default, can be disabled)
-
-### Download
-
-Latest release: **[Releases](https://github.com/Zawinzala/brokenarrow-log-maggot/releases)** (portable version recommended).
-
-### Quick start
-1. Launch the app and open "Settings" (top-right)
-2. Choose the Broken Arrow log folder (`...\broken_arrow\GameLogs`) or click "Auto-detect Steam folder"
-3. Players are queried automatically during a match; search a player and click "Maggot Index"
-
-> ⚠️ Query data comes from BATrace historical data with a few days of delay; it is not real-time.
-
-### Credits
-Player data by [BATrace](https://app.batrace.top/); Maggot Index algorithm synced with the [Broken Arrow Maggot](https://github.com/Zawinzala/Broken-Arrow-Maggot) website.
-
----
+A local Broken Arrow assistant: match analysis, player history, deck backups, recordings, optional real-input APM, seven themes and four languages. Run `pnpm install` and `pnpm dev`; validate with `pnpm check`. Existing JSON is backed up and imported transactionally into SQLite without changing the original files. Recordings remain local and use range-based playback. BATrace data can be delayed.
 
 ## 日本語
 
-ゲーム公式の GameLogs ログと [BATrace](https://app.batrace.top/) 公開データを使ったローカル対局レビューツール。
-読み取り専用：メモリ操作・プロセス注入・アンチチートへの影響は一切ありません。
-
-### 機能
-- **ログ常時監視**：現在の対局と部屋のプレイヤー一覧を自動認識（開戦前でも閲覧可）
-- **自動照会**：対局プレイヤーの ELO / 勝率 / 得意兵科 / お気に入りユニット（1対局あたり約10回、24時間クォータ内蔵）
-- **蛆指数**：単独トリガー。蛆指数サイトと同期（MVP 順位 → 1〜10 点）
-- **ドライブレコーダー（対局録画）**：毎対局、**自分の画面**を自動録画（1080p・1秒1フレーム）。ローカル保存のみで、「対局アーカイブ」から直接再生可能
-- **デッキツール**：デッキのバックアップ / 復元、全件一括バックアップ対応
-- **プレイヤートラッカー（VRCX風）**：出会ったプレイヤーをローカルDBに記録。右クリック「調査」で遭遇回数・同チーム/敵対の勝敗・改名履歴・BAN状態を表示
-- **BANモニタリング**：毎時 BATrace の BAN リストをチェックし、出会ったプレイヤーの新規 BAN を通知
-- **部屋のツール利用者**：同じ部屋で誰がこのツールを使っているか表示（プライバシー保護、マッチのみ）
-- **前の対局**：ワンクリックで前の対局の名簿を表示し自動照会
-- **4テーマ + 4言語**：ダーク / ライト / シアン / オレンジ；中文 / English / 日本語 / Русский のUI切替
-- **ハートビート統計**：匿名オンライン人数（初期オン、オフ可）
-
-### ダウンロード
-
-最新版は **[Releases](https://github.com/Zawinzala/brokenarrow-log-maggot/releases)** から（ポータブル版推奨）。
-
-### クイックスタート
-1. アプリを起動し、右上「設定」を開く
-2. Broken Arrow のログフォルダ（`...\broken_arrow\GameLogs`）を選択するか「Steam フォルダを自動検出」
-3. 対局中は自動でプレイヤーを照会。プレイヤーを検索して「蛆指数」で指数を確認
-
-> ⚠️ 照会データは BATrace の履歴データで数日遅延があります。リアルタイムではありません。
-
-### 謝辞
-プレイヤーデータ：[BATrace](https://app.batrace.top/)。蛆指数アルゴリズムは [Broken Arrow Maggot](https://github.com/Zawinzala/Broken-Arrow-Maggot) と同期。
-
----
+Broken Arrow のローカル対局アシスタントです。対局分析、履歴、デッキ、録画、任意の実入力 APM、7 テーマ、4 言語を備えます。`pnpm install` と `pnpm dev` で起動します。旧 JSON はバックアップ後に SQLite へ移行し、元ファイルを残します。
 
 ## Русский
 
-Локальный инструмент для разбора матчей на основе официальных логов GameLogs и открытых данных [BATrace](https://app.batrace.top/).
-Только чтение: без доступа к памяти, без внедрения, без влияния на античит.
+Локальный помощник Broken Arrow: анализ матчей, история, колоды, записи, опциональный APM, 7 тем и 4 языка. Запуск: `pnpm install`, затем `pnpm dev`. Старые JSON сохраняются и импортируются в SQLite транзакцией. Записи остаются локальными.
 
-### Возможности
-- **Мониторинг логов**: автоопределение текущего матча и игроков в комнате (видно до начала боя)
-- **Автозапрос игроков**: ELO / винрейт / любимые юниты (около 10 запросов за матч, защита лимита 24ч)
-- **Индекс Maggot**: по отдельному игроку, алгоритм синхронизирован с сайтом Maggot (место MVP → 1~10)
-- **Видеорегистратор**: автоматическая запись **вашего экрана** каждый матч (1080p, 1 кадр/сек), хранится локально, просмотр из архива матчей
-- **Колоды**: резервное копирование / восстановление, полный бэкап одним кликом
-- **Трекер игроков (как VRCX)**: локальная БД встреченных игроков; ПКМ «Исследовать» — встречи, победы/поражения, история имён, баны
-- **Мониторинг банов**: проверка списка банов BATrace каждый час, уведомление о новых банах встреченных игроков
-- **Пользователи инструмента в комнате**: показывает, кто ещё в комнате использует этот инструмент (приватно, только совпадения)
-- **Предыдущий матч**: список игроков прошлого матча одним кликом с автозапросом
-- **4 темы + 4 языка**: тёмная / светлая / циан / оранжевая; интерфейс на 中文 / English / 日本語 / Русский
-- **Статистика heartbeat**: анонимное число онлайн (вкл. по умолчанию, можно отключить)
+## 致谢与参考
 
-### Скачать
-
-Последняя версия: **[Releases](https://github.com/Zawinzala/brokenarrow-log-maggot/releases)** (рекомендуется портативная).
-
-### Быстрый старт
-1. Запустите приложение и откройте «Настройки» (справа сверху)
-2. Укажите папку логов Broken Arrow (`...\broken_arrow\GameLogs`) или «Автоопределение папки Steam»
-3. Во время матча игроки запрашиваются автоматически; найдите игрока и нажмите «Индекс Maggot»
-
-> ⚠️ Данные запроса — исторические данные BATrace с задержкой в несколько дней, не в реальном времени.
-
-### Благодарности
-Данные игроков: [BATrace](https://app.batrace.top/). Алгоритм индекса Maggot синхронизирован с [Broken Arrow Maggot](https://github.com/Zawinzala/Broken-Arrow-Maggot).
+作者 Zola；数据由 [BATrace](https://app.batrace.top/) 提供。应用职责划分参考 [T3 Code apps](https://github.com/pingdotgg/t3code/tree/main/apps)，未复制其业务代码。旧入口保留在 Git 历史中。

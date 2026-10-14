@@ -1,0 +1,8 @@
+.audit/
+.npm-cache/
+.pnpm-store/
+node_modules/
+dist/
+apps/*/dist/
+.test-data/
+pnpm-lock.yaml
