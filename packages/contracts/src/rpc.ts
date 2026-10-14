@@ -7,7 +7,6 @@ import type {
   Bootstrap,
   DeckList,
   Display,
-  HeartbeatState,
   MaggotReport,
   Match,
   MiniInfo,
@@ -19,7 +18,6 @@ import type {
   SearchPlayer,
   Session,
   Usage,
-  VersionInfo,
   WatcherStatus,
   DeckSwitchAlert,
 } from './models';
@@ -39,8 +37,6 @@ export const configSchema = z.object({
   decksDir: z.string().max(4096).default(''),
   autoQueryCurrentMatch: z.boolean().default(true),
   inputHookEnabled: z.boolean().default(false),
-  heartbeatEnabled: z.boolean().default(true),
-  roomPresenceEnabled: z.boolean().default(true),
   banPollEnabled: z.boolean().default(true),
   matchSyncEnabled: z.boolean().default(true),
   banCardVisible: z.boolean().default(false),
@@ -111,8 +107,6 @@ export const rpcSchemas = {
   'displays.list': empty,
   'displays.thumbnail': z.object({ id: z.string().max(256) }),
   'api.health': z.object({ force: z.boolean().default(false) }),
-  'heartbeat.test': empty,
-  'version.check': empty,
   'external.open': z.object({ url: z.url().regex(/^https?:\/\//) }),
 } as const;
 export type RpcMethod = keyof typeof rpcSchemas;
@@ -152,8 +146,6 @@ export interface RpcOutputs {
   'displays.list': Display[];
   'displays.thumbnail': string | null;
   'api.health': ApiHealth;
-  'heartbeat.test': HeartbeatState;
-  'version.check': VersionInfo;
   'external.open': null;
 }
 export type AppEvent = (
@@ -179,10 +171,7 @@ export type AppEvent = (
   | { type: 'apm'; apm: ApmState }
   | { type: 'decks'; alert: DeckSwitchAlert | null }
   | { type: 'health'; health: ApiHealth }
-  | { type: 'heartbeat'; heartbeat: HeartbeatState }
-  | { type: 'version'; version: VersionInfo }
   | { type: 'gate'; state: 'open' | 'done' | 'cancelled' }
-  | { type: 'roomUsers'; ids: string[] }
   | { type: 'error'; message: string }
 ) & { revision: number };
 export interface Bridge {

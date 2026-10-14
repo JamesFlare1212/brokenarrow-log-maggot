@@ -10,7 +10,7 @@ apps/
 packages/
   contracts/  领域类型、Zod 请求验证、RPC 和事件协议
   shared/     归一化、合并、格式化、录像参数、蛆指数纯计算
-tests/        算法、网络、生命周期、迁移、文件、录像、React、小游戏
+tests/        算法、网络、生命周期、迁移、文件、录像、React
 scripts/      开发、桌面冒烟、图标
 ```
 
@@ -26,4 +26,4 @@ SQLite 使用 WAL、外键、索引、prepared statements、事务。对局、�
 
 卡组 ZIP 校验路径、扩展名、CRC、边界和容量。压缩 / 解压使用异步线程池，写入临时文件后 rename，失败明确反馈。
 
-公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout。小游戏引擎、Canvas、HUD 分离，HUD 限流，关闭清理 RAF。
+公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout。

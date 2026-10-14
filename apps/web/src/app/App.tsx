@@ -1,8 +1,7 @@
-import { useState, lazy, Suspense, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Activity,
   Archive,
-  Gamepad2,
   Home,
   Info,
   Layers,
@@ -14,7 +13,7 @@ import {
 import type { Panel } from '@ba/contracts';
 import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
-import { Badge, Button, Card, Dialog, Notice, Loading } from '../components/ui';
+import { Badge, Button, Card, Notice } from '../components/ui';
 import { SessionPanel } from '../features/session/SessionPanel';
 import { PlayersPanel } from '../features/players/PlayersPanel';
 import { ProfileDialog } from '../features/players/ProfileDialog';
@@ -27,9 +26,6 @@ import { ReplaysPanel } from '../features/replays/ReplaysPanel';
 import { RecordingSettings } from '../features/replays/RecordingSettings';
 import { ReplayDialog } from '../features/replays/ReplayDialog';
 import { SettingsDialog } from '../features/settings/SettingsDialog';
-const GameDialog = lazy(() =>
-  import('../features/game').then((module) => ({ default: module.GameDialog })),
-);
 const icons: Record<Panel, ReactNode> = {
   current: <Home size={18} />,
   players: <Search size={18} />,
@@ -67,8 +63,7 @@ function About() {
   );
 }
 function ModalRouter() {
-  const { modal, closeModal } = useApp(),
-    { t } = useI18n();
+  const { modal } = useApp();
   if (!modal) return null;
   switch (modal.type) {
     case 'settings':
@@ -83,19 +78,11 @@ function ModalRouter() {
       return <ReplayDialog key={modal.id} id={modal.id} title={modal.title} />;
     case 'banAlert':
       return <BanAlertDialog players={modal.players} />;
-    case 'announcement':
-      return (
-        <Dialog open onClose={closeModal} title={t('announcement')}>
-          <p className="announcement">{modal.text}</p>
-        </Dialog>
-      );
   }
 }
 export function App() {
   const { state, api, page, setPage, openModal, patchConfig, notify } = useApp(),
     { t } = useI18n(),
-    [game, setGame] = useState(false),
-    [versionHidden, setVersionHidden] = useState(false),
     [healthBusy, setHealthBusy] = useState(false);
   const components: Record<Panel, ReactNode> = {
     current: <SessionPanel />,
@@ -138,10 +125,6 @@ export function App() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <Button onClick={() => setGame(true)}>
-            <Gamepad2 size={18} />
-            {t('game')}
-          </Button>
           <Button onClick={() => openModal({ type: 'settings' })}>
             <Settings size={18} />
             {t('settings')}
@@ -187,11 +170,6 @@ export function App() {
                 BATrace
               </Badge>
             </Button>
-            <Badge tone={state.heartbeat.error ? 'danger' : 'muted'}>
-              {state.heartbeat.error
-                ? t('heartbeat') + ' !'
-                : t('online', { n: state.heartbeat.online ?? 0 })}
-            </Badge>
             <select
               className="language-select"
               aria-label={t('language')}
@@ -209,19 +187,6 @@ export function App() {
         </header>
         <main id="main-content">
           {new URLSearchParams(location.search).has('demo') && <Notice>{t('demo')}</Notice>}
-          {state.version.hasUpdate && !versionHidden && (
-            <Notice>
-              <span>{t('newVersion', { version: state.version.latest })}</span>
-              <div className="actions">
-                <Button
-                  onClick={() => void api.invoke('external.open', { url: state.version.url })}
-                >
-                  {t('download')}
-                </Button>
-                <Button onClick={() => setVersionHidden(true)}>{t('close')}</Button>
-              </div>
-            </Notice>
-          )}
           {!state.config.logDir && page === 'current' && (
             <Notice>
               <span>{t('noDirectory')}</span>
@@ -249,17 +214,6 @@ export function App() {
         </footer>
       </div>
       <ModalRouter />
-      {game && (
-        <Suspense
-          fallback={
-            <Dialog open onClose={() => setGame(false)} title={t('game')}>
-              <Loading />
-            </Dialog>
-          }
-        >
-          <GameDialog open={game} onClose={() => setGame(false)} />
-        </Suspense>
-      )}
     </div>
   );
 }

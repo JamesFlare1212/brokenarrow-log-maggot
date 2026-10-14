@@ -164,14 +164,8 @@ export const demoBootstrap: Bootstrap = {
     fid: null,
   },
   health: { state: 'ok', at: now, checks: [] },
-  heartbeat: { online: 42, lastPing: now, error: null },
   version: {
     current: '4.0.0',
-    latest: '4.0.0',
-    hasUpdate: false,
-    announcement: '',
-    url: 'https://github.com/Zawinzala/brokenarrow-log-maggot/releases',
-    error: null,
   },
   migration: { completed: true, imported: {}, warnings: [], backupDir: null },
   deckAlert: null,
@@ -406,8 +400,6 @@ export function createDemoBridge(): Bridge {
     'displays.list': () => [{ id: 'screen:0:0', label: 'Display 1 · 1920×1080', thumbnail: '' }],
     'displays.thumbnail': () => null,
     'api.health': () => state.health,
-    'heartbeat.test': () => state.heartbeat,
-    'version.check': () => state.version,
     'external.open': () => null,
   };
   return {

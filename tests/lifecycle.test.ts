@@ -247,8 +247,6 @@ describe('application shutdown', () => {
         });
       }
       if (url.includes('/api/leaderboard/ban')) return Response.json({ leaderboard: [] });
-      if (url.endsWith('/update-meta')) return Response.json({ version: '4.0.0' });
-      if (url.endsWith('/online-count')) return Response.json({ online: 1 });
       return Response.json({ ok: true });
     });
     const app = application(platform(fetchImpl), [], true);
@@ -263,6 +261,12 @@ describe('application shutdown', () => {
       vi.useRealTimers();
     }
     await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(fetchImpl.mock.calls.length).toBeGreaterThan(0);
+    expect(
+      fetchImpl.mock.calls.every(
+        ([input]) => new URL(String(input)).hostname === 'app.batrace.top',
+      ),
+    ).toBe(true);
     const closedAt = close.mock.invocationCallOrder[0]!;
     expect(write.mock.invocationCallOrder.every((order) => order < closedAt)).toBe(true);
     expect(close).toHaveBeenCalledTimes(1);

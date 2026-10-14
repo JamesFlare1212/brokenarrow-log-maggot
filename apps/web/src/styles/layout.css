@@ -466,10 +466,6 @@ main {
   background: var(--accent);
   border-radius: 4px 4px 0 0;
 }
-.announcement {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 @media (min-width: 1600px) {
   .overview-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

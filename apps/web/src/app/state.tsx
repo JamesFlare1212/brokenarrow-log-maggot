@@ -19,7 +19,6 @@ export type ModalRoute =
   | { type: 'recordingSettings'; enable?: boolean }
   | { type: 'replay'; id: string; title: string }
   | { type: 'banAlert'; players: import('@ba/contracts').Ban[] }
-  | { type: 'announcement'; text: string }
   | null;
 export interface RosterResult {
   player: Player;
@@ -32,7 +31,6 @@ export interface AppState extends Bootstrap {
     previous: { requestId: string; rows: Record<string, RosterResult> };
   };
   preview: { sessionId: string; dataUrl: string; hasAudio: boolean } | null;
-  toolUsers: string[];
   matchesRevision: number;
   replaysRevision: number;
   decksRevision: number;
@@ -52,7 +50,6 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
       ...action.bootstrap,
       rosters: { current: { requestId: '', rows: {} }, previous: { requestId: '', rows: {} } },
       preview: null,
-      toolUsers: [],
       matchesRevision: 0,
       replaysRevision: 0,
       decksRevision: 0,
@@ -73,10 +70,6 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
       return { ...next, usage: e.usage };
     case 'health':
       return { ...next, health: e.health };
-    case 'heartbeat':
-      return { ...next, heartbeat: e.heartbeat };
-    case 'version':
-      return { ...next, version: e.version };
     case 'apm':
       return { ...next, apm: e.apm };
     case 'recording':
@@ -89,8 +82,6 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
       return next.recording.phase === 'recording' && e.sessionId === next.recording.sessionId
         ? { ...next, preview: e }
         : next;
-    case 'roomUsers':
-      return { ...next, toolUsers: e.ids };
     case 'matches':
       return { ...next, matchesRevision: next.matchesRevision + 1 };
     case 'replays':
@@ -171,10 +162,6 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       if (event.type === 'bans' && event.newly.length)
         openModal({ type: 'banAlert', players: event.newly });
       if (event.type === 'error') setToast({ message: event.message, error: true });
-      if (event.type === 'version' && event.version.announcement)
-        openModal(
-          (previous) => previous ?? { type: 'announcement', text: event.version.announcement },
-        );
     };
     const unsubscribe = api.subscribe((event) => {
       if (!active) return;
@@ -188,8 +175,6 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
         dispatch({ type: 'bootstrap', bootstrap });
         acceptedRevision = bootstrap.revision;
         ready = true;
-        if (bootstrap.version.announcement)
-          openModal({ type: 'announcement', text: bootstrap.version.announcement });
         for (const event of buffered.sort((a, b) => a.revision - b.revision))
           if (event.revision > bootstrap.revision) handle(event);
       })

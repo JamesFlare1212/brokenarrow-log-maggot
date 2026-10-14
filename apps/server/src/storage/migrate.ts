@@ -26,7 +26,6 @@ const FILES = [
   'batrace-cache.json',
   'api-usage.json',
   'deck-sync.json',
-  'heartbeat-uid.txt',
   'api-health.json',
 ] as const;
 type SourceFile = (typeof FILES)[number];
@@ -73,10 +72,6 @@ function validateSource(file: SourceFile, value: unknown): void {
   const fail = (reason: string): never => {
     throw new Error(reason);
   };
-  if (file === 'heartbeat-uid.txt') {
-    if (typeof value !== 'string' || !value.trim()) fail('expected a non-empty identity');
-    return;
-  }
   if (file === 'api-usage.json') {
     if (!Array.isArray(value) || value.some((at) => time(at) === null))
       fail('expected an array of integer call timestamps');
@@ -396,7 +391,7 @@ export async function migrateLegacy(db: Database, dir: string): Promise<Migratio
     snapshots.push(source);
     try {
       const raw = bytes.toString('utf8').replace(/^\uFEFF/, '');
-      source.value = file.endsWith('.txt') ? raw.trim() : (JSON.parse(raw) as unknown);
+      source.value = JSON.parse(raw) as unknown;
       validateSource(file, source.value);
       pending.push(source);
     } catch (error) {
@@ -462,10 +457,6 @@ export async function migrateLegacy(db: Database, dir: string): Promise<Migratio
           break;
         case 'deck-sync.json':
           db.setState('deckSync', raw);
-          count = 1;
-          break;
-        case 'heartbeat-uid.txt':
-          db.setState('heartbeatId', text(source.value));
           count = 1;
           break;
         case 'api-health.json':

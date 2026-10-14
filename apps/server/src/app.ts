@@ -87,7 +87,7 @@ export class Application {
     this.analyzer = new Analyzer(this.client, this.db);
     this.tracker = new TrackerService(this.db, this.client, this.analyzer);
     this.decks = new DeckService(this.db);
-    this.statuses = new StatusService(this.db, this.client, http, platform.version);
+    this.statuses = new StatusService(this.db, this.client);
     this.parser = new LogParser((event) => this.onLog(event));
     this.watcher = new LogWatcher(this.parser, (watcher) =>
       this.event({ type: 'watcher', watcher }),
@@ -133,8 +133,6 @@ export class Application {
           if (session.current && !session.recovering && this.watcher.status().live)
             await this.platform.recordings.start(session.current, next);
         }
-        if (before.heartbeatEnabled !== next.heartbeatEnabled)
-          this.event({ type: 'heartbeat', heartbeat: await this.statuses.ping() });
         return next;
       },
       'directory.select': ({ kind }) => platform.selectDirectory(kind),
@@ -259,12 +257,6 @@ export class Application {
       'displays.list': () => platform.recordings.displays(),
       'displays.thumbnail': ({ id }) => platform.recordings.thumbnail(id),
       'api.health': ({ force }) => (force ? this.probeHealth() : this.statuses.health()),
-      'heartbeat.test': async () => {
-        const value = await this.statuses.ping();
-        this.event({ type: 'heartbeat', heartbeat: value });
-        return value;
-      },
-      'version.check': () => this.checkVersion(),
       'external.open': async ({ url }) => {
         await platform.openExternal(url);
         return null;
@@ -319,8 +311,7 @@ export class Application {
       recording: this.platform.recordings.status(),
       apm: this.platform.apm.status(),
       health: this.statuses.health(),
-      heartbeat: this.statuses.heartbeat,
-      version: this.statuses.version,
+      version: { current: this.platform.version },
       migration: this.migration,
       deckAlert: this.deckAlert,
     };
@@ -346,14 +337,6 @@ export class Application {
     this.watcher.start(this.db.config().logDir);
     this.timers.push(
       setInterval(() => {
-        if (this.network && this.db.config().heartbeatEnabled)
-          this.fire(
-            this.statuses.ping().then((heartbeat) => this.event({ type: 'heartbeat', heartbeat })),
-          );
-      }, 600000),
-    );
-    this.timers.push(
-      setInterval(() => {
         if (!this.network) return;
         this.fire(this.syncBackground());
         this.fire(this.probeHealth());
@@ -367,14 +350,7 @@ export class Application {
         if (recording.phase === 'recording') this.event({ type: 'recording', recording });
       }, 1000),
     );
-    if (this.network) {
-      this.fire(this.checkVersion());
-      if (this.db.config().heartbeatEnabled)
-        this.fire(
-          this.statuses.ping().then((heartbeat) => this.event({ type: 'heartbeat', heartbeat })),
-        );
-      this.fire(this.syncBackground());
-    }
+    if (this.network) this.fire(this.syncBackground());
   }
   private onLog(event: LogEvent): void {
     if (this.disposed || this.closing) return;
@@ -484,13 +460,6 @@ export class Application {
         this.event({ type: 'error', message: errorMessage(e) }),
       );
     }
-    if (this.network && live)
-      this.fire(
-        this.statuses
-          .roomUsers(players.map((p) => p.id))
-          .then((ids) => this.event({ type: 'roomUsers', ids }))
-          .catch(() => {}),
-      );
   }
   private async query(input: RpcInputs['session.query']): Promise<RpcOutputs['session.query']> {
     const session = this.parser.snapshot(),
@@ -599,11 +568,6 @@ export class Application {
     const health = await this.statuses.probe();
     this.event({ type: 'health', health });
     return health;
-  }
-  private async checkVersion() {
-    const version = await this.statuses.checkVersion();
-    this.event({ type: 'version', version });
-    return version;
   }
   async stop(): Promise<void> {
     if (this.disposed || this.closing) return;

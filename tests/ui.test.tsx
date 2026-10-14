@@ -81,9 +81,6 @@ function nativeFixture(
         case 'recording':
           backend.recording = structuredClone(event.recording);
           break;
-        case 'version':
-          backend.version = structuredClone(event.version);
-          break;
       }
     }
     for (const callback of listeners) callback(structuredClone(event));
@@ -269,9 +266,8 @@ describe('request and native event ordering', () => {
     expect(screen.queryByText('Stale error')).toBeNull();
   });
 
-  it('keeps a newer buffered ban alert ahead of the older bootstrap announcement', async () => {
+  it('shows a buffered ban alert after bootstrap', async () => {
     const bootstrap = structuredClone(demoBootstrap);
-    bootstrap.version.announcement = 'Older startup announcement';
     const pending = deferred<Bootstrap>();
     const native = nativeFixture(bootstrap, { 'app.bootstrap': () => pending.promise });
     const { result } = renderHook(() => useApp(), { wrapper: wrapper(native.api) });

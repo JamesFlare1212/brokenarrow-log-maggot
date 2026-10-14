@@ -28,7 +28,6 @@ export const messages: Record<string, readonly [string, string, string, string]>
   apm: ['APM 统计', 'APM statistics', 'APM 統計', 'Статистика APM'],
   about: ['关于', 'About', '概要', 'О программе'],
   settings: ['设置', 'Settings', '設定', 'Настройки'],
-  game: ['小游戏', 'Mini-game', 'ミニゲーム', 'Мини-игра'],
   current: [
     '当前房间 / 对局',
     'Current room / match',
@@ -268,13 +267,6 @@ export const messages: Record<string, readonly [string, string, string, string]>
     '複数アカウントの遭遇を統合',
     'Объединять встречи аккаунтов',
   ],
-  heartbeat: ['在线人数统计', 'Online statistics', 'オンライン統計', 'Онлайн-статистика'],
-  roomPresence: [
-    '共享名字和游戏 ID 以匹配房间工具用户',
-    'Share name and game ID to find room tool users',
-    '名前とゲームIDを共有して部屋の利用者を照合',
-    'Делиться именем и ID для поиска пользователей в комнате',
-  ],
   theme: ['主题', 'Theme', 'テーマ', 'Тема'],
   language: ['语言', 'Language', '言語', 'Язык'],
   panelOrder: ['面板次序', 'Panel order', 'パネル順序', 'Порядок панелей'],
@@ -287,16 +279,7 @@ export const messages: Record<string, readonly [string, string, string, string]>
     '24時間API：{used} / {limit}',
     'API за 24 ч: {used} / {limit}',
   ],
-  online: ['在线 {n} 人', '{n} online', '{n}人オンライン', 'Онлайн: {n}'],
   health: ['API 健康检查', 'API health', 'API状態', 'Состояние API'],
-  newVersion: [
-    '新版本 {version}',
-    'New version {version}',
-    '新バージョン {version}',
-    'Новая версия {version}',
-  ],
-  download: ['下载', 'Download', 'ダウンロード', 'Скачать'],
-  announcement: ['公告', 'Announcement', 'お知らせ', 'Объявление'],
   apmDisabled: [
     '在设置中开启 APM 监测',
     'Enable APM monitoring in Settings',

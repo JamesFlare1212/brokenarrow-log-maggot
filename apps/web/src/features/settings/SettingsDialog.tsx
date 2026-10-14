@@ -12,8 +12,6 @@ const flags = [
   ['matchSyncEnabled', 'matchSync'],
   ['banCardVisible', 'banVisible'],
   ['multiAccountBond', 'multiAccount'],
-  ['heartbeatEnabled', 'heartbeat'],
-  ['roomPresenceEnabled', 'roomPresence'],
 ] as const;
 export function SettingsDialog() {
   const { api, state, patchConfig, closeModal, notify } = useApp(),
@@ -188,26 +186,6 @@ export function SettingsDialog() {
             }
           >
             {t('health')}
-          </Button>
-          <Button
-            onClick={() =>
-              void api
-                .invoke('heartbeat.test', null)
-                .then((result) => (result.error ? setError(result.error) : notify(t('success'))))
-                .catch((e) => setError(String(e)))
-            }
-          >
-            {t('heartbeat')}
-          </Button>
-          <Button
-            onClick={() =>
-              void api
-                .invoke('version.check', null)
-                .then(() => notify(t('success')))
-                .catch((e) => setError(String(e)))
-            }
-          >
-            {t('newVersion', { version: '' })}
           </Button>
         </div>
         {state.migration.warnings.length > 0 && (

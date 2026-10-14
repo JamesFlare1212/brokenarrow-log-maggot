@@ -68,6 +68,7 @@ describe('legacy migration integrity', () => {
       lang: 'ru',
       autoQueryCurrentMatch: false,
       heartbeatEnabled: false,
+      roomPresenceEnabled: true,
       multiAccountBond: false,
       replayAudio: 'off',
       replayQuality: 240,
@@ -170,9 +171,6 @@ describe('legacy migration integrity', () => {
       futureDeck: false,
     };
     inputs.set('deck-sync.json', await source('deck-sync.json', deck));
-    const heartbeatBytes = Buffer.from('fixture-identity\r\n');
-    await writeFile(join(dir, 'heartbeat-uid.txt'), heartbeatBytes);
-    inputs.set('heartbeat-uid.txt', heartbeatBytes);
     const health = {
       state: 'partial',
       checks: [{ path: '/example', ok: false, ms: 0, status: 503 }],
@@ -192,14 +190,12 @@ describe('legacy migration integrity', () => {
     expect(status.imported['batrace-cache.json']).toBe(1);
     expect(status.imported['api-usage.json']).toBe(3);
     expect(status.imported['deck-sync.json']).toBe(1);
-    expect(status.imported['heartbeat-uid.txt']).toBe(1);
     expect(status.imported['api-health.json']).toBe(1);
     expect(status.imported['settings.json']).toBeGreaterThan(0);
     expect(db.config()).toMatchObject({
       theme: 'forest',
       lang: 'ru',
       autoQueryCurrentMatch: false,
-      heartbeatEnabled: false,
       replayAudio: 'off',
       replayQuality: 240,
       replayFps: 60,
@@ -209,6 +205,8 @@ describe('legacy migration integrity', () => {
     expect(db.config().panelOrder.slice(0, 4)).toEqual(['players', 'decks', 'bans', 'archive']);
     expect(db.state('privateHeaders', {})).toEqual(settings.batraceExtraHeaders);
     expect(db.config()).not.toHaveProperty('batraceExtraHeaders');
+    expect(db.config()).not.toHaveProperty('heartbeatEnabled');
+    expect(db.config()).not.toHaveProperty('roomPresenceEnabled');
     expect(db.match('9')).toMatchObject({
       endedAt: at,
       durationSec: 0,
@@ -231,11 +229,10 @@ describe('legacy migration integrity', () => {
     expect(db.usage(at).used24h).toBe(2);
     expect(rows('api_calls')).toBe(3);
     expect(db.state('deckSync', {})).toEqual(deck);
-    expect(db.state('heartbeatId', '')).toBe('fixture-identity');
     expect(db.state('health', {})).toEqual(health);
     expect(db.state('lastBanSync', -1)).toBe(0);
     expect(db.state('lastMatchSync', -1)).toBe(at);
-    expect(rows('legacy_imports')).toBe(8);
+    expect(rows('legacy_imports')).toBe(7);
     for (const [file, bytes] of inputs) {
       expect(await readFile(join(dir, file))).toEqual(bytes);
       expect(await readFile(join(status.backupDir!, file))).toEqual(bytes);
@@ -284,13 +281,16 @@ describe('legacy migration integrity', () => {
     },
   );
 
-  it('rejects empty heartbeat identities and malformed JSON without losing their bytes', async () => {
+  it('ignores retired telemetry files and preserves malformed JSON for repair', async () => {
     const broken = Buffer.from('{ incomplete');
     await writeFile(join(dir, 'players-db.json'), broken);
     await writeFile(join(dir, 'heartbeat-uid.txt'), ' \r\n');
     const status = await migrateLegacy(db, dir);
     expect(status.completed).toBe(false);
-    expect(status.warnings).toHaveLength(2);
+    expect(status.warnings).toHaveLength(1);
+    expect(status.imported).not.toHaveProperty('heartbeat-uid.txt');
+    expect(db.state('heartbeatId', null)).toBeNull();
+    expect(await readFile(join(dir, 'heartbeat-uid.txt'), 'utf8')).toBe(' \r\n');
     expect(rows('legacy_imports')).toBe(0);
     expect(await readFile(join(status.backupDir!, 'players-db.json'))).toEqual(broken);
     expect(await readFile(join(dir, 'players-db.json'))).toEqual(broken);
@@ -363,7 +363,7 @@ describe('legacy migration integrity', () => {
 
   it('rolls back all database writes and completion markers if an import fails, then permits retry', async () => {
     db.updateConfig({ theme: 'ocean' });
-    db.setState('heartbeatId', 'existing-identity');
+    db.setState('activeAccountId', 'existing-account');
     const bytes = await source('players-db.json', {
       version: 2,
       players: { '1': { names: ['One'], firstSeen: 1, lastSeen: 2 } },
@@ -376,7 +376,7 @@ describe('legacy migration integrity', () => {
     });
     await expect(migrateLegacy(db, dir)).rejects.toThrow('injected storage failure');
     expect(db.config().theme).toBe('ocean');
-    expect(db.state('heartbeatId', '')).toBe('existing-identity');
+    expect(db.state('activeAccountId', '')).toBe('existing-account');
     expect(db.state('migration', null)).toBeNull();
     for (const table of [
       'players',

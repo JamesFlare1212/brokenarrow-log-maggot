@@ -9,7 +9,6 @@
 | match-archive.json | 同 FID 补缺，无 FID 保留稳定内部 ID                        |
 | batrace-cache.json | 原 key、时间、payload、各命名空间 TTL                      |
 | api-usage.json     | 保留同毫秒重复调用                                         |
-| heartbeat-uid.txt  | 原安装身份                                                 |
 | deck-sync.json     | 上一局包归属与提醒状态                                     |
 | api-health.json    | 上次探测                                                   |
 
@@ -24,4 +23,4 @@ v1 原 encounters 与数字 FID 聚合同时保留；不能证明归属时不全
 
 对局、名单、账号视角分表。删除保护其他已知账号和视角，不递归删游戏目录。录像保持原位置；用户明确迁移时才移动，目标已有同名文件不覆盖。
 
-专项测试核对原字节、格式错误、备份冲突、读后源变化、事务失败、v1 / v2、改名、空身份、同 / 无 FID、0 / false、超过 2000 条缓存、幂等启动。
+专项测试核对原字节、格式错误、备份冲突、读后源变化、事务失败、v1 / v2、改名、同 / 无 FID、0 / false、超过 2000 条缓存、幂等启动。

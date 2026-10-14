@@ -192,18 +192,8 @@ export interface ApiHealth {
   at: number;
   checks: Array<{ path: string; ok: boolean; ms: number; status: number | null }>;
 }
-export interface HeartbeatState {
-  online: number | null;
-  lastPing: number | null;
-  error: string | null;
-}
 export interface VersionInfo {
   current: string;
-  latest: string;
-  hasUpdate: boolean;
-  announcement: string;
-  url: string;
-  error: string | null;
 }
 export interface ApmState {
   status: 'disabled' | 'unavailable' | 'replay' | 'active' | 'complete' | 'idle';
@@ -274,8 +264,6 @@ export interface PublicConfig {
   decksDir: string;
   autoQueryCurrentMatch: boolean;
   inputHookEnabled: boolean;
-  heartbeatEnabled: boolean;
-  roomPresenceEnabled: boolean;
   banPollEnabled: boolean;
   matchSyncEnabled: boolean;
   banCardVisible: boolean;
@@ -301,7 +289,6 @@ export interface Bootstrap {
   recording: RecordingState;
   apm: ApmState;
   health: ApiHealth;
-  heartbeat: HeartbeatState;
   version: VersionInfo;
   migration: MigrationStatus;
   deckAlert: DeckSwitchAlert | null;

@@ -160,7 +160,6 @@ export function SessionPanel() {
                         <strong>
                           {p.name}
                           {p.id === state.session.localPlayerId && <Badge tone="info">●</Badge>}
-                          {state.toolUsers.includes(p.id) && <Badge tone="success">BA</Badge>}
                         </strong>
                         <span className="muted">
                           ID {p.id} · ELO {formatMetric(info?.elo ?? null, 0)}
