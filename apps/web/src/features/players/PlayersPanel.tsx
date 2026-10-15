@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import type { PlayerReport, RpcOutputs } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
@@ -8,7 +8,7 @@ import { Card, Field, Button, Empty, Loading, Notice } from '../../components/ui
 import { ReportView, MaggotView, MaggotProgress } from './Reports';
 import { PlayerActions } from './PlayerActions';
 export function PlayersPanel() {
-  const { api, maggot } = useApp(),
+  const { api, state, maggot } = useApp(),
     { t } = useI18n(),
     [query, setQuery] = useState('');
   const results = useRequest<RpcOutputs['players.search']>(),
@@ -17,22 +17,29 @@ export function PlayersPanel() {
     <Card title={t('players')} icon={<Search size={19} />}>
       <form
         className="search-form"
+        aria-busy={results.pending}
         onSubmit={(e) => {
           e.preventDefault();
           if (query.trim())
             void results.load(() => api.invoke('players.search', { query: query.trim() }));
         }}
       >
-        <Field id="player-search" label={t('searchLabel')}>
-          <input
-            id="player-search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            maxLength={200}
-          />
+        <Field id="player-search" label={t('searchLabel')} hint={t('searchHint')}>
+          <div className="search-input-wrap">
+            <Search size={18} aria-hidden="true" />
+            <input
+              id="player-search"
+              type="search"
+              placeholder={t('searchPlaceholder')}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              maxLength={200}
+            />
+          </div>
         </Field>
         <Button type="submit" disabled={results.pending || !query.trim()} variant="primary">
-          {t('search')}
+          <Search size={16} aria-hidden="true" />
+          {t(results.pending ? 'loading' : 'search')}
         </Button>
       </form>
       {results.pending && <Loading />}
@@ -55,9 +62,38 @@ export function PlayersPanel() {
               </div>
             ))
           ) : (
-            <Empty>{t('empty')}</Empty>
+            <Empty icon={<Search size={24} />} description={t('searchEmptyHint')}>
+              {t('searchEmpty')}
+            </Empty>
           )}
         </div>
+      )}
+      {!results.data && !results.pending && !report.data && !report.pending && (
+        <>
+          <Empty icon={<Users size={28} />} description={t('searchHint')}>
+            {t('report')}
+          </Empty>
+          {!!(state.session.current?.players ?? state.session.lobbyPlayers).length && (
+            <div className="player-suggestions">
+              <h3>{t('currentRoomPlayers')}</h3>
+              <div className="suggestion-list">
+                {(state.session.current?.players ?? state.session.lobbyPlayers).map((p) => (
+                  <Button
+                    key={p.id}
+                    onClick={() =>
+                      void report.load(() => api.invoke('players.report', { id: p.id }))
+                    }
+                  >
+                    <span className="player-avatar" aria-hidden="true">
+                      {p.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    {p.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
       {report.pending && <Loading />}
       {report.error && <Notice error>{report.error}</Notice>}

@@ -12,6 +12,8 @@ export class LogWatcher {
   private offset = 0;
   private decoder = new StringDecoder('utf8');
   private pending = '';
+  private pendingRecovering = false;
+  private recoveryEnd = 0;
   private identity = '';
   private state: WatcherStatus = {
     dir: '',
@@ -47,6 +49,8 @@ export class LogWatcher {
   private clear(): void {
     this.offset = 0;
     this.pending = '';
+    this.pendingRecovering = false;
+    this.recoveryEnd = 0;
     this.decoder = new StringDecoder('utf8');
     this.identity = '';
     this.state.file = null;
@@ -80,14 +84,14 @@ export class LogWatcher {
       }
       const identity = selected.path + ':' + selected.info.ino + ':' + selected.info.birthtimeMs;
       this.state.live = Date.now() - selected.info.mtimeMs < 120000;
-      let recovering = false;
       if (identity !== this.identity || selected.info.size < this.offset) {
         this.clear();
         this.identity = identity;
         this.state.file = selected.path;
-        this.parser.reset();
-        recovering = true;
+        this.parser.reset(selected.path);
+        this.recoveryEnd = selected.info.size;
       }
+      const recovering = this.offset < this.recoveryEnd;
       this.state.recovering = recovering;
       this.state.error = null;
       this.changed(this.status());
@@ -104,17 +108,22 @@ export class LogWatcher {
           );
           if (generation !== this.generation || !bytesRead) break;
           this.offset += bytesRead;
+          const firstRecovering = this.pendingRecovering || recovering;
           this.pending += this.decoder.write(buffer.subarray(0, bytesRead));
           const lines = this.pending.split('\n');
           this.pending = lines.pop() ?? '';
-          if (lines.length) this.parser.feed(lines, recovering);
+          if (lines.length) {
+            this.parser.feed(lines.slice(0, 1), firstRecovering);
+            if (lines.length > 1) this.parser.feed(lines.slice(1), recovering);
+            this.pendingRecovering = recovering && buffer[bytesRead - 1] !== 10;
+          } else this.pendingRecovering = firstRecovering;
           await yieldLoop();
         }
       } finally {
         await handle.close();
       }
       if (generation !== this.generation) return;
-      if (recovering) {
+      if (recovering || this.parser.snapshot().recovering) {
         this.parser.recovered();
         this.state.recovering = false;
       }

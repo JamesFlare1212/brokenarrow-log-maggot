@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Layers } from 'lucide-react';
+import { Layers, FileText, FolderOpen } from 'lucide-react';
 import type { DeckList, DeckFile } from '@ba/contracts';
 import { formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -21,13 +21,12 @@ function DeckFiles({
 }) {
   const { t } = useI18n();
   return (
-    <Field id={id} label={title}>
-      <select
+    <fieldset className="field deck-fieldset" aria-describedby={`${id}-hint`}>
+      <legend>{title}</legend>
+      <div
         id={id}
-        multiple
-        size={8}
-        value={selected}
-        onChange={(e) => onChange(Array.from(e.target.selectedOptions, (o) => o.value))}
+        className="deck-file-list"
+        tabIndex={0}
         onKeyDown={(e) => {
           if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
             e.preventDefault();
@@ -35,16 +34,40 @@ function DeckFiles({
           }
         }}
       >
-        {files.map((f) => (
-          <option key={f.name} value={f.name}>
-            {f.name} · {formatSize(f.size)}
-          </option>
-        ))}
-      </select>
-      <Button onClick={() => onChange(files.map((f) => f.name))} disabled={!files.length}>
-        {t('selectAll')}
+        {files.length ? (
+          files.map((f) => (
+            <label className="deck-file" key={f.name}>
+              <input
+                type="checkbox"
+                checked={selected.includes(f.name)}
+                onChange={(e) =>
+                  onChange(
+                    e.target.checked
+                      ? [...selected, f.name]
+                      : selected.filter((name) => name !== f.name),
+                  )
+                }
+              />
+              <FileText size={17} className="muted" aria-hidden="true" />
+              <span>{f.name}</span>
+              <small>{formatSize(f.size)}</small>
+            </label>
+          ))
+        ) : (
+          <Empty>{t('empty')}</Empty>
+        )}
+      </div>
+      <Button
+        onClick={() => onChange(selected.length === files.length ? [] : files.map((f) => f.name))}
+        disabled={!files.length}
+      >
+        {t(selected.length === files.length && files.length ? 'clearSelection' : 'selectAll')}
+        <small className="muted">
+          {selected.length} / {files.length}
+        </small>
       </Button>
-    </Field>
+      <small id={`${id}-hint`}>{t('deckSelectionHint')}</small>
+    </fieldset>
   );
 }
 export function DecksPanel() {
@@ -135,6 +158,7 @@ export function DecksPanel() {
                     setBackupNames(front);
                   }}
                 >
+                  <Layers size={16} aria-hidden="true" />
                   {t('backupSelected')}
                 </Button>
                 <Button
@@ -149,6 +173,7 @@ export function DecksPanel() {
                 <Button
                   onClick={() => void operate(() => api.invoke('decks.open', { kind: 'decks' }))}
                 >
+                  <FolderOpen size={16} aria-hidden="true" />
                   {t('folder')}
                 </Button>
                 <Button

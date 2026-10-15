@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Archive } from 'lucide-react';
+import { Archive, Plus, RefreshCw } from 'lucide-react';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, outcomeTone } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -13,7 +13,12 @@ export function MatchArchive() {
     [accounts, setAccounts] = useState<Account[]>([]),
     [account, setAccount] = useState(''),
     [fid, setFid] = useState(''),
-    [adding, setAdding] = useState(false);
+    [adding, setAdding] = useState(false),
+    [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
+  const list = [...(matches.data || [])].sort(
+    (a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0),
+  );
+  const filtered = list.filter((m) => outcome === 'all' || m.outcome === outcome);
   const refresh = () =>
     void matches.load(
       () => api.invoke('matches.list', account ? { accountId: account } : {}),
@@ -32,6 +37,7 @@ export function MatchArchive() {
       icon={<Archive size={19} />}
       actions={
         <Button disabled={matches.pending} onClick={refresh}>
+          <RefreshCw size={15} className={matches.pending ? 'spinner' : ''} aria-hidden="true" />
           {t('refresh')}
         </Button>
       }
@@ -58,14 +64,16 @@ export function MatchArchive() {
             <input
               id="match-id"
               inputMode="numeric"
+              placeholder="8050000"
               pattern="[0-9]+"
               value={fid}
               onChange={(e) => setFid(e.target.value)}
               maxLength={32}
             />
           </Field>
-          <Button type="submit" disabled={adding || !/^\d+$/.test(fid)}>
-            {t('addMatch')}
+          <Button variant="primary" type="submit" disabled={adding || !/^\d+$/.test(fid)}>
+            <Plus size={16} aria-hidden="true" />
+            {t(adding ? 'loading' : 'addMatch')}
           </Button>
         </form>
         <Field id="archive-account" label={t('account')}>
@@ -79,9 +87,21 @@ export function MatchArchive() {
           </select>
         </Field>
       </div>
+      <div className="filter-row">
+        <div className="segmented-control" role="group" aria-label={t('result')}>
+          {(['all', 'win', 'loss'] as const).map((value) => (
+            <Button key={value} aria-pressed={outcome === value} onClick={() => setOutcome(value)}>
+              {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
+            </Button>
+          ))}
+        </div>
+        <small className="muted">
+          {t('samples')}: {filtered.length}
+        </small>
+      </div>
       {matches.pending && !matches.data && <Loading />}
       {matches.error && <Notice error>{matches.error}</Notice>}
-      {matches.data?.length ? (
+      {filtered.length ? (
         <div className="table-wrap archive-table">
           <table>
             <caption className="sr-only">{t('archive')}</caption>
@@ -93,7 +113,7 @@ export function MatchArchive() {
               </tr>
             </thead>
             <tbody>
-              {matches.data.map((m) => (
+              {filtered.map((m) => (
                 <tr key={m.id}>
                   <td>
                     <Badge tone={outcomeTone(m.outcome)}>
@@ -113,14 +133,26 @@ export function MatchArchive() {
                     </Button>
                   </td>
                   <td>
-                    {formatDelta(
-                      m.eloAfter !== null && m.eloBefore !== null ? m.eloAfter - m.eloBefore : null,
-                    )}
+                    <span
+                      className={
+                        m.eloAfter !== null && m.eloBefore !== null
+                          ? m.eloAfter >= m.eloBefore
+                            ? 'text-success'
+                            : 'text-danger'
+                          : ''
+                      }
+                    >
+                      {formatDelta(
+                        m.eloAfter !== null && m.eloBefore !== null
+                          ? m.eloAfter - m.eloBefore
+                          : null,
+                      )}
+                    </span>
                   </td>
                   <td>{formatTime(m.endedAt, locale)}</td>
                   <td>{m.localPersona || '—'}</td>
                   <td>
-                    <Menu>
+                    <Menu label={`${t('actions')}: #${m.fid || m.id}`}>
                       {m.fid && (
                         <>
                           <Button
@@ -164,7 +196,26 @@ export function MatchArchive() {
           </table>
         </div>
       ) : (
-        !matches.pending && <Empty>{t('empty')}</Empty>
+        !matches.pending && (
+          <Empty
+            icon={<Archive size={26} />}
+            description={t('noMatchesHint')}
+            action={
+              outcome !== 'all' || account ? (
+                <Button
+                  onClick={() => {
+                    setOutcome('all');
+                    setAccount('');
+                  }}
+                >
+                  {t('clearFilters')}
+                </Button>
+              ) : undefined
+            }
+          >
+            {t(outcome !== 'all' || account ? 'noFilteredMatches' : 'empty')}
+          </Empty>
+        )
       )}
     </Card>
   );

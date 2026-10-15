@@ -63,6 +63,7 @@ export function RecordingSettings({ enable = false }: { enable?: boolean }) {
         replayFps: draft.replayFps,
         replayBitrateMbps: draft.replayBitrateMbps,
         replayAudio: draft.replayAudio,
+        replayMicrophone: draft.replayMicrophone,
         replayDisplayId: draft.replayDisplayId,
         replaySaveDir: draft.replaySaveDir,
       });
@@ -139,6 +140,13 @@ export function RecordingSettings({ enable = false }: { enable?: boolean }) {
             <option value="off">{t('audioOff')}</option>
           </select>
         </Field>
+        <Toggle
+          id="rec-microphone"
+          label={t('recordMicrophone')}
+          checked={draft.replayMicrophone}
+          disabled={draft.replayAudio === 'off'}
+          onChange={(value) => set('replayMicrophone', value)}
+        />
         <Notice>
           {t('estimated', {
             size: formatSize(

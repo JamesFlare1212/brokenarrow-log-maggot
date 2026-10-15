@@ -141,6 +141,7 @@ export class RecordingController {
           nodeIntegration: false,
           sandbox: true,
           backgroundThrottling: false,
+          autoplayPolicy: 'no-user-gesture-required',
         },
       });
       const capture: Capture = {
@@ -154,6 +155,7 @@ export class RecordingController {
           fps: config.replayFps,
           bitrateMbps: config.replayBitrateMbps,
           audio: config.replayAudio,
+          microphone: config.replayMicrophone,
         },
         win,
         writer: createWriteStream(part, { flags: 'wx' }),

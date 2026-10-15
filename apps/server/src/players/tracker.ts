@@ -134,6 +134,10 @@ export class TrackerService {
       .matches()
       .filter((m) => m.fid && m.outcome === 'unknown')
       .slice(0, 20);
+    // Save the recent snapshot before fetching richer, potentially newer details.
+    this.db.transaction(() => {
+      for (const match of result.matches) this.db.saveMatch(match);
+    });
     for (const match of pending) {
       try {
         await this.detail(match.fid!);
@@ -142,7 +146,6 @@ export class TrackerService {
       }
     }
     this.db.transaction(() => {
-      for (const match of result.matches) this.db.saveMatch(match);
       this.db.setState('lastMatchSync', Date.now());
     });
   }

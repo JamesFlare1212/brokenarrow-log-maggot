@@ -3,18 +3,39 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 34px;
-  padding: 7px 11px;
+  min-height: 40px;
+  padding: 9px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface-alt);
+  background: var(--surface-subtle);
   color: var(--text);
-  white-space: nowrap;
+  white-space: normal;
   line-height: 1.3;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    opacity var(--motion-fast);
 }
 .button:hover:not(:disabled) {
   border-color: var(--accent);
-  filter: brightness(1.08);
+  background: var(--surface-hover);
+}
+.button:active:not(:disabled) {
+  opacity: 0.8;
+}
+.button-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text));
+}
+.text-button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.icon-button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 7px;
 }
 .button-primary {
   background: var(--accent);
@@ -43,24 +64,62 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
 }
 .card-header h2 {
   display: flex;
   align-items: center;
   gap: 9px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.card-icon {
+  display: flex;
+  color: var(--muted);
+}
+.card-header > .actions {
+  min-width: 0;
+}
+.card-header > .actions > .button {
+  font-size: 12px;
 }
 .card-body {
-  padding: 18px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 22px;
 }
 .empty {
   color: var(--muted);
-  padding: 24px 12px;
+  padding: 40px 20px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.empty strong {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.empty p {
+  max-width: 460px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface-subtle);
+  color: var(--accent);
 }
 .notice {
   display: flex;
@@ -104,7 +163,7 @@
   background: var(--surface-alt);
   color: var(--muted);
   border: 1px solid var(--border);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .badge-success {
   color: var(--success);
@@ -161,6 +220,14 @@
   gap: 8px;
   align-items: center;
 }
+.input-action > input {
+  flex: 1;
+  min-width: 0;
+}
+.input-action > .button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 .toggle {
   display: flex;
   align-items: center;
@@ -184,7 +251,7 @@
   position: relative;
   width: 40px;
   height: 24px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 20px;
   background: var(--surface-alt);
   flex: none;
@@ -198,23 +265,43 @@
   left: 3px;
   border-radius: 50%;
   background: var(--muted);
+  transition: transform var(--motion-fast) var(--ease-out);
 }
 .toggle > input:checked + .toggle-track {
   background: var(--accent);
   border-color: var(--accent);
 }
 .toggle > input:checked + .toggle-track::after {
-  left: 19px;
+  transform: translateX(16px);
   background: var(--on-accent);
 }
 .toggle > input:focus-visible + .toggle-track {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+.toggle:has(> input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.toggle > input:disabled {
+  cursor: not-allowed;
+}
 .dialog-overlay {
   position: fixed;
   inset: 0;
   background: var(--overlay);
+  z-index: 100;
+  animation: overlay-enter var(--motion-normal) var(--ease-out);
+}
+.modal-loading {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
   z-index: 100;
 }
 .dialog {
@@ -223,20 +310,21 @@
   left: 50%;
   transform: translate(-50%, -50%);
   width: min(680px, calc(100vw - 48px));
-  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--surface);
   box-shadow: var(--shadow);
   z-index: 101;
+  animation: dialog-enter var(--motion-normal) var(--ease-out);
 }
 .dialog-wide {
   width: min(1180px, calc(100vw - 48px));
 }
 .dialog-header {
-  padding: 16px 20px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -247,7 +335,7 @@
   font-size: 17px;
 }
 .dialog-body {
-  padding: 20px;
+  padding: 24px;
   overflow: auto;
   min-height: 0;
   display: flex;
@@ -258,7 +346,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding-top: 12px;
+  padding-top: 20px;
   border-top: 1px solid var(--border);
 }
 .menu-content {
@@ -295,7 +383,7 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  max-width: 560px;
+  max-width: min(560px, calc(100vw - 32px));
   padding: 14px 18px;
   background: var(--success-bg);
   border: 1px solid var(--success);
@@ -313,4 +401,50 @@
   background: transparent;
   color: inherit;
   font-size: 20px;
+  min-width: 32px;
+  min-height: 32px;
+}
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@media (max-width: 600px) {
+  .card-header {
+    padding: 16px;
+  }
+  .card-body {
+    padding: 16px;
+  }
+  .dialog,
+  .dialog-wide {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+  .dialog-header {
+    padding: 16px;
+  }
+  .dialog-body {
+    padding: 16px;
+  }
+  .button {
+    min-height: 44px;
+  }
+  .toast {
+    right: 16px;
+    bottom: 16px;
+  }
 }

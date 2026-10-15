@@ -1,6 +1,0 @@
-v4.0.0
-公告：v4.0.0
-• React + Vite + Electron + Node.js + TypeScript + SQLite，pnpm workspace。
-• 修复日志、配额、账号视角、异步界面、APM 和录像生命周期问题。
-• 旧数据备份后事务导入，保留原文件；录像按需流式播放。
-• 七主题、四语言、统一可访问组件、自动化回归与桌面冒烟。

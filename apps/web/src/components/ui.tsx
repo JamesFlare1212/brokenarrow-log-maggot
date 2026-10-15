@@ -1,6 +1,14 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import * as Dropdown from '@radix-ui/react-dropdown-menu';
-import { Children, Fragment, isValidElement, useRef, type ReactElement } from 'react';
+import {
+  Children,
+  Fragment,
+  cloneElement,
+  isValidElement,
+  useId,
+  useRef,
+  type ReactElement,
+} from 'react';
 import { X, ChevronDown, ChevronUp, LoaderCircle, MoreHorizontal } from 'lucide-react';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { useI18n } from '../hooks/useI18n';
@@ -12,7 +20,12 @@ export function Button({
 }: ComponentPropsWithRef<'button'> & { variant?: 'primary' | 'danger' | 'ghost' }) {
   return (
     <button type="button" {...props} className={`button button-${variant} ${className}`}>
-      {children}
+      {Children.map(children, (child) =>
+        isValidElement<{ size?: number; 'aria-hidden'?: boolean }>(child) &&
+        ('size' in child.props || child.type === 'svg')
+          ? cloneElement(child, { 'aria-hidden': child.props['aria-hidden'] ?? true })
+          : child,
+      )}
     </button>
   );
 }
@@ -34,11 +47,16 @@ export function Card({
   className?: string;
 }) {
   const { t } = useI18n();
+  const contentId = useId();
   return (
     <section className={`card ${className}`}>
       <div className="card-header">
         <h2>
-          {icon}
+          {icon && (
+            <span className="card-icon" aria-hidden="true">
+              {icon}
+            </span>
+          )}
           {title}
         </h2>
         <div className="actions">
@@ -48,13 +66,18 @@ export function Card({
               onClick={onToggle}
               aria-label={title + ' ' + t(collapsed ? 'expand' : 'collapse')}
               aria-expanded={!collapsed}
+              aria-controls={contentId}
             >
               {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
             </Button>
           )}
         </div>
       </div>
-      {!collapsed && <div className="card-body">{children}</div>}
+      {!collapsed && (
+        <div className="card-body" id={contentId}>
+          {children}
+        </div>
+      )}
     </section>
   );
 }
@@ -111,14 +134,35 @@ export function Dialog({
     </RadixDialog.Root>
   );
 }
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="empty">{children}</div>;
+export function Empty({
+  children,
+  icon,
+  description,
+  action,
+}: {
+  children: ReactNode;
+  icon?: ReactNode;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="empty">
+      {icon && (
+        <span className="empty-icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
+      <strong>{children}</strong>
+      {description && <p>{description}</p>}
+      {action}
+    </div>
+  );
 }
 export function Loading() {
   const { t } = useI18n();
   return (
     <div className="loading" role="status">
-      <LoaderCircle className="spinner" size={18} />
+      <LoaderCircle className="spinner" size={18} aria-hidden="true" />
       {t('loading')}
     </div>
   );
@@ -162,11 +206,24 @@ export function Field({
   children: ReactNode;
   hint?: string;
 }) {
+  const hintId = `${id}-hint`;
+  const describe = (nodes: ReactNode): ReactNode =>
+    Children.map(nodes, (node) => {
+      if (!isValidElement<{ id?: string; children?: ReactNode; 'aria-describedby'?: string }>(node))
+        return node;
+      if (node.props.id === id)
+        return cloneElement(node, {
+          'aria-describedby': [node.props['aria-describedby'], hintId].filter(Boolean).join(' '),
+        });
+      return node.props.children
+        ? cloneElement(node, { children: describe(node.props.children) })
+        : node;
+    });
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      {children}
-      {hint && <small>{hint}</small>}
+      {hint ? describe(children) : children}
+      {hint && <small id={hintId}>{hint}</small>}
     </div>
   );
 }
@@ -174,11 +231,13 @@ export function Toggle({
   id,
   label,
   checked,
+  disabled,
   onChange,
 }: {
   id: string;
   label: string;
   checked: boolean;
+  disabled?: boolean;
   onChange: (value: boolean) => void;
 }) {
   return (
@@ -188,6 +247,7 @@ export function Toggle({
         id={id}
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="toggle-track" aria-hidden="true" />
@@ -202,12 +262,12 @@ function menuItems(children: ReactNode): ReactElement[] {
       : [child];
   });
 }
-export function Menu({ children }: { children: ReactNode }) {
+export function Menu({ children, label }: { children: ReactNode; label?: string }) {
   const { t } = useI18n();
   return (
     <Dropdown.Root>
       <Dropdown.Trigger asChild>
-        <Button data-menu-trigger aria-label={t('actions')}>
+        <Button data-menu-trigger aria-label={label || t('actions')}>
           <MoreHorizontal size={18} />
         </Button>
       </Dropdown.Trigger>

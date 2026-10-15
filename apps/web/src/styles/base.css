@@ -5,10 +5,16 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font:
-    14px/1.55 'Segoe UI',
-    'Microsoft YaHei',
-    sans-serif;
+  font: 14px/1.6 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+[hidden] {
+  display: none !important;
+}
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 button,
 input,
@@ -18,6 +24,7 @@ textarea {
 }
 button {
   cursor: pointer;
+  touch-action: manipulation;
 }
 button:disabled {
   cursor: default;
@@ -57,11 +64,23 @@ select,
 textarea {
   width: 100%;
   min-width: 0;
-  padding: 9px 12px;
+  min-height: 44px;
+  padding: 10px 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-alt);
+  border-radius: 9px;
+  background: var(--surface-subtle);
   color: var(--text);
+  border-color: var(--control-border);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
+}
+input[readonly] {
+  border-style: dashed;
+  color: var(--muted);
+  background: transparent;
 }
 input[type='range'] {
   accent-color: var(--accent);
@@ -95,9 +114,13 @@ th {
 }
 th,
 td {
-  padding: 10px 12px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+}
+.table-wrap .button {
+  background: transparent;
+  border-color: transparent;
 }
 tbody tr:hover {
   background: var(--surface-alt);
@@ -110,7 +133,7 @@ td small {
   max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 8px;
-  max-height: 450px;
+  max-height: 600px;
 }
 .sr-only {
   position: absolute;
@@ -147,6 +170,27 @@ td small {
 }
 .startup-error {
   color: var(--danger);
+}
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  transform: translateY(-180%);
+  z-index: 200;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+@media (max-width: 600px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,

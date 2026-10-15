@@ -26,7 +26,9 @@ export class Analyzer {
         throw new Error('No analysis');
       const points = array(object(a.trend).points).map(object),
         latest = points.at(-1) || {},
-        wins = points.filter((p) => p.won === true).length;
+        wins = points.filter((p) => p.won === true).length,
+        losses = points.filter((p) => p.won === false).length,
+        sampleCount = wins + losses;
       const maps = array(a.mapPerformance).map(object);
       for (const map of maps) {
         const mapId = number(map.mapId),
@@ -46,12 +48,13 @@ export class Analyzer {
         level: null,
         fallback: false,
         matchCount: number(a.matchCount) ?? points.length,
+        sampleCount,
         elo: number(latest.ratingAfter),
         kd: number(latest.kdRatio),
         dmr: number(latest.dmr),
-        winRate: points.length ? Math.round((wins / points.length) * 100) : null,
+        winRate: sampleCount ? Math.round((wins / sampleCount) * 100) : null,
         wins,
-        losses: points.filter((p) => p.won === false).length,
+        losses,
         updatedAt: response.at,
         stale: response.source === 'stale',
         recentMatches: points
@@ -96,23 +99,26 @@ export class Analyzer {
       return report;
     } catch (analysisError) {
       try {
-        const result = await this.client.playerInfo(id),
+        const result = await this.client.playerInfo(id, force),
           raw = object(result.value),
           info = object(raw.info),
           stats = object(raw.statInfo);
+        if (!text(info.name).trim())
+          throw new Error('Player not found or incomplete BATrace response');
         const wins = number(stats.winCountRt) ?? 0,
           losses = number(stats.lossCountRt) ?? 0,
           count = number(stats.fightsCountRt) ?? wins + losses;
-        return {
+        const report: PlayerReport = {
           id,
           name: text(info.name, name),
           level: number(info.level),
           fallback: true,
           matchCount: count,
+          sampleCount: wins + losses,
           elo: number(info.rating),
           kd: null,
           dmr: null,
-          winRate: count ? Math.round((wins / count) * 100) : null,
+          winRate: wins + losses ? Math.round((wins / (wins + losses)) * 100) : null,
           wins,
           losses,
           updatedAt: result.at,
@@ -123,6 +129,8 @@ export class Analyzer {
           mapStats: [],
           style: null,
         };
+        this.db.saveSnapshot(id, this.mini(report));
+        return report;
       } catch {
         throw analysisError;
       }
@@ -135,6 +143,8 @@ export class Analyzer {
       kd: report.kd,
       winRate: report.winRate,
       matchCount: report.matchCount,
+      sampleCount: report.sampleCount,
+      fallback: report.fallback,
       category: report.categories[0]?.key ?? null,
       topUnits: report.favUnits.map((u) => u.name).join(', '),
       updatedAt: report.updatedAt,
@@ -177,14 +187,34 @@ export class Analyzer {
             me = mvp.find((p) => text(p.playerId) === id),
             myTeam = me ? team(me.teamId) : null;
           calls += response.attempts ?? 0;
-          if (mvp.length < 10 || !me || (myTeam !== 0 && myTeam !== 1)) continue;
-          const allies = mvp.filter((p) => team(p.teamId) === myTeam);
-          if (allies.length !== 5 || allies.some((p) => number(p.score) === null)) continue;
-          const sorted = [...allies].sort((a, b) => Number(b.score) - Number(a.score)),
-            rank = sorted.findIndex((p) => text(p.playerId) === id) + 1;
+          const active = mvp.filter((p) => team(p.teamId) === 0 || team(p.teamId) === 1);
+          if (
+            !me ||
+            (myTeam !== 0 && myTeam !== 1) ||
+            active.length !== 10 ||
+            new Set(active.map((p) => text(p.playerId))).size !== 10 ||
+            active.some((p) => !/^[1-9]\d*$/.test(text(p.playerId)) || number(p.score) === null) ||
+            active.filter((p) => team(p.teamId) === 0).length !== 5 ||
+            active.filter((p) => team(p.teamId) === 1).length !== 5
+          )
+            continue;
+          const allies = active.filter((p) => team(p.teamId) === myTeam);
+          // Equal scores share the mean of their occupied positions.
+          const rankOf = (values: Array<{ id: string; value: number }>, ascending = false) => {
+            const mine = values.find((p) => p.id === id)!.value;
+            const better = values.filter((p) =>
+              ascending ? p.value < mine : p.value > mine,
+            ).length;
+            const equal = values.filter((p) => p.value === mine).length;
+            return better + (equal + 1) / 2;
+          };
+          const rank = rankOf(
+            allies.map((p) => ({ id: text(p.playerId), value: Number(p.score) })),
+          );
           const economy = array(object(raw.economy).players).map(object),
             stats = allies.map((p) => {
-              const e = economy.find((e) => text(e.playerId) === text(p.playerId));
+              const entries = economy.filter((e) => text(e.playerId) === text(p.playerId));
+              const e = entries.length === 1 ? entries[0] : undefined;
               return {
                 id: text(p.playerId),
                 kill: e ? number(e.returnValue) : null,
@@ -195,17 +225,25 @@ export class Analyzer {
               };
             });
           const rankMetric = (kind: 'kill' | 'loss' | 'kd'): number | null => {
-            if (stats.some((s) => s.kill === null || s.loss === null)) return null;
+            if (
+              stats.some((s) =>
+                kind === 'kill'
+                  ? s.kill === null
+                  : kind === 'loss'
+                    ? s.loss === null
+                    : s.kill === null || s.loss === null,
+              )
+            )
+              return null;
             const value = (s: (typeof stats)[number]) =>
               kind === 'kill'
                 ? s.kill || 0
                 : kind === 'loss'
                   ? s.loss || 0
                   : (s.kill || 0) / (s.loss || 1);
-            return (
-              [...stats]
-                .sort((a, b) => (kind === 'loss' ? value(a) - value(b) : value(b) - value(a)))
-                .findIndex((s) => s.id === id) + 1
+            return rankOf(
+              stats.map((s) => ({ id: s.id, value: value(s) })),
+              kind === 'loss',
             );
           };
           rows.push({
@@ -218,6 +256,7 @@ export class Analyzer {
             eloDelta: Number(p.ratingAfter) - Number(p.ratingBefore),
           });
         } catch (error) {
+          calls += number(object(error).attempts) ?? 0;
           if (String(error).includes('quota')) throw error;
         } finally {
           progress(rows.length, i + 1);

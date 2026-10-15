@@ -26,7 +26,11 @@ export function mergePlayers(
   return [...players.values()];
 }
 export function mergeMatch(previous: Match, incoming: Match, fillOnly = false): Match {
-  const lower = fillOnly || (previous.source === 'api' && incoming.source !== 'api'),
+  const olderApi =
+    previous.source === 'api' &&
+    incoming.source === 'api' &&
+    incoming.updatedAt < previous.updatedAt;
+  const lower = fillOnly || olderApi || (previous.source === 'api' && incoming.source !== 'api'),
     merged = { ...previous };
   for (const key of Object.keys(incoming) as Array<keyof Match>) {
     if (key === 'players') continue;
@@ -51,7 +55,7 @@ export function mergeMatch(previous: Match, incoming: Match, fillOnly = false): 
     merged.durationSec = incoming.durationSec;
     merged.durationSource = 'log';
   }
-  if (incoming.source === 'api') {
+  if (incoming.source === 'api' && !olderApi) {
     merged.restarted = incoming.restarted;
     merged.updatedAt = incoming.updatedAt;
   }

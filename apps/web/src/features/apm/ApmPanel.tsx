@@ -2,9 +2,9 @@ import { Activity } from 'lucide-react';
 import { formatDuration, formatMetric } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
-import { Card, Stats, Notice, Badge } from '../../components/ui';
+import { Button, Card, Empty, Stats, Notice, Badge } from '../../components/ui';
 export function ApmPanel() {
-  const { state, patchConfig } = useApp(),
+  const { state, patchConfig, openModal } = useApp(),
     { t } = useI18n(),
     apm = state.apm,
     collapsed = state.config.collapsedPanels.includes('apm'),
@@ -23,7 +23,17 @@ export function ApmPanel() {
       }
     >
       {apm.status === 'disabled' ? (
-        <Notice>{t('apmDisabled')}</Notice>
+        <Empty
+          icon={<Activity size={30} />}
+          description={t('apmDescription')}
+          action={
+            <Button variant="primary" onClick={() => openModal({ type: 'settings' })}>
+              {t('settings')}
+            </Button>
+          }
+        >
+          {t('apmDisabled')}
+        </Empty>
       ) : apm.status === 'unavailable' ? (
         <Notice error>{t('apmUnavailable')}</Notice>
       ) : apm.status === 'replay' ? (

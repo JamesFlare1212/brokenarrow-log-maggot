@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Match, Session, TeamId } from '@ba/contracts';
 import { emptyMatch, emptyPlayer, mapId, team } from '@ba/shared';
 export type LogEvent =
@@ -19,7 +19,13 @@ export class LogParser {
     current: null,
     recovering: false,
   };
-  private lastEnded: Match | null = null;
+  private ended: Match[] = [];
+  private source = '';
+  private lineNumber = 0;
+  private loggedAt: number | null = null;
+  private currentRecovered = false;
+  private connection = '';
+  private connections = new Map<string, string>();
   private listing = false;
   constructor(
     private emit: (event: LogEvent) => void,
@@ -28,7 +34,7 @@ export class LogParser {
   snapshot(): Session {
     return structuredClone(this.session);
   }
-  reset(): void {
+  reset(source = ''): void {
     const generation = this.session.generation + 1;
     this.session = {
       generation,
@@ -43,20 +49,35 @@ export class LogParser {
       current: null,
       recovering: false,
     };
-    this.lastEnded = null;
+    this.ended = [];
+    this.source = source;
+    this.lineNumber = 0;
+    this.loggedAt = null;
+    this.currentRecovered = false;
+    this.connection = '';
+    this.connections.clear();
     this.listing = false;
     this.emit({ type: 'reset', generation });
     this.emit({ type: 'session', session: this.snapshot() });
   }
   feed(lines: string[], recovering = false): void {
     this.session.recovering = recovering;
-    for (const raw of lines) this.line(raw.replace(/\r$/, ''), recovering);
+    for (const raw of lines) {
+      this.lineNumber++;
+      this.line(raw.replace(/\r$/, ''), recovering);
+    }
     this.resolveLocal();
     this.emit({ type: 'session', session: this.snapshot() });
   }
   recovered(): void {
     this.session.recovering = false;
     this.emit({ type: 'session', session: this.snapshot() });
+  }
+  isRecoveredMatch(): boolean {
+    return this.currentRecovered;
+  }
+  private time(recovering: boolean): number | null {
+    return this.loggedAt ?? (recovering ? null : this.now());
   }
   private resolveLocal(): void {
     const players = this.session.current?.players ?? this.session.lobbyPlayers;
@@ -79,8 +100,23 @@ export class LogParser {
   }
   private start(map: string, scenario: string, recovering: boolean): void {
     if (this.session.current) this.end(recovering);
-    const id = randomUUID(),
-      match = emptyMatch('local:' + id, recovering ? null : this.now());
+    const id =
+        this.source || recovering
+          ? createHash('sha256')
+              .update(
+                JSON.stringify([
+                  this.source,
+                  this.lineNumber,
+                  this.loggedAt,
+                  map,
+                  scenario,
+                  this.session.localName,
+                ]),
+              )
+              .digest('hex')
+              .slice(0, 32)
+          : randomUUID(),
+      match = emptyMatch('local:' + id, this.time(recovering));
     match.sessionId = id;
     match.map = map;
     match.mapId = mapId(map);
@@ -88,6 +124,8 @@ export class LogParser {
     match.localDeck = this.session.localDeck;
     match.localPersona = this.session.localName;
     this.session.current = match;
+    this.currentRecovered = recovering;
+    if (this.connection) this.connections.set(id, this.connection);
     this.session.phase = 'match';
     this.listing = false;
     this.emit({ type: 'started', match: structuredClone(match), recovering });
@@ -95,15 +133,25 @@ export class LogParser {
   private end(recovering: boolean): void {
     const match = this.session.current;
     if (!match) return;
-    match.endedAt = recovering ? null : this.now();
-    match.updatedAt = this.now();
-    if (match.durationSec === null && !recovering && match.startedAt !== null) {
-      match.durationSec = Math.max(0, Math.round((this.now() - match.startedAt) / 1000));
+    match.endedAt = this.time(recovering);
+    match.updatedAt = match.endedAt ?? (recovering ? 0 : this.now());
+    if (
+      match.durationSec === null &&
+      match.startedAt !== null &&
+      match.endedAt !== null &&
+      match.endedAt >= match.startedAt
+    ) {
+      match.durationSec = Math.round((match.endedAt - match.startedAt) / 1000);
       match.durationSource = 'estimated';
     }
     this.resolveLocal();
-    this.lastEnded = structuredClone(match);
+    this.ended.push(structuredClone(match));
+    if (this.ended.length > 20) {
+      const removed = this.ended.shift();
+      if (removed) this.connections.delete(removed.sessionId);
+    }
     this.session.current = null;
+    this.currentRecovered = false;
     this.session.phase = 'lobby';
     this.listing = false;
     this.emit({ type: 'ended', match: structuredClone(match), recovering });
@@ -111,6 +159,31 @@ export class LogParser {
   private line(line: string, recovering: boolean): void {
     line = line.replace(/^\uFEFF/, '');
     let m: RegExpExecArray | null;
+    if ((m = /^\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d{3})\]$/.exec(line))) {
+      const date = new Date(
+        Number(m[1]),
+        Number(m[2]) - 1,
+        Number(m[3]),
+        Number(m[4]),
+        Number(m[5]),
+        Number(m[6]),
+        Number(m[7]),
+      );
+      this.loggedAt = Number.isFinite(date.getTime()) ? date.getTime() : null;
+      return;
+    }
+    if (/^Log: \[NET_ROOM\] Network lifecycle .*Action=Entered\b/.test(line)) {
+      const ip = /\bConnectionIp=([^ |]+)/.exec(line)?.[1] ?? /\bServerIp=([^ |]+)/.exec(line)?.[1],
+        port = /\bConnectionPort=(\d+)/.exec(line)?.[1] ?? /\bServerPort=(\d+)/.exec(line)?.[1];
+      if (ip && port) {
+        this.connection = `${ip}:${port}`;
+        const fid = /\bFightId=(\d+)/.exec(line)?.[1];
+        const current = this.session.current;
+        if (current && (!current.fid || current.fid === fid))
+          this.connections.set(current.sessionId, this.connection);
+      }
+      return;
+    }
     if ((m = /^Log: GetPersonaName\s+(.+)$/.exec(line))) {
       this.session.localName = m[1]?.trim() || '';
       this.session.accountKey = 'persona:' + this.session.localName;
@@ -121,13 +194,19 @@ export class LogParser {
       this.session.loginSeen = true;
       return;
     }
-    if ((m = /^Log: Enter to lobby \(id: (\d+)\)/.exec(line)) || /^Log: Exit lobby/.test(line)) {
+    if (
+      (m = /^Log: (?:\[LOBBY\] )?Enter to lobby \(id: (\d+)\)/.exec(line)) ||
+      /^Log: (?:\[LOBBY\] )?Exit lobby/.test(line)
+    ) {
+      // New games log both tagged and plain exit notifications.
+      if (!m && !this.session.current && !this.session.lobbyId && this.session.phase === 'idle')
+        return;
       if (this.session.current) this.end(recovering);
       this.session.lobbyId = m?.[1] || '';
       this.session.lobbyPlayers = [];
       this.session.phase = m ? 'lobby' : 'idle';
-      this.lastEnded = null;
       this.listing = false;
+      this.session.generation++;
       this.emit({ type: 'reset', generation: this.session.generation });
       return;
     }
@@ -145,18 +224,33 @@ export class LogParser {
       return;
     }
     if ((m = /^Log: Start loading battle\.\.\. map: ([^,]+),\s*scenario:\s*(.*)$/.exec(line))) {
+      const current = this.session.current;
+      if (current && !current.map && !current.scenario) {
+        current.map = m[1]?.trim() || '';
+        current.mapId = mapId(current.map);
+        current.scenario = m[2]?.trim() || '';
+        return;
+      }
       this.start(m[1]?.trim() || '', m[2]?.trim() || '', recovering);
       return;
     }
-    if (/^Log: \[NET_ROOM\] GameRoom entered/.test(line)) {
+    if (/^Log: (?:\[NET_ROOM\] GameRoom entered|Room entered - GameRoom)/.test(line)) {
       if (!this.session.current) this.start('', '', recovering);
+      const fid = /fight id:\s*(\d+)/.exec(line)?.[1];
+      if (fid && this.session.current) {
+        this.session.current.fid = fid;
+        this.session.current.id = fid;
+      }
       return;
     }
     if (/^Log: Player list:\s*$/.test(line)) {
       this.listing = true;
       return;
     }
-    if (this.listing && (m = /^ID: (\d+), Name: (.*?), Team: (\w+)$/.exec(line))) {
+    if (
+      this.listing &&
+      (m = /^ID:\s*(\d+),?\s+Name:\s*(.*?),?\s*Team:\s*(Alpha|Bravo|Spectators)\s*$/.exec(line))
+    ) {
       this.player(m[1] || '', m[2]?.trim() || '', team(m[3]));
       return;
     }
@@ -183,16 +277,34 @@ export class LogParser {
       return;
     }
     if ((m = /^Log: \[NET_ROOM\] Connection closed\. .*LiveTime: (\d+) sec/.exec(line))) {
-      const match = this.session.current ?? this.lastEnded;
+      const fid = /\bFightId=(\d+)/.exec(line)?.[1];
+      const endpoint = /\bServer ([^,\s]+)/.exec(line)?.[1];
+      let candidates = [
+        ...this.ended.filter((match) => match.durationSource !== 'log'),
+        ...(this.session.current ? [this.session.current] : []),
+      ];
+      if (fid) candidates = candidates.filter((match) => match.fid === fid);
+      else if (endpoint && candidates.some((match) => this.connections.has(match.sessionId)))
+        candidates = candidates.filter(
+          (match) => this.connections.get(match.sessionId) === endpoint,
+        );
+      // Without connection identity, a pending ended match takes priority over a new one.
+      const pending = candidates.filter((match) => match !== this.session.current);
+      const match =
+        pending.length === 1 ? pending[0] : candidates.length === 1 ? candidates[0] : null;
       if (match) {
         match.durationSec = Number(m[1]);
         match.durationSource = 'log';
-        match.updatedAt = this.now();
+        match.updatedAt = this.time(recovering) ?? match.updatedAt;
         this.emit({ type: 'metadata', match: structuredClone(match), recovering });
       }
       return;
     }
-    if (/^Log: GameController dispose called|^Log: \[NET_ROOM\] GameRoom exited/.test(line))
+    if (
+      /^Log: GameController dispose called|^Log: \[NET_ROOM\] GameRoom exited|^Log: LoadSceneAsync: Hangar_Scene\b|^Log: Exit button pressed, exiting the game/.test(
+        line,
+      )
+    )
       this.end(recovering);
   }
 }

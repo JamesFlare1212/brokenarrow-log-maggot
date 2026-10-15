@@ -7,7 +7,7 @@ export function PlayerActions({ player, info }: { player: Player; info?: MiniInf
   const { api, openModal, notify } = useApp(),
     { t } = useI18n();
   return (
-    <Menu>
+    <Menu label={`${t('actions')}: ${player.name}`}>
       <Button onClick={() => openModal({ type: 'profile', id: player.id, name: player.name })}>
         {t('investigate')}
       </Button>
@@ -25,7 +25,7 @@ export function PlayerActions({ player, info }: { player: Player; info?: MiniInf
           void navigator.clipboard
             .writeText(
               info
-                ? `${player.name} (${player.id}) · ELO ${formatMetric(info.elo, 0)} · ${t('winRate')} ${formatMetric(info.winRate, 0)}% · ${info.category || '—'} · ${info.topUnits}`
+                ? `${player.name} (${player.id}) · ELO ${formatMetric(info.elo, 0)} · ${t(info.fallback ? 'winRate' : 'recentWinRate')} ${formatMetric(info.winRate, 0)}% · ${info.category || '—'} · ${info.topUnits}`
                 : `${player.name} ${player.id}`,
             )
             .then(() => notify(t('copied')))

@@ -53,8 +53,21 @@ export const configSchema = z.object({
   replayFps: z.number().int().min(30).max(60).default(30),
   replayBitrateMbps: z.number().int().min(3).max(10).default(5),
   replayAudio: z.enum(['default', 'off']).default('default'),
+  replayMicrophone: z.boolean().default(true),
   replaySaveDir: z.string().max(4096).default(''),
 });
+// Zod preserves defaults inside partial objects. Patches must validate only the
+// supplied fields, or a single preference change overwrites every other setting.
+const configPatchSchema: z.ZodType<Partial<PublicConfig>> = z
+  .object(
+    Object.fromEntries(
+      Object.entries(configSchema.shape).map(([key, schema]) => [
+        key,
+        schema.removeDefault().optional(),
+      ]),
+    ),
+  )
+  .strict();
 const id = z.string().regex(/^\d+$/).max(32);
 const name = z.string().min(1).max(255);
 const empty = z.null();
@@ -69,11 +82,11 @@ const roster = z
   .max(100);
 export const rpcSchemas = {
   'app.bootstrap': empty,
-  'config.update': configSchema.partial().strict(),
+  'config.update': configPatchSchema,
   'directory.select': z.object({ kind: z.enum(['logs', 'replays', 'decks']) }),
   'directory.detect': empty,
   'players.search': z.object({ query: z.string().trim().min(1).max(200) }),
-  'players.report': z.object({ id }),
+  'players.report': z.object({ id, force: z.boolean().optional() }),
   'players.maggot': z.object({ id, requestId: z.string().uuid() }),
   'players.profile': z.object({ id, force: z.boolean().default(false) }),
   'session.query': z.object({
@@ -185,6 +198,7 @@ export interface RecorderConfig {
   fps: number;
   bitrateMbps: number;
   audio: 'default' | 'off';
+  microphone: boolean;
 }
 export interface RecorderBridge {
   config(): Promise<RecorderConfig>;

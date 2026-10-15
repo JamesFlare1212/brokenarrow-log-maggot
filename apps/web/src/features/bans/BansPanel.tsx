@@ -21,8 +21,8 @@ export function BansPanel() {
       icon={<Shield size={19} />}
       actions={
         <>
-          <Button onClick={() => setMetOnly(!metOnly)}>{t(metOnly ? 'allBans' : 'metBans')}</Button>
           <Button
+            variant="primary"
             disabled={syncing}
             onClick={() => {
               setSyncing(true);
@@ -38,6 +38,14 @@ export function BansPanel() {
         </>
       }
     >
+      <div className="segmented-control" role="group" aria-label={t('bans')}>
+        <Button aria-pressed={!metOnly} onClick={() => setMetOnly(false)}>
+          {t('allBans')}
+        </Button>
+        <Button aria-pressed={metOnly} onClick={() => setMetOnly(true)}>
+          {t('metBans')}
+        </Button>
+      </div>
       {request.pending && <Loading />}
       {request.error && <Notice error>{request.error}</Notice>}
       {request.data?.length ? (
@@ -54,7 +62,11 @@ export function BansPanel() {
           ))}
         </div>
       ) : (
-        !request.pending && <Empty>{t('empty')}</Empty>
+        !request.pending && (
+          <Empty icon={<Shield size={28} />} description={t('bansDescription')}>
+            {t('empty')}
+          </Empty>
+        )
       )}
     </Card>
   );

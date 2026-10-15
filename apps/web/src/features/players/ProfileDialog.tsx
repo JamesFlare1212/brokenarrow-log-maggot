@@ -11,9 +11,13 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
     { t, locale } = useI18n(),
     profile = useRequest<PlayerProfile>(),
     report = useRequest<PlayerReport>();
+  const load = (force = false) =>
+    Promise.all([
+      profile.load(() => api.invoke('players.profile', { id, force })),
+      report.load(() => api.invoke('players.report', { id, force })),
+    ]);
   useEffect(() => {
-    void profile.load(() => api.invoke('players.profile', { id, force: false }));
-    void report.load(() => api.invoke('players.report', { id }));
+    void load();
   }, [id, api]);
   const p = profile.data,
     encounters = p?.encounters || [],
@@ -22,12 +26,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
   return (
     <Dialog open onClose={closeModal} title={`${name} · #${id}`} className="dialog-wide">
       <div className="actions">
-        <Button
-          onClick={() =>
-            void profile.load(() => api.invoke('players.profile', { id, force: true }))
-          }
-          disabled={profile.pending}
-        >
+        <Button onClick={() => void load(true)} disabled={profile.pending || report.pending}>
           {t('refresh')}
         </Button>
         <Button
@@ -69,9 +68,13 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
               <Stats
                 items={[
                   { label: 'ELO', value: formatMetric(p.info.elo, 0) },
-                  { label: 'K/D', value: formatMetric(p.info.kd) },
-                  { label: t('winRate'), value: formatMetric(p.info.winRate, 0) + '%' },
-                  { label: t('samples'), value: p.info.matchCount },
+                  { label: t('latestKd'), value: formatMetric(p.info.kd) },
+                  {
+                    label: t(p.info.fallback ? 'winRate' : 'recentWinRate'),
+                    value: formatMetric(p.info.winRate, 0) + '%',
+                  },
+                  { label: t('totalMatches'), value: p.info.matchCount },
+                  { label: t('samples'), value: p.info.sampleCount ?? '—' },
                 ]}
               />
               <div className="report-tags">

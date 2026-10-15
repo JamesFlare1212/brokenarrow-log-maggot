@@ -79,6 +79,8 @@ export interface MiniInfo {
   kd: Metric;
   winRate: Metric;
   matchCount: number;
+  sampleCount?: number;
+  fallback?: boolean;
   category: string | null;
   topUnits: string;
   updatedAt: number;
@@ -96,6 +98,7 @@ export interface PlayerReport {
   level: Metric;
   fallback: boolean;
   matchCount: number;
+  sampleCount: number;
   elo: Metric;
   kd: Metric;
   dmr: Metric;
@@ -278,6 +281,7 @@ export interface PublicConfig {
   replayFps: number;
   replayBitrateMbps: number;
   replayAudio: 'default' | 'off';
+  replayMicrophone: boolean;
   replaySaveDir: string;
 }
 export interface Bootstrap {

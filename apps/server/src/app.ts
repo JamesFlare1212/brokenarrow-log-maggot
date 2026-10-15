@@ -160,7 +160,7 @@ export class Application {
           return { players: this.db.localSearch(query), source: 'local' as const };
         }
       },
-      'players.report': ({ id }) => this.analyzer.report(id),
+      'players.report': ({ id, force }) => this.analyzer.report(id, force),
       'players.maggot': ({ id, requestId }) =>
         this.analyzer.maggot(id, (done, scanned) =>
           this.event({ type: 'maggot', requestId, id, done, scanned, total: 12 }),
@@ -417,7 +417,7 @@ export class Application {
     if (session.recovering) return;
     if (
       session.current &&
-      session.current.startedAt === null &&
+      this.parser.isRecoveredMatch() &&
       this.watcher.status().live &&
       this.restoredSession !== session.current.sessionId
     ) {

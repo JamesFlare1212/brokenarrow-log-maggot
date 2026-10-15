@@ -140,19 +140,20 @@ export class BatraceClient {
     }
     const stale = options.allowStale ? this.db.cache(key, true, this.now()) : null;
     if (stale) return { value: stale.value, source: 'stale', at: stale.at, attempts };
-    throw last instanceof Error ? last : new Error(String(last));
+    throw Object.assign(last instanceof Error ? last : new Error(String(last)), { attempts });
   }
   analysisPlayer(id: string, force = false): Promise<DataResult> {
     return this.get(
       `/api/analysis/player?stbid=${encodeURIComponent(id)}`,
       `analysis:${id}`,
       21600000,
-      { force, allowStale: true },
+      { force, allowStale: !force },
     );
   }
-  playerInfo(id: string): Promise<DataResult> {
+  playerInfo(id: string, force = false): Promise<DataResult> {
     return this.get(`/api/players/info?stbid=${encodeURIComponent(id)}`, `info:${id}`, 21600000, {
-      allowStale: true,
+      force,
+      allowStale: !force,
     });
   }
   playerMatches(id: string, force = false): Promise<DataResult> {
@@ -160,7 +161,7 @@ export class BatraceClient {
       `/api/players/matches?stbid=${encodeURIComponent(id)}&limit=10`,
       `myMatches:${id}:10`,
       1800000,
-      { force, allowStale: true },
+      { force, allowStale: !force },
     );
   }
   match(id: string, force = false): Promise<DataResult> {

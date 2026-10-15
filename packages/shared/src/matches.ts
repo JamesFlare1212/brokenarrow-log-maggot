@@ -231,10 +231,16 @@ export function normalizeMatch(
   };
 }
 export function winnerFromAnalysis(value: unknown): 0 | 1 | null {
-  const t = object(object(value).teamComparison),
-    a = number(object(t.teamATotals).destructionScore),
-    b = number(object(t.teamBTotals).destructionScore);
-  return a === null || b === null || a === b ? null : a > b ? 0 : 1;
+  const raw = object(value),
+    comparison = object(raw.teamComparison);
+  const winner = team(
+    raw.winnerTeamId ??
+      raw.winnerTeam ??
+      raw.WinnerTeam ??
+      comparison.winnerTeamId ??
+      comparison.winnerTeam,
+  );
+  return winner === 0 || winner === 1 ? winner : null;
 }
 export function summarizeMaggot(id: string, rows: MaggotRow[], calls = 0): MaggotReport {
   const complete = rows.length === 12,

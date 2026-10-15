@@ -3,6 +3,9 @@ import { canvasSize } from '@ba/shared';
 import './recorder.css';
 const bridge = (window as unknown as { recorder: RecorderBridge }).recorder;
 let stream: MediaStream | null = null,
+  microphone: MediaStream | null = null,
+  mixedAudio: MediaStream | null = null,
+  audioContext: AudioContext | null = null,
   output: MediaStream | null = null,
   recorder: MediaRecorder | null = null,
   draw: ReturnType<typeof setInterval> | null = null,
@@ -13,13 +16,21 @@ let stream: MediaStream | null = null,
   sequence = 0,
   startedAt = 0,
   token = '';
+const audioSources: MediaStreamAudioSourceNode[] = [];
 function cleanup() {
   if (draw) clearInterval(draw);
   if (preview) clearInterval(preview);
   draw = null;
   preview = null;
   stream?.getTracks().forEach((t) => t.stop());
+  microphone?.getTracks().forEach((t) => t.stop());
+  mixedAudio?.getTracks().forEach((t) => t.stop());
   output?.getTracks().forEach((t) => t.stop());
+  audioSources.splice(0).forEach((source) => source.disconnect());
+  if (audioContext) {
+    void audioContext.close().catch(() => {});
+    audioContext = null;
+  }
 }
 const unsubscribe = bridge.stop((cancel) => {
   discard = cancel;
@@ -60,6 +71,18 @@ async function start() {
       cleanup();
       return;
     }
+    if (config.audio === 'default' && config.microphone) {
+      try {
+        microphone = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      } catch (error) {
+        // Keep screen/system capture usable when no microphone is available or access is denied.
+        console.warn('Microphone capture unavailable', error);
+      }
+      if (stopRequested) {
+        cleanup();
+        return;
+      }
+    }
     video.srcObject = stream;
     await video.play();
     if (stopRequested) {
@@ -74,12 +97,32 @@ async function start() {
     if (!ctx) throw new Error('Canvas unavailable');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     output = canvas.captureStream(config.fps);
-    const audio = stream.getAudioTracks()[0];
-    if (audio) output.addTrack(audio);
+    const audioTracks = [...stream.getAudioTracks(), ...(microphone?.getAudioTracks() ?? [])];
+    if (audioTracks.length > 1) {
+      // MediaRecorder needs one mixed track to preserve both desktop and microphone audio.
+      const context = new AudioContext();
+      audioContext = context;
+      const destination = context.createMediaStreamDestination();
+      mixedAudio = destination.stream;
+      for (const track of audioTracks) {
+        const source = context.createMediaStreamSource(new MediaStream([track]));
+        audioSources.push(source);
+        source.connect(destination);
+      }
+      await context.resume();
+      if (stopRequested) {
+        cleanup();
+        return;
+      }
+      for (const track of mixedAudio.getAudioTracks()) output.addTrack(track);
+    } else if (audioTracks[0]) output.addTrack(audioTracks[0]);
     const hasAudio = output.getAudioTracks().length > 0,
-      mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-        ? 'video/webm;codecs=vp8'
-        : 'video/webm';
+      mime =
+        [
+          ...(hasAudio ? ['video/webm;codecs=vp8,opus'] : []),
+          'video/webm;codecs=vp8',
+          'video/webm',
+        ].find((type) => MediaRecorder.isTypeSupported(type)) ?? 'video/webm';
     recorder = new MediaRecorder(output, {
       mimeType: mime,
       videoBitsPerSecond: config.bitrateMbps * 1e6,
@@ -112,6 +155,7 @@ async function start() {
     recorder.start(1000);
     startedAt = performance.now();
     await bridge.started(token, hasAudio);
+    if (stopRequested) return;
     draw = setInterval(() => {
       if (stopRequested) return;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);

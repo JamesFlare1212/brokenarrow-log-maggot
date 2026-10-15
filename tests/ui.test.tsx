@@ -27,11 +27,17 @@ import { configSchema } from '@ba/contracts';
 import { summarizeMaggot } from '@ba/shared';
 import { App } from '../apps/web/src/app/App';
 import { AppProvider, useApp } from '../apps/web/src/app/state';
-import { createDemoBridge, demoBootstrap, demoReport } from '../apps/web/src/demo/bridge';
+import {
+  createDemoBridge,
+  demoBootstrap,
+  demoMatch,
+  demoReport,
+} from '../apps/web/src/demo/bridge';
 import { useRequest } from '../apps/web/src/hooks/useRequest';
 import { translate } from '../apps/web/src/hooks/useI18n';
 import { SessionPanel } from '../apps/web/src/features/session/SessionPanel';
 import { PlayersPanel } from '../apps/web/src/features/players/PlayersPanel';
+import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
 import { ReplaysPanel } from '../apps/web/src/features/replays/ReplaysPanel';
 import { Button, Dialog } from '../apps/web/src/components/ui';
 
@@ -160,7 +166,10 @@ function bannedPlayer(): Ban {
   };
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+});
 
 describe('request and native event ordering', () => {
   it('keeps the newest request when A finishes or fails after B', async () => {
@@ -386,7 +395,7 @@ describe('user interaction regressions', () => {
     );
     await screen.findByText('监听中');
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
-    const dialog = screen.getByRole('dialog', { name: '设置' });
+    const dialog = await screen.findByRole('dialog', { name: '设置' });
     fireEvent.click(within(dialog).getByRole('button', { name: '上移 卡组工具' }));
     fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -396,17 +405,71 @@ describe('user interaction regressions', () => {
         .getAllByRole('button')
         .map((button) => button.textContent?.trim()),
     ).toEqual([translate('zh', 'overview'), '卡组工具', 'APM 统计']);
-    expect(
-      screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent?.trim()),
-    ).toEqual(['当前房间 / 对局', '卡组工具', 'APM 统计']);
-    expect(
-      screen.getByRole('button', { name: 'APM 统计 展开' }).getAttribute('aria-expanded'),
-    ).toBe('false');
+    fireEvent.click(within(navigation).getByRole('button', { name: '卡组工具' }));
+    expect(screen.getByRole('heading', { level: 1, name: '卡组工具' })).toBeTruthy();
     expect(
       screen.getByRole('button', { name: '卡组工具 展开' }).getAttribute('aria-expanded'),
     ).toBe('false');
+    fireEvent.click(within(navigation).getByRole('button', { name: 'APM 统计' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'APM 统计' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'APM 统计 展开' }).getAttribute('aria-expanded'),
+    ).toBe('false');
     expect(native.backend.config.collapsedPanels).toEqual(['decks', 'apm']);
     expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'apm']);
+  });
+
+  it('opens a deep link and preserves search and result filters when navigating back', async () => {
+    window.history.replaceState(null, '', '#archive');
+    const native = nativeFixture();
+    render(
+      <AppProvider api={native.api}>
+        <App />
+      </AppProvider>,
+    );
+    await screen.findByRole('heading', { level: 1, name: '对局档案' });
+    const navigation = screen.getByRole('navigation');
+    fireEvent.click(screen.getByRole('button', { name: '失利' }));
+    await screen.findByText('没有符合筛选条件的对局');
+    fireEvent.click(within(navigation).getByRole('button', { name: '玩家查询' }));
+    const search = screen.getByLabelText(translate('zh', 'searchLabel'));
+    fireEvent.change(search, { target: { value: 'Zola' } });
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }));
+    await screen.findByRole('button', { name: /^Zola #8863/ });
+    act(() => {
+      window.location.hash = 'archive';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(screen.getByRole('button', { name: '失利' }).getAttribute('aria-pressed')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('main'));
+    fireEvent.click(within(navigation).getByRole('button', { name: '玩家查询' }));
+    expect((screen.getByLabelText(translate('zh', 'searchLabel')) as HTMLInputElement).value).toBe(
+      'Zola',
+    );
+    expect(screen.getByRole('button', { name: /^Zola #8863/ })).toBeTruthy();
+    expect(window.location.hash).toBe('#players');
+  });
+
+  it('summarizes eligible completed matches for the current account', async () => {
+    const win = demoMatch('1001');
+    const loss = { ...demoMatch('1002', 1), outcome: 'loss' as const, eloAfter: 2090 };
+    const restarted = { ...demoMatch('1003', 2), restarted: true };
+    const otherAccount = { ...demoMatch('1004', 3), localPlayerId: '9999' };
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => [win, loss, restarted, otherAccount],
+    });
+    render(
+      <AppProvider api={native.api}>
+        <App />
+      </AppProvider>,
+    );
+    await screen.findByText('1 胜 · 1 负');
+    const metric = screen.getByText('近期胜率').closest('.metric-card') as HTMLElement;
+    expect(within(metric).getByText('50%')).toBeTruthy();
+    const rating = screen.getByText('最近 ELO').closest('.metric-card') as HTMLElement;
+    expect(within(rating).getByText('2,114')).toBeTruthy();
+    const archive = screen.getByText('已收录对局').closest('.metric-card') as HTMLElement;
+    expect(within(archive).getByText('4')).toBeTruthy();
   });
 
   it('safely disables an empty lobby and releases refresh after a fulfilled zero-row query', async () => {
@@ -589,6 +652,52 @@ describe('user interaction regressions', () => {
     expect(screen.getByAltText('录制预览').getAttribute('src')).toBe(
       'data:image/png;base64,current',
     );
+  });
+});
+
+describe('profile refresh and report scopes', () => {
+  it('refreshes the profile and full report together and explains metric and sample scopes', async () => {
+    const profile: PlayerProfile = {
+      id: '8863',
+      name: 'Player',
+      names: [],
+      firstSeen: null,
+      lastSeen: null,
+      encounters: [],
+      banned: null,
+      recentMatches: [],
+      recentError: null,
+      latestElo: null,
+      info: null,
+    };
+    const native = nativeFixture(bootstrapForApp(), {
+      'players.profile': () => profile,
+      'players.report': ({ id, force }) => ({
+        ...demoReport(id),
+        elo: force ? 2002 : 1001,
+        sampleCount: 12,
+      }),
+    });
+    render(<ProfileDialog id="8863" name="Player" />, { wrapper: wrapper(native.api) });
+    await screen.findByText('1,001');
+    expect(screen.getByText('最近一场 K/D')).toBeTruthy();
+    expect(screen.getByText('最近一场 DMR')).toBeTruthy();
+    expect(screen.getByText('总场次')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    await screen.findByText('2,002');
+    expect(screen.queryByText('1,001')).toBeNull();
+    expect(
+      native.calls.some(
+        (call) =>
+          call.method === 'players.profile' && 'force' in call.input! && call.input.force === true,
+      ),
+    ).toBe(true);
+    expect(
+      native.calls.some(
+        (call) =>
+          call.method === 'players.report' && 'force' in call.input! && call.input.force === true,
+      ),
+    ).toBe(true);
   });
 });
 

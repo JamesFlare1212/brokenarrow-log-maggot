@@ -27,7 +27,7 @@ export function ReportView({ report }: { report: PlayerReport }) {
             onClick={() =>
               void navigator.clipboard
                 .writeText(
-                  `${report.name} · ELO ${formatMetric(report.elo, 0)} · ${t('winRate')} ${formatMetric(report.winRate, 0)}% · ${report.favUnits.map((u) => u.name).join(', ')}`,
+                  `${report.name} · ELO ${formatMetric(report.elo, 0)} · ${t(report.fallback ? 'winRate' : 'recentWinRate')} ${formatMetric(report.winRate, 0)}% (${report.sampleCount}) · ${report.favUnits.map((u) => u.name).join(', ')}`,
                 )
                 .then(() => notify(t('copied')))
                 .catch((e) => notify(String(e), true))
@@ -45,10 +45,14 @@ export function ReportView({ report }: { report: PlayerReport }) {
       <Stats
         items={[
           { label: 'ELO', value: formatMetric(report.elo, 0) },
-          { label: 'K/D', value: formatMetric(report.kd) },
-          { label: 'DMR', value: formatMetric(report.dmr) },
-          { label: t('winRate'), value: formatMetric(report.winRate, 0) + '%' },
-          { label: t('samples'), value: report.matchCount },
+          { label: t('latestKd'), value: formatMetric(report.kd) },
+          { label: t('latestDmr'), value: formatMetric(report.dmr) },
+          {
+            label: t(report.fallback ? 'winRate' : 'recentWinRate'),
+            value: formatMetric(report.winRate, 0) + '%',
+          },
+          { label: t('totalMatches'), value: report.matchCount },
+          { label: t('samples'), value: report.sampleCount },
         ]}
       />
       <div className="report-tags">
@@ -202,10 +206,10 @@ export function MaggotView({ report }: { report: MaggotReport }) {
                   </Button>
                 </td>
                 <td>{r.won === null ? t('unknown') : t(r.won ? 'win' : 'loss')}</td>
-                <td>{r.mvpRank}</td>
-                <td>{formatMetric(r.killRank, 0)}</td>
-                <td>{formatMetric(r.lossRank, 0)}</td>
-                <td>{formatMetric(r.kdRank, 0)}</td>
+                <td>{formatMetric(r.mvpRank, 1)}</td>
+                <td>{formatMetric(r.killRank, 1)}</td>
+                <td>{formatMetric(r.lossRank, 1)}</td>
+                <td>{formatMetric(r.kdRank, 1)}</td>
                 <td>{formatDelta(r.eloDelta)}</td>
               </tr>
             ))}

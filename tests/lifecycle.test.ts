@@ -89,6 +89,32 @@ class FakeHook extends EventEmitter implements Hook {
   stop = vi.fn();
 }
 
+describe('configuration updates', () => {
+  it('does not reset other settings or stop recording and input when changing language', async () => {
+    const p = platform(vi.fn<typeof fetch>());
+    const events: AppEvent[] = [];
+    const app = application(p, events);
+    const before = app.db.updateConfig({
+      logDir: 'custom-logs',
+      decksDir: 'custom-decks',
+      theme: 'forest',
+      replayEnabled: true,
+      inputHookEnabled: true,
+      replaySaveDir: 'custom-recordings',
+    });
+    const watch = vi.spyOn(app.watcher, 'start');
+
+    const config = await app.invoke('config.update', { lang: 'en' });
+
+    expect(config).toEqual({ ...before, lang: 'en' });
+    expect(app.snapshot().config).toEqual(config);
+    expect(events).toContainEqual({ type: 'config', config, revision: 1 });
+    expect(watch).not.toHaveBeenCalled();
+    expect(p.recordings.stop).not.toHaveBeenCalled();
+    expect(p.apm.disable).not.toHaveBeenCalled();
+  });
+});
+
 describe('input-hook lifecycle', () => {
   it('counts one click after every enable/disable cycle and detaches every listener', () => {
     const hook = new FakeHook();

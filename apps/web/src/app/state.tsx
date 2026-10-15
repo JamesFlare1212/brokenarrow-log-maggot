@@ -10,6 +10,7 @@ import type {
   MaggotReport,
 } from '@ba/contracts';
 import { LocaleContext, translate } from '../hooks/useI18n';
+import { PANELS } from '@ba/contracts';
 import { errorMessage } from '@ba/shared';
 import { useRef } from 'react';
 export type ModalRoute =
@@ -138,7 +139,9 @@ export function useApp(): AppContextValue {
 }
 export function AppProvider({ api, children }: { api: Bridge; children: ReactNode }) {
   const [state, dispatch] = useReducer(reduce, null),
-    [page, setPage] = useState<Panel>('current'),
+    [page, updatePage] = useState<Panel>(
+      () => PANELS.find((panel) => location.hash === `#${panel}`) || 'current',
+    ),
     [modal, openModal] = useState<ModalRoute>(null),
     [error, setError] = useState<string | null>(null),
     [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
@@ -150,6 +153,18 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       error: null,
     }),
     maggotRunning = useRef(false);
+  const setPage = (next: Panel) => {
+    if (location.hash !== `#${next}`) location.hash = next;
+    updatePage(next);
+  };
+  useEffect(() => {
+    const navigate = () => {
+      const panel = PANELS.find((candidate) => location.hash === `#${candidate}`);
+      if (panel || !location.hash) updatePage(panel || 'current');
+    };
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
   useEffect(() => {
     let active = true,
       ready = false,
@@ -188,7 +203,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
   }, [api]);
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 6000);
+    const timer = setTimeout(() => setToast(null), 4500);
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
