@@ -4,6 +4,8 @@
 
 [中文使用说明](使用说明.md) · [架构](docs/architecture.md) · [数据迁移](docs/migration.md) · [审查问题处理](docs/audit-resolution.md)
 
+[游戏日志目录检测：实现与调研依据](docs/log-directory-detection.md)
+
 ## 功能
 
 - GameLogs 增量监听：房间、队伍、地图、账号、卡组、晚到的对局 ID 和真实时长。

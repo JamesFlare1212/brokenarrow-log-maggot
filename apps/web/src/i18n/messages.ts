@@ -585,6 +585,25 @@ export const messages: Record<string, readonly [string, string, string, string]>
   logDirectory: ['游戏日志目录', 'Game log folder', 'ゲームログフォルダ', 'Папка логов'],
   decksDirectory: ['游戏 Decks 目录', 'Game Decks folder', 'ゲームDecksフォルダ', 'Папка Decks'],
   detect: ['自动检测 Steam', 'Detect Steam', 'Steamを検出', 'Найти Steam'],
+  detectingLogs: ['正在检测…', 'Detecting…', '検出中…', 'Поиск…'],
+  logDetectFound: [
+    '已找到日志目录，保存后开始监听。',
+    'Log folder found. Save to start listening.',
+    'ログフォルダが見つかりました。保存すると監視を開始します。',
+    'Папка логов найдена. Сохраните, чтобы начать отслеживание.',
+  ],
+  logDetectNotFound: [
+    '未找到可用的 GameLogs 目录，已保留原路径。请先启动一次游戏，或通过 Steam 的“浏览本地文件”找到 GameLogs 后手动选择。',
+    'No usable GameLogs folder found. Your path was kept. Start the game once, or use Steam’s Browse local files to find and select GameLogs.',
+    '利用可能なGameLogsが見つかりません。元のパスは保持されています。ゲームを一度起動するか、Steamの「ローカルファイルを閲覧」でGameLogsを探して選択してください。',
+    'Папка GameLogs не найдена. Прежний путь сохранён. Запустите игру один раз или найдите GameLogs через «Просмотреть локальные файлы» в Steam и выберите её вручную.',
+  ],
+  logDetectFailed: [
+    '检测未完成，已保留原路径。请重试或手动选择 GameLogs 目录。',
+    'Detection could not finish. Your path was kept. Retry or select GameLogs manually.',
+    '検出を完了できませんでした。元のパスは保持されています。再試行するか、GameLogsを手動で選択してください。',
+    'Не удалось завершить поиск. Прежний путь сохранён. Повторите поиск или выберите GameLogs вручную.',
+  ],
   autoQuery: [
     '自动查询房间玩家',
     'Query room players automatically',

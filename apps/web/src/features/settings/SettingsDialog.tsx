@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUp,
   ArrowDown,
@@ -28,7 +28,17 @@ export function SettingsDialog() {
     [draft, setDraft] = useState<PublicConfig>(() => structuredClone(state.config)),
     [accounts, setAccounts] = useState<Account[]>([]),
     [busy, setBusy] = useState(false),
+    [detecting, setDetecting] = useState(false),
+    [logFeedback, setLogFeedback] = useState<{ key: string; error: boolean } | null>(null),
     [error, setError] = useState<string | null>(null);
+  const logRevision = useRef(0),
+    logRequest = useRef(0);
+  useEffect(
+    () => () => {
+      logRequest.current++;
+    },
+    [],
+  );
   useEffect(() => {
     void api
       .invoke('accounts.list', null)
@@ -41,8 +51,30 @@ export function SettingsDialog() {
       document.documentElement.dataset.theme = state.config.theme;
     };
   }, [draft.theme, state.config.theme]);
-  const set = <K extends keyof PublicConfig>(key: K, value: PublicConfig[K]) =>
+  const set = <K extends keyof PublicConfig>(key: K, value: PublicConfig[K]) => {
+    if (key === 'logDir') {
+      logRevision.current++;
+      setLogFeedback(null);
+    }
     setDraft((old) => ({ ...old, [key]: value }));
+  };
+  const detect = async () => {
+    const request = ++logRequest.current,
+      revision = logRevision.current;
+    setDetecting(true);
+    setLogFeedback(null);
+    try {
+      const dir = await api.invoke('directory.detect', null);
+      if (request !== logRequest.current || revision !== logRevision.current) return;
+      if (dir) set('logDir', dir);
+      setLogFeedback({ key: dir ? 'logDetectFound' : 'logDetectNotFound', error: !dir });
+    } catch {
+      if (request === logRequest.current && revision === logRevision.current)
+        setLogFeedback({ key: 'logDetectFailed', error: true });
+    } finally {
+      if (request === logRequest.current) setDetecting(false);
+    }
+  };
   const move = (index: number, direction: number) => {
     const order = [...draft.panelOrder],
       other = index + direction;
@@ -79,22 +111,27 @@ export function SettingsDialog() {
                 id="settings-log"
                 value={draft.logDir}
                 onChange={(e) => set('logDir', e.target.value)}
+                aria-describedby={logFeedback ? 'settings-log-feedback' : undefined}
               />
               <Button onClick={() => void choose('logs')}>
                 <FolderOpen size={16} aria-hidden="true" />
                 {t('select')}
               </Button>
               <Button
-                onClick={() =>
-                  void api
-                    .invoke('directory.detect', null)
-                    .then((dir) => set('logDir', dir))
-                    .catch((e) => setError(String(e)))
-                }
+                disabled={busy || detecting}
+                aria-busy={detecting}
+                onClick={() => void detect()}
               >
-                {t('detect')}
+                {t(detecting ? 'detectingLogs' : 'detect')}
               </Button>
             </div>
+            {logFeedback && (
+              <div id="settings-log-feedback">
+                <Notice error={logFeedback.error}>
+                  <span role={logFeedback.error ? undefined : 'status'}>{t(logFeedback.key)}</span>
+                </Notice>
+              </div>
+            )}
           </Field>
           <Field id="settings-decks" label={t('decksDirectory')}>
             <div className="input-action">
@@ -243,7 +280,7 @@ export function SettingsDialog() {
           </Button>
           <Button
             variant="primary"
-            disabled={busy}
+            disabled={busy || detecting}
             onClick={() => {
               setBusy(true);
               void patchConfig(draft)

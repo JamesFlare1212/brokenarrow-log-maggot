@@ -271,6 +271,116 @@ describe('application updates', () => {
   });
 });
 
+describe('game log directory detection', () => {
+  async function settings(native: ReturnType<typeof nativeFixture>) {
+    render(
+      <AppProvider api={native.api}>
+        <App />
+      </AppProvider>,
+    );
+    await screen.findByText('监听中');
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    return within(await screen.findByRole('dialog', { name: '设置' }));
+  }
+
+  it('keeps an unsaved manual path when detection finds nothing and explains how to recover', async () => {
+    const native = nativeFixture(bootstrapForApp(), { 'directory.detect': () => '' });
+    const dialog = await settings(native);
+    const input = dialog.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement;
+    const manual = 'G:\\Games\\Broken Arrow\\GameLogs';
+    fireEvent.change(input, { target: { value: manual } });
+    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
+    await dialog.findByRole('alert');
+    expect(input.value).toBe(manual);
+    expect(dialog.getByRole('alert').textContent).toContain('已保留原路径');
+    expect(input.getAttribute('aria-describedby')).toBe('settings-log-feedback');
+    fireEvent.click(dialog.getByRole('button', { name: '保存' }));
+    await waitFor(() => expect(native.backend.config.logDir).toBe(manual));
+  });
+
+  it('only applies a detected directory after the user saves settings', async () => {
+    const detected = 'G:\\SteamLibrary\\steamapps\\common\\Broken Arrow\\GameLogs';
+    const native = nativeFixture(bootstrapForApp(), { 'directory.detect': () => detected });
+    const original = native.backend.config.logDir;
+    const dialog = await settings(native);
+    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
+    await dialog.findByText(translate('zh', 'logDetectFound'));
+    expect((dialog.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement).value).toBe(
+      detected,
+    );
+    expect(native.backend.config.logDir).toBe(original);
+    fireEvent.click(dialog.getByRole('button', { name: '保存' }));
+    await waitFor(() => expect(native.backend.config.logDir).toBe(detected));
+  });
+
+  it.each(['type', 'select'])(
+    'ignores late detection after a manual %s and prevents duplicate requests or premature saves',
+    async (method) => {
+      const pending = deferred<string>();
+      const manual = 'H:\\游戏\\GameLogs';
+      const native = nativeFixture(bootstrapForApp(), {
+        'directory.detect': () => pending.promise,
+        'directory.select': () => manual,
+      });
+      const dialog = await settings(native);
+      const input = dialog.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement;
+      fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
+      const detecting = dialog.getByRole('button', { name: '正在检测…' }) as HTMLButtonElement;
+      expect(detecting.disabled).toBe(true);
+      expect(detecting.getAttribute('aria-busy')).toBe('true');
+      expect((dialog.getByRole('button', { name: '保存' }) as HTMLButtonElement).disabled).toBe(
+        true,
+      );
+      fireEvent.click(detecting);
+      expect(native.calls.filter((call) => call.method === 'directory.detect')).toHaveLength(1);
+      if (method === 'type') fireEvent.change(input, { target: { value: manual } });
+      else {
+        fireEvent.click(dialog.getAllByRole('button', { name: '选择' })[0]!);
+        await waitFor(() => expect(input.value).toBe(manual));
+      }
+      await act(async () => pending.resolve('C:\\old\\GameLogs'));
+      expect(input.value).toBe(manual);
+      expect(dialog.queryByRole('alert')).toBeNull();
+      expect((dialog.getByRole('button', { name: '保存' }) as HTMLButtonElement).disabled).toBe(
+        false,
+      );
+    },
+  );
+
+  it('keeps the path on failure and clears the error after a successful retry', async () => {
+    let attempts = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'directory.detect': () => {
+        if (!attempts++) throw new Error('Access denied');
+        return 'G:\\Steam\\GameLogs';
+      },
+    });
+    const original = native.backend.config.logDir;
+    const dialog = await settings(native);
+    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
+    await dialog.findByRole('alert');
+    expect((dialog.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement).value).toBe(
+      original,
+    );
+    expect(dialog.getByRole('alert').textContent).toContain('重试或手动选择');
+    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
+    await dialog.findByText(translate('zh', 'logDetectFound'));
+    expect(dialog.queryByRole('alert')).toBeNull();
+  });
+
+  it('lets the user close settings during detection and ignores its late result', async () => {
+    const pending = deferred<string>();
+    const native = nativeFixture(bootstrapForApp(), { 'directory.detect': () => pending.promise });
+    const original = native.backend.config.logDir;
+    const dialog = await settings(native);
+    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
+    fireEvent.click(dialog.getByRole('button', { name: '取消' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await act(async () => pending.resolve('C:\\late\\GameLogs'));
+    expect(native.backend.config.logDir).toBe(original);
+  });
+});
+
 describe('request and native event ordering', () => {
   it('keeps the newest request when A finishes or fails after B', async () => {
     const a = deferred<string>();
