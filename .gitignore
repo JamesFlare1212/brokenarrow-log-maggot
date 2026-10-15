@@ -1,6 +1,16 @@
 ﻿# 依赖与构建产物
 node_modules/
 dist/
+*.tgz
+.npm-cache/
+.pnpm-store/
+apps/*/dist/
+coverage/
+.test-data/
+/.audit/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 .smoke-data/
 
 # 本地开发临时文件（_ 开头的脚本/数据）
@@ -31,7 +41,7 @@ replay-secret.json
 AGENTS.md
 
 # 本地管理站（版本发布/心跳统计，仅本机使用，不提交）
-admin/
+/admin/
 
 # 云端 Worker 代码（心跳服务/版本发布，仅本地部署粘贴到 Cloudflare，不提交）
-server/
+/server/

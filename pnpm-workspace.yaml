@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+onlyBuiltDependencies:
+  - electron
+  - uiohook-napi
+  - esbuild
+  - rolldown
+  - '@swc/core'

@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:"
+    />
+    <title>Recording</title>
+  </head>
+  <body>
+    <video id="capture" autoplay muted playsinline></video>
+    <script type="module" src="/src/recorder.ts"></script>
+  </body>
+</html>
