@@ -1,25 +1,40 @@
 name: Validate
 on:
   push:
-    branches: ['main', 'refactor/**']
+    branches: ['main']
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   check:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: 10.34.6
-      - uses: actions/setup-node@v5
+      - name: Set up Node.js 24 (LTS)
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm format:check
-      - run: pnpm smoke
-      - run: node scripts/smoke.mjs --real
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check formatting
+        run: pnpm format:check
+      - name: Run type checks
+        run: pnpm typecheck
+      - name: Run regression tests
+        run: pnpm test
+      - name: Build application
+        run: pnpm build
+      - name: Run Electron smoke test
+        run: node scripts/smoke.mjs
+      - name: Run real-data Electron smoke test
+        run: node scripts/smoke.mjs --real

@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write # Required to create a release
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
@@ -16,6 +20,15 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
+
+      - name: Verify release tag matches application version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -cne "v$version" -or $version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "The stable release tag must match package.json: v$version"
+          }
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -31,17 +44,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify release tag matches application version
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: pwsh
-        run: |
-          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          if ($env:GITHUB_REF_NAME -cne "v$version" -or $version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "The stable release tag must match package.json: v$version"
-          }
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Run type checks and regression tests
-        run: pnpm typecheck && pnpm test
+      - name: Run type checks
+        run: pnpm typecheck
+
+      - name: Run regression tests
+        run: pnpm test
 
       - name: Build NSIS installer and portable executable
         run: pnpm dist
@@ -49,15 +59,25 @@ jobs:
       - name: Verify update release artifacts
         run: node scripts/verify-update-artifacts.mjs
 
+      - name: Run packaged Electron smoke test
+        run: pnpm smoke:packaged
+
+      - name: Run real-data packaged Electron smoke test
+        run: pnpm smoke:packaged --real
+
       - name: Upload build artifacts (downloadable from the workflow page)
         uses: actions/upload-artifact@v4
         with:
           name: dist-windows
-          path: dist/
+          path: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
           if-no-files-found: error
+          compression-level: 0
 
       - name: Create GitHub release (tags only)
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
