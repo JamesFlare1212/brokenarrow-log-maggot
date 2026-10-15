@@ -210,7 +210,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     if (!state) return;
     document.documentElement.dataset.theme = state.config.theme;
     document.documentElement.lang = state.config.lang === 'zh' ? 'zh-CN' : state.config.lang;
-    document.title = translate(state.config.lang, 'brand') + ' by Zola';
+    document.title = translate(state.config.lang, 'brand');
   }, [state?.config.theme, state?.config.lang]);
   if (error)
     return (

@@ -153,7 +153,7 @@ async function start(): Promise<void> {
     minWidth: 900,
     minHeight: 600,
     show: !smoke,
-    title: '断箭蛆工具 byZola',
+    title: '断箭蛆工具',
     autoHideMenuBar: true,
     backgroundColor: '#111827',
     icon: join(root, 'build/icon.png'),

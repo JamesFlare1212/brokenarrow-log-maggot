@@ -25,7 +25,7 @@
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "smoke": "pnpm build && node scripts/smoke.mjs",
     "smoke:real": "pnpm build && node scripts/smoke.mjs --real",
-    "smoke:packaged": "node scripts/smoke.mjs \"dist/win-unpacked/断箭蛆工具 byZola.exe\"",
+    "smoke:packaged": "node scripts/smoke.mjs \"dist/win-unpacked/断箭蛆工具.exe\"",
     "dist": "pnpm build && node scripts/prepare-icon.mjs && electron-builder --win --publish never",
     "pack:desktop": "pnpm build && node scripts/prepare-icon.mjs && electron-builder --dir --publish never"
   },
@@ -61,7 +61,7 @@
       "releaseType": "release"
     },
     "appId": "com.zola.brokenarrow.maggot",
-    "productName": "断箭蛆工具 byZola",
+    "productName": "断箭蛆工具",
     "npmRebuild": false,
     "asar": true,
     "directories": {
@@ -96,7 +96,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "断箭蛆工具 byZola"
+      "shortcutName": "断箭蛆工具"
     },
     "portable": {
       "artifactName": "BrokenArrow-Portable-${version}-${arch}.${ext}"
