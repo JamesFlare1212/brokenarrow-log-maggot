@@ -237,9 +237,6 @@ export function App() {
             {t('settings')}
             <span className="version-label">v{state.version.current}</span>
           </Button>
-          <div className="sidebar-credit">
-            by Zola <span>Broken Arrow Companion</span>
-          </div>
         </div>
       </aside>
       <div className="workspace">

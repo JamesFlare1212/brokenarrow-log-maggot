@@ -111,18 +111,6 @@
   color: var(--muted);
   font: 11px var(--font-mono);
 }
-.sidebar-credit {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px 12px;
-  color: var(--muted);
-  font-size: 11px;
-}
-.sidebar-credit span {
-  font-size: 10px;
-  letter-spacing: 0.03em;
-}
 .workspace {
   display: flex;
   flex-direction: column;
