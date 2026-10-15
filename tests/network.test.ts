@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Database } from '../apps/server/src/storage/database';
 import { BatraceClient, type HttpPort } from '../apps/server/src/network/client';
+import { StatusService } from '../apps/server/src/network/status';
 
 const databases = new Set<Database>();
 const clients = new Set<BatraceClient>();
@@ -128,6 +129,57 @@ describe('BATrace scheduling and cache boundaries', () => {
     await client.get('/api/health', 'health', 0, { health: true, force: true });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(db.cache('health', true)).toBeNull();
+  });
+});
+
+describe('BATrace health checks', () => {
+  it('ignores a previous run and forced probes bypass cached responses', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
+    const { db, client, clock } = setup({ fetch: fetchImpl });
+    db.setState('health', { state: 'down', at: clock.now, checks: [] });
+    db.saveCache('health:/api/players/search?q=test&limit=1', {}, 60_000, clock.now);
+    const statuses = new StatusService(db, client);
+    expect(statuses.health()).toEqual({ state: 'unknown', at: 0, checks: [] });
+    const one = statuses.probe();
+    expect(statuses.probe()).toBe(one);
+    expect(await one).toMatchObject({ state: 'ok', checks: expect.any(Array) });
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(statuses.health().checks.every((check) => check.ok)).toBe(true);
+  });
+
+  it('reports partial failure, full failure, then recovery on subsequent probes', async () => {
+    let mode: 'partial' | 'down' | 'ok' = 'partial';
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      if (mode === 'down' || (mode === 'partial' && String(input).includes('/info?')))
+        return new Response('unavailable', { status: 403 });
+      return Response.json({ ok: true });
+    });
+    const { db, client } = setup({ fetch: fetchImpl });
+    const statuses = new StatusService(db, client);
+    expect((await statuses.probe()).state).toBe('partial');
+    expect(statuses.health().checks.filter((check) => !check.ok)).toMatchObject([{ status: 403 }]);
+    mode = 'down';
+    expect((await statuses.probe()).state).toBe('down');
+    mode = 'ok';
+    expect((await statuses.probe()).state).toBe('ok');
+  });
+
+  it('keeps offline fixtures unknown without attempting a connection', async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const { db, client } = setup({ fetch: fetchImpl, offline: true });
+    const statuses = new StatusService(db, client, false);
+    expect(await statuses.probe()).toEqual({ state: 'unknown', at: 0, checks: [] });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('records transport failures without inventing an HTTP status', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => {
+      throw new Error('Disconnected');
+    });
+    const { db, client } = setup({ fetch: fetchImpl });
+    const health = await new StatusService(db, client).probe();
+    expect(health.state).toBe('down');
+    expect(health.checks.every((check) => check.status === null)).toBe(true);
   });
 });
 

@@ -89,7 +89,7 @@ export class Application {
     this.analyzer = new Analyzer(this.client, this.db);
     this.tracker = new TrackerService(this.db, this.client, this.analyzer);
     this.decks = new DeckService(this.db);
-    this.statuses = new StatusService(this.db, this.client);
+    this.statuses = new StatusService(this.db, this.client, !platform.http.offline);
     this.parser = new LogParser((event) => this.onLog(event));
     this.watcher = new LogWatcher(this.parser, (watcher) =>
       this.event({ type: 'watcher', watcher }),
@@ -365,8 +365,12 @@ export class Application {
       setInterval(() => {
         if (!this.network) return;
         this.fire(this.syncBackground());
-        this.fire(this.probeHealth());
       }, 3600000),
+    );
+    this.timers.push(
+      setInterval(() => {
+        if (this.network) this.fire(this.probeHealth());
+      }, 60000),
     );
     this.timers.push(
       setInterval(() => {
@@ -376,7 +380,10 @@ export class Application {
         if (recording.phase === 'recording') this.event({ type: 'recording', recording });
       }, 1000),
     );
-    if (this.network) this.fire(this.syncBackground());
+    if (this.network) {
+      this.fire(this.probeHealth());
+      this.fire(this.syncBackground());
+    }
   }
   private scanArchive(dir: string): void {
     this.fire(

@@ -163,6 +163,12 @@
 .status-success {
   background: var(--success);
 }
+.status-warning {
+  background: var(--warning);
+}
+.status-danger {
+  background: var(--danger);
+}
 .status-recording {
   background: var(--danger);
 }

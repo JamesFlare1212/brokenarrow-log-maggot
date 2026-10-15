@@ -173,6 +173,35 @@ afterEach(() => {
   window.history.replaceState(null, '', window.location.pathname + window.location.search);
 });
 
+describe('BATrace status indicator', () => {
+  it('shows readable state and matching dot colors as health events arrive', async () => {
+    const initial = bootstrapForApp();
+    initial.health = { state: 'unknown', at: 0, checks: [] };
+    const native = nativeFixture(initial);
+    const { container } = render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByText('BATrace');
+    const badge = container.querySelector('.topbar-actions > .badge')!;
+    expect(badge.textContent).toContain('未知');
+    expect(badge.querySelector('.sr-only')).toBeNull();
+    for (const [state, tone, label] of [
+      ['ok', 'success', '服务可用'],
+      ['partial', 'warning', '服务部分可用'],
+      ['down', 'danger', '服务不可用'],
+    ] as const) {
+      act(() =>
+        native.emit({
+          type: 'health',
+          revision: native.backend.revision + 1,
+          health: { state, at: Date.now(), checks: [] },
+        }),
+      );
+      expect(badge.textContent).toContain(label);
+      expect(badge.classList.contains(`badge-${tone}`)).toBe(true);
+      expect(badge.querySelector(`.status-${tone}`)).not.toBeNull();
+    }
+  });
+});
+
 describe('application updates', () => {
   it('downloads only on click, shows native progress, and blocks restart until the match ends', async () => {
     const initial = structuredClone(demoBootstrap);

@@ -257,12 +257,9 @@ export function App() {
           </div>
           <div className="topbar-actions">
             <Badge tone={healthTone}>
-              <span
-                className={`status-dot ${state.health.state === 'ok' ? 'status-success' : ''}`}
-                aria-hidden="true"
-              />
+              <span className={`status-dot status-${healthTone}`} aria-hidden="true" />
               BATrace
-              <span className="sr-only">
+              <span>
                 {' '}
                 ·{' '}
                 {t(

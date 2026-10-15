@@ -88,6 +88,41 @@ afterEach(async () => {
   applications.clear();
 });
 
+it('probes health at startup and publishes recovery after one minute independently of hourly sync', async () => {
+  vi.useFakeTimers();
+  let available = false;
+  const fetchImpl = vi.fn<typeof fetch>(async () =>
+    available ? Response.json({ ok: true }) : new Response('missing', { status: 404 }),
+  );
+  const events: AppEvent[] = [];
+  const app = application(platform(fetchImpl), events, true);
+  const requests = vi.spyOn(app.client, 'get').mockImplementation(async () => {
+    if (!available) throw Object.assign(new Error('Unavailable'), { status: 404 });
+    return { value: { ok: true }, source: 'network', at: Date.now() };
+  });
+  app.db.updateConfig({ banPollEnabled: false, matchSyncEnabled: false });
+  app.db.setState('health', { state: 'ok', at: Date.now(), checks: [] });
+  try {
+    expect(app.snapshot().health.state).toBe('unknown');
+    await app.start();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(app.snapshot().health.state).toBe('down');
+    expect(events.some((event) => event.type === 'health' && event.health.state === 'down')).toBe(
+      true,
+    );
+    available = true;
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(app.snapshot().health.state).toBe('ok');
+    expect(events.some((event) => event.type === 'health' && event.health.state === 'ok')).toBe(
+      true,
+    );
+    expect(requests).toHaveBeenCalledTimes(8);
+  } finally {
+    await app.stop();
+    vi.useRealTimers();
+  }
+});
+
 it('imports historical logs on startup and directory change without replacing the live session or running historical effects', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ba-archive-lifecycle-'));
   const p = platform(vi.fn<typeof fetch>());
