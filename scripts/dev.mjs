@@ -30,7 +30,8 @@ const server = await createServer({ configFile: 'apps/web/vite.config.ts' });
 await server.listen();
 server.printUrls();
 delete environment.ELECTRON_RUN_AS_NODE;
-const child = spawn(electron, ['.'], { stdio: 'inherit', windowsHide: true, env: environment });
+// Electron is the visible development app; windowsHide also hides its GUI on Windows.
+const child = spawn(electron, ['.'], { stdio: 'inherit', windowsHide: false, env: environment });
 let closing = false;
 const close = async (code) => {
   if (closing) return;

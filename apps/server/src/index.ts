@@ -1,4 +1,5 @@
 export { Application } from './app';
+export { createBrowserFixtures } from './dev/browser';
 export { Database } from './storage/database';
 export { migrateLegacy } from './storage/migrate';
 export { BatraceClient, isChallenge } from './network/client';

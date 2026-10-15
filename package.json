@@ -16,6 +16,7 @@
     "format": "prettier --write apps packages tests scripts docs *.json *.yaml .github/**/*.yml *.md",
     "format:check": "prettier --check apps packages tests scripts docs *.json *.yaml .github/**/*.yml *.md",
     "dev": "node scripts/dev.mjs",
+    "dev:web": "pnpm --filter @ba/server build && vite --config apps/web/vite.config.ts --mode fixtures",
     "data:import": "pnpm --filter @ba/server build && node scripts/import-real-data.mjs",
     "start": "electron .",
     "typecheck": "tsc --noEmit",
