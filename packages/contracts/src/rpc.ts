@@ -81,6 +81,10 @@ const roster = z
   )
   .max(100);
 export const rpcSchemas = {
+  'updates.check': empty,
+  'updates.download': empty,
+  'updates.install': empty,
+  'updates.openDownload': empty,
   'app.bootstrap': empty,
   'config.update': configPatchSchema,
   'directory.select': z.object({ kind: z.enum(['logs', 'replays', 'decks']) }),
@@ -125,6 +129,10 @@ export const rpcSchemas = {
 export type RpcMethod = keyof typeof rpcSchemas;
 export type RpcInputs = { [K in RpcMethod]: z.infer<(typeof rpcSchemas)[K]> };
 export interface RpcOutputs {
+  'updates.check': import('./updates').UpdateState;
+  'updates.download': import('./updates').UpdateState;
+  'updates.install': import('./updates').UpdateState;
+  'updates.openDownload': null;
   'app.bootstrap': Bootstrap;
   'config.update': PublicConfig;
   'directory.select': string | null;
@@ -162,6 +170,7 @@ export interface RpcOutputs {
   'external.open': null;
 }
 export type AppEvent = (
+  | { type: 'updates'; updates: import('./updates').UpdateState }
   | { type: 'config'; config: PublicConfig }
   | { type: 'session'; session: Session }
   | { type: 'watcher'; watcher: WatcherStatus }

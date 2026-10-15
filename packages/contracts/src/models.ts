@@ -285,6 +285,7 @@ export interface PublicConfig {
   replaySaveDir: string;
 }
 export interface Bootstrap {
+  updates: import('./updates').UpdateState;
   revision: number;
   config: PublicConfig;
   session: Session;

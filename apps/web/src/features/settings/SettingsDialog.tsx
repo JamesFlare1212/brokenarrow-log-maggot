@@ -13,6 +13,7 @@ import { THEMES } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Dialog, Button, Field, Toggle, Notice } from '../../components/ui';
+import { UpdatePanel } from './UpdatePanel';
 const flags = [
   ['autoQueryCurrentMatch', 'autoQuery'],
   ['inputHookEnabled', 'inputHook'],
@@ -65,6 +66,7 @@ export function SettingsDialog() {
   return (
     <Dialog open onClose={closeModal} title={t('settings')} className="dialog-wide settings-dialog">
       <div className="settings-grid">
+        <UpdatePanel />
         <section className="settings-section">
           <h3>
             <Cable size={18} aria-hidden="true" />

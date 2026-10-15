@@ -35,6 +35,7 @@ import { BansPanel, BanAlertDialog } from '../features/bans/BansPanel';
 import { DecksPanel } from '../features/decks/DecksPanel';
 import { ApmPanel } from '../features/apm/ApmPanel';
 import { ReplaysPanel } from '../features/replays/ReplaysPanel';
+import { UpdatePanel } from '../features/settings/UpdatePanel';
 const ProfileDialog = lazy(() =>
   import('../features/players/ProfileDialog').then((module) => ({ default: module.ProfileDialog })),
 );
@@ -118,6 +119,7 @@ function About() {
       </div>
       <p>{t('aboutText')}</p>
       <p className="muted">{t('companion')} · by Zola</p>
+      <UpdatePanel />
       <div className="actions">
         {[
           ['BATrace', 'https://app.batrace.top/'],
@@ -332,6 +334,7 @@ export function App() {
               <Button onClick={() => openModal({ type: 'settings' })}>{t('select')}</Button>
             </Notice>
           )}
+          <UpdatePanel compact />
           {[...new Set([...visited, page])].map((panel) => (
             <div key={panel} className={`feature-page page-${panel}`} hidden={page !== panel}>
               {components[panel]}

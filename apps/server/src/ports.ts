@@ -1,6 +1,12 @@
 import type { ApmState, Display, Match, PublicConfig, RecordingState } from '@ba/contracts';
 import type { HttpPort } from './network/client';
 export interface Platform {
+  updates?: {
+    status(): import('@ba/contracts').UpdateState;
+    check(): Promise<import('@ba/contracts').UpdateState>;
+    download(): Promise<import('@ba/contracts').UpdateState>;
+    install(): import('@ba/contracts').UpdateState;
+  };
   http: HttpPort;
   version: string;
   selectDirectory(kind: 'logs' | 'replays' | 'decks'): Promise<string | null>;

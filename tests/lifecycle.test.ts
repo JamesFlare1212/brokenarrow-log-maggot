@@ -18,6 +18,7 @@ vi.mock('../apps/server/src/storage/database', async (importOriginal) => {
   };
 });
 import { Application } from '../apps/server/src/app';
+import { UpdateController, type UpdateEngine } from '../apps/desktop/src/updates/controller';
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -82,6 +83,46 @@ function application(value: Platform, events: AppEvent[] = [], network = false) 
 afterEach(async () => {
   await Promise.all([...applications].map((app) => app.stop()));
   applications.clear();
+});
+
+it('settles the update install RPC before draining application tasks and closing the database', async () => {
+  const p = platform(vi.fn<typeof fetch>());
+  const app = application(p);
+  const info = { version: '4.0.1', files: [], path: '', sha512: '', releaseDate: '' };
+  const engine = Object.assign(new EventEmitter(), {
+    autoDownload: true,
+    autoInstallOnAppQuit: true,
+    allowPrerelease: true,
+    allowDowngrade: true,
+    channel: 'latest',
+    checkForUpdates: vi.fn(async () => ({
+      isUpdateAvailable: true,
+      updateInfo: info,
+      versionInfo: info,
+    })),
+    downloadUpdate: vi.fn(async () => ['installer.exe']),
+    quitAndInstall: vi.fn(),
+  }) satisfies UpdateEngine;
+  const controller = new UpdateController({
+    version: p.version,
+    mode: 'installed',
+    engine,
+    emit: (updates) => app.event({ type: 'updates', updates }),
+    canInstall: () => true,
+    prepareInstall: () => app.stop(),
+    installFailed: vi.fn(),
+  });
+  p.updates = controller;
+  try {
+    await controller.check();
+    await controller.download();
+    expect((await app.invoke('updates.install', null)).status).toBe('installing');
+    await vi.waitFor(() => expect(engine.quitAndInstall).toHaveBeenCalledWith(true, true));
+    expect(p.recordings.stop).toHaveBeenCalled();
+    await expect(app.invoke('app.bootstrap', null)).rejects.toThrow('Application closed');
+  } finally {
+    controller.dispose();
+  }
 });
 
 class FakeHook extends EventEmitter implements Hook {

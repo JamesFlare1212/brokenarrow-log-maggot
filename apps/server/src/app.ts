@@ -13,7 +13,7 @@ import type {
   RpcOutputs,
   Session,
 } from '@ba/contracts';
-import { rpcSchemas } from '@ba/contracts';
+import { rpcSchemas, initialUpdateState, UPDATE_RELEASES_URL } from '@ba/contracts';
 import { array, object, text, number, errorMessage, MAP_NAMES } from '@ba/shared';
 import { Database } from './storage/database';
 import { migrateLegacy } from './storage/migrate';
@@ -93,6 +93,19 @@ export class Application {
       this.event({ type: 'watcher', watcher }),
     );
     this.handlers = {
+      'updates.check': () => platform.updates?.check() ?? initialUpdateState(platform.version),
+      'updates.download': () => {
+        if (!platform.updates) throw new Error('Updates unavailable');
+        return platform.updates.download();
+      },
+      'updates.install': () => {
+        if (!platform.updates) throw new Error('Updates unavailable');
+        return platform.updates.install();
+      },
+      'updates.openDownload': async () => {
+        await platform.openExternal(UPDATE_RELEASES_URL);
+        return null;
+      },
       'app.bootstrap': () => this.snapshot(),
       'config.update': async (patch) => {
         if (
@@ -303,6 +316,7 @@ export class Application {
   }
   snapshot(): Bootstrap {
     return {
+      updates: this.platform.updates?.status() ?? initialUpdateState(this.platform.version),
       revision: this.revision,
       config: this.db.config(),
       session: this.parser.snapshot(),

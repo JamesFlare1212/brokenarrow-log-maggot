@@ -61,6 +61,8 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
   const e = action.event,
     next = { ...state, revision: e.revision };
   switch (e.type) {
+    case 'updates':
+      return { ...next, updates: e.updates };
     case 'config':
       return { ...next, config: e.config };
     case 'session':

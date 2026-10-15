@@ -1,4 +1,6 @@
-import { app, BrowserWindow, ipcMain, net, Notification, protocol } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, Notification, protocol } from 'electron';
+import { existsSync } from 'node:fs';
+import electronUpdater from 'electron-updater';
 import { join, resolve } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { Application, type Platform } from '@ba/server';
@@ -9,6 +11,8 @@ import { ReplayProtocol } from './recordings/protocol';
 import { ApmController } from './apm';
 import { VerificationGate } from './gate';
 import { selectDirectory, detectLogDirectory, openPath } from './directories';
+import { UpdateController } from './updates/controller';
+import { readInstallRecord, writeInstallRecord } from './updates/install-record';
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'ba-replay',
@@ -21,14 +25,63 @@ let window: BrowserWindow | null = null,
   recordings: RecordingController | null = null,
   gate: VerificationGate | null = null,
   replays: ReplayProtocol | null = null,
+  updates: UpdateController | null = null,
   quitting = false;
 const smoke = process.env.BA_SMOKE === '1';
 const allowedDevUrl = process.env.BA_RENDERER_URL || '';
+function canInstallUpdate(): boolean {
+  const match = service?.parser.snapshot().current;
+  return (
+    !quitting &&
+    !(match && !match.endedAt) &&
+    !['starting', 'recording', 'stopping'].includes(recordings?.status().phase ?? 'idle')
+  );
+}
 async function start(): Promise<void> {
   const root = resolve(__dirname, '../../..'),
     userDir = app.getPath('userData');
   await mkdir(userDir, { recursive: true });
   const emit = (event: Parameters<Application['event']>[0]) => service?.event(event);
+  const updateMode =
+    !smoke &&
+    !allowedDevUrl &&
+    app.isPackaged &&
+    process.platform === 'win32' &&
+    process.env.BA_DISABLE_AUTO_UPDATE !== '1' &&
+    existsSync(join(process.resourcesPath, 'app-update.yml'))
+      ? process.env.PORTABLE_EXECUTABLE_FILE
+        ? 'portable'
+        : 'installed'
+      : 'disabled';
+  const installRecord = join(userDir, 'update-install.json');
+  updates = new UpdateController({
+    version: app.getVersion(),
+    mode: updateMode,
+    engine: updateMode === 'disabled' ? null : electronUpdater.autoUpdater,
+    notAppliedVersion: smoke ? null : await readInstallRecord(installRecord, app.getVersion()),
+    emit: (state) => emit({ type: 'updates', updates: state }),
+    canInstall: canInstallUpdate,
+    prepareInstall: async (targetVersion) => {
+      await writeInstallRecord(installRecord, app.getVersion(), targetVersion);
+      if (!canInstallUpdate())
+        throw new Error('A match or recording started. Install after it finishes.');
+      quitting = true;
+      gate?.close();
+      await service?.stop();
+      await recordings?.abort();
+      replays?.close();
+      // Keep the app alive until electron-updater starts NSIS and calls quit.
+    },
+    installFailed: (error) => {
+      if (!quitting) return; // Preparation failed before closing the service; retry in the UI.
+      dialog.showErrorBox(
+        '更新安装失败 / Update failed',
+        error + '\n应用将重新启动 / The app will restart.',
+      );
+      app.relaunch();
+      app.exit(1);
+    },
+  });
   replays = new ReplayProtocol();
   replays.register();
   gate = new VerificationGate((state) => emit({ type: 'gate', state }));
@@ -46,6 +99,7 @@ async function start(): Promise<void> {
   const nativeRecordings = recordings,
     apm = new ApmController();
   const platform: Platform = {
+    updates,
     version: app.getVersion(),
     http: {
       fetch: smoke
@@ -117,6 +171,7 @@ async function start(): Promise<void> {
     ? window.loadURL(allowedDevUrl)
     : window.loadFile(join(root, 'apps/web/dist/index.html'));
   await loaded;
+  updates.start();
   if (smoke) {
     const result = await window.webContents.executeJavaScript(
       `new Promise((resolve,reject)=>{let attempts=0;const timer=setInterval(()=>{if(document.querySelector('[data-ready="true"]')){clearInterval(timer);resolve({title:document.title,buttons:document.querySelectorAll('button').length,hasBridge:typeof window.assistant?.invoke==='function'});}else if(++attempts>100){clearInterval(timer);reject(new Error(document.body.innerText||'Renderer did not initialize'));}},100);})`,
@@ -156,6 +211,7 @@ async function shutdown(): Promise<void> {
   if (quitting) return;
   quitting = true;
   try {
+    updates?.dispose();
     gate?.close();
     await service?.stop();
     await recordings?.abort();

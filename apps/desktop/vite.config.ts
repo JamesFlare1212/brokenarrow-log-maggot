@@ -29,6 +29,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'electron',
+        'electron-updater',
         'uiohook-napi',
         ...builtinModules,
         ...builtinModules.map((m) => `node:${m}`),

@@ -121,6 +121,20 @@
   background: var(--surface-subtle);
   color: var(--accent);
 }
+.update-panel {
+  display: grid;
+  gap: 12px;
+  padding-block: 16px;
+  min-width: 0;
+}
+.update-panel p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.update-panel progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
 .notice {
   display: flex;
   align-items: center;

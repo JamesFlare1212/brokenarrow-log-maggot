@@ -10,7 +10,7 @@ import type {
   MiniInfo,
   Replay,
 } from '@ba/contracts';
-import { configSchema } from '@ba/contracts';
+import { configSchema, initialUpdateState } from '@ba/contracts';
 import { emptyMatch, emptyPlayer, determineOutcome, summarizeMaggot } from '@ba/shared';
 const now = Date.now();
 export const demoPlayers = Array.from({ length: 10 }, (_, i) => ({
@@ -117,6 +117,7 @@ const mini = (id: string): MiniInfo => {
   };
 };
 export const demoBootstrap: Bootstrap = {
+  updates: initialUpdateState('4.0.0'),
   revision: 0,
   config: configSchema.parse({
     logDir: 'C:\\Steam\\broken_arrow\\GameLogs',
@@ -238,6 +239,10 @@ export function createDemoBridge(): Bridge {
     [K in RpcMethod]: (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
   };
   const handlers: Handlers = {
+    'updates.check': () => state.updates,
+    'updates.download': () => state.updates,
+    'updates.install': () => state.updates,
+    'updates.openDownload': () => null,
     'app.bootstrap': () => structuredClone(state),
     'config.update': (patch) => {
       state.config = configSchema.parse({ ...state.config, ...patch });

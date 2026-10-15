@@ -40,6 +40,7 @@ import { PlayersPanel } from '../apps/web/src/features/players/PlayersPanel';
 import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
 import { ReplaysPanel } from '../apps/web/src/features/replays/ReplaysPanel';
 import { Button, Dialog } from '../apps/web/src/components/ui';
+import { UpdatePanel } from '../apps/web/src/features/settings/UpdatePanel';
 
 type Handler<K extends RpcMethod> = (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
 type Handlers = { [K in RpcMethod]: Handler<K> };
@@ -169,6 +170,105 @@ function bannedPlayer(): Ban {
 afterEach(() => {
   cleanup();
   window.history.replaceState(null, '', window.location.pathname + window.location.search);
+});
+
+describe('application updates', () => {
+  it('downloads only on click, shows native progress, and blocks restart until the match ends', async () => {
+    const initial = structuredClone(demoBootstrap);
+    initial.updates = {
+      ...initial.updates,
+      mode: 'installed',
+      status: 'available',
+      availableVersion: '4.0.1',
+    };
+    const f = nativeFixture(initial);
+    render(<UpdatePanel />, { wrapper: wrapper(f.api) });
+    const download = await screen.findByRole('button', { name: '下载更新' });
+    expect(f.calls.some((call) => call.method === 'updates.download')).toBe(false);
+    fireEvent.click(download);
+    await waitFor(() =>
+      expect(f.calls.some((call) => call.method === 'updates.download')).toBe(true),
+    );
+    act(() =>
+      f.emit({
+        type: 'updates',
+        updates: { ...initial.updates, status: 'downloading', downloadPercent: 37 },
+        revision: 1,
+      }),
+    );
+    expect(screen.getByRole('progressbar').getAttribute('value')).toBe('37');
+    act(() =>
+      f.emit({
+        type: 'updates',
+        updates: { ...initial.updates, status: 'downloaded', downloadPercent: 100 },
+        revision: 2,
+      }),
+    );
+    const install = screen.getByRole('button', { name: '重启并安装' }) as HTMLButtonElement;
+    expect(install.disabled).toBe(true);
+    expect(screen.getByText('请在对局和录制结束后重启安装。')).toBeTruthy();
+    act(() =>
+      f.emit({ type: 'session', session: { ...initial.session, current: null }, revision: 3 }),
+    );
+    expect(install.disabled).toBe(false);
+    fireEvent.click(install);
+    await waitFor(() =>
+      expect(f.calls.some((call) => call.method === 'updates.install')).toBe(true),
+    );
+  });
+
+  it('offers portable downloads without exposing an installer or accepting stale update events', async () => {
+    const initial = structuredClone(demoBootstrap);
+    initial.updates = {
+      ...initial.updates,
+      mode: 'portable',
+      status: 'available',
+      availableVersion: '4.0.1',
+    };
+    const f = nativeFixture(initial);
+    render(<UpdatePanel />, { wrapper: wrapper(f.api) });
+    const page = await screen.findByRole('button', { name: '打开下载页面' });
+    expect(screen.queryByRole('button', { name: '下载更新' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '重启并安装' })).toBeNull();
+    fireEvent.click(page);
+    await waitFor(() =>
+      expect(f.calls.some((call) => call.method === 'updates.openDownload')).toBe(true),
+    );
+    act(() =>
+      f.emit({
+        type: 'updates',
+        updates: { ...initial.updates, availableVersion: '4.0.2' },
+        revision: 2,
+      }),
+    );
+    act(() =>
+      f.emit({
+        type: 'updates',
+        updates: { ...initial.updates, availableVersion: '4.0.0' },
+        revision: 1,
+      }),
+    );
+    expect(screen.getByText('发现新版本 v4.0.2')).toBeTruthy();
+  });
+
+  it('shows retry controls after a failed download', async () => {
+    const initial = structuredClone(demoBootstrap);
+    initial.updates = {
+      ...initial.updates,
+      mode: 'installed',
+      status: 'error',
+      availableVersion: '4.0.1',
+      errorContext: 'download',
+      error: 'Network unavailable',
+    };
+    const f = nativeFixture(initial);
+    render(<UpdatePanel />, { wrapper: wrapper(f.api) });
+    fireEvent.click(await screen.findByRole('button', { name: '重试下载' }));
+    expect(screen.getByRole('alert').textContent).toContain('Network unavailable');
+    await waitFor(() =>
+      expect(f.calls.some((call) => call.method === 'updates.download')).toBe(true),
+    );
+  });
 });
 
 describe('request and native event ordering', () => {
