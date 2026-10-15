@@ -36,11 +36,23 @@ describe('browser development with repository fixtures', () => {
     expect(await service.invoke('players.search', { query: playerId })).toMatchObject({
       players: expect.arrayContaining([expect.objectContaining({ id: playerId })]),
     });
-    await service.invoke('config.update', { theme: 'forest' });
+    await service.invoke('config.update', {
+      theme: 'forest',
+      themeMode: 'light',
+      lightTheme: 'forest',
+      darkTheme: 'violet',
+      sidebarCollapsed: true,
+    });
     expect(events).toContainEqual(
       expect.objectContaining({
         type: 'config',
-        config: expect.objectContaining({ theme: 'forest' }),
+        config: expect.objectContaining({
+          theme: 'forest',
+          themeMode: 'light',
+          lightTheme: 'forest',
+          darkTheme: 'violet',
+          sidebarCollapsed: true,
+        }),
       }),
     );
     await service.invoke('matches.delete', { id: matches[0]!.id });

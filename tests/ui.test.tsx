@@ -24,15 +24,17 @@ import type {
   RpcOutputs,
 } from '@ba/contracts';
 import { configSchema } from '@ba/contracts';
-import { summarizeMaggot } from '@ba/shared';
+import { formatMetric, summarizeMaggot } from '@ba/shared';
 import { App } from '../apps/web/src/app/App';
 import { AppProvider, useApp } from '../apps/web/src/app/state';
 import {
-  createDemoBridge,
-  demoBootstrap,
-  demoMatch,
-  demoReport,
-} from '../apps/web/src/demo/bridge';
+  capturedAccounts,
+  capturedMatches,
+  capturedPlayers,
+  fixtureBootstrap,
+  matchFixture,
+  reportFixture,
+} from './fixtures/ui';
 import { useRequest } from '../apps/web/src/hooks/useRequest';
 import { translate } from '../apps/web/src/hooks/useI18n';
 import { SessionPanel } from '../apps/web/src/features/session/SessionPanel';
@@ -49,6 +51,9 @@ interface Call {
   method: RpcMethod;
   input: RpcInputs[RpcMethod];
 }
+const localPlayer = capturedPlayers.find((p) => p.id === fixtureBootstrap.session.localPlayerId)!;
+const secondPlayer = capturedPlayers.find((p) => p.id !== localPlayer.id)!;
+const missingHandlers: RpcMethod[] = [];
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -60,13 +65,30 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-/** Uses the production bridge contract and demo data, with controllable native event timing. */
+/** Uses captured game data and explicitly controlled native events and RPC responses. */
 function nativeFixture(
-  initial = structuredClone(demoBootstrap),
+  initial = structuredClone(fixtureBootstrap),
   overrides: Partial<Handlers> = {},
 ) {
   const backend = structuredClone(initial);
-  const fallback = createDemoBridge();
+  const defaults: Partial<Handlers> = {
+    'matches.list': ({ accountId }) =>
+      structuredClone(capturedMatches.filter((m) => !accountId || m.localPlayerId === accountId)),
+    'accounts.list': () => structuredClone(capturedAccounts),
+    'players.search': ({ query }) => ({
+      source: 'local',
+      players: structuredClone(
+        capturedPlayers.filter(
+          (player) =>
+            player.id.includes(query) || player.name.toLowerCase().includes(query.toLowerCase()),
+        ),
+      ),
+    }),
+    'bans.list': () => [],
+    'replays.list': () => [],
+    'replays.directory': () => ({ dir: 'test-profile/recordings', count: 0 }),
+    'displays.list': () => [],
+  };
   const listeners = new Set<(event: AppEvent) => void>();
   const calls: Call[] = [];
   const timeline: string[] = [];
@@ -110,7 +132,10 @@ function nativeFixture(
         emit({ type: 'config', config, revision: backend.revision + 1 });
         return structuredClone(config) as RpcOutputs[K];
       }
-      return fallback.invoke(method, input);
+      const handler = defaults[method] as Handler<K> | undefined;
+      if (handler) return handler(input);
+      missingHandlers.push(method);
+      throw new Error(`UI test must provide an RPC handler for ${method}`);
     },
     subscribe: (callback) => {
       subscriptions++;
@@ -151,7 +176,7 @@ function wrapper(api: Bridge) {
 }
 
 function bootstrapForApp(): Bootstrap {
-  const bootstrap = structuredClone(demoBootstrap);
+  const bootstrap = structuredClone(fixtureBootstrap);
   bootstrap.config.panelOrder = ['current'];
   return bootstrap;
 }
@@ -170,7 +195,9 @@ function bannedPlayer(): Ban {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  expect(missingHandlers.splice(0)).toEqual([]);
 });
 
 describe('BATrace status indicator', () => {
@@ -204,14 +231,17 @@ describe('BATrace status indicator', () => {
 
 describe('application updates', () => {
   it('downloads only on click, shows native progress, and blocks restart until the match ends', async () => {
-    const initial = structuredClone(demoBootstrap);
+    const initial = structuredClone(fixtureBootstrap);
     initial.updates = {
       ...initial.updates,
       mode: 'installed',
       status: 'available',
       availableVersion: '4.0.1',
     };
-    const f = nativeFixture(initial);
+    const f = nativeFixture(initial, {
+      'updates.download': () => initial.updates,
+      'updates.install': () => initial.updates,
+    });
     render(<UpdatePanel />, { wrapper: wrapper(f.api) });
     const download = await screen.findByRole('button', { name: '下载更新' });
     expect(f.calls.some((call) => call.method === 'updates.download')).toBe(false);
@@ -248,14 +278,14 @@ describe('application updates', () => {
   });
 
   it('offers portable downloads without exposing an installer or accepting stale update events', async () => {
-    const initial = structuredClone(demoBootstrap);
+    const initial = structuredClone(fixtureBootstrap);
     initial.updates = {
       ...initial.updates,
       mode: 'portable',
       status: 'available',
       availableVersion: '4.0.1',
     };
-    const f = nativeFixture(initial);
+    const f = nativeFixture(initial, { 'updates.openDownload': () => null });
     render(<UpdatePanel />, { wrapper: wrapper(f.api) });
     const page = await screen.findByRole('button', { name: '打开下载页面' });
     expect(screen.queryByRole('button', { name: '下载更新' })).toBeNull();
@@ -282,7 +312,7 @@ describe('application updates', () => {
   });
 
   it('shows retry controls after a failed download', async () => {
-    const initial = structuredClone(demoBootstrap);
+    const initial = structuredClone(fixtureBootstrap);
     initial.updates = {
       ...initial.updates,
       mode: 'installed',
@@ -291,7 +321,7 @@ describe('application updates', () => {
       errorContext: 'download',
       error: 'Network unavailable',
     };
-    const f = nativeFixture(initial);
+    const f = nativeFixture(initial, { 'updates.download': () => initial.updates });
     render(<UpdatePanel />, { wrapper: wrapper(f.api) });
     fireEvent.click(await screen.findByRole('button', { name: '重试下载' }));
     expect(screen.getByRole('alert').textContent).toContain('Network unavailable');
@@ -301,50 +331,383 @@ describe('application updates', () => {
   });
 });
 
-describe('game log directory detection', () => {
-  async function settings(native: ReturnType<typeof nativeFixture>) {
-    render(
-      <AppProvider api={native.api}>
-        <App />
-      </AppProvider>,
-    );
+describe('settings pages and automatic saving', () => {
+  async function openSettings(native: ReturnType<typeof nativeFixture>) {
+    render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByText('监听中');
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
-    return within(await screen.findByRole('dialog', { name: '设置' }));
+    return within(await screen.findByRole('main', { name: '设置' }));
   }
 
-  it('keeps an unsaved manual path when detection finds nothing and explains how to recover', async () => {
+  it('opens a full page, uses addressable tabs, and returns to the previous page with its input intact', async () => {
+    const native = nativeFixture(bootstrapForApp());
+    render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByText('监听中');
+    // Include the players page in this fixture's navigation.
+    act(() =>
+      native.emit({
+        type: 'config',
+        revision: native.backend.revision + 1,
+        config: { ...native.backend.config, panelOrder: ['current', 'players'] },
+      }),
+    );
+    fireEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: '玩家查询' }),
+    );
+    fireEvent.change(screen.getByRole('searchbox', { name: translate('zh', 'searchLabel') }), {
+      target: { value: localPlayer.name },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    const page = within(await screen.findByRole('main', { name: '设置' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getAllByRole('tab')).toHaveLength(7);
+    expect(page.queryByRole('button', { name: '保存' })).toBeNull();
+    expect(page.queryByRole('button', { name: '取消' })).toBeNull();
+    expect(location.hash).toBe('#settings/appearance');
+    fireEvent.click(screen.getByRole('tab', { name: '游戏连接' }));
+    expect(location.hash).toBe('#settings/connection');
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    expect(location.hash).toBe('#players');
+    expect(
+      (screen.getByRole('searchbox', { name: translate('zh', 'searchLabel') }) as HTMLInputElement)
+        .value,
+    ).toBe(localPlayer.name);
+  });
+
+  it('autosaves separate light and dark palettes and restores them when switching modes and reopening', async () => {
+    const native = nativeFixture(bootstrapForApp());
+    const page = await openSettings(native);
+    expect(within(page.getByRole('group', { name: '主题' })).getAllByRole('button')).toHaveLength(
+      3,
+    );
+    expect(
+      within(page.getByRole('group', { name: '配色方案' })).getAllByRole('button'),
+    ).toHaveLength(18);
+    fireEvent.click(page.getByRole('button', { name: '森林 · 浅色' }));
+    expect(document.documentElement.dataset.mode).toBe('dark');
+    fireEvent.click(page.getByRole('button', { name: '紫夜 · 深色' }));
+    await waitFor(() =>
+      expect(native.backend.config).toMatchObject({
+        lightTheme: 'forest',
+        darkTheme: 'violet',
+        themeMode: 'dark',
+      }),
+    );
+    expect(document.documentElement.dataset).toMatchObject({ mode: 'dark', theme: 'violet' });
+    fireEvent.click(page.getByRole('button', { name: '浅色' }));
+    await waitFor(() => expect(native.backend.config.themeMode).toBe('light'));
+    expect(document.documentElement.dataset).toMatchObject({ mode: 'light', theme: 'forest' });
+    expect(page.getByRole('button', { name: '森林 · 浅色' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(page.getByRole('button', { name: '紫夜 · 深色' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    const reopened = within(await screen.findByRole('main', { name: '设置' }));
+    expect(reopened.getByRole('button', { name: '森林 · 浅色' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(reopened.getByRole('button', { name: '紫夜 · 深色' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(
+      native.calls
+        .filter((call) => call.method === 'config.update')
+        .every((call) =>
+          Object.keys(call.input!).every((key) =>
+            ['lightTheme', 'darkTheme', 'themeMode'].includes(key),
+          ),
+        ),
+    ).toBe(true);
+  });
+
+  it.each(['system', 'light', 'dark'] as const)(
+    'keeps %s mode when changing individual palettes or a whole pair',
+    async (mode) => {
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+      );
+      const initial = bootstrapForApp();
+      initial.config.themeMode = mode;
+      initial.config.lightTheme = 'dark';
+      initial.config.darkTheme = 'dark';
+      const native = nativeFixture(initial);
+      const page = await openSettings(native);
+      const resolvedMode = mode === 'light' ? 'light' : 'dark';
+      fireEvent.click(page.getByRole('button', { name: '森林 · 浅色' }));
+      await waitFor(() => expect(native.backend.config.lightTheme).toBe('forest'));
+      expect(native.backend.config.themeMode).toBe(mode);
+      expect(document.documentElement.dataset).toMatchObject({
+        mode: resolvedMode,
+        theme: mode === 'light' ? 'forest' : 'dark',
+      });
+      fireEvent.click(page.getByRole('button', { name: '紫夜 · 深色' }));
+      await waitFor(() => expect(native.backend.config.darkTheme).toBe('violet'));
+      expect(native.backend.config.themeMode).toBe(mode);
+      expect(document.documentElement.dataset).toMatchObject({
+        mode: resolvedMode,
+        theme: mode === 'light' ? 'forest' : 'violet',
+      });
+      fireEvent.click(page.getByRole('button', { name: '深海 · 选择整组配色' }));
+      await waitFor(() =>
+        expect(native.backend.config).toMatchObject({
+          lightTheme: 'ocean',
+          darkTheme: 'ocean',
+          themeMode: mode,
+        }),
+      );
+      expect(document.documentElement.dataset).toMatchObject({
+        mode: resolvedMode,
+        theme: 'ocean',
+      });
+      expect(
+        page
+          .getByRole('button', { name: translate('zh', 'themeMode.' + mode) })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+      expect(
+        native.calls
+          .filter((call) => call.method === 'config.update')
+          .every((call) => !Object.keys(call.input!).includes('themeMode')),
+      ).toBe(true);
+    },
+  );
+
+  it('selects a full palette pair with the keyboard, preserves system mode, and keeps swatches independent', async () => {
+    const initial = bootstrapForApp();
+    initial.config.themeMode = 'system';
+    initial.config.lightTheme = 'forest';
+    initial.config.darkTheme = 'violet';
+    const native = nativeFixture(initial);
+    const page = await openSettings(native);
+    const user = userEvent.setup();
+    const card = page.getByRole('button', { name: '石墨 · 选择整组配色' });
+    card.focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(native.backend.config).toMatchObject({
+        lightTheme: 'dark',
+        darkTheme: 'dark',
+        themeMode: 'system',
+      }),
+    );
+    expect(
+      native.calls.filter((call) => call.method === 'config.update').map((call) => call.input),
+    ).toEqual([{ lightTheme: 'dark', darkTheme: 'dark' }]);
+    expect(card.getAttribute('aria-pressed')).toBe('true');
+    expect(page.getByRole('button', { name: '石墨 · 浅色' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(page.getByRole('button', { name: '石墨 · 深色' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    fireEvent.click(page.getByRole('button', { name: '紫夜 · 深色' }));
+    await waitFor(() =>
+      expect(native.backend.config).toMatchObject({
+        lightTheme: 'dark',
+        darkTheme: 'violet',
+        themeMode: 'system',
+      }),
+    );
+    expect(card.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(page.getByRole('button', { name: '森林 · 选择整组配色' }));
+    await waitFor(() =>
+      expect(native.backend.config).toMatchObject({
+        lightTheme: 'forest',
+        darkTheme: 'forest',
+        themeMode: 'system',
+      }),
+    );
+  });
+
+  it('uses each saved palette when the OS changes, including after leaving settings', async () => {
+    const listeners = new Set<() => void>();
+    const media = {
+      matches: false,
+      addEventListener: (_: string, callback: () => void) => listeners.add(callback),
+      removeEventListener: (_: string, callback: () => void) => listeners.delete(callback),
+    };
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => media),
+    );
+    const native = nativeFixture(bootstrapForApp());
+    const page = await openSettings(native);
+    fireEvent.click(page.getByRole('button', { name: '森林 · 浅色' }));
+    fireEvent.click(page.getByRole('button', { name: '深海 · 深色' }));
+    fireEvent.click(page.getByRole('button', { name: '跟随系统' }));
+    await waitFor(() =>
+      expect(native.backend.config).toMatchObject({
+        lightTheme: 'forest',
+        darkTheme: 'ocean',
+        themeMode: 'system',
+      }),
+    );
+    expect(document.documentElement.dataset).toMatchObject({ mode: 'light', theme: 'forest' });
+    act(() => {
+      media.matches = true;
+      listeners.forEach((callback) => callback());
+    });
+    expect(document.documentElement.dataset).toMatchObject({ mode: 'dark', theme: 'ocean' });
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    act(() => {
+      media.matches = false;
+      listeners.forEach((callback) => callback());
+    });
+    expect(document.documentElement.dataset).toMatchObject({ mode: 'light', theme: 'forest' });
+  });
+
+  it('retains failed changes, displays the save error, and retries the same patch', async () => {
+    let failed = false;
+    const native = nativeFixture(bootstrapForApp(), {
+      'config.update': (patch) => {
+        if (!failed) {
+          failed = true;
+          throw new Error('Disk is busy');
+        }
+        const config = configSchema.parse({ ...native.backend.config, ...patch });
+        native.emit({ type: 'config', config, revision: native.backend.revision + 1 });
+        return config;
+      },
+    });
+    const page = await openSettings(native);
+    fireEvent.click(page.getByRole('button', { name: '森林 · 深色' }));
+    expect((await page.findByRole('alert')).textContent).toContain('Disk is busy');
+    expect(native.backend.config.darkTheme).toBeUndefined();
+    expect(document.documentElement.dataset).toMatchObject({ mode: 'dark', theme: 'forest' });
+    fireEvent.click(page.getByRole('button', { name: '重试保存' }));
+    await waitFor(() =>
+      expect(native.backend.config).toMatchObject({ darkTheme: 'forest', themeMode: 'dark' }),
+    );
+    await waitFor(() => expect(page.queryByRole('alert')).toBeNull());
+    expect(page.getByRole('status').textContent).toBe('已自动保存');
+  });
+
+  it('serializes saves and keeps the newest choices visible when an older save completes', async () => {
+    const writes: Array<{
+      patch: RpcInputs['config.update'];
+      result: ReturnType<typeof deferred<Bootstrap['config']>>;
+    }> = [];
+    const native = nativeFixture(bootstrapForApp(), {
+      'config.update': (patch) => {
+        const result = deferred<Bootstrap['config']>();
+        writes.push({ patch, result });
+        return result.promise.then((config) => {
+          native.emit({ type: 'config', config, revision: native.backend.revision + 1 });
+          return config;
+        });
+      },
+    });
+    const page = await openSettings(native);
+    fireEvent.click(page.getByRole('button', { name: '森林 · 浅色' }));
+    fireEvent.click(page.getByRole('button', { name: '暖橙 · 浅色' }));
+    fireEvent.click(page.getByRole('button', { name: '紫夜 · 深色' }));
+    expect(writes).toHaveLength(1);
+    await act(async () =>
+      writes[0]!.result.resolve(
+        configSchema.parse({ ...native.backend.config, ...writes[0]!.patch }),
+      ),
+    );
+    expect(writes).toHaveLength(2);
+    expect(writes[1]!.patch).toEqual({
+      lightTheme: 'orange',
+      darkTheme: 'violet',
+    });
+    expect(document.documentElement.dataset).toMatchObject({ mode: 'dark', theme: 'violet' });
+    expect(page.getByRole('button', { name: '暖橙 · 浅色' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    await act(async () =>
+      writes[1]!.result.resolve(
+        configSchema.parse({ ...native.backend.config, ...writes[1]!.patch }),
+      ),
+    );
+    expect(native.backend.config).toMatchObject({
+      lightTheme: 'orange',
+      darkTheme: 'violet',
+      themeMode: 'dark',
+    });
+    expect(page.getByRole('status').textContent).toBe('已自动保存');
+  });
+
+  it('persists sidebar collapse and shares it between the workspace and settings', async () => {
+    const native = nativeFixture(bootstrapForApp());
+    render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByText('监听中');
+    fireEvent.click(screen.getByRole('button', { name: '折叠侧边栏' }));
+    await waitFor(() => expect(native.backend.config.sidebarCollapsed).toBe(true));
+    expect(document.querySelector('.app-shell')?.classList.contains('sidebar-collapsed')).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    await screen.findByRole('main', { name: '设置' });
+    expect(
+      document.querySelector('.settings-page')?.classList.contains('settings-page-collapsed'),
+    ).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '展开侧边栏' }));
+    await waitFor(() => expect(native.backend.config.sidebarCollapsed).toBe(false));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    expect(document.querySelector('.app-shell')?.classList.contains('sidebar-collapsed')).toBe(
+      false,
+    );
+  });
+
+  it('opens a settings tab directly from its URL and autosaves switches', async () => {
+    history.replaceState(null, '', '#settings/automation');
+    const native = nativeFixture(bootstrapForApp());
+    render(<App />, { wrapper: wrapper(native.api) });
+    const page = within(await screen.findByRole('main', { name: '设置' }));
+    expect(screen.getByRole('tab', { name: '自动化' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(page.getByRole('checkbox', { name: translate('zh', 'autoQuery') }));
+    await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(false));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    expect(location.hash).toBe('#current');
+  });
+});
+
+describe('game log directory detection', () => {
+  async function settings(native: ReturnType<typeof nativeFixture>) {
+    render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByText('监听中');
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    const page = within(await screen.findByRole('main', { name: '设置' }));
+    fireEvent.click(screen.getByRole('tab', { name: '游戏连接' }));
+    return page;
+  }
+
+  it('retains and autosaves a manual path when detection finds nothing', async () => {
     const native = nativeFixture(bootstrapForApp(), { 'directory.detect': () => '' });
-    const dialog = await settings(native);
-    const input = dialog.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement;
+    const page = await settings(native);
+    const input = page.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement;
     const manual = 'G:\\Games\\Broken Arrow\\GameLogs';
     fireEvent.change(input, { target: { value: manual } });
-    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
-    await dialog.findByRole('alert');
+    fireEvent.click(page.getByRole('button', { name: '自动检测 Steam' }));
+    await page.findByRole('alert');
     expect(input.value).toBe(manual);
-    expect(dialog.getByRole('alert').textContent).toContain('已保留原路径');
+    expect(page.getByRole('alert').textContent).toContain('已保留原路径');
     expect(input.getAttribute('aria-describedby')).toBe('settings-log-feedback');
-    fireEvent.click(dialog.getByRole('button', { name: '保存' }));
     await waitFor(() => expect(native.backend.config.logDir).toBe(manual));
   });
 
-  it('only applies a detected directory after the user saves settings', async () => {
+  it('automatically saves a detected directory', async () => {
     const detected = 'G:\\SteamLibrary\\steamapps\\common\\Broken Arrow\\GameLogs';
     const native = nativeFixture(bootstrapForApp(), { 'directory.detect': () => detected });
-    const original = native.backend.config.logDir;
-    const dialog = await settings(native);
-    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
-    await dialog.findByText(translate('zh', 'logDetectFound'));
-    expect((dialog.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement).value).toBe(
-      detected,
-    );
-    expect(native.backend.config.logDir).toBe(original);
-    fireEvent.click(dialog.getByRole('button', { name: '保存' }));
+    const page = await settings(native);
+    fireEvent.click(page.getByRole('button', { name: '自动检测 Steam' }));
+    await page.findByText(translate('zh', 'logDetectFound'));
     await waitFor(() => expect(native.backend.config.logDir).toBe(detected));
   });
 
   it.each(['type', 'select'])(
-    'ignores late detection after a manual %s and prevents duplicate requests or premature saves',
+    'ignores late detection after a manual %s and prevents duplicate requests',
     async (method) => {
       const pending = deferred<string>();
       const manual = 'H:\\游戏\\GameLogs';
@@ -352,28 +715,23 @@ describe('game log directory detection', () => {
         'directory.detect': () => pending.promise,
         'directory.select': () => manual,
       });
-      const dialog = await settings(native);
-      const input = dialog.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement;
-      fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
-      const detecting = dialog.getByRole('button', { name: '正在检测…' }) as HTMLButtonElement;
+      const page = await settings(native);
+      const input = page.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement;
+      fireEvent.click(page.getByRole('button', { name: '自动检测 Steam' }));
+      const detecting = page.getByRole('button', { name: '正在检测…' }) as HTMLButtonElement;
       expect(detecting.disabled).toBe(true);
       expect(detecting.getAttribute('aria-busy')).toBe('true');
-      expect((dialog.getByRole('button', { name: '保存' }) as HTMLButtonElement).disabled).toBe(
-        true,
-      );
       fireEvent.click(detecting);
       expect(native.calls.filter((call) => call.method === 'directory.detect')).toHaveLength(1);
       if (method === 'type') fireEvent.change(input, { target: { value: manual } });
       else {
-        fireEvent.click(dialog.getAllByRole('button', { name: '选择' })[0]!);
+        fireEvent.click(page.getAllByRole('button', { name: '选择' })[0]!);
         await waitFor(() => expect(input.value).toBe(manual));
       }
       await act(async () => pending.resolve('C:\\old\\GameLogs'));
       expect(input.value).toBe(manual);
-      expect(dialog.queryByRole('alert')).toBeNull();
-      expect((dialog.getByRole('button', { name: '保存' }) as HTMLButtonElement).disabled).toBe(
-        false,
-      );
+      expect(page.queryByRole('alert')).toBeNull();
+      await waitFor(() => expect(native.backend.config.logDir).toBe(manual));
     },
   );
 
@@ -386,28 +744,31 @@ describe('game log directory detection', () => {
       },
     });
     const original = native.backend.config.logDir;
-    const dialog = await settings(native);
-    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
-    await dialog.findByRole('alert');
-    expect((dialog.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement).value).toBe(
+    const page = await settings(native);
+    fireEvent.click(page.getByRole('button', { name: '自动检测 Steam' }));
+    await page.findByRole('alert');
+    expect((page.getByRole('textbox', { name: '游戏日志目录' }) as HTMLInputElement).value).toBe(
       original,
     );
-    expect(dialog.getByRole('alert').textContent).toContain('重试或手动选择');
-    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
-    await dialog.findByText(translate('zh', 'logDetectFound'));
-    expect(dialog.queryByRole('alert')).toBeNull();
+    expect(page.getByRole('alert').textContent).toContain('重试或手动选择');
+    fireEvent.click(page.getByRole('button', { name: '自动检测 Steam' }));
+    await page.findByText(translate('zh', 'logDetectFound'));
+    expect(page.queryByRole('alert')).toBeNull();
   });
 
-  it('lets the user close settings during detection and ignores its late result', async () => {
+  it('flushes pending text on return and ignores a late detection after leaving', async () => {
     const pending = deferred<string>();
     const native = nativeFixture(bootstrapForApp(), { 'directory.detect': () => pending.promise });
-    const original = native.backend.config.logDir;
-    const dialog = await settings(native);
-    fireEvent.click(dialog.getByRole('button', { name: '自动检测 Steam' }));
-    fireEvent.click(dialog.getByRole('button', { name: '取消' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const page = await settings(native);
+    fireEvent.click(page.getByRole('button', { name: '自动检测 Steam' }));
+    fireEvent.change(page.getByRole('textbox', { name: '游戏日志目录' }), {
+      target: { value: 'G:\\latest\\GameLogs' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    expect(native.backend.config.logDir).toBe('G:\\latest\\GameLogs');
     await act(async () => pending.resolve('C:\\late\\GameLogs'));
-    expect(native.backend.config.logDir).toBe(original);
+    expect(native.backend.config.logDir).toBe('G:\\latest\\GameLogs');
   });
 });
 
@@ -454,7 +815,7 @@ describe('request and native event ordering', () => {
   });
 
   it('subscribes before bootstrap, replays newer buffered events in order and rejects late stale state', async () => {
-    const bootstrap = structuredClone(demoBootstrap);
+    const bootstrap = structuredClone(fixtureBootstrap);
     bootstrap.revision = 4;
     bootstrap.watcher.listening = false;
     const pending = deferred<Bootstrap>();
@@ -502,7 +863,7 @@ describe('request and native event ordering', () => {
   });
 
   it('does not reopen a ban dialog or emit an error toast for stale revisions', async () => {
-    const bootstrap = structuredClone(demoBootstrap);
+    const bootstrap = structuredClone(fixtureBootstrap);
     bootstrap.revision = 10;
     const native = nativeFixture(bootstrap);
     const { result } = renderHook(() => useApp(), { wrapper: wrapper(native.api) });
@@ -516,7 +877,7 @@ describe('request and native event ordering', () => {
   });
 
   it('shows a buffered ban alert after bootstrap', async () => {
-    const bootstrap = structuredClone(demoBootstrap);
+    const bootstrap = structuredClone(fixtureBootstrap);
     const pending = deferred<Bootstrap>();
     const native = nativeFixture(bootstrap, { 'app.bootstrap': () => pending.promise });
     const { result } = renderHook(() => useApp(), { wrapper: wrapper(native.api) });
@@ -534,7 +895,7 @@ describe('request and native event ordering', () => {
     const first = deferred<Bootstrap>();
     const second = deferred<Bootstrap>();
     let bootstraps = 0;
-    const native = nativeFixture(structuredClone(demoBootstrap), {
+    const native = nativeFixture(structuredClone(fixtureBootstrap), {
       'app.bootstrap': () => (++bootstraps === 1 ? first.promise : second.promise),
     });
     const { result, unmount } = renderHook(() => useApp(), {
@@ -544,13 +905,13 @@ describe('request and native event ordering', () => {
     expect(native.subscriptions).toBe(2);
     expect(native.unsubscriptions).toBe(1);
     expect(native.activeSubscriptions).toBe(1);
-    const current = structuredClone(demoBootstrap);
+    const current = structuredClone(fixtureBootstrap);
     current.revision = 5;
     await act(async () => {
       second.resolve(current);
       await second.promise;
     });
-    const discarded = structuredClone(demoBootstrap);
+    const discarded = structuredClone(fixtureBootstrap);
     discarded.revision = 100;
     discarded.watcher.listening = false;
     await act(async () => {
@@ -568,13 +929,13 @@ describe('request and native event ordering', () => {
 describe('user interaction regressions', () => {
   it('makes archive records beyond 500 reachable and resets pagination when filters change', async () => {
     const rows = Array.from({ length: 525 }, (_, index) => ({
-      ...demoMatch(String(1000 + index)),
+      ...matchFixture({ id: String(1000 + index) }),
       map: `Archive map ${index}`,
       endedAt: 1_700_000_000_000 + index,
       outcome: index % 2 === 0 ? ('win' as const) : ('loss' as const),
       localPlayerId: index % 2 === 0 ? '1' : '2',
     }));
-    const native = nativeFixture(structuredClone(demoBootstrap), {
+    const native = nativeFixture(structuredClone(fixtureBootstrap), {
       'matches.list': ({ accountId }) =>
         accountId ? rows.filter((m) => m.localPlayerId === accountId) : rows,
       'accounts.list': () =>
@@ -611,8 +972,8 @@ describe('user interaction regressions', () => {
 
   it('scans local logs before refreshing the archive and exposes a busy state during the scan', async () => {
     const pending = deferred<null>();
-    let rows = [demoMatch('101')];
-    const native = nativeFixture(structuredClone(demoBootstrap), {
+    let rows = [matchFixture({ id: '101' })];
+    const native = nativeFixture(structuredClone(fixtureBootstrap), {
       'matches.list': () => rows,
       'matches.scan': () => pending.promise,
     });
@@ -631,7 +992,7 @@ describe('user interaction regressions', () => {
     expect(scanning.getAttribute('aria-busy')).toBe('true');
     expect(native.calls.slice(calls).map((call) => call.method)).toEqual(['matches.scan']);
     await act(async () => {
-      rows = [...rows, demoMatch('102')];
+      rows = [...rows, matchFixture({ id: '102' })];
       pending.resolve(null);
       await pending.promise;
     });
@@ -659,7 +1020,7 @@ describe('user interaction regressions', () => {
     };
     const native = nativeFixture(bootstrapForApp(), {
       'players.profile': () => profile,
-      'players.report': ({ id }) => ({ ...demoReport(id), name: ban.name }),
+      'players.report': ({ id }) => ({ ...reportFixture({ id }), name: ban.name }),
     });
     render(
       <AppProvider api={native.api}>
@@ -679,7 +1040,7 @@ describe('user interaction regressions', () => {
     );
   });
 
-  it('changes language while preserving the listening state and live status indicator', async () => {
+  it('changes language in settings while preserving the listening state and live status indicator', async () => {
     const native = nativeFixture(bootstrapForApp());
     const view = render(
       <AppProvider api={native.api}>
@@ -687,7 +1048,12 @@ describe('user interaction regressions', () => {
       </AppProvider>,
     );
     await screen.findByText('监听中');
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    await screen.findByRole('main', { name: '设置' });
+    fireEvent.click(screen.getByRole('tab', { name: '常规' }));
     fireEvent.change(screen.getByRole('combobox', { name: '语言' }), { target: { value: 'en' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: 'Settings' })).toBeNull());
     await screen.findByText('Listening');
     expect(screen.queryByText('Not listening')).toBeNull();
     expect(view.container.querySelector('.status-dot')?.classList.contains('status-success')).toBe(
@@ -703,7 +1069,15 @@ describe('user interaction regressions', () => {
     bootstrap.config.panelOrder = ['current', 'apm', 'decks'];
     bootstrap.config.inputHookEnabled = true;
     bootstrap.config.collapsedPanels = ['decks', 'apm'];
-    const native = nativeFixture(bootstrap);
+    const native = nativeFixture(bootstrap, {
+      'decks.list': () => ({
+        found: false,
+        decksDir: '',
+        backupsDir: '',
+        decks: [],
+        backups: [],
+      }),
+    });
     render(
       <AppProvider api={native.api}>
         <App />
@@ -711,10 +1085,11 @@ describe('user interaction regressions', () => {
     );
     await screen.findByText('监听中');
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
-    const dialog = await screen.findByRole('dialog', { name: '设置' });
+    const dialog = await screen.findByRole('main', { name: '设置' });
+    fireEvent.click(screen.getByRole('tab', { name: '导航' }));
     fireEvent.click(within(dialog).getByRole('button', { name: '上移 卡组工具' }));
-    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
     const navigation = screen.getByRole('navigation');
     expect(
       within(navigation)
@@ -746,12 +1121,15 @@ describe('user interaction regressions', () => {
     await screen.findByRole('heading', { level: 1, name: '对局档案' });
     const navigation = screen.getByRole('navigation');
     fireEvent.click(screen.getByRole('button', { name: '失利' }));
-    await screen.findByText('没有符合筛选条件的对局');
+    await screen.findByText(
+      `样本数: ${capturedMatches.filter((m) => m.outcome === 'loss').length}`,
+    );
     fireEvent.click(within(navigation).getByRole('button', { name: '玩家查询' }));
     const search = screen.getByLabelText(translate('zh', 'searchLabel'));
-    fireEvent.change(search, { target: { value: 'Zola' } });
+    fireEvent.change(search, { target: { value: localPlayer.name } });
     fireEvent.click(screen.getByRole('button', { name: '搜索' }));
-    await screen.findByRole('button', { name: /^Zola #8863/ });
+    const resultName = (name: string) => name.startsWith(`${localPlayer.name} #${localPlayer.id}`);
+    await screen.findByRole('button', { name: resultName });
     act(() => {
       window.location.hash = 'archive';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -760,17 +1138,84 @@ describe('user interaction regressions', () => {
     expect(document.activeElement).toBe(screen.getByRole('main'));
     fireEvent.click(within(navigation).getByRole('button', { name: '玩家查询' }));
     expect((screen.getByLabelText(translate('zh', 'searchLabel')) as HTMLInputElement).value).toBe(
-      'Zola',
+      localPlayer.name,
     );
-    expect(screen.getByRole('button', { name: /^Zola #8863/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: resultName })).toBeTruthy();
     expect(window.location.hash).toBe('#players');
   });
 
+  it('keeps ban tracking out of overview even for legacy visibility preferences and available on its own page', async () => {
+    const initial = bootstrapForApp();
+    initial.config.panelOrder = ['current', 'bans'];
+    initial.config.banCardVisible = true;
+    const list = vi.fn(() => [bannedPlayer()]);
+    const native = nativeFixture(initial, { 'bans.list': list });
+    render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByText('监听中');
+    expect(screen.queryByRole('group', { name: '封禁追踪' })).toBeNull();
+    expect(list).not.toHaveBeenCalled();
+    const nav = within(screen.getByRole('navigation'));
+    fireEvent.click(nav.getByRole('button', { name: '封禁追踪' }));
+    expect(screen.getByRole('heading', { level: 1, name: '封禁追踪' })).toBeTruthy();
+    await screen.findByRole('button', { name: /Banned Arrow/ });
+    expect(list).toHaveBeenCalledTimes(1);
+    fireEvent.click(nav.getByRole('button', { name: '总览' }));
+    expect(screen.queryByRole('group', { name: '封禁追踪' })).toBeNull();
+  });
+
+  it('copies room analysis into radar and preserves the view independently on both pages', async () => {
+    const bootstrap = bootstrapForApp();
+    bootstrap.config.panelOrder = ['current', 'radar'];
+    const query = vi.fn((input: RpcInputs['session.query']) => ({
+      requestId: input.requestId,
+      queried: 0,
+      skipped: 0,
+      cancelled: false,
+    }));
+    const native = nativeFixture(bootstrap, { 'session.query': query });
+    render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByText('监听中');
+    expect(screen.getByRole('button', { name: '刷新粗查' })).toBeTruthy();
+    const overviewPrevious = screen.getByRole('button', { name: '上一局' });
+    await waitFor(() => expect(overviewPrevious.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(overviewPrevious);
+    await screen.findByRole('button', { name: '返回当前局' });
+    const nav = within(screen.getByRole('navigation'));
+    fireEvent.click(nav.getByRole('button', { name: '蛐雷达' }));
+    expect(location.hash).toBe('#radar');
+    expect(screen.getByRole('heading', { level: 1, name: '蛐雷达' })).toBeTruthy();
+    const previous = await screen.findByRole('button', { name: '上一局' });
+    await waitFor(() => expect(previous.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(previous);
+    await waitFor(() =>
+      expect(query).toHaveBeenCalledWith(expect.objectContaining({ context: 'previous' })),
+    );
+    const restore = await screen.findByRole('button', { name: '返回当前局' });
+    await waitFor(() => expect(restore.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(nav.getByRole('button', { name: '总览' }));
+    expect(screen.getByRole('button', { name: '刷新粗查' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '返回当前局' })).toBeTruthy();
+    fireEvent.click(nav.getByRole('button', { name: '蛐雷达' }));
+    fireEvent.click(screen.getByRole('button', { name: '返回当前局' }));
+    fireEvent.click(screen.getByRole('button', { name: '刷新粗查' }));
+    await waitFor(() =>
+      expect(query).toHaveBeenCalledWith(expect.objectContaining({ context: 'current' })),
+    );
+  });
+
+  it('opens radar directly from its URL', async () => {
+    history.replaceState(null, '', '#radar');
+    const native = nativeFixture(bootstrapForApp());
+    render(<App />, { wrapper: wrapper(native.api) });
+    expect(await screen.findByRole('heading', { level: 1, name: '蛐雷达' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '刷新粗查' })).toBeTruthy();
+  });
+
   it('summarizes eligible completed matches for the current account', async () => {
-    const win = demoMatch('1001');
-    const loss = { ...demoMatch('1002', 1), outcome: 'loss' as const, eloAfter: 2090 };
-    const restarted = { ...demoMatch('1003', 2), restarted: true };
-    const otherAccount = { ...demoMatch('1004', 3), localPlayerId: '9999' };
+    const win = structuredClone(capturedMatches.find((m) => m.outcome === 'win')!);
+    const loss = structuredClone(capturedMatches.find((m) => m.outcome === 'loss')!);
+    const restarted = matchFixture({ id: 'restarted', restarted: true });
+    const otherAccount = matchFixture({ id: 'other-account', localPlayerId: secondPlayer.id });
     const native = nativeFixture(bootstrapForApp(), {
       'matches.list': () => [win, loss, restarted, otherAccount],
     });
@@ -783,13 +1228,13 @@ describe('user interaction regressions', () => {
     const metric = screen.getByText('近期胜率').closest('.metric-card') as HTMLElement;
     expect(within(metric).getByText('50%')).toBeTruthy();
     const rating = screen.getByText('最近 ELO').closest('.metric-card') as HTMLElement;
-    expect(within(rating).getByText('2,114')).toBeTruthy();
+    expect(within(rating).getByText(formatMetric(win.eloAfter, 0))).toBeTruthy();
     const archive = screen.getByText('已收录对局').closest('.metric-card') as HTMLElement;
     expect(within(archive).getByText('4')).toBeTruthy();
   });
 
   it('safely disables an empty lobby and releases refresh after a fulfilled zero-row query', async () => {
-    const bootstrap = structuredClone(demoBootstrap);
+    const bootstrap = structuredClone(fixtureBootstrap);
     bootstrap.session.phase = 'lobby';
     bootstrap.session.current = null;
     bootstrap.session.lobbyPlayers = [];
@@ -814,7 +1259,7 @@ describe('user interaction regressions', () => {
         revision: 1,
         session: {
           ...bootstrap.session,
-          lobbyPlayers: [{ id: '8863', name: 'Zola', teamId: null }],
+          lobbyPlayers: [{ id: localPlayer.id, name: localPlayer.name, teamId: null }],
         },
       }),
     );
@@ -831,17 +1276,17 @@ describe('user interaction regressions', () => {
   it('keeps a newly mounted report action disabled throughout a global maggot request', async () => {
     const pending = deferred<RpcOutputs['players.maggot']>();
     let maggotCalls = 0;
-    const native = nativeFixture(structuredClone(demoBootstrap), {
+    const native = nativeFixture(structuredClone(fixtureBootstrap), {
       'players.search': () => ({
         source: 'network',
         players: [
-          { id: '8863', name: 'First Player', level: 40, rating: 2200 },
-          { id: '8864', name: 'Second Player', level: 40, rating: 2300 },
+          { ...localPlayer, name: 'First Player' },
+          { ...secondPlayer, name: 'Second Player' },
         ],
       }),
       'players.report': ({ id }) => ({
-        ...demoReport(id),
-        name: id === '8863' ? 'First Player' : 'Second Player',
+        ...reportFixture({ id }),
+        name: id === localPlayer.id ? 'First Player' : 'Second Player',
       }),
       'players.maggot': () => {
         maggotCalls++;
@@ -862,16 +1307,16 @@ describe('user interaction regressions', () => {
     fireEvent.click(firstButton);
     expect(firstButton.hasAttribute('disabled')).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: /^Second Player/ }));
-    await screen.findByRole('heading', { name: 'Second Player #8864' });
+    await screen.findByRole('heading', { name: `Second Player #${secondPlayer.id}` });
     const newButton = screen.getByRole('button', { name: '查蛆指数' });
     expect(newButton).not.toBe(firstButton);
     expect(newButton.hasAttribute('disabled')).toBe(true);
     fireEvent.click(newButton);
     expect(maggotCalls).toBe(1);
     const result = summarizeMaggot(
-      '8863',
+      localPlayer.id,
       Array.from({ length: 12 }, (_, i) => ({
-        matchId: String(8049993 - i),
+        matchId: capturedMatches[i]!.id,
         won: true,
         mvpRank: 1,
         killRank: 1,
@@ -890,14 +1335,14 @@ describe('user interaction regressions', () => {
   });
 
   it('uses the same recording shape for bootstrap and events and never revives stopped or foreign previews', async () => {
-    const bootstrap = structuredClone(demoBootstrap);
+    const bootstrap = structuredClone(fixtureBootstrap);
     bootstrap.config.replayEnabled = true;
     const active: RecordingState = {
       ...bootstrap.recording,
       phase: 'recording',
       sessionId: 'recording-1',
-      fid: '8050000',
-      map: 'Dam',
+      fid: capturedMatches[0]!.fid,
+      map: capturedMatches[0]!.map,
       sourceId: 'screen:0:0',
       seconds: 12,
       startedAt: 1000,
@@ -928,7 +1373,7 @@ describe('user interaction regressions', () => {
       }),
     );
     expect(screen.getByText(/screen:1:0/)).toBeTruthy();
-    const idle: RecordingState = { ...demoBootstrap.recording };
+    const idle: RecordingState = { ...fixtureBootstrap.recording };
     act(() => native.emit({ type: 'recording', recording: idle, revision: 3 }));
     expect(screen.queryByAltText('录制预览')).toBeNull();
     act(() =>
@@ -974,7 +1419,7 @@ describe('user interaction regressions', () => {
 describe('profile refresh and report scopes', () => {
   it('refreshes the profile and full report together and explains metric and sample scopes', async () => {
     const profile: PlayerProfile = {
-      id: '8863',
+      id: localPlayer.id,
       name: 'Player',
       names: [],
       firstSeen: null,
@@ -989,12 +1434,12 @@ describe('profile refresh and report scopes', () => {
     const native = nativeFixture(bootstrapForApp(), {
       'players.profile': () => profile,
       'players.report': ({ id, force }) => ({
-        ...demoReport(id),
+        ...reportFixture({ id }),
         elo: force ? 2002 : 1001,
         sampleCount: 12,
       }),
     });
-    render(<ProfileDialog id="8863" name="Player" />, { wrapper: wrapper(native.api) });
+    render(<ProfileDialog id={localPlayer.id} name="Player" />, { wrapper: wrapper(native.api) });
     await screen.findByText('1,001');
     expect(screen.getByText('最近一场 K/D')).toBeTruthy();
     expect(screen.getByText('最近一场 DMR')).toBeTruthy();

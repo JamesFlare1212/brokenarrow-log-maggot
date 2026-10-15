@@ -32,6 +32,10 @@ const methods = new Set<RpcMethod>([
 ]);
 const preferences = new Set([
   'theme',
+  'themeMode',
+  'lightTheme',
+  'darkTheme',
+  'sidebarCollapsed',
   'lang',
   'panelOrder',
   'collapsedPanels',

@@ -1,3 +1,6 @@
+html {
+  scroll-padding-top: 88px;
+}
 .app-shell {
   display: grid;
   grid-template-columns: 224px minmax(0, 1fr);
@@ -91,20 +94,13 @@
   flex-direction: column;
   gap: 12px;
 }
-.sidebar-local {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 12px;
-  padding: 10px 12px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-}
 .sidebar .settings-button {
   justify-content: flex-start;
   border-color: transparent;
   background: transparent;
+}
+.sidebar .settings-button:hover:not(:disabled) {
+  background: var(--surface-alt);
 }
 .version-label {
   margin-left: auto;
@@ -117,14 +113,31 @@
   min-width: 0;
 }
 .topbar {
-  min-height: 68px;
-  padding: 12px 32px;
-  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: 56px;
+  padding: 8px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   background: var(--bg);
+}
+.topbar::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(
+    to bottom,
+    var(--bg),
+    color-mix(in srgb, var(--bg) 60%, transparent) 45%,
+    transparent
+  );
+  pointer-events: none;
 }
 .topbar-location,
 .topbar-actions {
@@ -172,20 +185,6 @@
 .status-recording {
   background: var(--danger);
 }
-.language-control {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-}
-.language-select {
-  width: auto;
-  min-height: 36px;
-  padding: 4px;
-  font-size: 12px;
-  border: 0;
-  background: transparent;
-}
 .account-button {
   width: 34px;
   height: 34px;
@@ -214,13 +213,6 @@ main {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-}
-.page-eyebrow {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.15em;
-  margin-bottom: 8px;
 }
 .page-heading h1 {
   font-size: 28px;
@@ -308,9 +300,13 @@ main {
 }
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: start;
-  gap: 20px;
+  gap: 16px;
+}
+.dashboard-grid > .session-card {
+  grid-column: span 3;
+  min-width: 0;
 }
 .dashboard-side {
   display: flex;
@@ -644,7 +640,7 @@ main {
   min-height: 38px;
   font-size: 12px;
   width: 100%;
-  border-color: var(--accent-border);
+  border-color: transparent;
   background: var(--accent-soft);
   color: var(--accent);
   justify-content: space-between;
@@ -1151,38 +1147,6 @@ main {
   border-radius: 8px;
   background: var(--bg);
 }
-.settings-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-.settings-section {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.settings-section + .settings-section {
-  padding-top: 22px;
-  border-top: 1px solid var(--border);
-}
-.settings-section h3 {
-  font-size: 15px;
-  font-weight: 600;
-}
-.settings-section h3 {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.settings-section h3 > svg {
-  color: var(--muted);
-}
-.settings-dialog {
-  width: min(860px, calc(100vw - 48px));
-}
-.settings-dialog .dialog-body {
-  scroll-padding-block: 16px 100px;
-}
 .dashboard-optional-panels {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1193,115 +1157,6 @@ main {
 }
 .dashboard-optional-panels > :only-child {
   grid-column: 1 / -1;
-}
-.settings-dialog .dialog-footer {
-  position: sticky;
-  bottom: -24px;
-  background: var(--surface);
-  padding-bottom: 12px;
-  margin-bottom: -24px;
-  z-index: 2;
-}
-.settings-section > p {
-  color: var(--muted);
-  font-size: 13px;
-  margin-top: -8px;
-}
-.settings-flags {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 28px;
-}
-.settings-flags .toggle {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.theme-options {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-.theme-option {
-  flex-direction: column;
-  padding: 12px !important;
-  gap: 10px !important;
-  background: transparent !important;
-  font-size: 12px;
-}
-.theme-option[aria-pressed='true'] {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-  color: var(--accent);
-}
-.theme-option i {
-  width: 100%;
-  height: 40px;
-  border-radius: 5px;
-  background: var(--swatch-bg);
-  border: 1px solid var(--swatch-border);
-  position: relative;
-  overflow: hidden;
-}
-.theme-option i::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 22%;
-  background: var(--swatch-surface);
-  border-right: 1px solid var(--swatch-border);
-}
-.theme-option i::after {
-  content: '';
-  position: absolute;
-  left: 33%;
-  right: 10%;
-  top: 12px;
-  height: 5px;
-  border-radius: 2px;
-  background: var(--swatch);
-  box-shadow: 0 10px 0 var(--swatch-surface);
-}
-.theme-option[data-theme='dark'] {
-  --swatch-bg: #0d1114;
-  --swatch-surface: #222c33;
-  --swatch-border: #34434d;
-  --swatch: #79e0c3;
-}
-.theme-option[data-theme='light'] {
-  --swatch-bg: #f0f3f8;
-  --swatch-surface: #fff;
-  --swatch-border: #c4cedb;
-  --swatch: #2457c5;
-}
-.theme-option[data-theme='cyan'] {
-  --swatch-bg: #e9f6f8;
-  --swatch-surface: #fff;
-  --swatch-border: #adcdd5;
-  --swatch: #0d6e83;
-}
-.theme-option[data-theme='orange'] {
-  --swatch-bg: #fff5eb;
-  --swatch-surface: #fff;
-  --swatch-border: #d4b796;
-  --swatch: #b3430c;
-}
-.theme-option[data-theme='violet'] {
-  --swatch-bg: #14101d;
-  --swatch-surface: #2b2440;
-  --swatch-border: #4b3f64;
-  --swatch: #bca1ff;
-}
-.theme-option[data-theme='forest'] {
-  --swatch-bg: #0d1511;
-  --swatch-surface: #20352a;
-  --swatch-border: #365945;
-  --swatch: #6edcab;
-}
-.theme-option[data-theme='ocean'] {
-  --swatch-bg: #0a1220;
-  --swatch-surface: #1a354f;
-  --swatch-border: #345a77;
-  --swatch: #72d2fc;
 }
 .panel-order {
   list-style: none;
@@ -1379,10 +1234,6 @@ main {
   font-size: 24px;
 }
 @media (min-width: 1600px) {
-  .dashboard-grid {
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 24px;
-  }
   .player-card {
     padding: 12px 0;
   }
@@ -1414,6 +1265,9 @@ main {
   }
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+  .dashboard-grid > .session-card {
+    grid-column: auto;
   }
   .dashboard-side {
     display: grid;
@@ -1451,9 +1305,6 @@ main {
   .app-footer {
     padding-inline: 20px;
   }
-  .topbar {
-    min-height: 64px;
-  }
   .topbar-location {
     gap: 10px;
   }
@@ -1482,7 +1333,7 @@ main {
     gap: 20px;
   }
   .topbar {
-    padding: 10px 12px;
+    padding: 8px 12px;
   }
   .topbar-location > span,
   .topbar-location > svg {
@@ -1493,13 +1344,6 @@ main {
   }
   .topbar-actions > .badge {
     font-size: 10px;
-  }
-  .language-control > svg {
-    display: none;
-  }
-  .language-select {
-    font-size: 12px;
-    min-height: 40px;
   }
   .account-button {
     width: 36px;
@@ -1656,10 +1500,6 @@ main {
   }
   .search-form:has(.field > small) > .button {
     margin-top: 0;
-  }
-  .settings-dialog .dialog-footer {
-    bottom: -16px;
-    margin-bottom: -16px;
   }
   .search-results,
   .replay-list,

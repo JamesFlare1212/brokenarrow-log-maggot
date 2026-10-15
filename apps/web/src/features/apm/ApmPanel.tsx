@@ -4,7 +4,7 @@ import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Button, Card, Empty, Stats, Notice, Badge } from '../../components/ui';
 export function ApmPanel() {
-  const { state, patchConfig, openModal } = useApp(),
+  const { state, patchConfig, openSettings } = useApp(),
     { t } = useI18n(),
     apm = state.apm,
     collapsed = state.config.collapsedPanels.includes('apm'),
@@ -27,7 +27,7 @@ export function ApmPanel() {
           icon={<Activity size={30} />}
           description={t('apmDescription')}
           action={
-            <Button variant="primary" onClick={() => openModal({ type: 'settings' })}>
+            <Button variant="primary" onClick={() => openSettings('automation')}>
               {t('settings')}
             </Button>
           }

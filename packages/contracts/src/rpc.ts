@@ -22,6 +22,7 @@ import type {
 } from './models';
 export const PANELS = [
   'current',
+  'radar',
   'players',
   'apm',
   'archive',
@@ -31,6 +32,12 @@ export const PANELS = [
   'about',
 ] as const;
 export const THEMES = ['dark', 'light', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
+export const THEME_MODES = ['system', 'light', 'dark'] as const;
+// Keep legacy palette keys so existing installations retain their colors.
+export const COLOR_SCHEMES = ['dark', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
+export function legacyThemeMode(theme: unknown): 'light' | 'dark' {
+  return ['light', 'cyan', 'orange'].includes(String(theme)) ? 'light' : 'dark';
+}
 export const configSchema = z.object({
   logDir: z.string().max(4096).default(''),
   decksDir: z.string().max(4096).default(''),
@@ -41,6 +48,10 @@ export const configSchema = z.object({
   banCardVisible: z.boolean().default(false),
   multiAccountBond: z.boolean().default(true),
   theme: z.enum(THEMES).default('dark'),
+  themeMode: z.enum(THEME_MODES).default('dark'),
+  lightTheme: z.enum(COLOR_SCHEMES).optional(),
+  darkTheme: z.enum(COLOR_SCHEMES).optional(),
+  sidebarCollapsed: z.boolean().default(false),
   lang: z.enum(['zh', 'en', 'ja', 'ru']).default('zh'),
   panelOrder: z.array(z.enum(PANELS)).default([...PANELS]),
   collapsedPanels: z.array(z.enum(PANELS)).default(['decks']),
@@ -62,7 +73,7 @@ const configPatchSchema: z.ZodType<Partial<PublicConfig>> = z
     Object.fromEntries(
       Object.entries(configSchema.shape).map(([key, schema]) => [
         key,
-        schema.removeDefault().optional(),
+        (schema instanceof z.ZodDefault ? schema.removeDefault() : schema).optional(),
       ]),
     ),
   )

@@ -13,8 +13,10 @@ import { LocaleContext, translate } from '../hooks/useI18n';
 import { PANELS } from '@ba/contracts';
 import { errorMessage } from '@ba/shared';
 import { useRef } from 'react';
+import { useAppearance } from '../hooks/useAppearance';
+import { useSettingsAutosave } from '../hooks/useSettingsAutosave';
+import { settingsTabFromHash, type SettingsTab } from '../features/settings/routes';
 export type ModalRoute =
-  | { type: 'settings' }
   | { type: 'profile'; id: string; name: string }
   | { type: 'match'; fid: string }
   | { type: 'recordingSettings'; enable?: boolean }
@@ -117,6 +119,10 @@ interface AppContextValue {
   state: AppState;
   page: Panel;
   setPage: (page: Panel) => void;
+  settingsTab: SettingsTab | null;
+  openSettings: (tab?: SettingsTab) => void;
+  closeSettings: () => void;
+  settings: ReturnType<typeof useSettingsAutosave>;
   modal: ModalRoute;
   openModal: (route: ModalRoute) => void;
   closeModal: () => void;
@@ -140,7 +146,13 @@ export function useApp(): AppContextValue {
 export function AppProvider({ api, children }: { api: Bridge; children: ReactNode }) {
   const [state, dispatch] = useReducer(reduce, null),
     [page, updatePage] = useState<Panel>(
-      () => PANELS.find((panel) => location.hash === `#${panel}`) || 'current',
+      () =>
+        PANELS.find((panel) => location.hash === `#${panel}`) ||
+        PANELS.find((panel) => panel === history.state?.baSettingsFrom) ||
+        'current',
+    ),
+    [settingsTab, updateSettingsTab] = useState<SettingsTab | null>(() =>
+      settingsTabFromHash(location.hash),
     ),
     [modal, openModal] = useState<ModalRoute>(null),
     [error, setError] = useState<string | null>(null),
@@ -153,17 +165,40 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       error: null,
     }),
     maggotRunning = useRef(false);
+  const settings = useSettingsAutosave(api, state?.config);
   const setPage = (next: Panel) => {
-    if (location.hash !== `#${next}`) location.hash = next;
+    if (location.hash !== `#${next}`) history.pushState(null, '', `#${next}`);
+    updateSettingsTab(null);
     updatePage(next);
+  };
+  const openSettings = (tab: SettingsTab = 'appearance') => {
+    const hash = `#settings/${tab}`;
+    if (settingsTab) history.replaceState(history.state, '', hash);
+    else history.pushState({ baSettingsFrom: page }, '', hash);
+    updateSettingsTab(tab);
+  };
+  const closeSettings = () => {
+    if (PANELS.some((panel) => panel === history.state?.baSettingsFrom)) history.back();
+    else setPage(page);
   };
   useEffect(() => {
     const navigate = () => {
+      const tab = settingsTabFromHash(location.hash);
+      updateSettingsTab(tab);
+      if (tab) {
+        const from = PANELS.find((panel) => panel === history.state?.baSettingsFrom);
+        if (from) updatePage(from);
+        return;
+      }
       const panel = PANELS.find((candidate) => location.hash === `#${candidate}`);
       if (panel || !location.hash) updatePage(panel || 'current');
     };
     window.addEventListener('hashchange', navigate);
-    return () => window.removeEventListener('hashchange', navigate);
+    window.addEventListener('popstate', navigate);
+    return () => {
+      window.removeEventListener('hashchange', navigate);
+      window.removeEventListener('popstate', navigate);
+    };
   }, []);
   useEffect(() => {
     let active = true,
@@ -206,12 +241,12 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     const timer = setTimeout(() => setToast(null), 4500);
     return () => clearTimeout(timer);
   }, [toast]);
+  useAppearance(settings.draft ?? state?.config);
   useEffect(() => {
     if (!state) return;
-    document.documentElement.dataset.theme = state.config.theme;
     document.documentElement.lang = state.config.lang === 'zh' ? 'zh-CN' : state.config.lang;
     document.title = translate(state.config.lang, 'brand');
-  }, [state?.config.theme, state?.config.lang]);
+  }, [state?.config.lang]);
   if (error)
     return (
       <div className="startup-error" role="alert">
@@ -225,6 +260,10 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     state,
     page,
     setPage,
+    settingsTab,
+    openSettings,
+    closeSettings,
+    settings,
     modal,
     openModal,
     closeModal: () => openModal(null),

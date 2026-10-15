@@ -10,10 +10,9 @@ declare global {
   }
 }
 const native = window.assistant,
-  demo = new URLSearchParams(location.search).has('demo'),
   fixtures = import.meta.env.DEV && import.meta.env.MODE === 'fixtures';
 const root = createRoot(document.getElementById('root')!);
-if (!native && !demo && !fixtures)
+if (!native && !fixtures)
   root.render(
     <div className="startup-error">
       请通过桌面应用启动 / Open the desktop application to access local game data.
@@ -29,7 +28,5 @@ else {
       </StrictMode>,
     );
   if (native) render(native);
-  else if (fixtures && !demo)
-    void import('./dev/bridge').then((module) => render(module.createFixtureBridge()));
-  else void import('./demo/bridge').then((module) => render(module.createDemoBridge()));
+  else void import('./dev/bridge').then((module) => render(module.createFixtureBridge()));
 }

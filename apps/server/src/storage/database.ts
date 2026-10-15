@@ -11,8 +11,16 @@ import type {
   PublicConfig,
   SearchPlayer,
 } from '@ba/contracts';
-import { configSchema, PANELS } from '@ba/contracts';
+import { configSchema, legacyThemeMode, PANELS } from '@ba/contracts';
 import { object, text, number, mergeMatch, determineOutcome } from '@ba/shared';
+
+function includeRadar(order: PublicConfig['panelOrder']): PublicConfig['panelOrder'] {
+  if (order.includes('radar')) return order;
+  const result = [...order],
+    overview = result.indexOf('current');
+  result.splice(overview < 0 ? result.length : overview + 1, 0, 'radar');
+  return result;
+}
 
 export class Database {
   readonly sql: DatabaseSync;
@@ -78,11 +86,14 @@ export class Database {
   }
   config(): PublicConfig {
     const row = this.sql.prepare('SELECT value FROM settings WHERE key=?').get('public');
-    return configSchema.parse(row ? JSON.parse(String(row.value)) : {});
+    const stored = row ? JSON.parse(String(row.value)) : {};
+    const config = configSchema.parse({ themeMode: legacyThemeMode(stored.theme), ...stored });
+    config.panelOrder = includeRadar(config.panelOrder);
+    return config;
   }
   updateConfig(patch: Partial<PublicConfig>): PublicConfig {
     const value = configSchema.parse({ ...this.config(), ...patch });
-    value.panelOrder = [...new Set([...value.panelOrder, ...PANELS])];
+    value.panelOrder = [...new Set([...includeRadar(value.panelOrder), ...PANELS])];
     value.collapsedPanels = [...new Set(value.collapsedPanels)];
     this.sql
       .prepare(

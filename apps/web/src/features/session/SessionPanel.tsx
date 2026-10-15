@@ -95,6 +95,7 @@ export function SessionPanel() {
       actions={
         <>
           <Button
+            className="button-borderless"
             disabled={!previous || pending}
             onClick={previousView}
             aria-pressed={view === 'previous'}

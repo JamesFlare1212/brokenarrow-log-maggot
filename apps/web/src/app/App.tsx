@@ -13,12 +13,13 @@ import {
   ArrowUpRight,
   ChevronRight,
   Crosshair,
-  Globe2,
-  HardDrive,
   Info,
   Layers,
   LayoutDashboard,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Radar,
   Search,
   Settings,
   ShieldCheck,
@@ -29,6 +30,7 @@ import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
 import { Badge, Button, Card, Dialog, Loading, Notice } from '../components/ui';
 import { Dashboard } from '../features/overview/Dashboard';
+import { SessionPanel } from '../features/session/SessionPanel';
 import { PlayersPanel } from '../features/players/PlayersPanel';
 import { MatchArchive } from '../features/matches/MatchArchive';
 import { BansPanel, BanAlertDialog } from '../features/bans/BansPanel';
@@ -50,14 +52,15 @@ const RecordingSettings = lazy(() =>
 const ReplayDialog = lazy(() =>
   import('../features/replays/ReplayDialog').then((module) => ({ default: module.ReplayDialog })),
 );
-const SettingsDialog = lazy(() =>
-  import('../features/settings/SettingsDialog').then((module) => ({
-    default: module.SettingsDialog,
+const SettingsPage = lazy(() =>
+  import('../features/settings/SettingsPage').then((module) => ({
+    default: module.SettingsPage,
   })),
 );
 
 const icons: Record<Panel, ReactNode> = {
   current: <LayoutDashboard size={19} />,
+  radar: <Radar size={19} />,
   players: <Search size={19} />,
   apm: <Activity size={19} />,
   archive: <Archive size={19} />,
@@ -83,7 +86,7 @@ function Brand() {
 }
 
 function Navigation({ onNavigate }: { onNavigate?: () => void }) {
-  const { state, page, setPage } = useApp(),
+  const { state, page, setPage, settings } = useApp(),
     { t } = useI18n();
   return (
     <nav aria-label={t('workspaceNav')}>
@@ -96,6 +99,12 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
             onNavigate?.();
           }}
           aria-current={page === panel ? 'page' : undefined}
+          aria-label={t(panel === 'current' ? 'overview' : panel)}
+          title={
+            settings.draft?.sidebarCollapsed
+              ? t(panel === 'current' ? 'overview' : panel)
+              : undefined
+          }
         >
           <span aria-hidden="true">{icons[panel]}</span>
           <span>{t(panel === 'current' ? 'overview' : panel)}</span>
@@ -144,8 +153,6 @@ function ModalRouter() {
   const { modal } = useApp();
   if (!modal) return null;
   switch (modal.type) {
-    case 'settings':
-      return <SettingsDialog />;
     case 'profile':
       return <ProfileDialog key={modal.id} id={modal.id} name={modal.name} />;
     case 'match':
@@ -160,32 +167,34 @@ function ModalRouter() {
 }
 
 export function App() {
-  const { state, api, page, openModal, patchConfig, notify } = useApp(),
+  const { state, api, page, settingsTab, settings, openSettings, openModal, notify } = useApp(),
     { t } = useI18n();
   const [healthBusy, setHealthBusy] = useState(false),
     [navigationOpen, setNavigationOpen] = useState(false);
   const [visited, setVisited] = useState<Panel[]>([page]);
   const main = useRef<HTMLElement>(null),
-    scrollPositions = useRef(new Map<Panel, number>()),
-    previousPage = useRef(page);
+    scrollPositions = useRef(new Map<string, number>()),
+    previousPage = useRef<string>(settingsTab ? `settings/${settingsTab}` : page);
   useEffect(() => {
     const remember = () => scrollPositions.current.set(previousPage.current, window.scrollY);
     window.addEventListener('scroll', remember, { passive: true });
     return () => window.removeEventListener('scroll', remember);
   }, []);
   useLayoutEffect(() => {
-    if (previousPage.current === page) return;
-    previousPage.current = page;
-    const scrollTop = scrollPositions.current.get(page) || 0;
+    const route = settingsTab ? `settings/${settingsTab}` : page;
+    if (previousPage.current === route) return;
+    previousPage.current = route;
+    const scrollTop = scrollPositions.current.get(route) || 0;
     document.documentElement.scrollTop = scrollTop;
     document.body.scrollTop = scrollTop;
-    main.current?.focus({ preventScroll: true });
-  }, [page]);
+    if (!settingsTab) main.current?.focus({ preventScroll: true });
+  }, [page, settingsTab]);
   useEffect(() => {
     setVisited((pages) => (pages.includes(page) ? pages : [...pages, page]));
   }, [page]);
   const components: Record<Panel, ReactNode> = {
     current: <Dashboard />,
+    radar: <SessionPanel />,
     players: <PlayersPanel />,
     archive: <MatchArchive />,
     replays: <ReplaysPanel />,
@@ -214,34 +223,50 @@ export function App() {
           : 'muted';
   const title = t(page === 'current' ? 'commandCenter' : page);
   const account = state.session.localName || t('noAccount');
+  const collapsed = settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed;
   return (
-    <div className="app-shell" data-ready="true">
-      <a className="skip-link" href="#main-content">
+    <div
+      className={`app-shell ${settingsTab ? 'app-shell-settings' : ''} ${collapsed ? 'sidebar-collapsed' : ''}`}
+      data-ready="true"
+    >
+      <a
+        className="skip-link"
+        href={settingsTab ? '#settings-content' : '#main-content'}
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById(settingsTab ? 'settings-content' : 'main-content')?.focus();
+        }}
+      >
         {t('skipContent')}
       </a>
-      <aside className="sidebar">
+      <aside className="sidebar" hidden={Boolean(settingsTab)}>
         <Brand />
         <div className="nav-section-label">{t('workspaceNav')}</div>
         <Navigation />
         <div className="sidebar-footer">
-          <div className="sidebar-local">
-            <HardDrive size={15} aria-hidden="true" />
-            <span>{t('localData')}</span>
-          </div>
           <Button
-            className="settings-button"
+            className="settings-button button-borderless"
             aria-label={t('settings')}
-            onClick={() => openModal({ type: 'settings' })}
+            title={t('settings')}
+            onClick={() => openSettings()}
           >
             <Settings size={18} aria-hidden="true" />
-            {t('settings')}
+            <span className="settings-button-label">{t('settings')}</span>
             <span className="version-label">v{state.version.current}</span>
           </Button>
         </div>
       </aside>
-      <div className="workspace">
+      <div className="workspace" hidden={Boolean(settingsTab)}>
         <header className="topbar">
           <div className="topbar-location">
+            <Button
+              className="sidebar-collapse-toggle button-borderless"
+              aria-label={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
+              aria-expanded={!collapsed}
+              onClick={() => settings.change({ sidebarCollapsed: !collapsed })}
+            >
+              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </Button>
             <Button
               className="mobile-menu"
               aria-label={t('openNavigation')}
@@ -250,7 +275,6 @@ export function App() {
             >
               <Menu size={20} />
             </Button>
-            <Crosshair size={16} className="muted" aria-hidden="true" />
             <span>Broken Arrow</span>
             <ChevronRight size={14} className="muted" aria-hidden="true" />
             <strong>{t(page === 'current' ? 'overview' : page)}</strong>
@@ -273,29 +297,13 @@ export function App() {
                 )}
               </span>
             </Badge>
-            <div className="language-control">
-              <Globe2 size={15} aria-hidden="true" />
-              <select
-                className="language-select"
-                aria-label={t('language')}
-                value={state.config.lang}
-                onChange={(e) =>
-                  void patchConfig({ lang: e.target.value as typeof state.config.lang })
-                }
-              >
-                <option value="zh">中文</option>
-                <option value="en">English</option>
-                <option value="ja">日本語</option>
-                <option value="ru">Русский</option>
-              </select>
-            </div>
             <button
               className="account-button"
               aria-label={`${t('currentAccount')}: ${account}`}
               onClick={() =>
                 state.session.localPlayerId
                   ? openModal({ type: 'profile', id: state.session.localPlayerId, name: account })
-                  : openModal({ type: 'settings' })
+                  : openSettings('accounts')
               }
             >
               {account.slice(0, 1).toUpperCase()}
@@ -305,9 +313,6 @@ export function App() {
         <main id="main-content" ref={main} tabIndex={-1} aria-labelledby="page-title">
           <div className="page-heading">
             <div>
-              <div className="page-eyebrow">
-                BROKEN ARROW / {page === 'current' ? 'OVERVIEW' : page.toUpperCase()}
-              </div>
               <h1 id="page-title">{title}</h1>
               <p>{t(page === 'current' ? 'overviewDescription' : `${page}Description`)}</p>
             </div>
@@ -317,9 +322,6 @@ export function App() {
                 aria-hidden="true"
               />
               <span title={state.watcher.file || undefined}>{status}</span>
-              {new URLSearchParams(location.search).has('demo') && (
-                <Badge tone="warning">{t('demo')}</Badge>
-              )}
               {new URLSearchParams(location.search).has('real') && (
                 <Badge tone="warning">{t('realDataOffline')}</Badge>
               )}
@@ -328,7 +330,7 @@ export function App() {
           {!state.config.logDir && page === 'current' && (
             <Notice>
               <span>{t('noDirectory')}</span>
-              <Button onClick={() => openModal({ type: 'settings' })}>{t('select')}</Button>
+              <Button onClick={() => openSettings('connection')}>{t('select')}</Button>
             </Notice>
           )}
           <UpdatePanel compact />
@@ -372,15 +374,21 @@ export function App() {
           <Brand />
           <Navigation onNavigate={() => setNavigationOpen(false)} />
           <Button
+            className="button-borderless"
             onClick={() => {
               setNavigationOpen(false);
-              openModal({ type: 'settings' });
+              openSettings();
             }}
           >
             <Settings size={18} />
             {t('settings')}
           </Button>
         </Dialog>
+      )}
+      {settingsTab && (
+        <Suspense fallback={<Loading />}>
+          <SettingsPage />
+        </Suspense>
       )}
       <Suspense
         fallback={

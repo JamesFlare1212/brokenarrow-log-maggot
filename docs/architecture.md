@@ -16,7 +16,7 @@ scripts/      开发、桌面冒烟、图标
 
 server 是可注入平台接口的 Node 业务层，在 Electron 装配，不额外开放 HTTP 端口。真实 HTTP 使用 net.fetch，与验证窗口共享会话 cookie。web 不访问 Node、文件或 SQLite。
 
-快照和事件共用类型及 revision；过期状态和副作用均被拒绝。查询有 requestId、context 和 generation；报告按目标 / 请求身份接收结果。蛆查全局互斥，订阅返回 cleanup。设置 draft 保存后立即应用统一状态。
+快照和事件共用类型及 revision；过期状态和副作用均被拒绝。查询有 requestId、context 和 generation；报告按目标 / 请求身份接收结果。蛆查全局互斥，订阅返回 cleanup。设置使用独立页面与共享的自动保存队列：本地修改即时反映，按变更字段串行持久化，较旧响应不覆盖新输入，保存失败保留修改并可重试。主题模式与浅色、深色配色分别存储，选择配色不切换模式。
 
 SQLite 使用 WAL、外键、索引、prepared statements、事务。对局、名单和账号视角分表；删除不使用玩家名构造路径。缓存保留时间和 stale 标记。
 
@@ -32,4 +32,4 @@ SQLite 使用 WAL、外键、索引、prepared statements、事务。对局、�
 
 卡组 ZIP 校验路径、扩展名、CRC、边界和容量。压缩 / 解压使用异步线程池，写入临时文件后 rename，失败明确反馈。
 
-公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout。
+公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout / settings；布局、配色与组件状态约定见[视觉规范](../design-system/broken-arrow/MASTER.md)。

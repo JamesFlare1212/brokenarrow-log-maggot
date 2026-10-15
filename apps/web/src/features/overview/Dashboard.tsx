@@ -21,7 +21,6 @@ import { useRequest } from '../../hooks/useRequest';
 import { Badge, Button, Card, Empty, Loading, Notice } from '../../components/ui';
 import { SessionPanel } from '../session/SessionPanel';
 import { ApmPanel } from '../apm/ApmPanel';
-import { BansPanel } from '../bans/BansPanel';
 
 function Metric({
   label,
@@ -154,7 +153,7 @@ export function Dashboard() {
             )}
             {recording.error && <Notice error>{recording.error}</Notice>}
             <Button
-              className="widget-action"
+              className="widget-action button-borderless"
               onClick={() =>
                 openModal({ type: 'recordingSettings', enable: !state.config.replayEnabled })
               }
@@ -245,13 +244,7 @@ export function Dashboard() {
         )}
       </Card>
       <div className="dashboard-optional-panels">
-        {state.config.panelOrder
-          .filter(
-            (panel) =>
-              (panel === 'apm' && state.config.inputHookEnabled) ||
-              (panel === 'bans' && state.config.banCardVisible),
-          )
-          .map((panel) => (panel === 'apm' ? <ApmPanel key={panel} /> : <BansPanel key={panel} />))}
+        {state.config.inputHookEnabled && state.config.panelOrder.includes('apm') && <ApmPanel />}
       </div>
     </div>
   );

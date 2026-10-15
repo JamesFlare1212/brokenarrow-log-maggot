@@ -9,6 +9,8 @@ export function browserFixtures(): Plugin {
     apply: 'serve',
     async configureServer(server) {
       const require = createRequire(import.meta.url);
+      // Vite restarts in the same process; pick up rebuilt server contracts.
+      delete require.cache[require.resolve('../../server/dist/index.cjs')];
       const { createBrowserFixtures } =
         require('../../server/dist/index.cjs') as typeof import('../../server/src');
       const { version } = require('../../../package.json') as { version: string };

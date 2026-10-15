@@ -5,8 +5,10 @@ export type Outcome = 'win' | 'loss' | 'spectator' | 'unknown';
 export type Mode = 'ranked' | 'custom' | 'unknown';
 export type Locale = 'zh' | 'en' | 'ja' | 'ru';
 export type Theme = 'dark' | 'light' | 'cyan' | 'orange' | 'violet' | 'forest' | 'ocean';
+export type ThemeMode = 'system' | 'light' | 'dark';
+export type ColorScheme = Exclude<Theme, 'light'>;
 export type Panel =
-  'current' | 'players' | 'apm' | 'archive' | 'replays' | 'decks' | 'bans' | 'about';
+  'current' | 'radar' | 'players' | 'apm' | 'archive' | 'replays' | 'decks' | 'bans' | 'about';
 export interface Player {
   id: Id;
   name: string;
@@ -267,6 +269,10 @@ export interface PublicConfig {
   banCardVisible: boolean;
   multiAccountBond: boolean;
   theme: Theme;
+  themeMode: ThemeMode;
+  lightTheme?: ColorScheme;
+  darkTheme?: ColorScheme;
+  sidebarCollapsed: boolean;
   lang: Locale;
   panelOrder: Panel[];
   collapsedPanels: Panel[];

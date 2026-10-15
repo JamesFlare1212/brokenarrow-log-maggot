@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { configSchema, PANELS } from '@ba/contracts';
+import { configSchema, legacyThemeMode, PANELS } from '@ba/contracts';
 import type { Ban, MigrationStatus, MiniInfo, PublicConfig } from '@ba/contracts';
 import {
   array,
@@ -162,6 +162,7 @@ function importSettings(db: Database, raw: Record<string, unknown>, warnings: st
   };
   const candidate = {
     ...raw,
+    themeMode: raw.themeMode ?? legacyThemeMode(raw.theme),
     replayQuality: normalizeQuality(raw.replayQuality),
     replayFps: normalizeFps(raw.replayFps),
     replayBitrateMbps: normalizeBitrate(raw.replayBitrateMbps),
