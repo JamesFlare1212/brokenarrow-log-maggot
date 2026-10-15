@@ -28,6 +28,7 @@ export class Database {
       CREATE TABLE IF NOT EXISTS player_names(player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,name TEXT NOT NULL,first_seen INTEGER NOT NULL,last_seen INTEGER NOT NULL,PRIMARY KEY(player_id,name)) STRICT;
       CREATE TABLE IF NOT EXISTS accounts(id TEXT PRIMARY KEY,name TEXT NOT NULL,persona TEXT NOT NULL,first_seen INTEGER NOT NULL,last_seen INTEGER NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS matches(id TEXT PRIMARY KEY,fid TEXT UNIQUE,end_time INTEGER,payload TEXT NOT NULL) STRICT;
+      CREATE TABLE IF NOT EXISTS deleted_log_matches(id TEXT PRIMARY KEY) STRICT;
       CREATE TABLE IF NOT EXISTS match_players(match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,player_id TEXT NOT NULL REFERENCES players(id),team_id INTEGER,payload TEXT NOT NULL,PRIMARY KEY(match_id,player_id)) STRICT;
       CREATE TABLE IF NOT EXISTS match_views(match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,payload TEXT NOT NULL,PRIMARY KEY(match_id,account_id)) STRICT;
       CREATE TABLE IF NOT EXISTS bans(player_id TEXT PRIMARY KEY REFERENCES players(id),payload TEXT NOT NULL) STRICT;
@@ -37,6 +38,7 @@ export class Database {
       CREATE TABLE IF NOT EXISTS legacy_encounters(id TEXT PRIMARY KEY,player_id TEXT NOT NULL REFERENCES players(id),fid TEXT,at INTEGER,payload TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS legacy_imports(file TEXT PRIMARY KEY,at INTEGER NOT NULL,sha256 TEXT NOT NULL,raw_json TEXT NOT NULL) STRICT;
       CREATE INDEX IF NOT EXISTS match_time ON matches(end_time DESC);
+      CREATE INDEX IF NOT EXISTS match_session ON matches(json_extract(payload,'$.sessionId'));
       CREATE INDEX IF NOT EXISTS player_matches ON match_players(player_id,match_id);
       CREATE INDEX IF NOT EXISTS account_matches ON match_views(account_id,match_id);
       CREATE INDEX IF NOT EXISTS cache_expiry ON api_cache(expires_at);
@@ -112,7 +114,7 @@ export class Database {
   observeAccount(id: string, name: string, persona = name, at = Date.now()): void {
     this.sql
       .prepare(
-        'INSERT INTO accounts VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,persona=excluded.persona,last_seen=MAX(accounts.last_seen,excluded.last_seen)',
+        'INSERT INTO accounts VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=CASE WHEN excluded.last_seen>=accounts.last_seen THEN excluded.name ELSE accounts.name END,persona=CASE WHEN excluded.last_seen>=accounts.last_seen THEN excluded.persona ELSE accounts.persona END,first_seen=MIN(accounts.first_seen,excluded.first_seen),last_seen=MAX(accounts.last_seen,excluded.last_seen)',
       )
       .run(id, name, persona, at, at);
   }
@@ -132,6 +134,13 @@ export class Database {
       }));
   }
   saveMatch(match: Match, observe = true): void {
+    if (
+      match.source === 'log' &&
+      this.sql
+        .prepare('SELECT 1 FROM deleted_log_matches WHERE id IN (?,?)')
+        .get(match.id, 'local:' + match.sessionId)
+    )
+      return;
     this.transaction(() => {
       const incoming = match;
       const temporary = this.sql
@@ -200,16 +209,29 @@ export class Database {
     const rows = accountId
       ? this.sql
           .prepare(
-            'SELECT m.id FROM matches m JOIN match_views v ON m.id=v.match_id WHERE v.account_id=? ORDER BY m.end_time DESC LIMIT 500',
+            "SELECT m.payload,v.payload AS view FROM matches m JOIN match_views v ON m.id=v.match_id WHERE v.account_id=? ORDER BY COALESCE(m.end_time,json_extract(m.payload,'$.startedAt'),0) DESC,m.id DESC",
           )
           .all(accountId)
-      : this.sql.prepare('SELECT id FROM matches ORDER BY end_time DESC LIMIT 500').all();
-    return rows
-      .map((r) => this.match(String(r.id), accountId))
-      .filter((m): m is Match => m !== null);
+      : this.sql
+          .prepare(
+            "SELECT payload FROM matches ORDER BY COALESCE(end_time,json_extract(payload,'$.startedAt'),0) DESC,id DESC",
+          )
+          .all();
+    return rows.map((row) => {
+      const match = JSON.parse(String(row.payload)) as Match;
+      if (row.view) Object.assign(match, JSON.parse(String(row.view)));
+      return match;
+    });
   }
   deleteMatch(id: string): boolean {
-    return this.sql.prepare('DELETE FROM matches WHERE id=?').run(id).changes > 0;
+    return this.transaction(() => {
+      const match = this.match(id);
+      if (!match) return false;
+      const remember = this.sql.prepare('INSERT OR IGNORE INTO deleted_log_matches VALUES(?)');
+      remember.run(match.id);
+      remember.run('local:' + match.sessionId);
+      return this.sql.prepare('DELETE FROM matches WHERE id=?').run(match.id).changes > 0;
+    });
   }
   deleteAccount(id: string): { removedMatches: number } {
     return this.transaction(() => {

@@ -9,6 +9,7 @@ export interface DataResult {
 }
 export interface HttpPort {
   fetch: typeof fetch;
+  offline?: boolean;
   challenge?: () => Promise<void>;
 }
 export function isChallenge(value: string): boolean {
@@ -35,6 +36,11 @@ export class BatraceClient {
     options: { force?: boolean; allowStale?: boolean; signal?: AbortSignal; health?: boolean } = {},
   ): Promise<DataResult> {
     this.lifetime.signal.throwIfAborted();
+    if (this.http.offline) {
+      const hit = this.db.cache(key, true, this.now());
+      if (!hit) throw new Error('Offline real-data mode: no recorded response for this request');
+      return { value: hit.value, source: 'stale', at: hit.at, attempts: 0 };
+    }
     if (!options.force) {
       const hit = this.db.cache(key, false, this.now());
       if (hit) return { value: hit.value, source: 'cache', at: hit.at, attempts: 0 };

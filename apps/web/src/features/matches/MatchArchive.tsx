@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Archive, Plus, RefreshCw } from 'lucide-react';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, outcomeTone } from '@ba/shared';
@@ -6,6 +6,7 @@ import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Card, Badge, Field, Loading, Notice, Empty, Menu } from '../../components/ui';
+const PAGE_SIZE = 50;
 export function MatchArchive() {
   const { api, state, openModal, notify } = useApp(),
     { t, locale } = useI18n(),
@@ -14,16 +15,35 @@ export function MatchArchive() {
     [account, setAccount] = useState(''),
     [fid, setFid] = useState(''),
     [adding, setAdding] = useState(false),
+    [scanning, setScanning] = useState(false),
+    [page, setPage] = useState(1),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
-  const list = [...(matches.data || [])].sort(
-    (a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0),
+  const filtered = useMemo(
+    () =>
+      [...(matches.data || [])]
+        .sort((a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0))
+        .filter((m) => outcome === 'all' || m.outcome === outcome),
+    [matches.data, outcome],
   );
-  const filtered = list.filter((m) => outcome === 'all' || m.outcome === outcome);
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pages);
+  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const refresh = () =>
     void matches.load(
       () => api.invoke('matches.list', account ? { accountId: account } : {}),
       true,
     );
+  const scan = async () => {
+    setScanning(true);
+    try {
+      await api.invoke('matches.scan', null);
+    } catch (error) {
+      notify(String(error), true);
+    } finally {
+      refresh();
+      setScanning(false);
+    }
+  };
   useEffect(() => {
     refresh();
     void api
@@ -36,9 +56,17 @@ export function MatchArchive() {
       title={t('archive')}
       icon={<Archive size={19} />}
       actions={
-        <Button disabled={matches.pending} onClick={refresh}>
-          <RefreshCw size={15} className={matches.pending ? 'spinner' : ''} aria-hidden="true" />
-          {t('refresh')}
+        <Button
+          disabled={matches.pending || scanning}
+          onClick={() => void scan()}
+          aria-busy={scanning}
+        >
+          <RefreshCw
+            size={15}
+            className={matches.pending || scanning ? 'spinner' : ''}
+            aria-hidden="true"
+          />
+          {t(scanning ? 'scanningLogs' : 'refresh')}
         </Button>
       }
     >
@@ -77,7 +105,14 @@ export function MatchArchive() {
           </Button>
         </form>
         <Field id="archive-account" label={t('account')}>
-          <select id="archive-account" value={account} onChange={(e) => setAccount(e.target.value)}>
+          <select
+            id="archive-account"
+            value={account}
+            onChange={(e) => {
+              setAccount(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="">{t('allAccounts')}</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
@@ -90,7 +125,14 @@ export function MatchArchive() {
       <div className="filter-row">
         <div className="segmented-control" role="group" aria-label={t('result')}>
           {(['all', 'win', 'loss'] as const).map((value) => (
-            <Button key={value} aria-pressed={outcome === value} onClick={() => setOutcome(value)}>
+            <Button
+              key={value}
+              aria-pressed={outcome === value}
+              onClick={() => {
+                setOutcome(value);
+                setPage(1);
+              }}
+            >
               {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
             </Button>
           ))}
@@ -102,99 +144,124 @@ export function MatchArchive() {
       {matches.pending && !matches.data && <Loading />}
       {matches.error && <Notice error>{matches.error}</Notice>}
       {filtered.length ? (
-        <div className="table-wrap archive-table">
-          <table>
-            <caption className="sr-only">{t('archive')}</caption>
-            <thead>
-              <tr>
-                {['result', 'mode', 'map', 'eloDelta', 'time', 'account', 'actions'].map((k) => (
-                  <th key={k}>{t(k)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((m) => (
-                <tr key={m.id}>
-                  <td>
-                    <Badge tone={outcomeTone(m.outcome)}>
-                      {m.restarted ? t('restarted') : t(m.outcome)}
-                    </Badge>
-                  </td>
-                  <td>
-                    <Badge>{t(m.mode)}</Badge>
-                  </td>
-                  <td>
-                    <Button
-                      onClick={() =>
-                        m.fid ? openModal({ type: 'match', fid: m.fid }) : notify(t('offline'))
-                      }
-                    >
-                      {m.map || '#' + m.id}
-                    </Button>
-                  </td>
-                  <td>
-                    <span
-                      className={
-                        m.eloAfter !== null && m.eloBefore !== null
-                          ? m.eloAfter >= m.eloBefore
-                            ? 'text-success'
-                            : 'text-danger'
-                          : ''
-                      }
-                    >
-                      {formatDelta(
-                        m.eloAfter !== null && m.eloBefore !== null
-                          ? m.eloAfter - m.eloBefore
-                          : null,
-                      )}
-                    </span>
-                  </td>
-                  <td>{formatTime(m.endedAt, locale)}</td>
-                  <td>{m.localPersona || '—'}</td>
-                  <td>
-                    <Menu label={`${t('actions')}: #${m.fid || m.id}`}>
-                      {m.fid && (
-                        <>
-                          <Button
-                            onClick={() =>
-                              void api
-                                .invoke('matches.detail', { fid: m.fid || '', force: true })
-                                .then(() => refresh())
-                                .catch((e) => notify(String(e), true))
-                            }
-                          >
-                            {t('refresh')}
-                          </Button>
-                          <Button
-                            onClick={() =>
-                              void api.invoke('external.open', {
-                                url: `https://app.batrace.top/match/${m.fid}`,
-                              })
-                            }
-                          >
-                            {t('openBatrace')}
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="danger"
-                        onClick={() => {
-                          if (window.confirm(t('deleteConfirm')))
-                            void api
-                              .invoke('matches.delete', { id: m.id })
-                              .then(() => refresh())
-                              .catch((e) => notify(String(e), true));
-                        }}
-                      >
-                        {t('delete')}
-                      </Button>
-                    </Menu>
-                  </td>
+        <>
+          <div className="table-wrap archive-table">
+            <table>
+              <caption className="sr-only">{t('archive')}</caption>
+              <thead>
+                <tr>
+                  {['result', 'mode', 'map', 'eloDelta', 'time', 'account', 'actions'].map((k) => (
+                    <th key={k}>{t(k)}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {visible.map((m) => (
+                  <tr key={m.id}>
+                    <td>
+                      <Badge tone={outcomeTone(m.outcome)}>
+                        {m.restarted ? t('restarted') : t(m.outcome)}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge>{t(m.mode)}</Badge>
+                    </td>
+                    <td>
+                      <Button
+                        onClick={() =>
+                          m.fid ? openModal({ type: 'match', fid: m.fid }) : notify(t('offline'))
+                        }
+                      >
+                        {m.map || '#' + m.id}
+                      </Button>
+                    </td>
+                    <td>
+                      <span
+                        className={
+                          m.eloAfter !== null && m.eloBefore !== null
+                            ? m.eloAfter >= m.eloBefore
+                              ? 'text-success'
+                              : 'text-danger'
+                            : ''
+                        }
+                      >
+                        {formatDelta(
+                          m.eloAfter !== null && m.eloBefore !== null
+                            ? m.eloAfter - m.eloBefore
+                            : null,
+                        )}
+                      </span>
+                    </td>
+                    <td>{formatTime(m.endedAt ?? m.startedAt, locale)}</td>
+                    <td>{m.localPersona || '—'}</td>
+                    <td>
+                      <Menu label={`${t('actions')}: #${m.fid || m.id}`}>
+                        {m.fid && (
+                          <>
+                            <Button
+                              onClick={() =>
+                                void api
+                                  .invoke('matches.detail', { fid: m.fid || '', force: true })
+                                  .then(() => refresh())
+                                  .catch((e) => notify(String(e), true))
+                              }
+                            >
+                              {t('refresh')}
+                            </Button>
+                            <Button
+                              onClick={() =>
+                                void api.invoke('external.open', {
+                                  url: `https://app.batrace.top/match/${m.fid}`,
+                                })
+                              }
+                            >
+                              {t('openBatrace')}
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          variant="danger"
+                          onClick={() => {
+                            if (window.confirm(t('deleteConfirm')))
+                              void api
+                                .invoke('matches.delete', { id: m.id })
+                                .then(() => refresh())
+                                .catch((e) => notify(String(e), true));
+                          }}
+                        >
+                          {t('delete')}
+                        </Button>
+                      </Menu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {pages > 1 && (
+            <nav className="filter-row" aria-label={t('archivePagination')}>
+              <Button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
+                {t('previousPage')}
+              </Button>
+              <Field id="archive-page" label={t('pageNumber')}>
+                <select
+                  id="archive-page"
+                  value={currentPage}
+                  onChange={(event) => setPage(Number(event.target.value))}
+                >
+                  {Array.from({ length: pages }, (_, index) => (
+                    <option key={index + 1} value={index + 1}>
+                      {index + 1} / {pages}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Button disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>
+                {t('nextPage')}
+              </Button>
+            </nav>
+          )}
+        </>
       ) : (
         !matches.pending && (
           <Empty
@@ -206,6 +273,7 @@ export function MatchArchive() {
                   onClick={() => {
                     setOutcome('all');
                     setAccount('');
+                    setPage(1);
                   }}
                 >
                   {t('clearFilters')}

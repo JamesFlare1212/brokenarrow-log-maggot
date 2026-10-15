@@ -326,6 +326,9 @@ export function App() {
               {new URLSearchParams(location.search).has('demo') && (
                 <Badge tone="warning">{t('demo')}</Badge>
               )}
+              {new URLSearchParams(location.search).has('real') && (
+                <Badge tone="warning">{t('realDataOffline')}</Badge>
+              )}
             </div>
           </div>
           {!state.config.logDir && page === 'current' && (

@@ -23,6 +23,7 @@ import { Analyzer } from './players/analyzer';
 import { TrackerService } from './players/tracker';
 import { LogParser, type LogEvent } from './logs/parser';
 import { LogWatcher } from './logs/watcher';
+import { LogArchive } from './logs/archive';
 import { DeckService } from './decks/service';
 import { ReplayFiles } from './replays/files';
 import type { Platform } from './ports';
@@ -39,6 +40,7 @@ export class Application {
   readonly files: ReplayFiles;
   readonly parser: LogParser;
   readonly watcher: LogWatcher;
+  private archive: LogArchive;
   readonly client: BatraceClient;
   private analyzer: Analyzer;
   private tracker: TrackerService;
@@ -92,6 +94,7 @@ export class Application {
     this.watcher = new LogWatcher(this.parser, (watcher) =>
       this.event({ type: 'watcher', watcher }),
     );
+    this.archive = new LogArchive(this.db, () => this.event({ type: 'matches' }));
     this.handlers = {
       'updates.check': () => platform.updates?.check() ?? initialUpdateState(platform.version),
       'updates.download': () => {
@@ -125,7 +128,11 @@ export class Application {
         const before = this.db.config(),
           next = this.db.updateConfig(patch);
         this.event({ type: 'config', config: next });
-        if (before.logDir !== next.logDir) this.watcher.start(next.logDir);
+        if (before.logDir !== next.logDir) {
+          this.archive.cancel();
+          this.watcher.start(next.logDir);
+          this.scanArchive(next.logDir);
+        }
         if (before.inputHookEnabled && !next.inputHookEnabled) {
           this.platform.apm.disable();
           this.event({ type: 'apm', apm: this.platform.apm.status() });
@@ -181,6 +188,10 @@ export class Application {
       'players.profile': ({ id, force }) => this.tracker.profile(id, force),
       'session.query': (input) => this.query(input),
       'matches.list': ({ accountId }) => this.db.matches(accountId),
+      'matches.scan': async () => {
+        await this.archive.scan(this.db.config().logDir);
+        return null;
+      },
       'matches.detail': async ({ fid, force }) => {
         const match = await this.tracker.detail(fid, force);
         this.event({ type: 'matches' });
@@ -348,6 +359,8 @@ export class Application {
     for (const row of this.db.sql.prepare('SELECT id,name FROM map_names').all())
       MAP_NAMES[Number(row.id)] = String(row.name);
     this.watcher.start(this.db.config().logDir);
+    this.scanArchive(this.db.config().logDir);
+    this.timers.push(setInterval(() => this.scanArchive(this.db.config().logDir), 30000));
     this.timers.push(
       setInterval(() => {
         if (!this.network) return;
@@ -364,6 +377,13 @@ export class Application {
       }, 1000),
     );
     if (this.network) this.fire(this.syncBackground());
+  }
+  private scanArchive(dir: string): void {
+    this.fire(
+      this.archive
+        .scan(dir)
+        .catch((error) => this.event({ type: 'error', message: errorMessage(error) })),
+    );
   }
   private onLog(event: LogEvent): void {
     if (this.disposed || this.closing) return;
@@ -591,6 +611,7 @@ export class Application {
     if (this.debounce) clearTimeout(this.debounce);
     this.queryIds.clear();
     this.watcher.stop();
+    this.archive.cancel();
     this.platform.apm.disable();
     const recording = this.platform.recordings.stop(match || undefined);
     void recording.catch(() => {});

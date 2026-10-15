@@ -1,0 +1,2342 @@
+{
+  "version": 1,
+  "capturedAt": 1792094858658,
+  "sha256": "561ffbfd1c7d87c368726be69b652b6a02f5bf6f1983bb164433515522348624",
+  "source": {
+    "logFiles": 258,
+    "logBytes": 444014406,
+    "databaseMatches": 13,
+    "databasePlayers": 600
+  },
+  "expected": {
+    "sessions": 454,
+    "uniqueFids": 125,
+    "withoutFid": 329,
+    "logMatches": 454,
+    "seededMatches": 454
+  },
+  "files": [
+    {
+      "path": "Gamelog__2025_06_17__03_11.log",
+      "sourceSha256": "6c22e6f755fd293a9406e809280e35be73205b4afbefb410572eab5065b88a8e",
+      "sourceBytes": 25429286,
+      "sourceLines": 365799,
+      "eventSha256": "496ac89b00e8acd5e5ca0af0aca017dc4df040e8095ceda3a651773937207dc0",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_06_18__00_12.log",
+      "sourceSha256": "cfb107d4e29bcfe8b3e21fd797fc677a13c0628d5d340cc8dfa1b46d7593b1da",
+      "sourceBytes": 24361933,
+      "sourceLines": 348424,
+      "eventSha256": "60a8a158b0ba79a0c3413a919aa0c29312b0dfbd23d29ac5054a7021d5359890",
+      "eventLines": 52,
+      "matchFactsSha256": "3a2c33e9ccc877f62aedd7cb332e0a6b08ae39d24a4ad7532899624a8e1b557a"
+    },
+    {
+      "path": "Gamelog__2025_06_18__03_03.log",
+      "sourceSha256": "a656c4c72ec768972a20f43a141f4f8d127cf9a4409c7c31aff448f14b4e5e06",
+      "sourceBytes": 20184676,
+      "sourceLines": 289238,
+      "eventSha256": "448ae3b6a8699c941cda7db04d1e8543e4b2d16c997bc0e4ae8e0cd8aa9cf211",
+      "eventLines": 50,
+      "matchFactsSha256": "51f31297e003c5386585c3521f4a8cbbef19feb50ea78e178b20eaf76667124d"
+    },
+    {
+      "path": "Gamelog__2025_06_18__05_28.log",
+      "sourceSha256": "ef36487c6998fe842501d65f8d53afa8d22f07064ebd97d2baefc3db569b8ff5",
+      "sourceBytes": 13310706,
+      "sourceLines": 189208,
+      "eventSha256": "d0b32a505343c8527ca8e9886118af9c0f7c96884ec0bec6b49dc2bc0a2f80b1",
+      "eventLines": 53,
+      "matchFactsSha256": "58fd03cdec0bb0fe6457ae9aab11a787f957264ac36d8fb83135779d04ba36a2"
+    },
+    {
+      "path": "Gamelog__2025_06_18__09_52.log",
+      "sourceSha256": "cb76b6d0492360b23c3a20617ca25a39b36ee6968ab6b6e068ab197696ec5e24",
+      "sourceBytes": 415243,
+      "sourceLines": 6247,
+      "eventSha256": "4dd571bcd7a22014e84ec5307fa53035d53a087864c8047a6781cb070440385d",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_06_18__10_13.log",
+      "sourceSha256": "6f7626ae27f0f57e9e7763122ceef6798981c87deacc87c48410e2e1d5205844",
+      "sourceBytes": 47560651,
+      "sourceLines": 679532,
+      "eventSha256": "e672a03e0b883e8a9caf9328e3141f8513f09ce8da95de9f774456d9e4a4d485",
+      "eventLines": 69,
+      "matchFactsSha256": "5f36527bf05eb90aa98988b274b8fc249b3bfe167aec035fbbfc4b9c7feafe21"
+    },
+    {
+      "path": "Gamelog__2025_06_18__13_48.log",
+      "sourceSha256": "a64d6e8ec1e07611ecde6c8cae2be36c54738b40408a4ca3545a23d95997131a",
+      "sourceBytes": 14779138,
+      "sourceLines": 211437,
+      "eventSha256": "a76af7464782657e2a913401d0f4b2676c93cb8c96aa81a277803abc59bd1b53",
+      "eventLines": 64,
+      "matchFactsSha256": "3133eec06fa43170acc1989bb9f7a41c6a76b1926bbe3f21de215be8f57c9f19"
+    },
+    {
+      "path": "Gamelog__2025_06_19__00_11.log",
+      "sourceSha256": "a4971077617032ebd0a8f107a3bd5ec7938ae98c757ed0d0f311b14bb60c7830",
+      "sourceBytes": 436676,
+      "sourceLines": 8225,
+      "eventSha256": "89210677222111672f6f07857a6c33a115961dfe93c9ea3fce2240ee0ca64e58",
+      "eventLines": 142,
+      "matchFactsSha256": "4cfa68f6b12733edecba35772a4a2440fcc47377c7478d6c64ac1bc41f45cae9"
+    },
+    {
+      "path": "Gamelog__2025_06_19__08_56.log",
+      "sourceSha256": "aa215829556e4d95c67e9ce743b8196833bd06c0a014b1326996eeb849881409",
+      "sourceBytes": 22557,
+      "sourceLines": 461,
+      "eventSha256": "0b67195046a30124945b87d6626589a69aad2b20f50f6192dbdabeb304c2a86b",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_06_19__09_00.log",
+      "sourceSha256": "875cae95fe85fe0db58e6da7146468db732c87f8baac473f1bb8ce19a9305d02",
+      "sourceBytes": 249487,
+      "sourceLines": 4655,
+      "eventSha256": "a635f4d94ca6cfab70cdf2a43f811e696663811477389b3185ca5b8b7620eb44",
+      "eventLines": 36,
+      "matchFactsSha256": "be6105b8c38ea0b3f30bda2f1888b7da6dc817ef23eb1c4f56c596c5c848d829"
+    },
+    {
+      "path": "Gamelog__2025_06_20__03_13.log",
+      "sourceSha256": "ea9e20fa91ec79dc0485794e26f70245279e867fa9eb420971863fefa788947a",
+      "sourceBytes": 864317,
+      "sourceLines": 15781,
+      "eventSha256": "b16b1449b76e7aebb53901401e211151be633f07f7909a135b3c9b2b0e45b5a5",
+      "eventLines": 92,
+      "matchFactsSha256": "a32cbbb680e86ce7edc28ad203cb43e7673fdb9f852e8975864e9af7293d9474"
+    },
+    {
+      "path": "Gamelog__2025_06_21__05_09.log",
+      "sourceSha256": "74cb5be24defd9e5743b12bdb593c9b8b70c4fe02845ac16e1ab392705a5ccd3",
+      "sourceBytes": 272700,
+      "sourceLines": 5067,
+      "eventSha256": "2dda3013c6aae9378f708dac3a2ffc5e91af8dc35bc1a9cbd88f4297b53aadd3",
+      "eventLines": 38,
+      "matchFactsSha256": "1fc3a711e9c7093cbb783b25bdab32de3c2d2280bb3c1e568f551b387a33644f"
+    },
+    {
+      "path": "Gamelog__2025_06_21__11_41.log",
+      "sourceSha256": "f911952e3bf9dcaa64c8ceac0393ee25ecf3aed84201c91d27b2ec83b90250a4",
+      "sourceBytes": 676771,
+      "sourceLines": 11736,
+      "eventSha256": "9ffe215bbe4c31db4a54e3fdff2c011f3d19ae8dbf95513876c63e290b82571c",
+      "eventLines": 31,
+      "matchFactsSha256": "372576ba0affa01754ea63d8ca88795218c542bd8761ba694fb0c1ae290443fa"
+    },
+    {
+      "path": "Gamelog__2025_06_21__14_33.log",
+      "sourceSha256": "a6b3215fd4a85b9e56fe9449374cfb64d21aa7ddfd31af7c9390361c5aeaa1a0",
+      "sourceBytes": 315875,
+      "sourceLines": 5817,
+      "eventSha256": "53539fbc13e481071e6d5b905ca80cc301fe6995ea3cdfb43258b96898bd076f",
+      "eventLines": 32,
+      "matchFactsSha256": "7d7931276a4ee52ad10a87c6023ad794d47e914e8280726be054b25b589b2151"
+    },
+    {
+      "path": "Gamelog__2025_06_22__17_50.log",
+      "sourceSha256": "6812c59258208622cb09b80b8f637e2ca0b53f00052b696587db4f2182edbd24",
+      "sourceBytes": 984630,
+      "sourceLines": 17384,
+      "eventSha256": "2544a45761e2cb49ca6eca6f82f597d0977edb4a20183777bbd8ba89a62e8a9d",
+      "eventLines": 38,
+      "matchFactsSha256": "a92f5a35c4acb2b6755962dcd28f4a5eb30bd705d7ba03542c3d954f30b6e7c7"
+    },
+    {
+      "path": "Gamelog__2025_06_22__21_07.log",
+      "sourceSha256": "ae6bbfd4d633b87573f6f7827bf3ad2e579fb8176ad8e172b023b98631dad26d",
+      "sourceBytes": 1666830,
+      "sourceLines": 28912,
+      "eventSha256": "709784b2b84ced36f9921e957b2f54986931bf1f51387e2a6072994c17426715",
+      "eventLines": 54,
+      "matchFactsSha256": "53b8401c837782d102d691f14f43dc445fbf6bc0e9ab99bc5f52d59a4ec3f2d9"
+    },
+    {
+      "path": "Gamelog__2025_06_22__23_32.log",
+      "sourceSha256": "8306426b6e37eeb1d131afc910627115eff12f8317d9c47b0d6d4a6801c35390",
+      "sourceBytes": 257232,
+      "sourceLines": 4703,
+      "eventSha256": "0c4e8b23d75c255292c2136d32a86337adadecd8636bbc100cf53f98ac5d3868",
+      "eventLines": 34,
+      "matchFactsSha256": "95bf1384afed1e684278e630438348f54876118b02a62d0c1dc30d0af335c161"
+    },
+    {
+      "path": "Gamelog__2025_06_23__10_40.log",
+      "sourceSha256": "a6562e6de5f1c986e5878ba6d16f3442be0a296ff8e70baf61d1631954de9095",
+      "sourceBytes": 261036,
+      "sourceLines": 4845,
+      "eventSha256": "c7f9bf379971685be7c964c6e3f02d341408e98730dad717c940e274d7099a8f",
+      "eventLines": 35,
+      "matchFactsSha256": "ed0b5342e4b97579387a2b23852141ba28bdabae5e82f4683ce85f230d3c2938"
+    },
+    {
+      "path": "Gamelog__2025_06_28__12_39.log",
+      "sourceSha256": "9ea904eda7400cc6ba201681f018e062ec1342d4c1a02626058bc3b68aba14d0",
+      "sourceBytes": 163914,
+      "sourceLines": 3391,
+      "eventSha256": "063509362e5f32f8676be6d2af572ed6513ee92944d6c779a8a53bd692e8648a",
+      "eventLines": 58,
+      "matchFactsSha256": "41d919b494b8fc3d6cc8726f2a40391fc481a85512a8728e52587d53ef93a330"
+    },
+    {
+      "path": "Gamelog__2025_06_30__02_25.log",
+      "sourceSha256": "85e4fdf95ed55fa0cfda58c6a89f3415f99e1e344af233e2609fb5b9f9b4991c",
+      "sourceBytes": 1056972,
+      "sourceLines": 19337,
+      "eventSha256": "fe9c97e10c450224b0e214fe6554f54e0cca4a218886d9deff8c7d846d471ecb",
+      "eventLines": 147,
+      "matchFactsSha256": "f76eeccbd9df811191a13eb26f2faad15dea0dc187087e77df12b0b1b5a0012f"
+    },
+    {
+      "path": "Gamelog__2025_07_01__00_15.log",
+      "sourceSha256": "ee6636a50f009ae4e20808d15f71da2fcffce6134eb24122d30a1b22313de0f7",
+      "sourceBytes": 29724,
+      "sourceLines": 556,
+      "eventSha256": "1380493b40c76eb13b9b650e55f96b340323a9cb202b7f721b1799fb64d21172",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_01__00_52.log",
+      "sourceSha256": "350cc07abb98eca9efa9e9dad5a28d46da6df170fd0b2c079af3a46343a95cff",
+      "sourceBytes": 71953,
+      "sourceLines": 1254,
+      "eventSha256": "a40a9bc4ad45099b06d4a0eb447b709ddffd40fe8ab160cd0273a6f0d0a8a32f",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_01__02_10.log",
+      "sourceSha256": "cef6876555a8a6775eb673225aafe0cda011656c73ff0964f34279b90bb93ec6",
+      "sourceBytes": 921627,
+      "sourceLines": 16667,
+      "eventSha256": "57c3258318dd633d10efd86d14a6f95f226822e8d974eade9f6f16a4fdc8e23e",
+      "eventLines": 172,
+      "matchFactsSha256": "aa23de0c235746601dbc6484c7267672e849add2c2c565ba5081075d09ef163b"
+    },
+    {
+      "path": "Gamelog__2025_07_01__16_43.log",
+      "sourceSha256": "08abb6e9c6c6ef1fc4fec61427208f8ef2f793eb974428df181b141d2831edd7",
+      "sourceBytes": 242372,
+      "sourceLines": 4344,
+      "eventSha256": "cc4858709a52b7794670e39813cdfd9a0a2c5b1253d43260ce5352fcadda2a67",
+      "eventLines": 31,
+      "matchFactsSha256": "fc78ea257b786587d8080e200a6c49a5e371e6624a9cf909e84a8f44f45384d3"
+    },
+    {
+      "path": "Gamelog__2025_07_01__20_36.log",
+      "sourceSha256": "d62819443d8f511a0acce92a3005ba3e3bbe8ad5e3e2c8293b8a8897a754ebad",
+      "sourceBytes": 1096468,
+      "sourceLines": 19622,
+      "eventSha256": "865a28cb4af19e9d283d8a70c3fb285e869575eeb0f08a420acf44c2dc68c7ad",
+      "eventLines": 69,
+      "matchFactsSha256": "46eea867281d5bc35eef26613966083072dfef407e86bb099d15d3880318a049"
+    },
+    {
+      "path": "Gamelog__2025_07_02__11_50.log",
+      "sourceSha256": "70aa8f2d686b087be4b4e90c3cd0d54d3e14f60a636e1eb59ead689c01662b91",
+      "sourceBytes": 503794,
+      "sourceLines": 9294,
+      "eventSha256": "8d892d2a6852a5d56d70e42671d1782c933206db77b3afcf500848226658214d",
+      "eventLines": 90,
+      "matchFactsSha256": "6aac254c7f4f2b01a2830d276affcb95f95ed2bd13d84f5e58d3f18c6df6b682"
+    },
+    {
+      "path": "Gamelog__2025_07_02__20_01.log",
+      "sourceSha256": "e5c4964b641ad0280ffe6de6034ef8f4f812426b2d0a8b19b8dac18056013d76",
+      "sourceBytes": 250807,
+      "sourceLines": 4525,
+      "eventSha256": "300f7a04101e5ba470e2c1b5fe74df1f99ec78126b455df37d8dbb98ed0f18ad",
+      "eventLines": 35,
+      "matchFactsSha256": "2e6c208a1c569e324dc67fdf83ee59eed3d3d7f03c2f49df228c185b92c2c2cc"
+    },
+    {
+      "path": "Gamelog__2025_07_03__00_39.log",
+      "sourceSha256": "e2127e43d8608613371e01a45bd8b98108717cc7d02facc53f3ab73ba4b2781b",
+      "sourceBytes": 6292,
+      "sourceLines": 191,
+      "eventSha256": "516347beba76f60060690c06ec9d14c8aa8e8d136b181b8b59eeac8c63434126",
+      "eventLines": 2,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_03__00_45.log",
+      "sourceSha256": "b33dd4a3d138e746f96aca37a8491d5bba4128829531f95ec39e7b32d9c8c123",
+      "sourceBytes": 572434,
+      "sourceLines": 10397,
+      "eventSha256": "500681242437da99c921d550cf3f3553acc693fc10e4617adf22e8d022fa4a03",
+      "eventLines": 39,
+      "matchFactsSha256": "731de8a2b68b8379f25f204d2fd872c2fd1b096ffdcfe001683cd52e9b93eafe"
+    },
+    {
+      "path": "Gamelog__2025_07_03__01_37.log",
+      "sourceSha256": "47197112c8f43b0a089f57f005d1c158914915b1990713b3f51e3f4c0ce36dd9",
+      "sourceBytes": 22693,
+      "sourceLines": 467,
+      "eventSha256": "be11a7886787bf7ffd1d499ee1c7eca941f6fa018b3a77c135748549bb073632",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_03__01_43.log",
+      "sourceSha256": "bca281860ab5b0defd479cb37bc23579aa117ff39c5afd8a32109d0e5d16ea0c",
+      "sourceBytes": 379795,
+      "sourceLines": 6726,
+      "eventSha256": "1ad62e2705ab90ab1999f9206a6c33b06c1fe63259bf782ff40cf231aed6ecf2",
+      "eventLines": 26,
+      "matchFactsSha256": "8b86b9c8a7c6614d398ce9ab553ffbde9764313c4359a25313580e7331d881eb"
+    },
+    {
+      "path": "Gamelog__2025_07_03__22_38.log",
+      "sourceSha256": "e0f972c588949a1a6a74f9db70380e569739ced1be5e7a486a13056ec79b035d",
+      "sourceBytes": 1053657,
+      "sourceLines": 17725,
+      "eventSha256": "8e4f6fe9598ca7f15b9a0cfe0f2782d59b2d7f2fbebca820eddeea757eb9e2dc",
+      "eventLines": 52,
+      "matchFactsSha256": "76b1d210b3b990f1320fc73518fd27834010ce4366cd2a1d04433aa1890831f0"
+    },
+    {
+      "path": "Gamelog__2025_07_04__04_00.log",
+      "sourceSha256": "d3c0e97f462421fda3758ca90f7585e638734a2167142bb4b60533343aace3ff",
+      "sourceBytes": 375937,
+      "sourceLines": 6819,
+      "eventSha256": "30bb582fda92e98d275c7aff5d1b8329b4f270d740af3af0acf8e720fc3deafb",
+      "eventLines": 30,
+      "matchFactsSha256": "e8469d7fab1c44acaecfc315743b0b16eb3514fa7e62e167d38fca1a2b9cb8b9"
+    },
+    {
+      "path": "Gamelog__2025_07_04__07_15.log",
+      "sourceSha256": "c612a607593cbe27ef861dbb0522ffc508bed6f8be00f606f7c15bd4b4da4441",
+      "sourceBytes": 39224,
+      "sourceLines": 702,
+      "eventSha256": "d5f7154efaa603ccee78b69f9c908fd7a3601c54d42d91bbabe47a52bcce22a7",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_04__21_25.log",
+      "sourceSha256": "2fe5a67d52594a94732a82ec5d04050267f70cb4e88fc636d542eeab3db413f5",
+      "sourceBytes": 508806,
+      "sourceLines": 8132,
+      "eventSha256": "50fe88d1eed828c58ba527fc281394fcab2587c5d79d7d75df5cfef0ec0296fb",
+      "eventLines": 34,
+      "matchFactsSha256": "ba75ec4d2d6826c5913981b87efcb3494195004b8e36a7b1de622a853a81074d"
+    },
+    {
+      "path": "Gamelog__2025_07_05__23_25.log",
+      "sourceSha256": "7de29ea41a9d5a5c5385d947cb474e368639aa2b34245094d4b0fe25146c59db",
+      "sourceBytes": 168460,
+      "sourceLines": 3188,
+      "eventSha256": "8182abdf4905b58ab0c415b03e17d90525d25c3229c0447b830e9f2ecd531d49",
+      "eventLines": 26,
+      "matchFactsSha256": "a1b1c5fe4f28c662e062ddcb989c1ec0b75a1320d985063957a047f039ef46d2"
+    },
+    {
+      "path": "Gamelog__2025_07_06__00_59.log",
+      "sourceSha256": "a59ee76abb925ed77538b4df2dee3ccdc74d257ea755dee8c23c0916bc441c37",
+      "sourceBytes": 440698,
+      "sourceLines": 8182,
+      "eventSha256": "af1e73004e22f9363d088f31f201beb528e2aa9b60ba128b9f09a1ad5eea82a1",
+      "eventLines": 32,
+      "matchFactsSha256": "88048fb473a81939bf014246d58bc1f4464ac085785e1689bcfb41d6d2280df0"
+    },
+    {
+      "path": "Gamelog__2025_07_06__08_40.log",
+      "sourceSha256": "29a62dbaf982f86104ddb07354eefec74152d072e281b1d36bb04c1a45315265",
+      "sourceBytes": 175570,
+      "sourceLines": 3364,
+      "eventSha256": "cb64990aa250f243a6eb7f51cdfe8f1e0dd9a8980f63631b3c0e9039d3319adc",
+      "eventLines": 64,
+      "matchFactsSha256": "bab3a212295d2c69833a6bb17ded0a7da38d85b4c5b3390abb7ee7c231e826df"
+    },
+    {
+      "path": "Gamelog__2025_07_06__11_48.log",
+      "sourceSha256": "e8c3dc1dbe589335140bf95d2a228f86694973124f1feed1f6ae6b60d1a45737",
+      "sourceBytes": 7060,
+      "sourceLines": 209,
+      "eventSha256": "9bfef3ca6765a8c836bb8c6c9bcf3abf1bd499d04ae886673721b0b7fc36d7cd",
+      "eventLines": 2,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_06__22_10.log",
+      "sourceSha256": "10b03996999195f9b4edc59a1e7d4e055132c0a5bd3969bde51c057985bc0dbe",
+      "sourceBytes": 365025,
+      "sourceLines": 6654,
+      "eventSha256": "3755b72d4148470e7f6255e96a8d226f975dfc0ac48770f7c40e69ff9382a37c",
+      "eventLines": 38,
+      "matchFactsSha256": "602b68d5e4438d6309fc9938dcad4bed359891c12483b341388704a75e12ef9e"
+    },
+    {
+      "path": "Gamelog__2025_07_08__19_06.log",
+      "sourceSha256": "42ca3933f9f4ba57c86e5cac32d00496735bf4a3b874948e03828e6523a2a2c2",
+      "sourceBytes": 19115,
+      "sourceLines": 407,
+      "eventSha256": "93dc8222cc085ea963ad5e4e82847e7cfd4743562f5434d7d098ff1b20532f75",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_09__03_49.log",
+      "sourceSha256": "892a427cdf72cd3d01e2640ccb0fce70dd4ee97588889588b4d352c099756832",
+      "sourceBytes": 348593,
+      "sourceLines": 6382,
+      "eventSha256": "9f80407932e70e0db91a94d4c38627ce5977a04a354015101bd95cc268df34be",
+      "eventLines": 33,
+      "matchFactsSha256": "bea1c70e22f36c37dfccb07b51691b8280833498251dfbcb010228e36af6c444"
+    },
+    {
+      "path": "Gamelog__2025_07_09__09_59.log",
+      "sourceSha256": "6860eac84e29e762a48b57cbd97920214b9532df6c2f6fed661601008db5f2ce",
+      "sourceBytes": 165914,
+      "sourceLines": 3460,
+      "eventSha256": "9da45cb5e81c253b6ce8d491cec37d1f6848fc49dc44349a0b40157cd2094fb3",
+      "eventLines": 52,
+      "matchFactsSha256": "870ca171612d60c2b68bb143e2c09ae88ebaf19c34fdf880321d27971f8ff017"
+    },
+    {
+      "path": "Gamelog__2025_07_10__07_36.log",
+      "sourceSha256": "bae1f2f90083c8b64cf22f07a35da425d9da7835aed82194a5d583414b57a075",
+      "sourceBytes": 24235,
+      "sourceLines": 477,
+      "eventSha256": "d0d33c26a7eb3acb6bf8a800cdeaeba204fbc82640ff82f1e28c0943c378c82f",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_11__09_11.log",
+      "sourceSha256": "8cdf7b69f868663a1b7a6413dcfa17430437f5098a3adf168b0d83ee57001aee",
+      "sourceBytes": 9991,
+      "sourceLines": 238,
+      "eventSha256": "a55763096bff931b5b927544f11f13d742888d78fe4e494c9c947b4df5bf72d0",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_12__10_20.log",
+      "sourceSha256": "a5c5d1b8fd851e323030b1fed7a4b0a88468f8640506548e4aff5f551e3d91ef",
+      "sourceBytes": 322333,
+      "sourceLines": 5818,
+      "eventSha256": "e367ce9139794766f032ab453de793b1ce938d17e35d3ceb61bfd0314d7ec7a8",
+      "eventLines": 31,
+      "matchFactsSha256": "e26d776152ebc3508104aa1f95002c5473e519354c8d7dcb148416231968639e"
+    },
+    {
+      "path": "Gamelog__2025_07_12__11_23.log",
+      "sourceSha256": "d6d7cbb2f28758c40a416fc4a201e24a85d5a2529be9f7792dfce3e5dc4e850d",
+      "sourceBytes": 248173,
+      "sourceLines": 4492,
+      "eventSha256": "85c5c9dc0deed98f7438d36c9a3f0933c95f3ba5a111a5bd749ef4bc1ab813ac",
+      "eventLines": 31,
+      "matchFactsSha256": "0d72cf5b0c155890f4ca14f17d80a52a739038fe9512213407daa88e84e71374"
+    },
+    {
+      "path": "Gamelog__2025_07_12__12_17.log",
+      "sourceSha256": "e61025c3854044573971b13b00fd2f41ade5098c58846120271e525e1533a708",
+      "sourceBytes": 290422,
+      "sourceLines": 5396,
+      "eventSha256": "90fb5811cccf1e330451310a81c10c09fb439c368e2d54b8ee92dbc38dd3ae88",
+      "eventLines": 28,
+      "matchFactsSha256": "df8c155ac554e69c255afbe56ed49ddcd36f9a3a477717f0bdcddaabefbe71e0"
+    },
+    {
+      "path": "Gamelog__2025_07_12__13_22.log",
+      "sourceSha256": "58d4c7e5f6aaec841d4da57980f93d4953e4d2cbd5c1ed4cd3cfa2e780863097",
+      "sourceBytes": 132395,
+      "sourceLines": 2640,
+      "eventSha256": "575993c3c5dca141ba9bb584d7ab5c2341c86aa83fd2ad34e6cc18f162f6bd58",
+      "eventLines": 29,
+      "matchFactsSha256": "2103ce8d5e6b1ae0f2a4e81852ddf3de43a44bf7fcb12fc2623fae7f09f51d6c"
+    },
+    {
+      "path": "Gamelog__2025_07_12__19_05.log",
+      "sourceSha256": "1013d8093d479a77f6578f5dcc518a93cd097c7ded78b89218739b6533d86e19",
+      "sourceBytes": 232776,
+      "sourceLines": 4450,
+      "eventSha256": "f7b1bb6efa5879d8a9fc7298151bfd33416b5f16772dffda1d21fed1b1413983",
+      "eventLines": 37,
+      "matchFactsSha256": "74aa57cd0e93ee0626f0b719c7c9ecf1bc9b120e56221972a7ce7dafcfd2d963"
+    },
+    {
+      "path": "Gamelog__2025_07_13__12_27.log",
+      "sourceSha256": "523058bcebd6c4536816659eb7e570cc28eaf7e1b39899895b17489ad63ecb51",
+      "sourceBytes": 423951,
+      "sourceLines": 7639,
+      "eventSha256": "ce374089613c9cdd767d383d9611be0f42b6edb7e0977efec9ddebdf1612e8dc",
+      "eventLines": 37,
+      "matchFactsSha256": "2afc25d7f4ca438025d9eb9135985e691f88b5d644ccf887e6872e90b18adacf"
+    },
+    {
+      "path": "Gamelog__2025_07_13__15_00.log",
+      "sourceSha256": "46f3bf143563468e4fe423a61e5dec8ab8b96575197d5df1a9686c718c36a6ce",
+      "sourceBytes": 170438,
+      "sourceLines": 3643,
+      "eventSha256": "733365f529028759b1c95d421593edca8d18e4ef92760621a150af2b65c303c1",
+      "eventLines": 70,
+      "matchFactsSha256": "3d3a929310d1f4b6e119378bba5223000d9ad66b3e3b6ac0baa23b6caeaea80a"
+    },
+    {
+      "path": "Gamelog__2025_07_13__16_45.log",
+      "sourceSha256": "c4316789148b0534ec3b667d384e115195b2e62ee6cda61a923ddf48f7813aab",
+      "sourceBytes": 158992,
+      "sourceLines": 2903,
+      "eventSha256": "a051f7385b94f80b5341a62b8e398d217c34b12a30a574816fac487be70ecd5c",
+      "eventLines": 34,
+      "matchFactsSha256": "df6eaa22b48c8512576aa1bb03cb9d44d8de0da025c525e4a1ee306c57521806"
+    },
+    {
+      "path": "Gamelog__2025_07_15__22_42.log",
+      "sourceSha256": "0b323ec91f4cf2fe5056ead9ab349b417b602342f89002dd7949430512a4587c",
+      "sourceBytes": 18337,
+      "sourceLines": 331,
+      "eventSha256": "de52cf6c32a006495148fdb4f6c6628369a8d61c327315ad713169409281e7f2",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_17__23_28.log",
+      "sourceSha256": "7710bb609e0b3d040c96ea60c93f59b4f6d0f5b82aadcdea06fd5ef591d7c064",
+      "sourceBytes": 726121,
+      "sourceLines": 13395,
+      "eventSha256": "7595137cbb89a838105e1c5975fd05e0c7cf9630b238590ce850763482fa0879",
+      "eventLines": 63,
+      "matchFactsSha256": "2b8b65bda80ba590b1668cfce5122abdecc387bab0af9c672262040efbb14856"
+    },
+    {
+      "path": "Gamelog__2025_07_18__12_08.log",
+      "sourceSha256": "86698bc600ee38e24e854fa1d433f125b7cfc9ec6b3b9eee235bee5b256f1719",
+      "sourceBytes": 1241876,
+      "sourceLines": 22350,
+      "eventSha256": "f3b82cf242b71541a0d619ed29519d4bd74f0f8feb59f3c5edb50afbaa76114b",
+      "eventLines": 48,
+      "matchFactsSha256": "7da776de9d9909c2acf2ea3a1350a6374224b6ed72474f3bd7ef0ebd609d9795"
+    },
+    {
+      "path": "Gamelog__2025_07_19__12_48.log",
+      "sourceSha256": "8d633134b7e4d661b30571d03022ab881fe46f9841379204485a070b73a7a0dd",
+      "sourceBytes": 296529,
+      "sourceLines": 5498,
+      "eventSha256": "d8d8538b5f4433cf62b18e8277aba2d3781bc285b33e44e7665b245cc73c6880",
+      "eventLines": 36,
+      "matchFactsSha256": "be6171d36c2044c29fcc28862270d4e690ab4fd3e941ad850c2cc95a197fe986"
+    },
+    {
+      "path": "Gamelog__2025_07_19__15_39.log",
+      "sourceSha256": "ead1d5fe7f842f490fd579a3010eda38505a171dda0397a2171bdae779bdb16e",
+      "sourceBytes": 850882,
+      "sourceLines": 15055,
+      "eventSha256": "a42ed5bd5009484a75cf3eadc1a3f078776adf4e5764bc18e4c84ac446617b37",
+      "eventLines": 25,
+      "matchFactsSha256": "d7c59a0c0a1497209d493546b5aa9defb5fc6a38ddf2a0e5a487ecbcf9c7a50c"
+    },
+    {
+      "path": "Gamelog__2025_07_19__18_58.log",
+      "sourceSha256": "2a3dea7acf19864acffa86ca0a47c6d2479b69aa4dc6162828856642e10485f1",
+      "sourceBytes": 313036,
+      "sourceLines": 5769,
+      "eventSha256": "ad0272a2b5852fb89434b91dd63b629e699029408233971f79035ab5ae5c501c",
+      "eventLines": 33,
+      "matchFactsSha256": "e8cd754ed21b48c6d74c1566bc16c724c4eb90bed3497a2b6b4244f70ae78f86"
+    },
+    {
+      "path": "Gamelog__2025_07_20__13_55.log",
+      "sourceSha256": "cc092fd79f8c3b661bacafaacf9883f169648025c895ac65f8b59b3f783eb605",
+      "sourceBytes": 202283,
+      "sourceLines": 3987,
+      "eventSha256": "061c4035e1c6854825bc26dc9265c15752499504703fb89565996da0377fbb9a",
+      "eventLines": 31,
+      "matchFactsSha256": "925f5999937a9ca6c5ffda1d079fc5f08ec9765a98de2dde90f5a1eb97103a35"
+    },
+    {
+      "path": "Gamelog__2025_07_20__16_26.log",
+      "sourceSha256": "984cf3a62cbbe13526d82283b78663cb201bb9d653daf6025a4a2ca5fdcba510",
+      "sourceBytes": 312806,
+      "sourceLines": 6016,
+      "eventSha256": "01cd04b2d606aaac6a24a3f7f2c343dc51a7c7c00ddb0515b0c3130a6aa57834",
+      "eventLines": 52,
+      "matchFactsSha256": "5c92d12fde689c6460645d18be2ff482747605aae25098d7d08dfb86aa222ff6"
+    },
+    {
+      "path": "Gamelog__2025_07_20__21_57.log",
+      "sourceSha256": "2617327334e61c1b12ab8fc4d380050e28e12ff625ef44f71cf1c3d1b041bd83",
+      "sourceBytes": 206138,
+      "sourceLines": 4114,
+      "eventSha256": "61a30fba32f2347ac7d829b8bec4b416370b9484d5be8ace0cbafc3e8c58e007",
+      "eventLines": 34,
+      "matchFactsSha256": "df6e8c5af150a31ae759448c939a3b0cd9b6ea240839a28e018ab5087c16c157"
+    },
+    {
+      "path": "Gamelog__2025_07_20__23_27.log",
+      "sourceSha256": "70980ea74cbe07842d5bdba3d38bf722b00a20db5080905b8ab15c4f06dc7e62",
+      "sourceBytes": 6809,
+      "sourceLines": 203,
+      "eventSha256": "348835088c1e5cd3c4d01e11fa6ee03d335bea53c860f96444eeb7e98ef14d4c",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_21__01_47.log",
+      "sourceSha256": "7c9c697703012c6575387b9a4708b23db27494871279fa0fd0bfa3905aa47a41",
+      "sourceBytes": 453297,
+      "sourceLines": 8183,
+      "eventSha256": "0f176b437f94e53444a1453c3d431b8227e19009b226577fbe42ce842b91e610",
+      "eventLines": 33,
+      "matchFactsSha256": "119a6aa2b3efa97f30c34c11084f8347fb1782ba7ab76882e09152f01d00d6cd"
+    },
+    {
+      "path": "Gamelog__2025_07_21__03_06.log",
+      "sourceSha256": "157839bd68b824bf32c31818679a97e9fa4df91c7036a3f1a1583ea38419e09c",
+      "sourceBytes": 7897,
+      "sourceLines": 251,
+      "eventSha256": "49f74be420410357197efbdb4599efe76c67261780997962fc146f986761a834",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_21__03_18.log",
+      "sourceSha256": "b3358bff7233c4c292798f6ba8316e8bc72f9b4ba805a229a151e6b6696916c2",
+      "sourceBytes": 523323,
+      "sourceLines": 9322,
+      "eventSha256": "cfbd8f11da147da8fc8163944f31088b455182420a61f4626a7e643b8946e63a",
+      "eventLines": 39,
+      "matchFactsSha256": "071c8ed3b40523f932c607fb0c4de3940294d4789acaf46ad80e3b3644198a35"
+    },
+    {
+      "path": "Gamelog__2025_07_21__05_05.log",
+      "sourceSha256": "b1bad9d83d299a6e785e645abd6e48c00fcb335954c065b86e654ce350b4e445",
+      "sourceBytes": 190921,
+      "sourceLines": 3613,
+      "eventSha256": "e4e931d67b18aebeb337825d318688187d09034a69bf49b92725f49a853b4628",
+      "eventLines": 27,
+      "matchFactsSha256": "97ed54205d2d4b71311fd14cb52f6d5b1f3d0966ab8b034a96219630ea531f50"
+    },
+    {
+      "path": "Gamelog__2025_07_21__13_39.log",
+      "sourceSha256": "c87bcafeb869b7d0976c71cee3b65d9213a1903db4382b1cb03851b311be09ce",
+      "sourceBytes": 6809,
+      "sourceLines": 203,
+      "eventSha256": "9e5cd306dc670ca2f72496681793c2fbd5228862bf1f9b93ac05712d276b4690",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_21__19_51.log",
+      "sourceSha256": "2600d143135c855360549e854f0298a9f0170aa5a0bc9be88758cd1ade8e1c76",
+      "sourceBytes": 319153,
+      "sourceLines": 5947,
+      "eventSha256": "ba6433607531f44e732cc919f830962c8411d5b4c400639d69f626212fe9bd0a",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_23__21_08.log",
+      "sourceSha256": "dffe11c6c7ab5195940cb58fa5c456d3915d3203636d1e19223f3a30fb686b8c",
+      "sourceBytes": 1608079,
+      "sourceLines": 28068,
+      "eventSha256": "52eb1612e6da3b219f3b4814f48c3717f374ce8e670f6cf51f224865e53241a4",
+      "eventLines": 36,
+      "matchFactsSha256": "22dadea930200e35a348b71dc2d35687b5b8c53cba20e3fc6faadea314663e5b"
+    },
+    {
+      "path": "Gamelog__2025_07_23__22_34.log",
+      "sourceSha256": "6d1968e4b29ea6e771fbb496e6f907c3f489506b2ad187710777855790862df0",
+      "sourceBytes": 685788,
+      "sourceLines": 11659,
+      "eventSha256": "2a694deebb9236421648cdb77a63be16697be04b20c64c553ed65c6e10ac344b",
+      "eventLines": 30,
+      "matchFactsSha256": "40d936dd79beaa6934f43fef10126acf604192a3786b038774bbb1f51335859a"
+    },
+    {
+      "path": "Gamelog__2025_07_25__23_59.log",
+      "sourceSha256": "b5fd6848c4ac51492e1b7f3d81033c993b0afb5c8fdb9c187eeebe71b68cc054",
+      "sourceBytes": 35868746,
+      "sourceLines": 790917,
+      "eventSha256": "ed06704507a80f261bb6ee84dbe94f7fc19d1c68110ece8ec33198ae61361023",
+      "eventLines": 212,
+      "matchFactsSha256": "56c3260d58d0d4bd25cdaa37cdae3921b825549315f2d49c45ff4565adbbeb23"
+    },
+    {
+      "path": "Gamelog__2025_07_26__05_01.log",
+      "sourceSha256": "64a2afba4051b642720af425d1459398d3f9db912098ebf3636c133774e2e192",
+      "sourceBytes": 812934,
+      "sourceLines": 14931,
+      "eventSha256": "52ef91ce0f50b37c9c428619013ff1e9e97d5c384344b35b35f9aafb4af88dac",
+      "eventLines": 81,
+      "matchFactsSha256": "cd31c5a716d7da4f0a031907d698bb04814b2022080c976944fd4b7ec361689a"
+    },
+    {
+      "path": "Gamelog__2025_07_26__07_16.log",
+      "sourceSha256": "9ae9bd2e4d0532e3d03fe0bdcbcc43e212871d6c4ed8dbefbcc0d4de398abc8e",
+      "sourceBytes": 341549,
+      "sourceLines": 6422,
+      "eventSha256": "31ae2428d54ededcbae85a8c84047cf7cf12e2c3c7cf26b50da245a159653e09",
+      "eventLines": 33,
+      "matchFactsSha256": "c795bae35c1cb864c45032298a0dcf2a33208049d81809bc3af5cefba37415a5"
+    },
+    {
+      "path": "Gamelog__2025_07_26__21_13.log",
+      "sourceSha256": "3f5058ea1398b040ba882aba639ddba28eb0b782b172e512d91bd015faab7df6",
+      "sourceBytes": 9297,
+      "sourceLines": 243,
+      "eventSha256": "ca9e7771062f5e2c03e54c1efeefccddeaf55ce22614cc82136a1f281a30b43c",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_26__22_54.log",
+      "sourceSha256": "022e51fabbb6fab0a532139e7a0e6e19b52b66ce14f5ff9132599155fcbf9b2e",
+      "sourceBytes": 55375,
+      "sourceLines": 1099,
+      "eventSha256": "94cd31ff5f5ca2cfc93b8066943525e2968f580e1f85bf1c74d1b4fe6139f759",
+      "eventLines": 13,
+      "matchFactsSha256": "367456deb6ebce999b760e4bd022bdf334597a54ad39a7be281f3a4bff2efbfd"
+    },
+    {
+      "path": "Gamelog__2025_07_26__22_57.log",
+      "sourceSha256": "10c23ce5ebb691ae467370d1323a9b3b14124f595132d287196c05618c19f52d",
+      "sourceBytes": 191861,
+      "sourceLines": 3907,
+      "eventSha256": "af608a85ea1a10412e796b20bd74544a6bc303bbededad8bf0699baf1591d278",
+      "eventLines": 49,
+      "matchFactsSha256": "674bfaded6fe5358932ee6198fe392986a1c6081585963590f15a9df2b0c3ba8"
+    },
+    {
+      "path": "Gamelog__2025_07_26__23_19.log",
+      "sourceSha256": "1ba2cf9d8dc0fd52e5b9c78792a6c59c9094073cb09f66c25fa42f5b9bbf2c8e",
+      "sourceBytes": 266409,
+      "sourceLines": 5574,
+      "eventSha256": "42bd5e62d4f32142bc9e2df07b839a91476a1166649e106704a957af39f2dc0c",
+      "eventLines": 78,
+      "matchFactsSha256": "feedd20491f7cacd2e45c10ae1e9abcac47e35b7866abacdf9bac21445ba9a31"
+    },
+    {
+      "path": "Gamelog__2025_07_27__02_19.log",
+      "sourceSha256": "c1f2077023b50f9791a85df24de7743105b860f9b2cf1b705cc087fafa5824d3",
+      "sourceBytes": 217940,
+      "sourceLines": 4135,
+      "eventSha256": "aec0840fbb331b49d2d721409ba6e5d6d6a38221b0b3b47157b81dd24b8ec79a",
+      "eventLines": 32,
+      "matchFactsSha256": "05d351a98ea5bf356534190a1bc18f9c9df6a7bd9ea3a260f592f898ca990c32"
+    },
+    {
+      "path": "Gamelog__2025_07_27__04_35.log",
+      "sourceSha256": "df0eaa9214edb5b3e2615ba19404cc0484c34654a2a5006d7746784f8a769f09",
+      "sourceBytes": 2029420,
+      "sourceLines": 36346,
+      "eventSha256": "a14f0799f2247159ee006b5ad14f3d21bb12f0d302427806d5d5126880632d2f",
+      "eventLines": 201,
+      "matchFactsSha256": "b7f02002975c6bc255a07f855a9a9070c1ff12f4e76be61745df6cda8f18e666"
+    },
+    {
+      "path": "Gamelog__2025_07_28__03_20.log",
+      "sourceSha256": "e48dcb1a0eb4aa240a4dacc44cf8c4db03ce908d7a176166e79af8feda4ae303",
+      "sourceBytes": 30553297,
+      "sourceLines": 680393,
+      "eventSha256": "d72a2f16ae67cba22607cd8ea2304335721e6f806f45cee52d2f1e68ed84ec7e",
+      "eventLines": 64,
+      "matchFactsSha256": "207c1211eaba4008cd467792a86ed1985cf5f0ec134ce9cb84c720e84a17a1d2"
+    },
+    {
+      "path": "Gamelog__2025_07_28__05_03.log",
+      "sourceSha256": "86df85c476e1bcb0ffb1aca45c2b8d4599f4772bff93728260b75268fdfd52c3",
+      "sourceBytes": 234804,
+      "sourceLines": 4278,
+      "eventSha256": "b147af12f952752c6e70b335dfb06b92ee70503adca6dd14dee3f852031f9eb4",
+      "eventLines": 8,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_28__09_07.log",
+      "sourceSha256": "3b53b87f675f772fb3889c4f39393a0f00a86d6059eb20974c8e044a6a51ded9",
+      "sourceBytes": 212471,
+      "sourceLines": 4632,
+      "eventSha256": "dfa1f56cabd7cdcce5709e0abb7d23ec58632eb0bcb88e9a2d8fbe2224bd9f72",
+      "eventLines": 89,
+      "matchFactsSha256": "55ee012ae3863fac99679a76832cf705134d673fb79a0910e8484d99be29951d"
+    },
+    {
+      "path": "Gamelog__2025_07_28__10_44.log",
+      "sourceSha256": "de04107d5a7d63ae13be9cfa8ad5081e8ee47662d019971a4c47b0b5e86d354c",
+      "sourceBytes": 707893,
+      "sourceLines": 13082,
+      "eventSha256": "86bc885998ecc71aa9137dae0975ca026c0c5a940e0569de6e13d3f98635d323",
+      "eventLines": 38,
+      "matchFactsSha256": "612a24bf5cb0d8979e51b2a7eb3ac62f1fd170ff6b5d4b6af5c2833af02912f3"
+    },
+    {
+      "path": "Gamelog__2025_07_28__13_10.log",
+      "sourceSha256": "0ecb8d83e27e842b0c170acc1c93fa5d10dc40e9b3a5eb495162aa081ad2283c",
+      "sourceBytes": 6809,
+      "sourceLines": 203,
+      "eventSha256": "d06255857ccf38cca5cec09cb6c67e9fd8de9d1bf29f54a06a600fa98026117b",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_28__18_22.log",
+      "sourceSha256": "33483fd41acb54582309119d3c417a8e4f3ad6fca02459e850adeba75231392e",
+      "sourceBytes": 12304,
+      "sourceLines": 281,
+      "eventSha256": "aaf14889ebc90c6b9416929ee2462c2fdb56c5ba95295d3e314140230fda26e2",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_07_29__02_49.log",
+      "sourceSha256": "d56e2ffb01163e550c58b422eb2b245b501b33737d23b892f42bfc35bbeb0f94",
+      "sourceBytes": 18364350,
+      "sourceLines": 406622,
+      "eventSha256": "7c1466fb5031cd8bd006926561b69d9b7415a1de5f561b85e77ae1dc8352ba02",
+      "eventLines": 77,
+      "matchFactsSha256": "a7c151a9a130f4b12a98601f293d273f55a12d3f76f54cba9cbccaf1cec42695"
+    },
+    {
+      "path": "Gamelog__2025_07_30__01_36.log",
+      "sourceSha256": "0b0c40fa0473253925242db13a986bc8270d5e016e2cb9ec8b176def9a829889",
+      "sourceBytes": 129838,
+      "sourceLines": 3075,
+      "eventSha256": "95cbd129e836a87c86a72dd25d3abc8cf94aeaf0e75256eb0c8a425bd4041604",
+      "eventLines": 102,
+      "matchFactsSha256": "a6964c99ccdbdf6aaca212480cc0e2a9839940df5863b7bf5915f5a84c59c08b"
+    },
+    {
+      "path": "Gamelog__2025_07_30__02_14.log",
+      "sourceSha256": "9b33b554b74112338430ccc6d55fdef1d0bff4c086256d8cdc2477ea2b568870",
+      "sourceBytes": 356481,
+      "sourceLines": 7023,
+      "eventSha256": "3a8891dd7748b464fc8765ae2fe25d050b09a23cd7b8c151d9626e1816cdfaed",
+      "eventLines": 65,
+      "matchFactsSha256": "b7e95d4dac57b37c3648c2eb1ae20a61944ffcd322283123c04ef9f352821258"
+    },
+    {
+      "path": "Gamelog__2025_07_30__06_38.log",
+      "sourceSha256": "fe27f8eae56a66327cf5f555abb7613680e17d3f1327c991fbe4114b070e8da5",
+      "sourceBytes": 230403,
+      "sourceLines": 4643,
+      "eventSha256": "c87b7dbf1d1b18ee5f22e149065c0db7b3a3dd8d0ba87084d0e1271285565111",
+      "eventLines": 31,
+      "matchFactsSha256": "7be5656a22397c773d919efde5d8a885a46c93d5015ec0c7e88d51ab5a925bec"
+    },
+    {
+      "path": "Gamelog__2025_08_03__08_17.log",
+      "sourceSha256": "a9d2678866c83ef581d2c12cb1932940b982ce85c0f7291683facc79a2fe903f",
+      "sourceBytes": 238849,
+      "sourceLines": 4362,
+      "eventSha256": "99cd962638be931a1fa647f206802d871b384e0999d64fc44e42d04dcb991ecb",
+      "eventLines": 33,
+      "matchFactsSha256": "37f36460d6d9aff6da6a49d9859a776970b56f3b45c84e2a581456d187f5a5ce"
+    },
+    {
+      "path": "Gamelog__2025_08_03__16_32.log",
+      "sourceSha256": "e62a18c9f2e4e73d5775b1fe970924e8de79c8a2dfe320ac03a162d76704cf15",
+      "sourceBytes": 502608,
+      "sourceLines": 9149,
+      "eventSha256": "aa5334425760ec3a21a54b64cc2cd81660905ea5fa757eb3375c07fc11f5d7b7",
+      "eventLines": 35,
+      "matchFactsSha256": "de7b3d00f8ae30f48840c7272bc3fc27cbc26070a555d2763611a8908fa13b6c"
+    },
+    {
+      "path": "Gamelog__2025_08_04__09_54.log",
+      "sourceSha256": "14cb4b0f72614ec6056f610d542471e14ef91ac25b947b3e289f2d0d48f75f4e",
+      "sourceBytes": 295839,
+      "sourceLines": 5439,
+      "eventSha256": "5a422ea011785f6187574e4e6c6a6feb4864dada1715d31af7881ef96882ad5a",
+      "eventLines": 37,
+      "matchFactsSha256": "8c0386ced648c39425ffa4f7bb8d84c955e981bf7a2d2fd35396f763a5339eea"
+    },
+    {
+      "path": "Gamelog__2025_08_04__12_53.log",
+      "sourceSha256": "a99a81e93d6872ac06a7fb6beec905bd86703e16d48e9c0c2fea91db481043cb",
+      "sourceBytes": 8285,
+      "sourceLines": 210,
+      "eventSha256": "3b99da8a8978f53d281c7b231482bb0b86bd1546c0a57d07aa26ea2fca8b8c3c",
+      "eventLines": 2,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_08_05__10_58.log",
+      "sourceSha256": "617b46bb2ca88d3f9541a38d09dfa3d5f7a5547a7aee91618297ae781aec948b",
+      "sourceBytes": 8487,
+      "sourceLines": 219,
+      "eventSha256": "2e21d4ba6e99bc5919d8dcccfb4a934b03fed0eb4b14443cdf8ed65377851d55",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_08_07__00_22.log",
+      "sourceSha256": "6b5eb36f8fccd0d60f5a7262f628ea54b978ae8ffdca334b949d04fa4cafae3a",
+      "sourceBytes": 718172,
+      "sourceLines": 13235,
+      "eventSha256": "f76a8e61d39b687c349a3cbda3bb78e09d2d037623e49f7449c1a9d0bf6f2f0f",
+      "eventLines": 30,
+      "matchFactsSha256": "1c2fc6a35803473a0100d0b81d978e17d319e341f7637bfe9e5a611833460a4c"
+    },
+    {
+      "path": "Gamelog__2025_08_07__13_41.log",
+      "sourceSha256": "58baf071c6ce273e4627d2f0b3d53f0efed70d8c74b236104eae7d92bff01a04",
+      "sourceBytes": 7006,
+      "sourceLines": 212,
+      "eventSha256": "fcde160e9b8395884b370a347424eb195851c1c0b98bcfb4c94a30200ff15b65",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_08_07__19_14.log",
+      "sourceSha256": "5a2c0fa45fd8c9d6a32e026b6f7dfa546067390fd6eaa34a1319222f49c8446f",
+      "sourceBytes": 6363,
+      "sourceLines": 191,
+      "eventSha256": "7b6f245e6a72de60eab9c9002b88097a81931ccedb9245dc0e047a32d9ccc796",
+      "eventLines": 2,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_08_07__19_54.log",
+      "sourceSha256": "865ba76d20b4010fb30159f079dda23fe548b171f72dbce8aa08ec2b6cd13ffc",
+      "sourceBytes": 264881,
+      "sourceLines": 5234,
+      "eventSha256": "e5e5785918cc2c67521b79dbb937b07c0a28e25bf81fe2bbd5e48954d46e9637",
+      "eventLines": 39,
+      "matchFactsSha256": "b8ae8621b42e3172e5be1a34403ebce58faa1f405df6671a631e31df96eeae9f"
+    },
+    {
+      "path": "Gamelog__2025_08_27__04_30.log",
+      "sourceSha256": "01f4f408eaff2b8fd3878ff48055bee1169b84d387efec0bb1005edf7241b1eb",
+      "sourceBytes": 15247,
+      "sourceLines": 304,
+      "eventSha256": "7b27b6774c7ae1061de26996950f8d5863e7ee74d88f53295ddbd64e041ff54a",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_09_25__19_28.log",
+      "sourceSha256": "252622650ec2421de4b23386e3f3e1fb5ba202669546a661d897839fa29e7d94",
+      "sourceBytes": 21083,
+      "sourceLines": 390,
+      "eventSha256": "a373921664f36341431bed3e761ef722e99fee9cb07151d5af682cc50070a731",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_10_03__21_40.log",
+      "sourceSha256": "c12a2ac8a5561eceb0eec1120ba8ba5322bcd6cf07e2c807e2323235364678e6",
+      "sourceBytes": 563591,
+      "sourceLines": 10213,
+      "eventSha256": "eafaec6c344aeac15ba411ddd00d478f87f539afbaeed62a89c67aa27c37b6e8",
+      "eventLines": 59,
+      "matchFactsSha256": "05289cde74b42044d66d219e3654d2c7d449587aff2c8ef3a614d1f464b298aa"
+    },
+    {
+      "path": "Gamelog__2025_10_30__21_17.log",
+      "sourceSha256": "16a20d43dd6083103dab4abedff8b9748eefa5eea0f751212097984d4a2840ba",
+      "sourceBytes": 212408,
+      "sourceLines": 4110,
+      "eventSha256": "53bc4bbfb9e7f5293c88fe600afa2081ffb4bf7f2f03da176063b7f185247654",
+      "eventLines": 67,
+      "matchFactsSha256": "3623e7dd7292c53311a729945d9f41e03d140dfa78b54a911acf31f0aa31a707"
+    },
+    {
+      "path": "Gamelog__2025_12_07__21_13.log",
+      "sourceSha256": "a25843703c34aa30a2a528d795bbbced901bf71761d608e67e4a8e6ad2e9ce32",
+      "sourceBytes": 709857,
+      "sourceLines": 12870,
+      "eventSha256": "1f5cb562da7d31bb7a870c659e1bba31b754e434d1f2d15bd8e7c9b7b91b3261",
+      "eventLines": 66,
+      "matchFactsSha256": "8a6743e978f5643eb1b3a231ab6ab88c12eab0e167cb93e7941310a262875374"
+    },
+    {
+      "path": "Gamelog__2025_12_10__22_50.log",
+      "sourceSha256": "e81b804464f9f97ebb38d6064dc0100b4187eb98af000950f9eb0b4748c97fe9",
+      "sourceBytes": 20698,
+      "sourceLines": 495,
+      "eventSha256": "ee6a0ed6b9b8f6a5288c2dbf074946d34e4d3ca82ef52994e38869e0e10118ea",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_12_11__20_47.log",
+      "sourceSha256": "bc108f5aef9962ba0ec891f59986aa5791b937f8f35a0114dd33c1043f5c0f36",
+      "sourceBytes": 522561,
+      "sourceLines": 9531,
+      "eventSha256": "d3a29cccbb0785802b9c31ec13c69b29db139acb7cdfe05265f0c92dde71ac27",
+      "eventLines": 27,
+      "matchFactsSha256": "6038d2a6c70adbc0836ee16b71e91965f24c1f145b3df99c43d2c4dd6d3a938e"
+    },
+    {
+      "path": "Gamelog__2025_12_12__00_29.log",
+      "sourceSha256": "d369932b630648a79aeaa77a2087880513690c521248dee57056a125d9f5d26b",
+      "sourceBytes": 631425,
+      "sourceLines": 11595,
+      "eventSha256": "3372ed08fcbb37ae895404c173a0c3179c5f5ec32af1932438bf9d6bb63ad1a3",
+      "eventLines": 35,
+      "matchFactsSha256": "49c0fe299f5f0eb8f7ab5c121aca1908124828183a28cf9a8d6e99ad1662b3de"
+    },
+    {
+      "path": "Gamelog__2025_12_13__18_10.log",
+      "sourceSha256": "003aed14b7aac565acdfa5f6f14b7526edfea4e1fb1eb657abc0979b9e9ed183",
+      "sourceBytes": 922131,
+      "sourceLines": 17149,
+      "eventSha256": "aec3daa03166a75a09d9a5af1a57ad506015d22b315e12e858c2298e87e1fe1f",
+      "eventLines": 108,
+      "matchFactsSha256": "68b9c95e475d9d5ed0204bc9dddcb44a8ca81b53f38fccf10ce62dfc545429e1"
+    },
+    {
+      "path": "Gamelog__2025_12_14__14_10.log",
+      "sourceSha256": "e482d628a56dbcf0b8bdc6d1cd1bf1e2d88efde9acd130479493f56d6d77c635",
+      "sourceBytes": 173780,
+      "sourceLines": 3456,
+      "eventSha256": "8998368ed4fee6ccbb141e5bd2850e5e8d16f35065d6c382dc8eba8a83a011bd",
+      "eventLines": 31,
+      "matchFactsSha256": "b3011d64821354d2eadfb49d4c9a6f3836cc5b8119ae9e9634db07383618bd19"
+    },
+    {
+      "path": "Gamelog__2025_12_14__15_33.log",
+      "sourceSha256": "d2a6e28afe7cb3b160ddb65dd5d707b4500c212e74e9d4c8719d90392659e0d9",
+      "sourceBytes": 425646,
+      "sourceLines": 8124,
+      "eventSha256": "0739bbdfe20af7b4b75461e62341bc3c01dd737f7f09811b55886bd9172c411d",
+      "eventLines": 38,
+      "matchFactsSha256": "cf903f9fb95fbf29b5640791df66d45f8ab8017aafb06c6872adfe51996f129a"
+    },
+    {
+      "path": "Gamelog__2025_12_20__01_41.log",
+      "sourceSha256": "de963d51b329f9af91a66ad626c215b209774da62017ff51acb626b97f999779",
+      "sourceBytes": 945875,
+      "sourceLines": 18278,
+      "eventSha256": "8f27f0d1a6a17032536efdde5addd44a37b7d3a4f34f98dbf22fbdcb1be94727",
+      "eventLines": 207,
+      "matchFactsSha256": "50cee3463bfe28a328045d04cfb86b6dcee69bedff9406bb562ced8b74bb291e"
+    },
+    {
+      "path": "Gamelog__2025_12_21__23_02.log",
+      "sourceSha256": "f772630b5d5abe3baf0c55d3e67a106e957a747c5575b3b2e9d6b929cda76690",
+      "sourceBytes": 469490,
+      "sourceLines": 8751,
+      "eventSha256": "7b31aeb019fc492f9d794df3b7e14af754fba0bbc38405d2e6a1884426df951c",
+      "eventLines": 46,
+      "matchFactsSha256": "94e97ab0e9a43b43837d9e9330579b612b03e58cdd2e85b29fd34748664af0b2"
+    },
+    {
+      "path": "Gamelog__2025_12_22__01_43.log",
+      "sourceSha256": "461bd684b453ad3f150397e8e385f520d08cbe31566d364a8087987a729fa028",
+      "sourceBytes": 819065,
+      "sourceLines": 15361,
+      "eventSha256": "0325927f8c0aa185aef7e7a8edd5461988440c3ec88ab54d4e13bc7b2e4bdeff",
+      "eventLines": 142,
+      "matchFactsSha256": "e47740fa5551a6c6b77d97e8601b3c50fc6b87e3fad2695917721a68235d2374"
+    },
+    {
+      "path": "Gamelog__2025_12_23__00_45.log",
+      "sourceSha256": "39b4447ab4115f3772d4d1ecf8dde3064db457956ab89aadca95bad7028ccfec",
+      "sourceBytes": 799912,
+      "sourceLines": 14809,
+      "eventSha256": "fbf18cf378fd1614a737bfc3dc0df50ee1ffc70e9b48f815822adb1f54e727eb",
+      "eventLines": 134,
+      "matchFactsSha256": "c3e541b5d61d3ef368bb5eb587497af85f410d89e14ccf10b99d0a82bd968564"
+    },
+    {
+      "path": "Gamelog__2025_12_23__23_44.log",
+      "sourceSha256": "1530e37cac955b2414da4645963f289104573e2e2b20ab3058044125dafe4dbc",
+      "sourceBytes": 4259123,
+      "sourceLines": 76007,
+      "eventSha256": "48e618edb50aae5810daa5fe36caa49c08603240bdcb6bcf46d5c2bec2ce3241",
+      "eventLines": 179,
+      "matchFactsSha256": "6e8db8bf251c33258d72622d6408978a9f759e122e331c8676329258ca0aa19a"
+    },
+    {
+      "path": "Gamelog__2025_12_25__00_22.log",
+      "sourceSha256": "3f4d6529585339ff5f676580c288716b5e991ca2dec051e654285d35ecfab024",
+      "sourceBytes": 649986,
+      "sourceLines": 12398,
+      "eventSha256": "2e7a116a64384762cff7b14b4982d15b6f0d4dbf16210c8c56823a9d26f1bc8b",
+      "eventLines": 104,
+      "matchFactsSha256": "ec9eecf8f4210da9d8c2fe2b00c1c148c804be3993c37f47615268cdf8ae0f61"
+    },
+    {
+      "path": "Gamelog__2025_12_25__17_53.log",
+      "sourceSha256": "a84bd0cd1cf50c2f612b73eb82542d90a7943a7701f12ce247f12ff463150f20",
+      "sourceBytes": 138730,
+      "sourceLines": 2401,
+      "eventSha256": "58ec4ba18964f4e7334c6919b6ddbbefda5ed478a7c447d8c43b0d044cba2c2b",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2025_12_25__22_50.log",
+      "sourceSha256": "840b747f8bc923041616580ce5b2a88a6f3ddf5e6c1e9ed8df714805ecd8b922",
+      "sourceBytes": 3502202,
+      "sourceLines": 36457,
+      "eventSha256": "e53e8d4f566e49f0e528f8b883522013f6e32b194c1892d2628cbd755f276e87",
+      "eventLines": 90,
+      "matchFactsSha256": "08cbb224c1527de6ad22162056d03c70df50d79b20b651396bc75f6c44ee8466"
+    },
+    {
+      "path": "Gamelog__2025_12_27__20_51.log",
+      "sourceSha256": "c8670234c36a2764c82800b608aeecfc6039410f5e5ff3b3d2efa86d65cc3b48",
+      "sourceBytes": 1656406,
+      "sourceLines": 30396,
+      "eventSha256": "24a13620eb087f3cfe909772807960507dbabadf8c9e1fc4993722b2882d5a0b",
+      "eventLines": 145,
+      "matchFactsSha256": "99e52cd7af534ade2d8ff763dd3b81e7ca7bb2a65ed5608c6097e67f1fd3fd81"
+    },
+    {
+      "path": "Gamelog__2025_12_31__16_25.log",
+      "sourceSha256": "cbe36d42c65bc994d8866de3d2ab0b1dadfea5a7c9379d804300c5277bd25569",
+      "sourceBytes": 404043,
+      "sourceLines": 7303,
+      "eventSha256": "3e9b37a098154a2f78b744f0e76485014dded1f3cbbee37f9ec17d77998a262a",
+      "eventLines": 40,
+      "matchFactsSha256": "de2abca86bff41d1e0480a50ba91a7b05937d49684c81159b20413404bf6c0c1"
+    },
+    {
+      "path": "Gamelog__2026_01_03__00_48.log",
+      "sourceSha256": "065b87624b77597f5b0178d47018c2cbd47d78285cb7154ee7a255894f322460",
+      "sourceBytes": 251525,
+      "sourceLines": 4943,
+      "eventSha256": "33d330732919de03bf418f8342cd981c7eb419066456c3ecc846108aa68423ef",
+      "eventLines": 46,
+      "matchFactsSha256": "bab11030daf2133786ed92a48fba9d9fabd8c95085784057dae464bc1fbbe6ff"
+    },
+    {
+      "path": "Gamelog__2026_01_03__22_15.log",
+      "sourceSha256": "622ffe786cc6bdbd84b5d860d9d84087696b8717246c30668ccb893c122d3d59",
+      "sourceBytes": 1298727,
+      "sourceLines": 23573,
+      "eventSha256": "bf7c581ac4b920116c90099738c37f45268b09a6f2e589b8334179392a8b2d92",
+      "eventLines": 80,
+      "matchFactsSha256": "06a2bb0b95c39809422b43d93943b729e266afa5f0a285890cda6a86a9cdb95c"
+    },
+    {
+      "path": "Gamelog__2026_01_06__22_19.log",
+      "sourceSha256": "9fee189244d05fb658b8c04c44f56978308180878bf5042fab4f8ddc32b42747",
+      "sourceBytes": 10290692,
+      "sourceLines": 182574,
+      "eventSha256": "b1a7d927287cbdf940d5db1d256cca4dd3d3a2a1ed493c043c50b2049db9fd81",
+      "eventLines": 372,
+      "matchFactsSha256": "fde984c5cd80ef2c699b17706acfba5a0be17e5fc70bc5fcbf7c3dc21adb736b"
+    },
+    {
+      "path": "Gamelog__2026_01_07__17_01.log",
+      "sourceSha256": "a9b89409ced0af4a075863cc882ba09c8bee59f8a89068acfdd5659aae051a85",
+      "sourceBytes": 136798,
+      "sourceLines": 3138,
+      "eventSha256": "bf423bf99c567fd5a675050c4a8f1370d238be68bb8c44b26381e242cbd3607d",
+      "eventLines": 12,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_07__20_18.log",
+      "sourceSha256": "90472f6c25341a2af96f9242ac7a0e2f4cc735cac5dae002ac704bb6170ceebb",
+      "sourceBytes": 434885,
+      "sourceLines": 8541,
+      "eventSha256": "c413af188ccbb51fbf733f163e27dc6e9cae00cba780f234de935627b7af3ed5",
+      "eventLines": 158,
+      "matchFactsSha256": "68e1242bb032650d1a4ea8bee5a20dffd7cdb7b65340f2bdbb5cdfc050de7d6e"
+    },
+    {
+      "path": "Gamelog__2026_01_14__11_07.log",
+      "sourceSha256": "1017946021ca42b01fab7c6d852e1b7aa4a77d3383083b34dbb148cba84d6f48",
+      "sourceBytes": 10817,
+      "sourceLines": 296,
+      "eventSha256": "8c07d4d5954ceb18f69b3071d1d2e02d6dbdb33f7557d32061ec127a2e83c87d",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_14__18_55.log",
+      "sourceSha256": "c117ad7ff7587889e5d69049894a3cb69870a8061eeea383457f2ed329888f85",
+      "sourceBytes": 2116802,
+      "sourceLines": 38158,
+      "eventSha256": "d4e45d57a192b99e341dc46cb6544212414627e918460dd37c2224b350a1d218",
+      "eventLines": 239,
+      "matchFactsSha256": "e2fba81ec42583316995b31f5f2cd67f5aec1a4698b65bd5f1eceedf45c541d0"
+    },
+    {
+      "path": "Gamelog__2026_01_15__17_58.log",
+      "sourceSha256": "7a81132fc73ff8e82add3d6aeb05291086961ff1f09020742bab20ac348dee73",
+      "sourceBytes": 11197,
+      "sourceLines": 305,
+      "eventSha256": "212e6639c4eb634a2524ebd6b757b129f74e9b3d56545566cf079d30597dba85",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_15__21_18.log",
+      "sourceSha256": "10da50a250bb656b4ed0af5cd0f379868670af784704e2a63a7708560b478d9b",
+      "sourceBytes": 1080398,
+      "sourceLines": 20351,
+      "eventSha256": "601463d9a8f23c18e354dbb9eace01da4c1c884ce335cd8b5828d3fa1663d93c",
+      "eventLines": 234,
+      "matchFactsSha256": "a3ab3578569d4a05a6ba5a9e7ab597ed4b9131c52a3c528b42e595c2a80fc4c5"
+    },
+    {
+      "path": "Gamelog__2026_01_16__00_31.log",
+      "sourceSha256": "fca59151d52570e87d3510cc1ee26bb9104503a18e2c99a7065bc654524925bb",
+      "sourceBytes": 23625,
+      "sourceLines": 501,
+      "eventSha256": "2736dac183e10a8d83da6db1304083f483b36c1b7b5d95dd96ddb47c648ceb96",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_16__18_27.log",
+      "sourceSha256": "0adf144ab20021122dabe3640c0c4cbd353f46904afd95b639ec7d93349a1ee7",
+      "sourceBytes": 11197,
+      "sourceLines": 305,
+      "eventSha256": "2e208ae4ce1f5d54272da3e708dc3ac93b603cc9a387a18e098d9eea8a755710",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_16__21_07.log",
+      "sourceSha256": "05076fe7a0d6aee43057faf30af26bbf0ec48d398151e79ad520a7c6b66f156c",
+      "sourceBytes": 848041,
+      "sourceLines": 15578,
+      "eventSha256": "a8c7031fd80eefd2237c1aa225a6048ea682fc271082b98e89cdcf7f1795012d",
+      "eventLines": 103,
+      "matchFactsSha256": "ef2f3f0296356ce6d6695ab7c0c7843061e933b0d0208f50004be491ac5665da"
+    },
+    {
+      "path": "Gamelog__2026_01_17__20_02.log",
+      "sourceSha256": "c1ef242a0fae08ffdfd0ace2e366ffec86795640154f957b3ecabc8ea7fc0a4e",
+      "sourceBytes": 1833167,
+      "sourceLines": 34057,
+      "eventSha256": "2293dd326b4a00ef4f372bdcf869dc4e8d829c929335515a94402ac48f83cce8",
+      "eventLines": 275,
+      "matchFactsSha256": "da60a3fe2fc44c1d07720c5df76b12e5c6dcc84c4fce501e0bde56c639a4a6de"
+    },
+    {
+      "path": "Gamelog__2026_01_18__23_49.log",
+      "sourceSha256": "3182a0bbe7748eae4e271497c8b26599eee74b14afb88badf7d58ff3f249ab12",
+      "sourceBytes": 1253263,
+      "sourceLines": 22981,
+      "eventSha256": "05058c0dec02e08a204b4ee340ea628f03e707f5f50981649f46f4fe9cc3a350",
+      "eventLines": 135,
+      "matchFactsSha256": "1ec31217cc98bbb9cded68061510daf94034ce886532e9e3cf4d1f25e0ebf07a"
+    },
+    {
+      "path": "Gamelog__2026_01_19__20_15.log",
+      "sourceSha256": "edd7f393ce27fd7be8f31e63091289a28360b12d011826573d3a7a82c1ae38de",
+      "sourceBytes": 954196,
+      "sourceLines": 17922,
+      "eventSha256": "abaadc381749df534195a01f00aaa3e1a5c58b358a870c37d677d405ac7b571b",
+      "eventLines": 165,
+      "matchFactsSha256": "ca89f52771383c7291fd72071fa0bada145fe5d76216c30523686b24e9fd9635"
+    },
+    {
+      "path": "Gamelog__2026_01_20__18_37.log",
+      "sourceSha256": "7c8754ae468ca16a589f4ae28e0ba65f416a9138d9388314bddd304c4f15a87a",
+      "sourceBytes": 14309,
+      "sourceLines": 372,
+      "eventSha256": "dbc5354dbf55f6a443c0ea42a38548df163bc9658214cae5d101dbbe0e72f96e",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_20__21_04.log",
+      "sourceSha256": "cad19a2967a80eb64a740ff1de2b83cc0bc43c769dbb02d0ee5ff21f757e0f79",
+      "sourceBytes": 1109515,
+      "sourceLines": 20978,
+      "eventSha256": "2805c45190671ded445dde3b7a27d400680745318439c7fe795c7de9a5389b23",
+      "eventLines": 239,
+      "matchFactsSha256": "3d8e1bedb2fb5210bfa52a916aaa5bf75c75aa5a9a0c06598d1af9aff5511f84"
+    },
+    {
+      "path": "Gamelog__2026_01_21__19_08.log",
+      "sourceSha256": "cf83eef9aceabf7681f5ebdb7b7d20946c5ee217e7e0ccd89c306428a17b2124",
+      "sourceBytes": 16021,
+      "sourceLines": 388,
+      "eventSha256": "bfbdc76a05980ebffb4fe3be7098c5de665e03c474971d015db73ee25d2a5ace",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_21__22_54.log",
+      "sourceSha256": "747bd430774d03f0feecf7be786e4688cbdaaf8bda8f66a53df6a31c2c6178b8",
+      "sourceBytes": 938828,
+      "sourceLines": 18305,
+      "eventSha256": "1c3cdc38ef6f3c77642cd482968aa429cc9eeef8aad17f52be45c9818f112fb1",
+      "eventLines": 231,
+      "matchFactsSha256": "bee070b6a689afd507a1d78a577e14715034ed2d695551752172473ad5dc16f9"
+    },
+    {
+      "path": "Gamelog__2026_01_22__23_04.log",
+      "sourceSha256": "2a511d8bf490959bf5248390e7fe920cdc9775786fd94714c78bfd46d7512d80",
+      "sourceBytes": 765973,
+      "sourceLines": 14227,
+      "eventSha256": "f14d18460b8ccbd3185ae679e11add7cfe308d5ec9801ac471cd5cda992ecc6e",
+      "eventLines": 141,
+      "matchFactsSha256": "7959c1b5b3acd4ac87535b5e17b4a8df45b4ad7fe5cba753e94df1dcf7f8009a"
+    },
+    {
+      "path": "Gamelog__2026_01_23__20_25.log",
+      "sourceSha256": "3779d611583002385b219d9a0fdf84113fb78b48f637b795a9a75f8ad4a11731",
+      "sourceBytes": 11786451,
+      "sourceLines": 142853,
+      "eventSha256": "30ca1a0941a0bc22d3f72ec37440e05e1b0dc540a18171b42c223626aa6e6ee4",
+      "eventLines": 499,
+      "matchFactsSha256": "e7bb058ba67a0391c790023bce46705e9d23db772c0c6b56b6f216aa5a5aad0e"
+    },
+    {
+      "path": "Gamelog__2026_01_24__22_17.log",
+      "sourceSha256": "702f0b00ac3b4c789e3a21491e95ed94313b1d883de3af9abc263d41e4bfe2af",
+      "sourceBytes": 1325584,
+      "sourceLines": 24858,
+      "eventSha256": "134dd6ebce9a02151b6eebe52783742c78b10a823dd45df7ea5ed25b74b0dc51",
+      "eventLines": 158,
+      "matchFactsSha256": "ec40feaca09bdcce1364d2c708f9a2ce45bc19f44656747ca55c0f38a56b2e7d"
+    },
+    {
+      "path": "Gamelog__2026_01_25__20_03.log",
+      "sourceSha256": "79a65071164c42262111b8b9d0051157ec10d70fc645bdb6b0aecb0dce87e1ca",
+      "sourceBytes": 5385421,
+      "sourceLines": 96325,
+      "eventSha256": "c123f7d5a6683fb5525d581b2a78411ad11b794a55ab75d8e68be291e8c02cd2",
+      "eventLines": 551,
+      "matchFactsSha256": "611e74da620661590a4365583c67d954e77878aa4c39405abe30d0449ec08dde"
+    },
+    {
+      "path": "Gamelog__2026_01_26__17_56.log",
+      "sourceSha256": "a73d08536d8eef773d4b7a660cb3d7f123d99fe882460baf6da498e1396bfd81",
+      "sourceBytes": 1346908,
+      "sourceLines": 25193,
+      "eventSha256": "b473f3c290f9188bfc62f945d39b8b3ee2bbd11359a6d82161477081826f641e",
+      "eventLines": 250,
+      "matchFactsSha256": "d243facc8e70d4574b495e35bb32491c5e09d84bf6d0c08e3263720665533af4"
+    },
+    {
+      "path": "Gamelog__2026_01_27__10_24.log",
+      "sourceSha256": "1c2231a20c1b7bbfd06ac1f4df15caf927edd3b131b6da0b0e3eedeb00dc41af",
+      "sourceBytes": 21578,
+      "sourceLines": 485,
+      "eventSha256": "97eeb528f8b5266500d9f0e8f001c3ed6d6176be055112aa9de47f32a121d5b4",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_27__11_44.log",
+      "sourceSha256": "c35ce6d38451eb61848098701314fcb54addb9421215f3202760b94acacadc7b",
+      "sourceBytes": 11212,
+      "sourceLines": 305,
+      "eventSha256": "d0d719e564754031e7ed95f8719e5d50e30e038017fc2a7d74e9a8cd4247ee79",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_27__13_04.log",
+      "sourceSha256": "9e118c070a1f115ab6aefac8315459c799b1036ddd00f231a5b9e738b33063c3",
+      "sourceBytes": 11212,
+      "sourceLines": 305,
+      "eventSha256": "faf91ece266f71d8bd8ee343e6ca18ca43f5f0d29ed4b9c864f17dc105894c61",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_01_27__20_42.log",
+      "sourceSha256": "031c9e72432ac51dc408924fe51574754743932f98b27159b9215b65a9d6edbd",
+      "sourceBytes": 799443,
+      "sourceLines": 15134,
+      "eventSha256": "7ff4d6334908f36e1752e8a8927bc2e2895fefa2870d59a6f672dd32fad358b8",
+      "eventLines": 142,
+      "matchFactsSha256": "b2103966b5dbe713f69bdf9b1be1cad440f60fd832af13781aac479cfd0012c2"
+    },
+    {
+      "path": "Gamelog__2026_01_30__22_46.log",
+      "sourceSha256": "aef34f0e5593f381c9ec3841490ded68e4dd2fb182d7d59be2f5bcef1dabd4fb",
+      "sourceBytes": 595543,
+      "sourceLines": 11379,
+      "eventSha256": "b7a5636ac2ef47cfe7df90aadf6e0fd2f3b19deca7df442cbb7841d8e5cb4f1d",
+      "eventLines": 127,
+      "matchFactsSha256": "3bc26f329d337c9b809a0696ef2def9cf6d4f2004a17f556d3b2eafcd57b963f"
+    },
+    {
+      "path": "Gamelog__2026_02_20__20_28.log",
+      "sourceSha256": "9ba1e28e7ebff6572b66b0c21340f968d30458dd0bce850614e8c8426df0af33",
+      "sourceBytes": 625729,
+      "sourceLines": 11312,
+      "eventSha256": "741655c09e71d685430aa9f46750319c872ce6f897465a78c0abdbe38ee992b5",
+      "eventLines": 33,
+      "matchFactsSha256": "af5e469a5cab725526d80850e082d9c32ccc794741e6ceb1cb6799666515cc45"
+    },
+    {
+      "path": "Gamelog__2026_02_21__19_33.log",
+      "sourceSha256": "d2cd59004f2e749cc95f4e4a62bd783d7686868d2938ed727ee96f132a94666f",
+      "sourceBytes": 10834,
+      "sourceLines": 296,
+      "eventSha256": "8d83c4efa364b9ccb63834c7e6fd4f97b425779e800f739031b2e6ce0bea6f16",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_02_21__21_16.log",
+      "sourceSha256": "f68cd6718eeb07f275fdbe8e0fd190bfe1e2c64035337808673318744b201042",
+      "sourceBytes": 633501,
+      "sourceLines": 11848,
+      "eventSha256": "f109761e31204300d8dc4311d1ff833127d4f5eb73b4a8cca1437ccc708a25a0",
+      "eventLines": 90,
+      "matchFactsSha256": "a5d581ae99238f0ea2dc4e3a6e7fcc965db23c7082bf73d3c60d9c41cab75487"
+    },
+    {
+      "path": "Gamelog__2026_02_22__14_40.log",
+      "sourceSha256": "e795bce1e5493dbfe24bb919b52600caf209a10af19b34f9e76b1a735c535a4f",
+      "sourceBytes": 1268988,
+      "sourceLines": 23248,
+      "eventSha256": "a359582ac5d294a47fa5080d8f39ebb5689b045391c5243cbacfe9ec18c98d89",
+      "eventLines": 175,
+      "matchFactsSha256": "e1ee080662d1c7ed3907899209c043867a0ff33d292980539a18daa9b9c61440"
+    },
+    {
+      "path": "Gamelog__2026_02_23__20_51.log",
+      "sourceSha256": "85573a6c35e33dcacf4318f202f84dd9e74eeceada3fb4aa69619424fd08a1d9",
+      "sourceBytes": 19381,
+      "sourceLines": 628,
+      "eventSha256": "bb4362862f38569ff21c20ae87c5b682504f5ee0632917a4941bc19959aa639e",
+      "eventLines": 29,
+      "matchFactsSha256": "1f19977a81cb13538511e9c42a7cf206066e1c0f2e4aa546968bc9dfeeb00595"
+    },
+    {
+      "path": "Gamelog__2026_02_23__21_02.log",
+      "sourceSha256": "c8e4f995647a7fc1723d219e48b0b3eab92313dcc72b44ac7e538de201bd1f00",
+      "sourceBytes": 798474,
+      "sourceLines": 14799,
+      "eventSha256": "180aebdd7ff67c068d2337aa288a06f1b01b17ffb7a2af32215cefb9dab822b6",
+      "eventLines": 84,
+      "matchFactsSha256": "e2056ee4a99f876643a6fc9e013251530b51571b3752f322feee8f2e2405efff"
+    },
+    {
+      "path": "Gamelog__2026_02_25__12_29.log",
+      "sourceSha256": "113add2c6882fee25996c940bd0f1e11c207fd34a7e66be617fc1b49c440fe16",
+      "sourceBytes": 14363,
+      "sourceLines": 375,
+      "eventSha256": "5861eae983222760a3d734c0baef0aa80a023801a4d2e5f26f7f5d82c97c6502",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_02_25__17_01.log",
+      "sourceSha256": "9d8af74eb341aec9cbb77523025a155bf71bcf7b224e4b3e4e48cf948b03ff68",
+      "sourceBytes": 13787,
+      "sourceLines": 364,
+      "eventSha256": "da3441a5a20e82e8a5889482953d5ee07ea46476ba470d99403ea393e079e086",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_02_25__20_44.log",
+      "sourceSha256": "5be812ea548fc879635b17313fd982bb847517108eaea487c40523686abdfec2",
+      "sourceBytes": 295913,
+      "sourceLines": 5727,
+      "eventSha256": "58328a02a9a3a243df1c1ece5eda4a5fb5ee1e69e308e36f9f24fd7442e298f3",
+      "eventLines": 75,
+      "matchFactsSha256": "2db95902700703c7d35cd398b93ff2d1b41dac39e416d3b5373adc0e7e24bb07"
+    },
+    {
+      "path": "Gamelog__2026_02_26__01_03.log",
+      "sourceSha256": "84406c08f7ec66e272306c68762cea48248374daad8768111dc2c1ea9316a1c5",
+      "sourceBytes": 128808,
+      "sourceLines": 2186,
+      "eventSha256": "4b9db76f26626431299038e600fd2afe01725cdfab23555d75250987e31effcb",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_02_26__18_42.log",
+      "sourceSha256": "621896bd880403c170373f6b889d6206bf06401cb4167a255679d1d1819d733a",
+      "sourceBytes": 1827123,
+      "sourceLines": 32651,
+      "eventSha256": "65855f35b248482f14ad556377aea11f5b48dfc27cc16c234c73d6ba957e9c75",
+      "eventLines": 136,
+      "matchFactsSha256": "1d7180be2f802f784a6973d45fc883310c7f257ed51db01c2f882ad32f9bad08"
+    },
+    {
+      "path": "Gamelog__2026_02_27__19_11.log",
+      "sourceSha256": "19b49da99574cf6009fc2762f4d71c76487bc7de65c992213cc4b249a282b7e9",
+      "sourceBytes": 634790,
+      "sourceLines": 11793,
+      "eventSha256": "d64d21d21357bdf83a00f228f13890743ae72f53c4f887baaf579b173d09b34a",
+      "eventLines": 84,
+      "matchFactsSha256": "e2af07d16a65bf859b3d2861275cfaf61f57a7c3d9cfb0a1f33ca89ff276f559"
+    },
+    {
+      "path": "Gamelog__2026_02_28__22_49.log",
+      "sourceSha256": "e58f8d0978fe79f428749a19a69430aa3dfbe309b818adad23c00573e055fcbd",
+      "sourceBytes": 942531,
+      "sourceLines": 17215,
+      "eventSha256": "f8a6899fbf6c3617539719a8e8ec27f15b01d3c267713f27fc9ca9c4bb8a627b",
+      "eventLines": 107,
+      "matchFactsSha256": "02016167af5d068583ae1afefe7e8d850a95370b63b412c7f780450055837034"
+    },
+    {
+      "path": "Gamelog__2026_03_01__05_22.log",
+      "sourceSha256": "89d23e2e7b2256178e7a21323e57aa4743d0db45946523ba78054d662cb33539",
+      "sourceBytes": 604180,
+      "sourceLines": 11486,
+      "eventSha256": "5d492cc7d98d0fdb8711742250cb06d5bdc4a5d61b6f324e4f22e197e79a8ab8",
+      "eventLines": 97,
+      "matchFactsSha256": "0d4afc34a3b38500fc180994b43a33c373b468b2646fa9b70b6999c378dc2ea5"
+    },
+    {
+      "path": "Gamelog__2026_03_01__21_16.log",
+      "sourceSha256": "00a7391086440a583e5af09f72375f7623ab879fc883170ba6f5b050bf29b500",
+      "sourceBytes": 860220,
+      "sourceLines": 16756,
+      "eventSha256": "42c4fbc8ba1a99895775c0c750e4805243999d1060d4a1de6777e686d1c194ca",
+      "eventLines": 243,
+      "matchFactsSha256": "d263ab513169a300f73b32a788501a7b79208059c8bbf146b6393e6a68ade321"
+    },
+    {
+      "path": "Gamelog__2026_03_02__23_44.log",
+      "sourceSha256": "b7fff75fa56584ceee791a5db4c53eba63cdef3a6134e3a8517f3e7807db8ef2",
+      "sourceBytes": 1299804,
+      "sourceLines": 23219,
+      "eventSha256": "2ee0e25aa1878a48f07ec822971afd6f2db21c2d98c0dc1ccd3398090e956ff3",
+      "eventLines": 97,
+      "matchFactsSha256": "d8e5d6bffedd4bcacd44464051ec0603f501af67aa1ad614dead758470c5a26d"
+    },
+    {
+      "path": "Gamelog__2026_03_03__21_57.log",
+      "sourceSha256": "44082fe7d3983fcca1a64bee8e6a58b110dc722a5583247e385422b1b281a8b9",
+      "sourceBytes": 809856,
+      "sourceLines": 15143,
+      "eventSha256": "7eb8d1f6790a7de9fec8f263b25c7af8c78b1ba75e270110006e7c7681d228a9",
+      "eventLines": 103,
+      "matchFactsSha256": "ca8a76776756506f69e7c4047a04d059fecb80f19fd2c4a47f7dfb735390fd87"
+    },
+    {
+      "path": "Gamelog__2026_03_05__01_13.log",
+      "sourceSha256": "5eb6919c5ca95e132e5124156f4fa2f7b0570d513214d744d18696acf03502f3",
+      "sourceBytes": 857189,
+      "sourceLines": 15917,
+      "eventSha256": "47dd396c5a879a6d97941ed4f1397876045ba77b30b1405e4dc88a214c319038",
+      "eventLines": 107,
+      "matchFactsSha256": "f663afede5c0214a127358a538ecd49fbe4015615d3acf9a25f78ed719aef5b3"
+    },
+    {
+      "path": "Gamelog__2026_03_08__15_03.log",
+      "sourceSha256": "0d9924296584f8f04ab43249743b1a820202f040096d2c082a2b3e9f0839b5c0",
+      "sourceBytes": 214561,
+      "sourceLines": 4123,
+      "eventSha256": "50c4177f8565fa317b3e135b0b0df2049928662cb21ebf619ec26a253f446067",
+      "eventLines": 52,
+      "matchFactsSha256": "99d6d340ea0274dfa478ad704aa42c8e6122e98fcceeedfa1ee4f19ff69aab76"
+    },
+    {
+      "path": "Gamelog__2026_03_09__03_41.log",
+      "sourceSha256": "8754ad2e7a4ab8ec58a1315c3e82faf9cdc01b1e50acc3be3ddcc8b16856659f",
+      "sourceBytes": 163742,
+      "sourceLines": 2704,
+      "eventSha256": "076cd3d133113b9b6cf10f489f36cba5683d4036f43fa239d7c3fbba4ecc0d7c",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_15__10_15.log",
+      "sourceSha256": "e5d278c9e1a2cdb30c84dbfa2dd138dd31e063e145ffa6d4e45b70bba8f69b1d",
+      "sourceBytes": 532716,
+      "sourceLines": 9710,
+      "eventSha256": "27c64f55c68533049071be0d8ca3150666669bb97bcbf149133dd253476f35c3",
+      "eventLines": 42,
+      "matchFactsSha256": "4390a917b706ae5ee44dde8311f3b5b3ec25ca5aee63dd38adf428d46c946169"
+    },
+    {
+      "path": "Gamelog__2026_03_18__14_37.log",
+      "sourceSha256": "62c895765ee34b0db3bbfa7215caaaec94de82cad923f644f8cfb3afdbfa33d0",
+      "sourceBytes": 29031,
+      "sourceLines": 613,
+      "eventSha256": "8f338f2bfa6b3f8dad1d7797b8712214567d81210e62003dc55eeb0ca22a659d",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_20__18_51.log",
+      "sourceSha256": "4ada3f9c522f29b55dff5ff248b34fdb1fc450089cec281a52359c6ae97e1a05",
+      "sourceBytes": 17844,
+      "sourceLines": 354,
+      "eventSha256": "f8e39fa6e78c430df00a6943802a2e61dd06dd9ebfe0eb233ace67008c738bca",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_23__00_44.log",
+      "sourceSha256": "aac6ad096920208cb426b2286520cd9198293a40758271b55266fd9e2869a7e9",
+      "sourceBytes": 1292576,
+      "sourceLines": 23559,
+      "eventSha256": "fcc3e3bf8107ca70c57d3d14edbfc5360d087c601de5a7391782294df62040c8",
+      "eventLines": 131,
+      "matchFactsSha256": "179545486987613eb949b9357f47004b6b60ef802345f5354ff1aef73eea3733"
+    },
+    {
+      "path": "Gamelog__2026_03_26__23_39.log",
+      "sourceSha256": "4e13cdeee947720438618f683a6ce9d57be2e1bf154d0064bad92f484a7a6eb4",
+      "sourceBytes": 10386,
+      "sourceLines": 284,
+      "eventSha256": "bcdbbb6b32b21920434b903a8bb4b880cbe94c2eb46d504dd5c7926431de0c1c",
+      "eventLines": 2,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_26__23_48.log",
+      "sourceSha256": "91c05c7c02687133d2dae5a94e0904c57f47afa0648f58522ed1a2d4e06dd95a",
+      "sourceBytes": 396681,
+      "sourceLines": 7669,
+      "eventSha256": "4aa1c5838c4ecc2a34fc547eadd86b613be29f681326521926710d0843b76b5a",
+      "eventLines": 123,
+      "matchFactsSha256": "e881c0b0c4b181d6b06cae560fc7e3e527e5f197274a0424bf94f768164d8cdc"
+    },
+    {
+      "path": "Gamelog__2026_03_27__01_07.log",
+      "sourceSha256": "edbd939994b2107ebad93e2e9e65fce3cbfaa1be85d9994cc1fa02e14761c1aa",
+      "sourceBytes": 13773,
+      "sourceLines": 407,
+      "eventSha256": "1898f3597bbceb0c966df91045cb2a3ea23d34281b4449519e81f7d05f438d76",
+      "eventLines": 31,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_27__20_54.log",
+      "sourceSha256": "aa49bdceaef4891dbed66dadefe38018168c293cf5d4c6e61a255dfb8e7f1f1f",
+      "sourceBytes": 406729,
+      "sourceLines": 7453,
+      "eventSha256": "99016f5fe9f42368fd63a9f944936354098bd817b6668f9463405b12f082005c",
+      "eventLines": 52,
+      "matchFactsSha256": "0620895b25b13de4493cd0931bbca7cbf0cbaed6be1d39eb3c8a408fdcc2c3a0"
+    },
+    {
+      "path": "Gamelog__2026_03_28__23_57.log",
+      "sourceSha256": "6a0ee2c8932d64559c681a41a332be4a57c3cddca38effd15a24d2f9aeea0136",
+      "sourceBytes": 444868,
+      "sourceLines": 8771,
+      "eventSha256": "87770c76fcb7018d07a0d0558243444ee9b0e4275d82767f6f8b20b7658d98fc",
+      "eventLines": 146,
+      "matchFactsSha256": "4586a348640a30a2418c7699b62e843dda286e1a28bc98c2c8e5c823dfda3692"
+    },
+    {
+      "path": "Gamelog__2026_03_30__01_02.log",
+      "sourceSha256": "feb5353195ad95457304a7dc40cfbbc1e11c1fdc67862b0439edc7537e04359a",
+      "sourceBytes": 10832,
+      "sourceLines": 296,
+      "eventSha256": "d19d385396cb80a26fc8addefb5313e20dfa7a4f4876e5e9445ada4bc3dbc794",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_30__06_09.log",
+      "sourceSha256": "a0fbe2f55591b39774e37860c4a5407992965477ef58360fa1df103c9d5d1edb",
+      "sourceBytes": 12955,
+      "sourceLines": 310,
+      "eventSha256": "05e25fdec62fe52e7f87153baee577862236a787bdc41f13d396643fe0aef8d9",
+      "eventLines": 2,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_30__06_10.log",
+      "sourceSha256": "e5f704cae8143452eee76201d1e83089b367be27432b9a3438b27106007b4d62",
+      "sourceBytes": 28267,
+      "sourceLines": 588,
+      "eventSha256": "6526b2e664970aa6f64d4dc252a999fd33fc19771d4833a43d4f884c356ff357",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_30__06_16.log",
+      "sourceSha256": "3a95b6b07a7c04d7101ec697d88a54e8245d91856f18839a74c454e364c3faf6",
+      "sourceBytes": 171550,
+      "sourceLines": 2964,
+      "eventSha256": "de73035986301a1d29ee51a7136e8f9521ece876833902775d5384c4af6748a9",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_03_30__07_02.log",
+      "sourceSha256": "3f02cd64f2da9453d171bbc9fa80fdda85b43d549e7c5cb628297d3d28f81306",
+      "sourceBytes": 1696040,
+      "sourceLines": 31470,
+      "eventSha256": "d97046fa8e49ec3613383a982954ac2c96dbe5b1c706d3321b0ffe937ccb9e6e",
+      "eventLines": 142,
+      "matchFactsSha256": "d4fe3c9de974cb1c2fa62ea5307a132f8d01760d097277da78081acb22ac3f5e"
+    },
+    {
+      "path": "Gamelog__2026_03_30__23_37.log",
+      "sourceSha256": "eaea472149ae79dd68a446569d57a7ef665c8a69c2d380ae606f2874f728959a",
+      "sourceBytes": 1651179,
+      "sourceLines": 30616,
+      "eventSha256": "84750134a5c995b7b6a5d48c5ae30d79d19841915f6fe6495a59dea398fd5e79",
+      "eventLines": 287,
+      "matchFactsSha256": "2fa5b61bb6ada225d2243e540c8094e35a921611370cdc768123cef30ec79e22"
+    },
+    {
+      "path": "Gamelog__2026_04_03__09_09.log",
+      "sourceSha256": "9ffc18c2d6e99f88fd049a9c262ae3fe3306db22f4f16165d0e64bcd6780ffdd",
+      "sourceBytes": 1076584,
+      "sourceLines": 19723,
+      "eventSha256": "b65532acfef56d9d0e256f9d19361a825cbfe7c4873077a6319a6b7912537083",
+      "eventLines": 123,
+      "matchFactsSha256": "3f3b4ca590e11ec5072061fb63de32ed43f69b52f5bf30d738b04f985750d4c9"
+    },
+    {
+      "path": "Gamelog__2026_04_03__12_30.log",
+      "sourceSha256": "a8445be64a0e752ab233b491226a82d7b7e0c8e13e74d4a33348816ba9cc3259",
+      "sourceBytes": 17016,
+      "sourceLines": 426,
+      "eventSha256": "42b521adc9bd8f1d5239479f5129a40b704cb744772383ead6467358bade246f",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_04_04__03_27.log",
+      "sourceSha256": "4293a46039e1c6175b2cd21fd1678e6000449f72bfee096452027671174c2127",
+      "sourceBytes": 1515218,
+      "sourceLines": 28832,
+      "eventSha256": "75ded1edf196cb5046d23643525cebfbd583db05aa66ac37c4291f3bea05b85d",
+      "eventLines": 195,
+      "matchFactsSha256": "acaa4205b2c82214aaa2500f03e4f28f2383a9b9c50ca3fd976e263b9fe0962b"
+    },
+    {
+      "path": "Gamelog__2026_04_04__09_25.log",
+      "sourceSha256": "6a2831540b6b72516c6e35eeae3d781f6d3907f5959f0b502a7756d801547edd",
+      "sourceBytes": 1969013,
+      "sourceLines": 37071,
+      "eventSha256": "1238de4c4c081c236700376c9c1ac59da678d6e16702d4b956d0d4fe25858fa5",
+      "eventLines": 188,
+      "matchFactsSha256": "47d84d411ab94cfd9c865971f47c0e78d16ee4cda0079bf08413ce55699d564f"
+    },
+    {
+      "path": "Gamelog__2026_04_04__12_35.log",
+      "sourceSha256": "e606ebae3034febae26a222251e9008c821e456704a1830574998354609e7431",
+      "sourceBytes": 451095,
+      "sourceLines": 8640,
+      "eventSha256": "67b0854459c65c027986ebb5c98a56a4aa1f0de7cbfd67c3fd56f571ac6a7b73",
+      "eventLines": 51,
+      "matchFactsSha256": "359f8dcc80202db96599c9a928c4e1386b0a3d51ee3ed950aefc241042bfad9c"
+    },
+    {
+      "path": "Gamelog__2026_04_05__03_56.log",
+      "sourceSha256": "d3a0559de4a5a09ccbe40fe58beb0cc31ea3138fc90b7e04365c7e343f1210f9",
+      "sourceBytes": 147579,
+      "sourceLines": 3299,
+      "eventSha256": "adce30078af375eb1623316f8693b437d51311282fa80da1b680fde94a70464a",
+      "eventLines": 18,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_04_05__07_16.log",
+      "sourceSha256": "83000d0604ed46698dcc92357c1f53310240765f2045c180bf40706091d753d7",
+      "sourceBytes": 2046643,
+      "sourceLines": 38862,
+      "eventSha256": "d7194bb98b0dbc903593942593e9a1616be3d633047590194cfaf70a5880bf72",
+      "eventLines": 289,
+      "matchFactsSha256": "273d0ea95afe36c428f9e0c67f62c5d7fbc07c25502f5d9b4360abfe9f49e997"
+    },
+    {
+      "path": "Gamelog__2026_04_05__22_40.log",
+      "sourceSha256": "080ac5613acf6eef456d2aa91a05f7651376a1e58064d4a193af21c50fc59237",
+      "sourceBytes": 1580578,
+      "sourceLines": 29282,
+      "eventSha256": "f3870ec37245b1e8e9ba5ddc20ab9683a7363f3869c4ef4b8daebb9074437ce9",
+      "eventLines": 144,
+      "matchFactsSha256": "6fd72203906dfc6bfe348c600d97c129299f53f0adefe2d0b3c3dcb9c1df8e20"
+    },
+    {
+      "path": "Gamelog__2026_04_08__17_36.log",
+      "sourceSha256": "ea954974d34370a1fcfc6ceae2b758dd67c4153bad532d4584d3a7b42dc43236",
+      "sourceBytes": 21214,
+      "sourceLines": 515,
+      "eventSha256": "355d2f6215846c6b50fb9e188b42148cf5bc69f899700949252e5fdf0da57917",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_04_09__20_23.log",
+      "sourceSha256": "95a4275205914c2cc14d7a5588bf3285e8b6ad6599b0a69c585e6a5c1fa1c91b",
+      "sourceBytes": 762805,
+      "sourceLines": 13301,
+      "eventSha256": "eb1249222c87aad899d14779025d31d165d06203e9c9a899e6f959c093bff116",
+      "eventLines": 50,
+      "matchFactsSha256": "e740eed7b3389df71561edbf279f04b54deb227f5c08b70b62738512765899ff"
+    },
+    {
+      "path": "Gamelog__2026_04_09__22_05.log",
+      "sourceSha256": "3115b33979ea8b32d9dfc41d5b0aba712c0f7a4ee981bc765063e6670343f642",
+      "sourceBytes": 9279,
+      "sourceLines": 267,
+      "eventSha256": "5959e81a505484302561876ba578ac5a300d543828e15ffc4cc257976b70e216",
+      "eventLines": 5,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_04_09__22_51.log",
+      "sourceSha256": "5ac96b81d87c09304c1b262930081fdc2791919bfb6f29e9340ed9f7afd9d614",
+      "sourceBytes": 50490,
+      "sourceLines": 1150,
+      "eventSha256": "431fc988d3958f28a568508e9d136cd904f4c12d59a9fbc74159ee3b527264cc",
+      "eventLines": 5,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_04_10__07_56.log",
+      "sourceSha256": "f553d61555c6444b6adf8a515c8f63dda2873094225f1a526bb9ee17ff9c5dc6",
+      "sourceBytes": 1136477,
+      "sourceLines": 21643,
+      "eventSha256": "5b5c3e41138482ce42d1b7e66bc63ece92baecfd4d910395f01dd33f81efea54",
+      "eventLines": 198,
+      "matchFactsSha256": "4c0ee6e5cef965df83bfab7be7fd6dd030f08f6641155664c0e0a6003019a0e1"
+    },
+    {
+      "path": "Gamelog__2026_04_21__01_25.log",
+      "sourceSha256": "7ba737f766be6f65f6288aca890b083517590880a830cdc814d4ab7d891918f5",
+      "sourceBytes": 18599,
+      "sourceLines": 389,
+      "eventSha256": "49c29e72f354b9d5d1a0180055ac6b402aeae95d44c98cf9b61694100ccc6346",
+      "eventLines": 5,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_04_24__22_32.log",
+      "sourceSha256": "b7445b189d2e138afc50162b29bad1170b26a3a6aca3c2a406fda2a2b21799f0",
+      "sourceBytes": 49255,
+      "sourceLines": 855,
+      "eventSha256": "02e0ff81d125206310b97e36dc4ff96135a43ef5962e7ff4de8fb97c2856d887",
+      "eventLines": 5,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_05_07__12_01.log",
+      "sourceSha256": "9e9ffb7af010073585b8d9b8af3cd1c90fc68bb239fcafffbe5ba538def61fcf",
+      "sourceBytes": 75463,
+      "sourceLines": 1804,
+      "eventSha256": "2d466c14ba37311e1d267671f3b99594ef2c7593e7535855bae8689f4796b0ba",
+      "eventLines": 15,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_05_07__14_30.log",
+      "sourceSha256": "5c1754ef2bf3b932fd96a9ae73a7f3db7585093cf932a7f55a31b4a4a5595cb7",
+      "sourceBytes": 1462885,
+      "sourceLines": 28811,
+      "eventSha256": "877fa0c84f5ea5f73076f73cf00641d7cdec6589c3a1ccf1f5b8eecc1eb728a9",
+      "eventLines": 210,
+      "matchFactsSha256": "d9e1c0101f9bbe9b8a9b14d2b8f928ea32659dfa7dc1c9cece7b8ceabd859103"
+    },
+    {
+      "path": "Gamelog__2026_05_07__21_03.log",
+      "sourceSha256": "82657b18170d97e89407d68be9e9b6a7a02fa1fbe24b8a8f23a837c2f75a5201",
+      "sourceBytes": 113940,
+      "sourceLines": 2073,
+      "eventSha256": "4b312f46951f202002879494791176a3661d41cdab3da721ebda6a077f8323c1",
+      "eventLines": 5,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_06_11__20_00.log",
+      "sourceSha256": "c855d5fbd8975912bfe3e8d884fceb2ab48a70fa9485db74f524a9b1be867238",
+      "sourceBytes": 15316,
+      "sourceLines": 327,
+      "eventSha256": "66fecd65fa9bb64a7cccc3fdab1df6fa26f4dc06bf22148e0eefcecda503e84e",
+      "eventLines": 5,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_06_13__22_25.log",
+      "sourceSha256": "9ab7351cd4d36f644dc9bcb5c43759718f0806964bd4aba75282aa468a5fc534",
+      "sourceBytes": 901132,
+      "sourceLines": 17239,
+      "eventSha256": "b2542b907e23f90c91c1d549515be426d510ffc6431d9b25165f5c9835ab8aea",
+      "eventLines": 135,
+      "matchFactsSha256": "8f18cfbfffcb82f46d16aa978c2fa8d4e96e1259b8e995ba3c92dd524e2a3349"
+    },
+    {
+      "path": "Gamelog__2026_07_19__20_13.log",
+      "sourceSha256": "dfd76f02fe60d55664874ab617f70defcf1543808c462a408ec99de82167fa07",
+      "sourceBytes": 20384,
+      "sourceLines": 413,
+      "eventSha256": "f5e1121fabeb7307216de62da752dee4acb19707c3a55ec79dd27d29a3a66b12",
+      "eventLines": 5,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_07_19__20_19.log",
+      "sourceSha256": "7d40b6938cf122189d8d9b25de2d147ecaef3b1e7fd847f16372a79dd04e6325",
+      "sourceBytes": 1136225,
+      "sourceLines": 21218,
+      "eventSha256": "d3162d8e9160167fcf6929446311fad31b3c851fd9fda1bc7a1d6fd08f6a8a7c",
+      "eventLines": 147,
+      "matchFactsSha256": "41aa76e7d73f2a1a243de9ff80a18ac21021c30ac5c252128c5f2928bcd0f208"
+    },
+    {
+      "path": "Gamelog__2026_07_19__22_53.log",
+      "sourceSha256": "1063d3472751a6aee9331fcca2e10e9d6baae2fdd0203abf9ba059ce6f7d1407",
+      "sourceBytes": 819880,
+      "sourceLines": 16001,
+      "eventSha256": "f0ca6bda4f3624181d26df19ddb88181d78725f2a59f8cf22cafd2e24f0277c8",
+      "eventLines": 132,
+      "matchFactsSha256": "62a3bf5d0d0256a26aa137d3760dbb398ab78229aa49e4bba4179b20cb630d20"
+    },
+    {
+      "path": "Gamelog__2026_07_20__23_24.log",
+      "sourceSha256": "095b2f14e0034ed7b307e051dfcac9c95154ab62a6630666699cff5c8009ce93",
+      "sourceBytes": 1177039,
+      "sourceLines": 22398,
+      "eventSha256": "c45394ff35eddfdbc30a6ae27a4053f18e76e0f06ccbb1fbba8db02cb8fe8d33",
+      "eventLines": 109,
+      "matchFactsSha256": "e3ad8858bbb641926d26a2594014ef6daf7337c1644896f9a1ed870a3f9f34fa"
+    },
+    {
+      "path": "Gamelog__2026_07_21__01_48.log",
+      "sourceSha256": "1c8a4285788ef66eaaa96f80fdda79bb849d9077e7826c2603f0eeee6f806d2e",
+      "sourceBytes": 353479,
+      "sourceLines": 6855,
+      "eventSha256": "5c18929398f3a0b578666ed21c87539769cfce9516522768833606baecfaec87",
+      "eventLines": 48,
+      "matchFactsSha256": "19a09b012807b9ab811ee1934b6341c348e2acc9ef6774ccb32ae665698bb080"
+    },
+    {
+      "path": "Gamelog__2026_08_10__20_26.log",
+      "sourceSha256": "257d8f21afec585d1e5dfdc3365ec8f50bcfc0dcfe58afa24965f42d16a3b213",
+      "sourceBytes": 20806,
+      "sourceLines": 425,
+      "eventSha256": "ef160da9d87af22f31bf179f06a4620fedd5df1fb1c8992e04df9ff5aaa8f381",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_08_11__23_59.log",
+      "sourceSha256": "15d56508a0ab8857cdb938e743b3a47c6d63b2069c5534b051391c9ecaf41d0f",
+      "sourceBytes": 987009,
+      "sourceLines": 18763,
+      "eventSha256": "bdd4aeda682c7e98cccda09e3974c0c9ccb71e82cbf519b2d65356d3f3dc4a20",
+      "eventLines": 203,
+      "matchFactsSha256": "99b9e9812cbd34c32c2d2ddf1fe6616bdfec53cbbc5ce5218e596d1c67d7796d"
+    },
+    {
+      "path": "Gamelog__2026_08_12__22_04.log",
+      "sourceSha256": "d010645407b1c4771010316c8d3716b88a30d651de8cb159e2d1e63909c6719f",
+      "sourceBytes": 1382207,
+      "sourceLines": 25345,
+      "eventSha256": "2c1479b8cff4011877154113f5c499c91becc52e4de1750c02e51cb5af0ddd02",
+      "eventLines": 174,
+      "matchFactsSha256": "58c9e8c5db991843562aa40b7f25378cf2333da207c4e4206c1309181499e359"
+    },
+    {
+      "path": "Gamelog__2026_08_13__15_45.log",
+      "sourceSha256": "f2695a8e71e0577b7dea3009f97b6510be324f92682900deafbb35e48ada83fa",
+      "sourceBytes": 9684,
+      "sourceLines": 276,
+      "eventSha256": "7b2b962436ad4be29f77f16235b8cb1bf76dc34939669abebb17512b1bdb3fa5",
+      "eventLines": 5,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_08_14__00_16.log",
+      "sourceSha256": "c73569e7ea6187557917be44fdb44d2321be8070f3e5897ec8d486bb82ded42c",
+      "sourceBytes": 998180,
+      "sourceLines": 21332,
+      "eventSha256": "ffecb249648ea138eecbba4ca32dc26cdf71729e58c7436dac7bae0fac068e46",
+      "eventLines": 191,
+      "matchFactsSha256": "38793b8649d66d1940fb2318e72b2c01fbf9171c4f3ef5f7642905620abddca2"
+    },
+    {
+      "path": "Gamelog__2026_08_15__22_14.log",
+      "sourceSha256": "7d2da77b0e5c57fae4e7628d2c6e936ede41f57d367af4cd0a62e2493245194f",
+      "sourceBytes": 1069334,
+      "sourceLines": 19592,
+      "eventSha256": "e006c2686f367703ffb5ed4de8edc9c115070adf77f3e4c5cd68d981cf6ae5c5",
+      "eventLines": 137,
+      "matchFactsSha256": "f7d5c24c97fb3f2d0e63968157027cbd76d266adf4577e42d779c3d8474cba2a"
+    },
+    {
+      "path": "Gamelog__2026_08_17__00_59.log",
+      "sourceSha256": "94e5fd9849410b29f6c98f3e315434c8bd423358193ae27f671a790223e49b11",
+      "sourceBytes": 823487,
+      "sourceLines": 19438,
+      "eventSha256": "6a576d8126bd4df287805c42741ea6ff00c4fdb949bd72e5241292277186d7ac",
+      "eventLines": 46,
+      "matchFactsSha256": "cc441d630eb53b17cc1e82e2aeb495ddcb37a020c48ea8437ccbde2a5c2e06f8"
+    },
+    {
+      "path": "Gamelog__2026_08_17__20_28.log",
+      "sourceSha256": "5005c4efe1d50a86e39226156a05adfb788f1b3b57b68ffe09d57dcb35916090",
+      "sourceBytes": 1576888,
+      "sourceLines": 29021,
+      "eventSha256": "54015913ce50ee1f9a9c41903082ab01fe2accc2b9ce37bc7d271a04131dbf08",
+      "eventLines": 166,
+      "matchFactsSha256": "b3a120acce86a1c48f687282df973780e8ca23e7641c0fb060d1d4b3bf12ed66"
+    },
+    {
+      "path": "Gamelog__2026_08_18__10_25.log",
+      "sourceSha256": "4a5758bd4d61d8ddcad8366faf22483ad0d27128299b7b72200c5263aebbf8b8",
+      "sourceBytes": 965407,
+      "sourceLines": 17249,
+      "eventSha256": "69f077b65164a4064f2aff4aaa700b145f81e51f27d1a524338e72851eb8bf4d",
+      "eventLines": 59,
+      "matchFactsSha256": "724ef3ab8f5833688fd720ef87b6b34e2e55109d50b3f023f53249b52d9c0e85"
+    },
+    {
+      "path": "Gamelog__2026_08_18__21_49.log",
+      "sourceSha256": "c11fd15e3219e4e38da7fff2f2b24cee6712c5fd16ca25baa795e9b2244d32dc",
+      "sourceBytes": 1402234,
+      "sourceLines": 27561,
+      "eventSha256": "fc4e3133e498bbbad1c11d7553739e805ef0e2ad4af1e6486ef9b926da357bd4",
+      "eventLines": 385,
+      "matchFactsSha256": "7c4677b67363338adc19f9c686aa40fdc58f8b2b6aef13ef1e57da5ab3a5b738"
+    },
+    {
+      "path": "Gamelog__2026_08_19__23_10.log",
+      "sourceSha256": "b9469ae9864bdc9e3444074fc7b09d3b620a6334d50ad2e2a750fefe0439331d",
+      "sourceBytes": 751648,
+      "sourceLines": 14744,
+      "eventSha256": "6e8fc12d6bffc54b203c27f3ce39cb996b4f9e9e43e4e521cebd3e4596a3f48a",
+      "eventLines": 302,
+      "matchFactsSha256": "d7f19b80664eb46b9a6d1d51a4f04c54442aed46a5a5823c594c40f46fc893b9"
+    },
+    {
+      "path": "Gamelog__2026_08_23__21_16.log",
+      "sourceSha256": "29fa9661b05e1fbd88b5705504bfdf3c8c91689dd069814db7f66f255895dec3",
+      "sourceBytes": 1453881,
+      "sourceLines": 27201,
+      "eventSha256": "90fb0f51a774db6ec44583297579c7b9cb4857aeacdd04eda595fea90cea097f",
+      "eventLines": 175,
+      "matchFactsSha256": "ab559419c60a3828b15f59752acea2eb8b705b201eab503baa9a661cf35c7630"
+    },
+    {
+      "path": "Gamelog__2026_08_27__19_59.log",
+      "sourceSha256": "a99cf0fdde464ebf494dd2a18ad39912d12daabc6950a3caa752367cf4132959",
+      "sourceBytes": 2080097,
+      "sourceLines": 39079,
+      "eventSha256": "78c42e60c0e2373a913bc30053578e5491fdd4aef9364b4233203fe1f39a0b27",
+      "eventLines": 187,
+      "matchFactsSha256": "29e4faf20207b8eb6cd15d8b2159dad5d4722b7c30b4dad8a56a6fca5b1283dd"
+    },
+    {
+      "path": "Gamelog__2026_08_28__17_56.log",
+      "sourceSha256": "f5e6f27386e56484f0f37faa5fe7c8b7b03dac63f64823495b576be0e2b67222",
+      "sourceBytes": 19389,
+      "sourceLines": 515,
+      "eventSha256": "cfc9591d9820aec00707ba5322d4bb88d3c986e235117e96265daf09b0d93863",
+      "eventLines": 18,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_08_28__18_10.log",
+      "sourceSha256": "dc39f20c8315523951cf05e8c07fb93a3b65f9290e163e6c13d28798ee58ca0f",
+      "sourceBytes": 237943,
+      "sourceLines": 4880,
+      "eventSha256": "adeb0f26650f47c20d36a65cc11b2e5bc04c083f2f463cccae755a9ed943ba52",
+      "eventLines": 65,
+      "matchFactsSha256": "2f1daf31345b6578be51d9ca65660880ab8476f45bd1599bbac8cf7a955d7160"
+    },
+    {
+      "path": "Gamelog__2026_08_28__21_12.log",
+      "sourceSha256": "8dde0973778b16b7547a769ab1e098231ec43deaf64d2df3aa4fb426f911b026",
+      "sourceBytes": 92373,
+      "sourceLines": 1493,
+      "eventSha256": "ada41e93c9b7df73c7218873f46c136cefb060ff45d8431f765212eac5f9c889",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_08_29__08_34.log",
+      "sourceSha256": "ac381efd14fb4eb95e506ca2f3dc39573e98ebba3865618afd5f66c6696bb050",
+      "sourceBytes": 723705,
+      "sourceLines": 13685,
+      "eventSha256": "7e9d7e4d15706242181b1398c291ae924c0f8d6e624317a8b5e6499584d7ce3d",
+      "eventLines": 45,
+      "matchFactsSha256": "703f81deca29e4cc434ca37cfe2a0b8a6d4689c4b45a85e2b2bb8ee32dcaa72f"
+    },
+    {
+      "path": "Gamelog__2026_08_29__13_32.log",
+      "sourceSha256": "5cd0143d36891763e796360608990e49a875deedf41b62993fd9ab61bdc5d575",
+      "sourceBytes": 1291819,
+      "sourceLines": 26436,
+      "eventSha256": "3333d7a9d9502808152c137d7b00ff0e2ff342f9f5674e8c4ca2b6d28e63375a",
+      "eventLines": 167,
+      "matchFactsSha256": "2dd0c0fc0e304ec55f14f8d75ce3aee863c4e555930eb7d71ecea900f7159cd1"
+    },
+    {
+      "path": "Gamelog__2026_08_30__20_02.log",
+      "sourceSha256": "b3ffb7ca6edef8d160ce16c26d2ac59a661594b76451eb5e96984b322dd8cf6b",
+      "sourceBytes": 1145120,
+      "sourceLines": 22910,
+      "eventSha256": "d892ed161edce83784dadb54944a28b2e6f28dd863603aea9a7ec288ad3b68e1",
+      "eventLines": 134,
+      "matchFactsSha256": "d2c3aadb1b00800d7ee51428cde7f57d3291c0a5e471307d8f66661659f9a584"
+    },
+    {
+      "path": "Gamelog__2026_08_31__08_20.log",
+      "sourceSha256": "0d79b2fac5a594039623c17a4882e8dac8ba827004e4a44d88a7d75417f7098e",
+      "sourceBytes": 17404,
+      "sourceLines": 400,
+      "eventSha256": "af9caf01c2a6fa35eceaf34ed8727c64816d1b63b0775d95d4fdf7f886c9ed0e",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_08_31__16_44.log",
+      "sourceSha256": "1bf734b0cc2a99e726d0311503397cb19f79546f4d5bc19b8e90f5e1343377a3",
+      "sourceBytes": 552234,
+      "sourceLines": 10234,
+      "eventSha256": "bc24e7fe280e8399994847371b9add9363193156df117b6067f6dd2b92d0b664",
+      "eventLines": 150,
+      "matchFactsSha256": "1e5dcc3a3380818a25960119a50c016723a69ce06436700bbf65d0c44770e730"
+    },
+    {
+      "path": "Gamelog__2026_09_01__10_39.log",
+      "sourceSha256": "73616e14ca28c1679ee625803e90e50e54554c44b3320fa3c14568201fdd9a09",
+      "sourceBytes": 41652,
+      "sourceLines": 1055,
+      "eventSha256": "2c2d72ceae2f4b6792f66e3ab921c18a556595aab23ff17b3ca964f77ac88f2b",
+      "eventLines": 10,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_09_01__19_24.log",
+      "sourceSha256": "e3dc8110d5c1e559dbdc0eaa8a92ebb70542f2e68f7b76756f02cd82ed05d2b0",
+      "sourceBytes": 2349506,
+      "sourceLines": 46110,
+      "eventSha256": "590aa96ec8806338d64fc7ff80596e943ab00f0e02e9ac6c711dc627e973bb6a",
+      "eventLines": 244,
+      "matchFactsSha256": "312d3c89f30838846b1df47c2d8d023bcfc5f824c1a13931c83808667abf5325"
+    },
+    {
+      "path": "Gamelog__2026_09_01__23_27.log",
+      "sourceSha256": "0c7ad269aca6a2709081d34259a11090e8e2daba2d61f856a44f31a2777fb107",
+      "sourceBytes": 705685,
+      "sourceLines": 13066,
+      "eventSha256": "cb6dcbd9efb104b428242503a7ff4f33e4af3fac8aebb6053bcc608ab1e7d6e0",
+      "eventLines": 136,
+      "matchFactsSha256": "c716a96be6495fac18e82c17b6d2c3dafe118b32195bed20f0c4b6314dfe54f7"
+    },
+    {
+      "path": "Gamelog__2026_09_02__18_51.log",
+      "sourceSha256": "de7e74b90204ea99a357e80462402e0281911df1333c1a228f9fd7bbbb8e089e",
+      "sourceBytes": 2079476,
+      "sourceLines": 38932,
+      "eventSha256": "096f3bd51e86de8fdde444f0db9d08fba874a961064bd3869841d73ec77773f7",
+      "eventLines": 349,
+      "matchFactsSha256": "263b233538763865b559afd3c1c015499f031949d21e6384b91cccb07901ecc1"
+    },
+    {
+      "path": "Gamelog__2026_09_03__20_20.log",
+      "sourceSha256": "dd28efb3bfc66090413e409d7f83daa53000cf2dad1976184b51ed39a6e8780d",
+      "sourceBytes": 47344351,
+      "sourceLines": 591829,
+      "eventSha256": "6959f8b3669e47abc4468f6d10370056a2c99fb477669fa6296e1e9f70333a6c",
+      "eventLines": 262,
+      "matchFactsSha256": "827aa51ac3a685f11e3e5f870eb3ee808505d6666fa88dd4a0c07bcd23923457"
+    },
+    {
+      "path": "Gamelog__2026_09_04__18_24.log",
+      "sourceSha256": "8d6a5682b235238c44a5d670c07426594c49621dc130b19db74806ff421ce195",
+      "sourceBytes": 1499147,
+      "sourceLines": 28885,
+      "eventSha256": "658cbbf5dd1bb03e2ec86486b8bcf7cfd3a7e18dcb06c2afd1d0d48538406624",
+      "eventLines": 376,
+      "matchFactsSha256": "f7a8daab1fc140ffb82b75129c1bbac7c2850b1873e57142d52628bb6e3415e9"
+    },
+    {
+      "path": "Gamelog__2026_09_05__16_37.log",
+      "sourceSha256": "120d232ec6686eb6ff72e5e087f8e1e0df2afb93e692e192158a2f530abd6343",
+      "sourceBytes": 2239383,
+      "sourceLines": 43729,
+      "eventSha256": "4e2682b46646c5dbb735510a735c761b19efa70f930f034b3053a948868a6c09",
+      "eventLines": 296,
+      "matchFactsSha256": "7a835fd75df9e99dd5a4396ed9c9f4d862d15665424746055f4da94c56e64eb8"
+    },
+    {
+      "path": "Gamelog__2026_09_09__21_09.log",
+      "sourceSha256": "830a5c64af5f978dc4256ba8f49fea8e15021e4007747887c34647bb787a00e3",
+      "sourceBytes": 148850,
+      "sourceLines": 3097,
+      "eventSha256": "274f606ad75a51da58c44c9b555827bc7962aa0fbfb7cf2cde2dc190c92df62f",
+      "eventLines": 54,
+      "matchFactsSha256": "c8fc09b0f63af65f1acff680545db3c20c7b54ff377727d6994539276b42d1ce"
+    },
+    {
+      "path": "Gamelog__2026_09_10__20_08.log",
+      "sourceSha256": "2ceab0a5d7161254080de332170567d6acfafdb8236fc88974d5684588a2db0b",
+      "sourceBytes": 994454,
+      "sourceLines": 18760,
+      "eventSha256": "5d4548b4ffa519ba0b369c2824cdab26442bd550998cc4ed7d47aecb42ac442e",
+      "eventLines": 111,
+      "matchFactsSha256": "f9e813dd07eb60379224087acdc96582c0b6583eafb14d754a813ad11b0aa96f"
+    },
+    {
+      "path": "Gamelog__2026_09_25__23_53.log",
+      "sourceSha256": "d82c47de65c187bf293bf876a8d34763a35ede5988366638b02ed9eb8e8cf570",
+      "sourceBytes": 820128,
+      "sourceLines": 19866,
+      "eventSha256": "f74607dc837f5ba25b5c0ca8835b04238dfe5df2fe1143af9dfc30acb2233198",
+      "eventLines": 313,
+      "matchFactsSha256": "3782d1028efcbc226e7a6e71c67e69bc32a76da5aee7dad43b6bba442c20b628"
+    },
+    {
+      "path": "Gamelog__2026_09_26__05_04.log",
+      "sourceSha256": "d6c5741ef9f0865af3bc52d4aaa46d8a96b13839b137c9d7f9de72bcdc43070e",
+      "sourceBytes": 22361,
+      "sourceLines": 536,
+      "eventSha256": "bc3bb1b7b42571914b3d6cbc4100b40d11f2fa72d77d3f70391170cf87207422",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_09_26__11_36.log",
+      "sourceSha256": "102471f4860d7d291c2ca920a6c74031edbd834def726696a2cdaa6c1eba3a19",
+      "sourceBytes": 16172,
+      "sourceLines": 428,
+      "eventSha256": "0d4194ad05202064a181aa67d761cc37e5f61ef43d4675ff36a800df61210755",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_09_26__22_09.log",
+      "sourceSha256": "692f14b3ab2736ebb9a8d56569f7c52bbd1874538304b2c74ebeef41aace0965",
+      "sourceBytes": 697578,
+      "sourceLines": 18179,
+      "eventSha256": "d080184a169ddbbde521880c5731a2c524c1169c45de8fdefcd621852ab23f21",
+      "eventLines": 487,
+      "matchFactsSha256": "fd5e8894a0b14f688b0807453e6ba461a06874e316c0635daf75cf214dadab44"
+    },
+    {
+      "path": "Gamelog__2026_09_27__12_13.log",
+      "sourceSha256": "454bcfe32f5a997d657e07745e742826264a23b3aa571306c5711605ffddfd88",
+      "sourceBytes": 12360,
+      "sourceLines": 335,
+      "eventSha256": "898ed5899929294a7d047655f2c47b5fe7b0d22d9c2894fadd7401dad4617c7a",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_09_27__14_46.log",
+      "sourceSha256": "218b89b8a33331da8ef54fb376cf258aefbf758bcf23a439a6a93f226041224c",
+      "sourceBytes": 13886,
+      "sourceLines": 371,
+      "eventSha256": "e5c34dd6bdbb1e74d8ac0a827fbd06bc2a2ffa1fef4a11b07c9f758c3fce39d4",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_09_27__16_00.log",
+      "sourceSha256": "42976910a5e7ef7b214168ca16e7a4fd4f3660584cb72c7cd4d5e812b9eb6141",
+      "sourceBytes": 703170,
+      "sourceLines": 17483,
+      "eventSha256": "40206b76bbedbdaa16c81cb891c91402aaad6a277f26a168ce7a35d7c7977b8e",
+      "eventLines": 78,
+      "matchFactsSha256": "16b3be8365d4e26de4418cdcc98038f09ec7bab468c23769e834a829d450a2c9"
+    },
+    {
+      "path": "Gamelog__2026_09_28__20_56.log",
+      "sourceSha256": "38f5bdc6587836bd59bbb38071e630d1d16746679c092727bfde543b90f4f401",
+      "sourceBytes": 1051772,
+      "sourceLines": 27655,
+      "eventSha256": "a279a051c92c303243d1b52abde45e355ad4b3a20b90d3ec13ff5a35209bc05c",
+      "eventLines": 393,
+      "matchFactsSha256": "4c08aebe6f8de19beabf17b8af94a5db1f95c63f14c275fc207490d17c004b0f"
+    },
+    {
+      "path": "Gamelog__2026_09_29__07_15.log",
+      "sourceSha256": "6e2277bc796aeb4a9b3f27876c518b8bc625cef02190bb6ed505381c8c5786a2",
+      "sourceBytes": 10644,
+      "sourceLines": 304,
+      "eventSha256": "f4b944765a9a31ac874b8e5ec2c802137ae7a1ce798ce5c4693ef754c3ec978e",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_09_29__07_17.log",
+      "sourceSha256": "e8b582b4f7a05fe5dc2cb8e3a552947aa02172a8dddf306457af7f391f2ee785",
+      "sourceBytes": 10642,
+      "sourceLines": 304,
+      "eventSha256": "6c1e1e5818e590cb53142817f7ce46354557434ef867a19df671f18495766f5f",
+      "eventLines": 6,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_09_29__21_33.log",
+      "sourceSha256": "57b2b2deba6a24e242ec15e937489e332be385b65704e1a26edbb2a09756de65",
+      "sourceBytes": 1228125,
+      "sourceLines": 32048,
+      "eventSha256": "9de9ac4e31e799277926995172be7d988763696fe9d74d2a9a1a5ba194fd9bdd",
+      "eventLines": 204,
+      "matchFactsSha256": "3a4354978915a80c74cb7e5720209c9319e4b3601fe83778656d9375192a7d0d"
+    },
+    {
+      "path": "Gamelog__2026_10_03__22_56.log",
+      "sourceSha256": "817cd681a6326dba74594ea245413ba97bac9449a969b6f02fd119392abca776",
+      "sourceBytes": 325918,
+      "sourceLines": 7003,
+      "eventSha256": "4861a4e0bf7fc827602589df4b3d4a4df73af1cdbb43ed35d832edf9774bd607",
+      "eventLines": 194,
+      "matchFactsSha256": "2ea74a206d26ff1d03415d9328027358568f5572c85489bafcc9f96df6e5efa5"
+    },
+    {
+      "path": "Gamelog__2026_10_09__22_00.log",
+      "sourceSha256": "dfd57426335970ff668ff5338468e8f811d9af752ef924da7823c75be186d1e5",
+      "sourceBytes": 21827,
+      "sourceLines": 459,
+      "eventSha256": "1297ef041564b75d64257729a12193303649caee17c9626c8a105ab5b0db1001",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_10_09__22_02.log",
+      "sourceSha256": "32d94d6735c5945ea5919b7fce123be16d457ad6de0b37c2f430f121e2bbfd52",
+      "sourceBytes": 45012,
+      "sourceLines": 699,
+      "eventSha256": "1f8f7b6260b35ee7599c84c8bcea758d66d5e82102837b60f8397e53152af0cb",
+      "eventLines": 4,
+      "matchFactsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "Gamelog__2026_10_09__22_04.log",
+      "sourceSha256": "8a057724ae522d97e87bf428ad5d1bc50e3f2060cc87d7afdbf10c64131943e9",
+      "sourceBytes": 399743,
+      "sourceLines": 10219,
+      "eventSha256": "2976816e78396be32d0a9f626956fb742ead9a4fc7b0445bb1bdd64a83391b35",
+      "eventLines": 134,
+      "matchFactsSha256": "4af94dd0dc254a524ce049c19d2d73df1d7ad00fcf67cbec564fe3e86b89d434"
+    },
+    {
+      "path": "Gamelog__2026_10_11__18_07.log",
+      "sourceSha256": "758ba0fd23ccfb1f8b871f04c81beaf387d40c62d6aa5d2910ab5a777ff01168",
+      "sourceBytes": 370510,
+      "sourceLines": 9920,
+      "eventSha256": "d302401b2e1418d3f2e73d0ed42fb0dc306e577c21657e6fcdb1d159d31deda5",
+      "eventLines": 242,
+      "matchFactsSha256": "31124dee672ba58f4a9891262464cf259958734cd48dfb8361120dd59517ea34"
+    },
+    {
+      "path": "Gamelog__2026_10_12__18_13.log",
+      "sourceSha256": "dfc8b5b74410371f993de1033e5db85b010ca0d04dd929cff31b441eae15e6e4",
+      "sourceBytes": 389404,
+      "sourceLines": 10667,
+      "eventSha256": "14c634ec60ce93baf98fecab6282354dbba565a8ce84da38dd2ca5b96ab7bc2d",
+      "eventLines": 368,
+      "matchFactsSha256": "504e5f4b8c645034e24bb0431c47c38637cd61f0a3aa3467fee5ef311ea03276"
+    },
+    {
+      "path": "Gamelog__2026_10_13__22_54.log",
+      "sourceSha256": "d141a3c21f4d6f863ccbf258638a02b17c4131b51722d6dd7b6046e91be01c58",
+      "sourceBytes": 355504,
+      "sourceLines": 8336,
+      "eventSha256": "7deef4b604f93318fbb2db8d74552ea552e067770e99daa3014c1a300d32e6f8",
+      "eventLines": 304,
+      "matchFactsSha256": "3061fb00ebbf701720b75ae15ab88bb65f8ffe4256e3aa299c267f05d6e3c4c6"
+    },
+    {
+      "path": "Gamelog__2026_10_14__18_27.log",
+      "sourceSha256": "7363299110b0279d44ad7ff496aadf93c4ae9afd97e91e75b7022838577bcc2a",
+      "sourceBytes": 629812,
+      "sourceLines": 16715,
+      "eventSha256": "1952a7741f21eed508ab3d088ca7001b5eb37aeef863657cf0285390de5f4662",
+      "eventLines": 246,
+      "matchFactsSha256": "f4aeb1ce46af961362e11f51a5cc83acd6876fdba21061e3264493c87d2abb1c"
+    }
+  ]
+}

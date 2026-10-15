@@ -1,5 +1,8 @@
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
+import { appendFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppEvent, ApmState, RecordingState } from '@ba/contracts';
 import type { Platform } from '../apps/server/src/ports';
@@ -83,6 +86,69 @@ function application(value: Platform, events: AppEvent[] = [], network = false) 
 afterEach(async () => {
   await Promise.all([...applications].map((app) => app.stop()));
   applications.clear();
+});
+
+it('imports historical logs on startup and directory change without replacing the live session or running historical effects', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ba-archive-lifecycle-'));
+  const p = platform(vi.fn<typeof fetch>());
+  const events: AppEvent[] = [];
+  const app = application(p, events);
+  const lines = (fid: string) =>
+    `Log: Start loading battle... map: Dam, scenario: Test\nLog: FID:${fid}\nLog: GameController dispose called\n`;
+  try {
+    const logs = join(dir, 'logs');
+    await mkdir(join(logs, 'history'), { recursive: true });
+    await writeFile(join(logs, 'Gamelog__latest.log'), lines('101'));
+    await writeFile(join(logs, 'history', 'old.txt'), lines('102'));
+    app.db.updateConfig({ logDir: logs, replayEnabled: true, inputHookEnabled: true });
+    await app.start();
+    await app.invoke('matches.scan', null);
+    expect(app.db.matches()).toHaveLength(2);
+    expect(p.recordings.start).not.toHaveBeenCalled();
+    expect(p.apm.start).not.toHaveBeenCalled();
+    await app.watcher.poll();
+    const session = app.parser.snapshot();
+    const aborts = vi.mocked(p.recordings.abort).mock.calls.length;
+    await appendFile(join(logs, 'history', 'old.txt'), lines('103'));
+    await app.invoke('matches.scan', null);
+    expect(app.db.matches()).toHaveLength(3);
+    expect(app.parser.snapshot()).toEqual(session);
+    expect(p.recordings.abort).toHaveBeenCalledTimes(aborts);
+    expect(p.recordings.start).not.toHaveBeenCalled();
+    expect(p.apm.start).not.toHaveBeenCalled();
+    expect(events.some((event) => event.type === 'matches')).toBe(true);
+    const other = join(dir, 'other');
+    await mkdir(other);
+    await writeFile(join(other, 'old.log'), lines('104'));
+    await app.invoke('config.update', { logDir: other });
+    await app.invoke('matches.scan', null);
+    expect(app.db.matches()).toHaveLength(4);
+  } finally {
+    await app.stop();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+it('reports automatic archive scan failures and leaves manual scans available for retry', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ba-archive-error-'));
+  const events: AppEvent[] = [];
+  const app = application(platform(vi.fn<typeof fetch>()), events);
+  try {
+    const missing = join(dir, 'logs');
+    app.db.updateConfig({ logDir: missing });
+    await app.start();
+    await vi.waitFor(() =>
+      expect(
+        events.some((event) => event.type === 'error' && event.message.includes(missing)),
+      ).toBe(true),
+    );
+    await expect(app.invoke('matches.scan', null)).rejects.toThrow();
+    await mkdir(missing);
+    await expect(app.invoke('matches.scan', null)).resolves.toBeNull();
+  } finally {
+    await app.stop();
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 it('settles the update install RPC before draining application tasks and closing the database', async () => {

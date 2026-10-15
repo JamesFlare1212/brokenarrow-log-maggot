@@ -2,3 +2,4 @@
 *.png binary
 *.exe binary
 *.node binary
+*.gz binary

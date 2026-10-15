@@ -41,6 +41,7 @@ import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
 import { ReplaysPanel } from '../apps/web/src/features/replays/ReplaysPanel';
 import { Button, Dialog } from '../apps/web/src/components/ui';
 import { UpdatePanel } from '../apps/web/src/features/settings/UpdatePanel';
+import { MatchArchive } from '../apps/web/src/features/matches/MatchArchive';
 
 type Handler<K extends RpcMethod> = (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
 type Handlers = { [K in RpcMethod]: Handler<K> };
@@ -536,6 +537,82 @@ describe('request and native event ordering', () => {
 });
 
 describe('user interaction regressions', () => {
+  it('makes archive records beyond 500 reachable and resets pagination when filters change', async () => {
+    const rows = Array.from({ length: 525 }, (_, index) => ({
+      ...demoMatch(String(1000 + index)),
+      map: `Archive map ${index}`,
+      endedAt: 1_700_000_000_000 + index,
+      outcome: index % 2 === 0 ? ('win' as const) : ('loss' as const),
+      localPlayerId: index % 2 === 0 ? '1' : '2',
+    }));
+    const native = nativeFixture(structuredClone(demoBootstrap), {
+      'matches.list': ({ accountId }) =>
+        accountId ? rows.filter((m) => m.localPlayerId === accountId) : rows,
+      'accounts.list': () =>
+        ['1', '2'].map((id) => ({
+          id,
+          name: `Account ${id}`,
+          persona: id,
+          firstSeen: 0,
+          lastSeen: 0,
+          matchCount: 0,
+        })),
+    });
+    render(
+      <AppProvider api={native.api}>
+        <MatchArchive />
+      </AppProvider>,
+    );
+    await screen.findByRole('button', { name: 'Archive map 524' });
+    expect(screen.getAllByRole('row')).toHaveLength(51);
+    expect(screen.getByText('样本数: 525')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('页码'), { target: { value: '11' } });
+    expect(screen.getByRole('button', { name: 'Archive map 0' })).toBeTruthy();
+    expect(screen.getAllByRole('row')).toHaveLength(26);
+    expect(screen.getByRole('button', { name: '下一页' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '胜利' }));
+    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
+    expect(screen.getByText('样本数: 263')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '全部结果' }));
+    fireEvent.change(screen.getByLabelText('页码'), { target: { value: '11' } });
+    fireEvent.change(screen.getByLabelText('账号'), { target: { value: '2' } });
+    await waitFor(() => expect(screen.getByText('样本数: 262')).toBeTruthy());
+    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
+  });
+
+  it('scans local logs before refreshing the archive and exposes a busy state during the scan', async () => {
+    const pending = deferred<null>();
+    let rows = [demoMatch('101')];
+    const native = nativeFixture(structuredClone(demoBootstrap), {
+      'matches.list': () => rows,
+      'matches.scan': () => pending.promise,
+    });
+    render(
+      <AppProvider api={native.api}>
+        <MatchArchive />
+      </AppProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '刷新' }).hasAttribute('disabled')).toBe(false),
+    );
+    const calls = native.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    const scanning = screen.getByRole('button', { name: '扫描本地日志中…' });
+    expect(scanning.hasAttribute('disabled')).toBe(true);
+    expect(scanning.getAttribute('aria-busy')).toBe('true');
+    expect(native.calls.slice(calls).map((call) => call.method)).toEqual(['matches.scan']);
+    await act(async () => {
+      rows = [...rows, demoMatch('102')];
+      pending.resolve(null);
+      await pending.promise;
+    });
+    await screen.findByText('样本数: 2');
+    expect(native.calls.slice(calls).map((call) => call.method)).toEqual([
+      'matches.scan',
+      'matches.list',
+    ]);
+  });
+
   it('replaces the ban alert with the player investigation in a single dialog', async () => {
     const ban = bannedPlayer();
     const profile: PlayerProfile = {

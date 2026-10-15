@@ -28,6 +28,7 @@ let window: BrowserWindow | null = null,
   updates: UpdateController | null = null,
   quitting = false;
 const smoke = process.env.BA_SMOKE === '1';
+const offline = process.env.BA_OFFLINE === '1';
 const allowedDevUrl = process.env.BA_RENDERER_URL || '';
 function canInstallUpdate(): boolean {
   const match = service?.parser.snapshot().current;
@@ -44,6 +45,7 @@ async function start(): Promise<void> {
   const emit = (event: Parameters<Application['event']>[0]) => service?.event(event);
   const updateMode =
     !smoke &&
+    !offline &&
     !allowedDevUrl &&
     app.isPackaged &&
     process.platform === 'win32' &&
@@ -102,9 +104,14 @@ async function start(): Promise<void> {
     updates,
     version: app.getVersion(),
     http: {
-      fetch: smoke
-        ? async () => new Response('{}', { headers: { 'Content-Type': 'application/json' } })
-        : (url, init) => net.fetch(url instanceof URL ? url.toString() : url, init),
+      offline,
+      fetch: offline
+        ? async () => {
+            throw new Error('Network disabled in offline real-data mode');
+          }
+        : smoke
+          ? async () => new Response('{}', { headers: { 'Content-Type': 'application/json' } })
+          : (url, init) => net.fetch(url instanceof URL ? url.toString() : url, init),
       challenge: () => gate?.open() || Promise.reject(new Error('Verification unavailable')),
     },
     selectDirectory,
@@ -136,9 +143,10 @@ async function start(): Promise<void> {
     (event) => {
       if (window && !window.isDestroyed()) window.webContents.send('ba:event', event);
     },
-    !smoke,
+    !smoke && !offline,
   );
   await service.start();
+  if (smoke && offline) await service.invoke('matches.scan', null);
   window = new BrowserWindow({
     width: 1280,
     height: 850,
@@ -176,6 +184,10 @@ async function start(): Promise<void> {
     const result = await window.webContents.executeJavaScript(
       `new Promise((resolve,reject)=>{let attempts=0;const timer=setInterval(()=>{if(document.querySelector('[data-ready="true"]')){clearInterval(timer);resolve({title:document.title,buttons:document.querySelectorAll('button').length,hasBridge:typeof window.assistant?.invoke==='function'});}else if(++attempts>100){clearInterval(timer);reject(new Error(document.body.innerText||'Renderer did not initialize'));}},100);})`,
     );
+    if (offline)
+      result.matches = await window.webContents.executeJavaScript(
+        "window.assistant.invoke('matches.list', {}).then(matches => matches.length)",
+      );
     console.log('SMOKE_RESULT', JSON.stringify(result));
     await shutdown();
   }

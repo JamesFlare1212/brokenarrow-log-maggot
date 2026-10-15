@@ -22,9 +22,13 @@ export function SessionPanel() {
   useEffect(() => {
     void api
       .invoke('matches.list', {})
-      .then((matches) => setPrevious(matches.find((m) => m.fid !== null) || null))
+      .then((matches) =>
+        setPrevious(
+          matches.find((m) => m.fid !== null && m.fid !== state.session.current?.fid) || null,
+        ),
+      )
       .catch((e) => notify(String(e), true));
-  }, [api, state.matchesRevision]);
+  }, [api, state.matchesRevision, state.session.current?.fid]);
   const players: Player[] =
       view === 'previous'
         ? previous?.players || []

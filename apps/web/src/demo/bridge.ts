@@ -323,6 +323,7 @@ export function createDemoBridge(): Bridge {
       return { requestId: input.requestId, queried: players.length, skipped: 0, cancelled: false };
     },
     'matches.list': () => matches,
+    'matches.scan': () => null,
     'matches.detail': ({ fid }) => matches.find((m) => m.fid === fid) || demoMatch(fid),
     'matches.add': ({ fid }) => {
       const m = demoMatch(fid);
