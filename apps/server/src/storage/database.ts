@@ -10,7 +10,6 @@ import type {
   NameRecord,
   PublicConfig,
   SearchPlayer,
-  Usage,
 } from '@ba/contracts';
 import { configSchema, PANELS } from '@ba/contracts';
 import { object, text, number, mergeMatch, determineOutcome } from '@ba/shared';
@@ -34,17 +33,17 @@ export class Database {
       CREATE TABLE IF NOT EXISTS bans(player_id TEXT PRIMARY KEY REFERENCES players(id),payload TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS player_snapshots(player_id TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,at INTEGER NOT NULL,payload TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS api_cache(key TEXT PRIMARY KEY,at INTEGER NOT NULL,expires_at INTEGER NOT NULL,payload TEXT NOT NULL) STRICT;
-      CREATE TABLE IF NOT EXISTS api_calls(id INTEGER PRIMARY KEY,at INTEGER NOT NULL,path TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS map_names(id INTEGER PRIMARY KEY,name TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS legacy_encounters(id TEXT PRIMARY KEY,player_id TEXT NOT NULL REFERENCES players(id),fid TEXT,at INTEGER,payload TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS legacy_imports(file TEXT PRIMARY KEY,at INTEGER NOT NULL,sha256 TEXT NOT NULL,raw_json TEXT NOT NULL) STRICT;
       CREATE INDEX IF NOT EXISTS match_time ON matches(end_time DESC);
       CREATE INDEX IF NOT EXISTS player_matches ON match_players(player_id,match_id);
       CREATE INDEX IF NOT EXISTS account_matches ON match_views(account_id,match_id);
-      CREATE INDEX IF NOT EXISTS calls_time ON api_calls(at);
       CREATE INDEX IF NOT EXISTS cache_expiry ON api_cache(expires_at);
       CREATE INDEX IF NOT EXISTS player_seen ON players(last_seen DESC);
-      INSERT OR IGNORE INTO migrations VALUES(1,unixepoch()*1000);`);
+      INSERT OR IGNORE INTO migrations VALUES(1,unixepoch()*1000);
+      DROP TABLE IF EXISTS api_calls;
+      DELETE FROM app_state WHERE key='apiAttemptTotal';`);
   }
   close(): void {
     this.sql.close();
@@ -438,27 +437,5 @@ export class Database {
           'DELETE FROM api_cache WHERE key IN (SELECT key FROM api_cache ORDER BY at DESC LIMIT -1 OFFSET 2000)',
         )
         .run();
-  }
-  usage(now = Date.now()): Usage {
-    const used = Number(
-      this.sql.prepare('SELECT COUNT(*) n FROM api_calls WHERE at>?').get(now - 86400000)?.n || 0,
-    );
-    return {
-      used24h: used,
-      limit24h: 400,
-      attempts: this.state<number>(
-        'apiAttemptTotal',
-        Number(this.sql.prepare('SELECT COUNT(*) n FROM api_calls').get()?.n || 0),
-      ),
-    };
-  }
-  reserveCall(path: string, now = Date.now()): void {
-    this.transaction(() => {
-      const attempts = this.usage(now).attempts;
-      if (this.usage(now).used24h >= 400) throw new Error('24-hour BATrace quota exhausted (400)');
-      this.sql.prepare('INSERT INTO api_calls(at,path) VALUES(?,?)').run(now, path);
-      this.setState('apiAttemptTotal', attempts + 1);
-      this.sql.prepare('DELETE FROM api_calls WHERE at<?').run(now - 7 * 86400000);
-    });
   }
 }

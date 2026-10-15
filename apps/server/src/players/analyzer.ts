@@ -257,7 +257,6 @@ export class Analyzer {
           });
         } catch (error) {
           calls += number(object(error).attempts) ?? 0;
-          if (String(error).includes('quota')) throw error;
         } finally {
           progress(rows.length, i + 1);
         }

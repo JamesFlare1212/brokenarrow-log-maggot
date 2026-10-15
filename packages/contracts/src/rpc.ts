@@ -17,7 +17,6 @@ import type {
   RecordingState,
   SearchPlayer,
   Session,
-  Usage,
   WatcherStatus,
   DeckSwitchAlert,
 } from './models';
@@ -174,7 +173,6 @@ export type AppEvent = (
   | { type: 'config'; config: PublicConfig }
   | { type: 'session'; session: Session }
   | { type: 'watcher'; watcher: WatcherStatus }
-  | { type: 'usage'; usage: Usage }
   | {
       type: 'roster';
       requestId: string;

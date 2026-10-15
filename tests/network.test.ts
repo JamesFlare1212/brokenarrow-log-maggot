@@ -9,11 +9,9 @@ function setup(http: HttpPort, interval = 1_200) {
   databases.add(db);
   const clock = { now: Date.now() };
   const waits: number[] = [];
-  const changed = vi.fn();
   const client = new BatraceClient(
     db,
     http,
-    changed,
     interval,
     () => clock.now,
     async (ms) => {
@@ -22,7 +20,7 @@ function setup(http: HttpPort, interval = 1_200) {
     },
   );
   clients.add(client);
-  return { db, client, clock, waits, changed };
+  return { db, client, clock, waits };
 }
 afterEach(async () => {
   await Promise.all([...clients].map((client) => client.close()));
@@ -32,20 +30,16 @@ afterEach(async () => {
 });
 
 describe('BATrace scheduling and cache boundaries', () => {
-  it('allows only one of three concurrent requests when one daily call remains', async () => {
+  it('allows more than 400 requests while preserving the global request interval', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
-    const { db, client, clock } = setup({ fetch: fetchImpl });
-    const insert = db.sql.prepare('INSERT INTO api_calls(at,path) VALUES(?,?)');
-    db.transaction(() => {
-      for (let i = 0; i < 399; i++) insert.run(clock.now - 1, 'fixture');
-    });
-    const result = await Promise.allSettled(
-      [1, 2, 3].map((i) => client.get(`/api/fake/${i}`, `key:${i}`, 60_000)),
+    const { client, waits } = setup({ fetch: fetchImpl });
+    const results = await Promise.all(
+      Array.from({ length: 405 }, (_, i) => client.get(`/api/fake/${i}`, `key:${i}`, 60_000)),
     );
-    expect(result.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-    expect(result.filter((r) => r.status === 'rejected')).toHaveLength(2);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(db.usage(clock.now).used24h).toBe(400);
+    expect(results).toHaveLength(405);
+    expect(fetchImpl).toHaveBeenCalledTimes(405);
+    expect(waits).toHaveLength(404);
+    expect(waits.every((ms) => ms >= 1_200)).toBe(true);
   });
 
   it('shares an in-flight request for the same cache key', async () => {
@@ -56,7 +50,7 @@ describe('BATrace scheduling and cache boundaries', () => {
           release = resolve;
         }),
     );
-    const { db, client } = setup({ fetch: fetchImpl });
+    const { client } = setup({ fetch: fetchImpl });
     const one = client.get('/api/shared', 'shared', 60_000);
     const two = client.get('/api/shared', 'shared', 60_000);
     const three = client.get('/api/shared', 'shared', 60_000);
@@ -68,7 +62,7 @@ describe('BATrace scheduling and cache boundaries', () => {
       { value: 42 },
       { value: 42 },
     ]);
-    expect(db.usage().attempts).toBe(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it('counts each retry and honors both the global interval and Retry-After', async () => {
@@ -84,13 +78,12 @@ describe('BATrace scheduling and cache boundaries', () => {
     const result = await state.client.get('/api/retry', 'retry', 60_000);
     expect(result.source).toBe('network');
     expect(fetchImpl).toHaveBeenCalledTimes(3);
-    expect(state.db.usage(state.clock.now)).toMatchObject({ used24h: 3, attempts: 3 });
+    expect(result.attempts).toBe(3);
     expect(attemptTimes[1]! - attemptTimes[0]!).toBeGreaterThanOrEqual(2_000);
     expect(attemptTimes[2]! - attemptTimes[1]!).toBeGreaterThanOrEqual(2_000);
-    expect(state.changed).toHaveBeenCalledTimes(3);
   });
 
-  it('uses a fresh cache without spending quota, and force replaces it from the network', async () => {
+  it('uses a fresh cache without a request, and force replaces it from the network', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ version: 'new' }));
     const { db, client, clock } = setup({ fetch: fetchImpl });
     db.saveCache('force', { version: 'old' }, 60_000, clock.now);
@@ -99,7 +92,6 @@ describe('BATrace scheduling and cache boundaries', () => {
       source: 'cache',
     });
     expect(fetchImpl).not.toHaveBeenCalled();
-    expect(db.usage(clock.now).used24h).toBe(0);
     expect(await client.get('/api/force', 'force', 60_000, { force: true })).toMatchObject({
       value: { version: 'new' },
       source: 'network',
@@ -130,11 +122,12 @@ describe('BATrace scheduling and cache boundaries', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
-  it('does not charge health probes to the content quota', async () => {
+  it('does not cache health probes', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
     const { db, client } = setup({ fetch: fetchImpl });
     await client.get('/api/health', 'health', 0, { health: true, force: true });
-    expect(db.usage().used24h).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(db.cache('health', true)).toBeNull();
   });
 });
 
@@ -170,7 +163,7 @@ describe('verification and shutdown', () => {
     });
     expect(challenge).toHaveBeenCalledTimes(1);
     expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(1_200);
-    expect(state.db.usage(state.clock.now).attempts).toBe(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it('does not retry a user-cancelled verification flow', async () => {

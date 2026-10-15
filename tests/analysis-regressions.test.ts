@@ -18,7 +18,7 @@ function setup(
   },
 ) {
   const db = new Database(':memory:');
-  const client = new BatraceClient(db, { fetch: fetchImpl }, () => {}, 0);
+  const client = new BatraceClient(db, { fetch: fetchImpl }, 0);
   resources.push({ db, client });
   const analyzer = new Analyzer(client, db);
   return { db, client, analyzer, tracker: new TrackerService(db, client, analyzer) };
@@ -171,11 +171,10 @@ describe('ranked sample and ranking regressions', () => {
       if (String(url).endsWith('matchid=1012')) return new Response('Down', { status: 503 });
       return Response.json({ mvpRanking: ranking() });
     });
-    const { db, analyzer } = setup(fetchImpl);
+    const { analyzer } = setup(fetchImpl);
     const report = await analyzer.maggot('1', () => {});
     expect(report).toMatchObject({ complete: true, calls: 16 });
     expect(fetchImpl).toHaveBeenCalledTimes(16);
-    expect(db.usage().used24h).toBe(16);
   });
 });
 

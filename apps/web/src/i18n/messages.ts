@@ -649,12 +649,6 @@ export const messages: Record<string, readonly [string, string, string, string]>
   moveUp: ['上移', 'Move up', '上へ', 'Вверх'],
   moveDown: ['下移', 'Move down', '下へ', 'Вниз'],
   accounts: ['本机账号', 'Local accounts', 'ローカルアカウント', 'Локальные аккаунты'],
-  quota: [
-    '24 小时 API：{used} / {limit}',
-    '24h API: {used} / {limit}',
-    '24時間API：{used} / {limit}',
-    'API за 24 ч: {used} / {limit}',
-  ],
   health: ['API 健康检查', 'API health', 'API状態', 'Состояние API'],
   apmDisabled: [
     '在设置中开启 APM 监测',

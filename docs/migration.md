@@ -2,13 +2,14 @@
 
 用户目录仍为 broken-arrow-log-assistant，新库 assistant.sqlite。迁移不运行旧构造器、不改旧 JSON。
 
+旧版请求用量文件不再导入，原文件保留。打开已有 SQLite 时会移除停用的请求计数表和累计计数。
+
 | 来源               | 内容                                                       |
 | ------------------ | ---------------------------------------------------------- |
 | settings.json      | 设置、主题 / 语言 / 排序、录像参数；私有请求头仅服务端保留 |
 | players-db.json    | v1 / v2 玩家、名字、对局、账号、封禁、快照、原 encounters  |
 | match-archive.json | 同 FID 补缺，无 FID 保留稳定内部 ID                        |
 | batrace-cache.json | 原 key、时间、payload、各命名空间 TTL                      |
-| api-usage.json     | 保留同毫秒重复调用                                         |
 | deck-sync.json     | 上一局包归属与提醒状态                                     |
 | api-health.json    | 上次探测                                                   |
 

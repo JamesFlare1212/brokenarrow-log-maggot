@@ -49,7 +49,6 @@ function rows(table: string): number {
     'bans',
     'player_snapshots',
     'api_cache',
-    'api_calls',
   ];
   if (!allowed.includes(table)) throw new Error('Unknown test table');
   return Number(db.sql.prepare(`SELECT COUNT(*) n FROM ${table}`).get()?.n);
@@ -60,7 +59,47 @@ function rawImport(file: string): { raw: string; sha256: string } | null {
 }
 
 describe('legacy migration integrity', () => {
-  it('imports every source, preserves extra fields and bytes, and keeps duplicate usage timestamps', async () => {
+  it('removes retired request counters from an existing database without changing other data', () => {
+    db.close();
+    const file = join(dir, 'application.sqlite');
+    db = new Database(file);
+    db.updateConfig({ theme: 'forest' });
+    db.saveCache('info:1', { name: 'One' }, 60_000);
+    db.setState('activeAccountId', '1');
+    db.setState('apiAttemptTotal', 400);
+    db.sql.exec(`
+      CREATE TABLE api_calls(id INTEGER PRIMARY KEY,at INTEGER NOT NULL,path TEXT NOT NULL) STRICT;
+      CREATE INDEX calls_time ON api_calls(at);
+      INSERT INTO api_calls(at,path) VALUES(1,'/api/example');
+    `);
+    db.close();
+    db = new Database(file);
+    expect(
+      db.sql
+        .prepare("SELECT name FROM sqlite_master WHERE name IN ('api_calls','calls_time')")
+        .all(),
+    ).toEqual([]);
+    expect(db.state('apiAttemptTotal', null)).toBeNull();
+    expect(db.config().theme).toBe('forest');
+    expect(db.cache('info:1', true)?.value).toEqual({ name: 'One' });
+    expect(db.state('activeAccountId', null)).toBe('1');
+  });
+
+  it('ignores obsolete usage files without blocking migration or modifying the original', async () => {
+    const bytes = Buffer.from('{obsolete and invalid JSON');
+    await writeFile(join(dir, 'api-usage.json'), bytes);
+    await source('settings.json', { theme: 'forest' });
+    const status = await migrateLegacy(db, dir);
+    expect(status.completed).toBe(true);
+    expect(status.warnings).toEqual([]);
+    expect(Object.keys(status.imported)).toEqual(['settings.json']);
+    expect(status.imported['settings.json']).toBeGreaterThan(0);
+    expect(db.config().theme).toBe('forest');
+    expect(await readFile(join(dir, 'api-usage.json'))).toEqual(bytes);
+    expect(rawImport('api-usage.json')).toBeNull();
+  });
+
+  it('imports every source and preserves extra fields and bytes', async () => {
     const at = 2_000_000_000_000;
     const inputs = new Map<string, Buffer>();
     const settings = {
@@ -161,7 +200,6 @@ describe('legacy migration integrity', () => {
         'info:4': { t: at, value: { empty: null, count: 0, active: false } },
       }),
     );
-    inputs.set('api-usage.json', await source('api-usage.json', [at, at, at - 86400001]));
     const deck = {
       pkgKey: 'persona:Old',
       pkgName: 'Old',
@@ -188,7 +226,6 @@ describe('legacy migration integrity', () => {
     expect(status.imported['players-db.json']).toBe(5);
     expect(status.imported['match-archive.json']).toBe(1);
     expect(status.imported['batrace-cache.json']).toBe(1);
-    expect(status.imported['api-usage.json']).toBe(3);
     expect(status.imported['deck-sync.json']).toBe(1);
     expect(status.imported['api-health.json']).toBe(1);
     expect(status.imported['settings.json']).toBeGreaterThan(0);
@@ -226,13 +263,11 @@ describe('legacy migration integrity', () => {
       matchCount: 0,
       updatedAt: 0,
     });
-    expect(db.usage(at).used24h).toBe(2);
-    expect(rows('api_calls')).toBe(3);
     expect(db.state('deckSync', {})).toEqual(deck);
     expect(db.state('health', {})).toEqual(health);
     expect(db.state('lastBanSync', -1)).toBe(0);
     expect(db.state('lastMatchSync', -1)).toBe(at);
-    expect(rows('legacy_imports')).toBe(7);
+    expect(rows('legacy_imports')).toBe(6);
     for (const [file, bytes] of inputs) {
       expect(await readFile(join(dir, file))).toEqual(bytes);
       expect(await readFile(join(status.backupDir!, file))).toEqual(bytes);
@@ -261,8 +296,6 @@ describe('legacy migration integrity', () => {
     ['batrace-cache.json', []],
     ['batrace-cache.json', { 'info:1': { t: 1 } }],
     ['batrace-cache.json', { 'info:1': { t: null, value: {} } }],
-    ['api-usage.json', {}],
-    ['api-usage.json', [null]],
     ['deck-sync.json', []],
     ['deck-sync.json', { alertedPairs: 'wrong' }],
     ['api-health.json', null],
@@ -641,7 +674,6 @@ describe('legacy migration integrity', () => {
     const file = join(dir, 'application.sqlite');
     db = new Database(file);
     await source('players-db.json', { version: 2, players: {}, matches: { '9': { players: [] } } });
-    await source('api-usage.json', [1, 1]);
     const first = await migrateLegacy(db, dir);
     expect(first.completed).toBe(true);
     db.deleteMatch('9');
@@ -650,8 +682,7 @@ describe('legacy migration integrity', () => {
     const second = await migrateLegacy(db, dir);
     expect(second).toEqual(first);
     expect(db.match('9')).toBeNull();
-    expect(rows('api_calls')).toBe(2);
-    expect(rows('legacy_imports')).toBe(2);
+    expect(rows('legacy_imports')).toBe(1);
     expect(await readdir(join(dir, 'migration-backups'))).toHaveLength(1);
   });
 

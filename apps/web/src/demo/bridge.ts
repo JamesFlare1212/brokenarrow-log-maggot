@@ -145,7 +145,6 @@ export const demoBootstrap: Bootstrap = {
     error: null,
     live: true,
   },
-  usage: { used24h: 38, limit24h: 400, attempts: 38 },
   recording: {
     phase: 'idle',
     sessionId: null,

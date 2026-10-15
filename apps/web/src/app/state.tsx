@@ -69,8 +69,6 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
       return { ...next, session: e.session };
     case 'watcher':
       return { ...next, watcher: e.watcher };
-    case 'usage':
-      return { ...next, usage: e.usage };
     case 'health':
       return { ...next, health: e.health };
     case 'apm':

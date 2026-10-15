@@ -347,7 +347,6 @@ export function App() {
             {t('historical')}
           </span>
           <span>
-            {t('quota', { used: state.usage.used24h, limit: state.usage.limit24h })}
             <Button
               className="health-button"
               disabled={healthBusy}

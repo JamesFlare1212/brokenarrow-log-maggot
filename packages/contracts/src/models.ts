@@ -185,11 +185,6 @@ export interface PlayerProfile {
   latestElo: Metric;
   info: MiniInfo | null;
 }
-export interface Usage {
-  used24h: number;
-  limit24h: number;
-  attempts: number;
-}
 export interface ApiHealth {
   state: 'unknown' | 'ok' | 'partial' | 'down';
   at: number;
@@ -290,7 +285,6 @@ export interface Bootstrap {
   config: PublicConfig;
   session: Session;
   watcher: WatcherStatus;
-  usage: Usage;
   recording: RecordingState;
   apm: ApmState;
   health: ApiHealth;

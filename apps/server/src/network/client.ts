@@ -1,5 +1,4 @@
 import { setTimeout as sleep } from 'node:timers/promises';
-import type { Usage } from '@ba/contracts';
 import { object } from '@ba/shared';
 import type { Database } from '../storage/database';
 export interface DataResult {
@@ -25,7 +24,6 @@ export class BatraceClient {
   constructor(
     private db: Database,
     private http: HttpPort,
-    private changed: (usage: Usage) => void,
     private interval = 1200,
     private now: () => number = Date.now,
     private wait: (ms: number) => Promise<unknown> = (ms) => sleep(ms),
@@ -67,11 +65,7 @@ export class BatraceClient {
           if (delay) await this.wait(delay);
           this.lifetime.signal.throwIfAborted();
           options.signal?.throwIfAborted();
-          if (!options.health) {
-            this.db.reserveCall(path, this.now());
-            attempts++;
-            this.changed(this.db.usage(this.now()));
-          }
+          if (!options.health) attempts++;
           this.lastAttempt = this.now();
           const headers = object(this.db.state<unknown>('privateHeaders', {}));
           const safeHeaders = new Headers(
@@ -127,14 +121,7 @@ export class BatraceClient {
         last = error;
         if (this.lifetime.signal.aborted || options.signal?.aborted) throw error;
         const e = object(error);
-        if (
-          e.verification ||
-          e.status === 404 ||
-          e.status === 401 ||
-          e.status === 403 ||
-          String(error).includes('quota')
-        )
-          break;
+        if (e.verification || e.status === 404 || e.status === 401 || e.status === 403) break;
         if (attempt < 2) await this.wait(Math.max(this.interval, Number(e.retryAfter) || 0));
       }
     }

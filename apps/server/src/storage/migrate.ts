@@ -24,7 +24,6 @@ const FILES = [
   'players-db.json',
   'match-archive.json',
   'batrace-cache.json',
-  'api-usage.json',
   'deck-sync.json',
   'api-health.json',
 ] as const;
@@ -72,11 +71,6 @@ function validateSource(file: SourceFile, value: unknown): void {
   const fail = (reason: string): never => {
     throw new Error(reason);
   };
-  if (file === 'api-usage.json') {
-    if (!Array.isArray(value) || value.some((at) => time(at) === null))
-      fail('expected an array of integer call timestamps');
-    return;
-  }
   if (file === 'match-archive.json') {
     const entries = Array.isArray(value)
       ? value
@@ -444,14 +438,6 @@ export async function migrateLegacy(db: Database, dir: string): Promise<Migratio
           for (const [key, value] of Object.entries(raw)) {
             const c = object(value);
             db.saveCache(key, c.value, cacheTtl(key), time(c.t) ?? 0, false);
-            count++;
-          }
-          break;
-        case 'api-usage.json':
-          for (const at of array(source.value)) {
-            db.sql
-              .prepare('INSERT INTO api_calls(at,path) VALUES(?,?)')
-              .run(time(at) ?? 0, 'legacy');
             count++;
           }
           break;

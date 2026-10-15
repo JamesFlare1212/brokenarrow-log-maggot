@@ -83,7 +83,7 @@ export class Application {
           ]),
         })) as typeof fetch,
     };
-    this.client = new BatraceClient(this.db, http, (usage) => this.event({ type: 'usage', usage }));
+    this.client = new BatraceClient(this.db, http);
     this.analyzer = new Analyzer(this.client, this.db);
     this.tracker = new TrackerService(this.db, this.client, this.analyzer);
     this.decks = new DeckService(this.db);
@@ -321,7 +321,6 @@ export class Application {
       config: this.db.config(),
       session: this.parser.snapshot(),
       watcher: this.watcher.status(),
-      usage: this.db.usage(),
       recording: this.platform.recordings.status(),
       apm: this.platform.apm.status(),
       health: this.statuses.health(),
