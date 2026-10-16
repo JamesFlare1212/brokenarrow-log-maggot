@@ -208,7 +208,6 @@ export type AppEvent = (
   | { type: 'apm'; apm: ApmState }
   | { type: 'decks'; alert: DeckSwitchAlert | null }
   | { type: 'health'; health: ApiHealth }
-  | { type: 'gate'; state: 'open' | 'done' | 'cancelled' }
   | { type: 'error'; message: string }
 ) & { revision: number };
 export interface Bridge {

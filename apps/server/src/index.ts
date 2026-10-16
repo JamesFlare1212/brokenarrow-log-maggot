@@ -2,7 +2,7 @@ export { Application } from './app';
 export { createBrowserFixtures } from './dev/browser';
 export { Database } from './storage/database';
 export { migrateLegacy } from './storage/migrate';
-export { BatraceClient, isChallenge } from './network/client';
+export { BatraceClient } from './network/client';
 export { LogParser } from './logs/parser';
 export { LogWatcher } from './logs/watcher';
 export { LogArchive } from './logs/archive';

@@ -1,5 +1,5 @@
 import { BATRACE_ORIGIN } from '@ba/contracts';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { faBoxArchive, faPlus, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
@@ -21,6 +21,7 @@ export function MatchArchive() {
     [scanning, setScanning] = useState(false),
     [page, setPage] = useState(1),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
+  const table = useRef<HTMLDivElement>(null);
   const filtered = useMemo(
     () =>
       [...(matches.data || [])]
@@ -30,6 +31,9 @@ export function MatchArchive() {
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages);
+  useLayoutEffect(() => {
+    if (table.current) table.current.scrollTop = 0;
+  }, [currentPage, account, outcome]);
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const refresh = () =>
     void matches.load(
@@ -102,7 +106,7 @@ export function MatchArchive() {
             <option value="">{t('allAccounts')}</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}
+                {a.name} · #{a.id}
               </option>
             ))}
           </select>
@@ -161,7 +165,7 @@ export function MatchArchive() {
           </div>
         )}
         {filtered.length ? (
-          <div className="table-wrap archive-table">
+          <div className="table-wrap archive-table" ref={table}>
             <table>
               <caption className="sr-only">{t('archive')}</caption>
               <colgroup>

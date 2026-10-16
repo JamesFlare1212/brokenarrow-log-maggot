@@ -117,10 +117,10 @@ export function BansPanel() {
   );
 }
 export function BanAlertDialog({ players }: { players: Ban[] }) {
-  const { openModal, closeModal } = useApp(),
+  const { openModal, closeModal, backModal } = useApp(),
     { t } = useI18n();
   return (
-    <Dialog open onClose={closeModal} title={t('banAlert')}>
+    <Dialog open onClose={closeModal} onBack={backModal} title={t('banAlert')}>
       <div className="ban-list">
         {players.map((p) => (
           <div className="ban-row" key={p.id}>

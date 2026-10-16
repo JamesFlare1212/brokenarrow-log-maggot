@@ -224,10 +224,10 @@ export function MaggotView({ report }: { report: MaggotReport }) {
     </div>
   );
 }
-export function MaggotProgress() {
+export function MaggotProgress({ id }: { id?: string } = {}) {
   const { state, maggot } = useApp(),
     { t } = useI18n();
-  if (!maggot.busy) return null;
+  if (!maggot.busy || (id && maggot.id !== id)) return null;
   const progress =
     state.maggotProgress?.requestId === maggot.requestId ? state.maggotProgress : null;
   return (

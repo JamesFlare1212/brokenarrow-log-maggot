@@ -9,7 +9,6 @@ import { errorMessage } from '@ba/shared';
 import { RecordingController } from './recordings/controller';
 import { ReplayProtocol } from './recordings/protocol';
 import { ApmController } from './apm';
-import { VerificationGate } from './gate';
 import { selectDirectory, detectLogDirectory, openPath } from './directories';
 import { UpdateController } from './updates/controller';
 import { readInstallRecord, writeInstallRecord } from './updates/install-record';
@@ -26,7 +25,6 @@ if (process.env.BA_USER_DATA) app.setPath('userData', resolve(process.env.BA_USE
 let window: BrowserWindow | null = null,
   service: Application | null = null,
   recordings: RecordingController | null = null,
-  gate: VerificationGate | null = null,
   replays: ReplayProtocol | null = null,
   updates: UpdateController | null = null,
   quitting = false;
@@ -71,7 +69,6 @@ async function start(): Promise<void> {
       if (!canInstallUpdate())
         throw new Error('A match or recording started. Install after it finishes.');
       quitting = true;
-      gate?.close();
       await service?.stop();
       await recordings?.abort();
       replays?.close();
@@ -89,7 +86,6 @@ async function start(): Promise<void> {
   });
   replays = new ReplayProtocol();
   replays.register();
-  gate = new VerificationGate((state) => emit({ type: 'gate', state }));
   recordings = new RecordingController(
     join(__dirname, 'recorder-preload.cjs'),
     join(root, 'apps/web/dist/recorder.html'),
@@ -115,7 +111,6 @@ async function start(): Promise<void> {
         : smoke
           ? async () => new Response('{}', { headers: { 'Content-Type': 'application/json' } })
           : (url, init) => net.fetch(url instanceof URL ? url.toString() : url, init),
-      challenge: () => gate?.open() || Promise.reject(new Error('Verification unavailable')),
     },
     selectDirectory,
     detectLogDirectory,
@@ -227,7 +222,6 @@ async function shutdown(): Promise<void> {
   quitting = true;
   try {
     updates?.dispose();
-    gate?.close();
     await service?.stop();
     await recordings?.abort();
     replays?.close();

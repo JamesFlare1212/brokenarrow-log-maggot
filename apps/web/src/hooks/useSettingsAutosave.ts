@@ -13,6 +13,7 @@ export function useSettingsAutosave(
   const [status, setStatus] = useState<SettingsSaveStatus>('saved');
   const [error, setError] = useState<string | null>(null);
   const latest = useRef(config);
+  const confirmed = useRef(config);
   const pending = useRef<Partial<PublicConfig>>({}),
     overrides = useRef<Partial<PublicConfig>>({});
   const running = useRef<Promise<boolean> | null>(null);
@@ -21,6 +22,7 @@ export function useSettingsAutosave(
   prepareSave.current = beforeSave;
   useEffect(() => {
     if (config) {
+      confirmed.current = config;
       latest.current = { ...config, ...overrides.current };
       setDraft(latest.current);
     }
@@ -41,6 +43,7 @@ export function useSettingsAutosave(
         try {
           if (prepareSave.current) await prepareSave.current(patch);
           const result = await api.invoke('config.update', patch);
+          confirmed.current = result;
           for (const key of Object.keys(patch) as Array<keyof PublicConfig>) {
             if (
               !(key in pending.current) &&
@@ -90,11 +93,24 @@ export function useSettingsAutosave(
     },
     [flush],
   );
+  const discard = useCallback(async () => {
+    if (timer.current !== null) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    if (running.current) await running.current;
+    pending.current = {};
+    overrides.current = {};
+    latest.current = confirmed.current;
+    setDraft(confirmed.current);
+    setError(null);
+    setStatus('saved');
+  }, []);
   useEffect(
     () => () => {
       if (timer.current !== null) clearTimeout(timer.current);
     },
     [],
   );
-  return { draft, status, error, change, flush };
+  return { draft, status, error, change, flush, discard };
 }

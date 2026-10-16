@@ -388,6 +388,43 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Не удалось сохранить',
   ],
   settingsRetry: ['重试保存', 'Retry save', '保存を再試行', 'Повторить сохранение'],
+  settingsDiscard: [
+    '放弃未保存的更改',
+    'Discard unsaved changes',
+    '未保存の変更を破棄',
+    'Отменить несохранённые изменения',
+  ],
+  settingsUnsavedTitle: [
+    '更改尚未保存',
+    'Changes are not saved',
+    '変更は保存されていません',
+    'Изменения не сохранены',
+  ],
+  settingsUnsavedDescription: [
+    '保存失败。可以重试、继续编辑，或放弃未保存的更改后返回。',
+    'Saving failed. Retry, keep editing, or discard unsaved changes and return.',
+    '保存できませんでした。再試行、編集の続行、または未保存の変更を破棄して戻ることができます。',
+    'Не удалось сохранить. Повторите попытку, продолжите редактирование или отмените несохранённые изменения и вернитесь.',
+  ],
+  settingsKeepEditing: ['继续编辑', 'Keep editing', '編集を続ける', 'Продолжить редактирование'],
+  dialogBack: [
+    '返回上一级',
+    'Back to previous view',
+    '前の画面に戻る',
+    'Назад к предыдущему экрану',
+  ],
+  previewWaiting: [
+    '等待预览画面',
+    'Waiting for preview',
+    'プレビューを待機中',
+    'Ожидание предпросмотра',
+  ],
+  previewUnavailable: [
+    '预览暂不可用',
+    'Preview unavailable',
+    'プレビューを利用できません',
+    'Предпросмотр недоступен',
+  ],
   'settingsHint.general': [
     '设置适合你的界面语言。',
     'Choose your interface language.',
@@ -506,12 +543,6 @@ export const messages: Record<string, readonly [string, string, string, string]>
   ],
   healthHttp429: ['请求过于频繁', 'Rate limited', 'リクエスト制限', 'Слишком много запросов'],
   healthHttpError: ['请求失败', 'Request failed', 'リクエスト失敗', 'Ошибка запроса'],
-  healthFailure_verification: [
-    '需要人机验证',
-    'Verification required',
-    '人間による認証が必要',
-    'Требуется проверка',
-  ],
   healthFailure_blocked: [
     '被 Cloudflare 拦截',
     'Blocked by Cloudflare',

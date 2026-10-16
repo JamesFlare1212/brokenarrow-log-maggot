@@ -90,6 +90,13 @@
   background: var(--text);
   box-shadow: 0 0 0 2px var(--surface);
 }
+.button.update-details-button {
+  position: relative;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  background: transparent;
+}
 .workspace {
   display: flex;
   flex-direction: column;
@@ -534,6 +541,33 @@ main {
 .player-identity .badge {
   font-size: 9px;
   padding: 0 4px;
+}
+.player-analysis {
+  display: grid;
+}
+.player-analysis > span {
+  grid-area: 1 / 1;
+}
+.player-analysis-placeholder {
+  visibility: hidden;
+}
+.player-analysis-error {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.player-results-viewport {
+  position: relative;
+  height: clamp(240px, 40dvh, 360px);
+}
+.player-results-scroll {
+  height: 100%;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.player-results-scroll > .notice {
+  margin-bottom: 12px;
 }
 .player-rating {
   display: flex;
@@ -1310,22 +1344,77 @@ main {
   gap: 14px;
   color: var(--muted);
 }
-.recording-preview img {
+.recording-preview-media {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: 240px;
   max-width: 50%;
+  flex-shrink: 0;
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
   border-radius: 9px;
   aspect-ratio: 16 / 9;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+}
+.recording-preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
   object-fit: contain;
+}
+.replay-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  max-height: 65dvh;
+  flex-shrink: 0;
+  background: var(--bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.replay-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  overflow: auto;
+  background: var(--surface);
 }
 .replay-video {
   width: 100%;
-  max-height: 65dvh;
+  height: 100%;
   background: var(--bg);
   border-radius: 8px;
 }
-.display-preview {
+.display-preview-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: 100%;
+  aspect-ratio: 16 / 9;
   max-height: 260px;
+  border-radius: 8px;
+  background: var(--bg);
+  text-align: center;
+  overflow: hidden;
+}
+.display-preview-slot > span {
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+.display-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   border-radius: 8px;
   background: var(--bg);

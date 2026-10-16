@@ -186,19 +186,13 @@ describe('BATrace match detail fallback', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('does not fall back after cancelled verification', async () => {
-    const cancelled = new Error('Verification cancelled');
+  it('reports an HTML access-denied response when both sources fail', async () => {
     const fetchImpl = vi.fn<typeof fetch>(
-      async () => new Response('<html>TencentEOCaptchaWidget</html>'),
+      async () => new Response('<html>Access denied</html>', { status: 403 }),
     );
-    const { client } = setup({
-      fetch: fetchImpl,
-      challenge: async () => {
-        throw cancelled;
-      },
-    });
-    await expect(client.match(id, true)).rejects.toBe(cancelled);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const { client } = setup({ fetch: fetchImpl });
+    await expect(client.match(id, true)).rejects.toThrow('BATrace HTTP 403');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -208,7 +202,6 @@ describe('BATrace match detail health', () => {
 
   it('reports the blocked API and available page separately, bypasses caches and recovers on a later probe', async () => {
     let mode: 'fallback' | 'down' | 'api' = 'fallback';
-    const challenge = vi.fn(async () => {});
     const fetchImpl = vi.fn<typeof fetch>(async (url) => {
       if (String(url).endsWith(pagePath) && mode === 'fallback') return new Response(capturedHtml);
       if (mode === 'api') return Response.json(capturedData);
@@ -217,7 +210,7 @@ describe('BATrace match detail health', () => {
         headers: { server: 'cloudflare', 'cf-ray': 'match-health-ray' },
       });
     });
-    const { db, client, times, now } = setup({ fetch: fetchImpl, challenge });
+    const { db, client, times, now } = setup({ fetch: fetchImpl });
     db.saveCache(`health:${apiPath}`, capturedData, 60_000, now);
     db.saveCache(`health:${pagePath}`, capturedData, 60_000, now);
     db.saveCache(`match:${id}`, capturedData, 60_000, now);
@@ -253,7 +246,6 @@ describe('BATrace match detail health', () => {
     expect(fetchImpl.mock.calls.filter(([url]) => String(url).endsWith(pagePath))).toHaveLength(2);
     for (const key of [`health:${apiPath}`, `health:${pagePath}`, `match:${id}`])
       expect(db.cache(key, true)?.at).toBe(now);
-    expect(challenge).not.toHaveBeenCalled();
   });
 
   it.each([

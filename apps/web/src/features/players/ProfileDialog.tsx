@@ -1,5 +1,7 @@
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect } from 'react';
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
 import { formatTime, formatMetric, formatDelta } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -8,14 +10,14 @@ import { useRequest } from '../../hooks/useRequest';
 import { Dialog, Button, Loading, Notice, Stats, Badge } from '../../components/ui';
 import { ReportView, MaggotView, MaggotProgress } from './Reports';
 export function ProfileDialog({ id, name }: { id: string; name: string }) {
-  const { api, closeModal, openModal, maggot, runMaggot } = useApp(),
+  const { api, closeModal, backModal, openModal, maggot, runMaggot } = useApp(),
     { t, locale } = useI18n(),
     profile = useRequest<PlayerProfile>(),
     report = useRequest<PlayerReport>();
   const load = (force = false) =>
     Promise.all([
-      profile.load(() => api.invoke('players.profile', { id, force })),
-      report.load(() => api.invoke('players.report', { id, force })),
+      profile.load(() => api.invoke('players.profile', { id, force }), true),
+      report.load(() => api.invoke('players.report', { id, force }), true),
     ]);
   useEffect(() => {
     void load();
@@ -25,9 +27,25 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
     same = encounters.filter((e) => e.relation === 'same'),
     opponent = encounters.filter((e) => e.relation === 'opponent');
   return (
-    <Dialog open onClose={closeModal} title={`${name} · #${id}`} className="dialog-wide">
+    <Dialog
+      open
+      onClose={closeModal}
+      onBack={backModal}
+      title={`${name} · #${id}`}
+      className="dialog-wide"
+    >
       <div className="actions">
-        <Button onClick={() => void load(true)} disabled={profile.pending || report.pending}>
+        <Button
+          onClick={() => void load(true)}
+          disabled={profile.pending || report.pending}
+          aria-busy={profile.pending || report.pending}
+        >
+          <Icon
+            icon={faArrowsRotate}
+            size={16}
+            spin={profile.pending || report.pending}
+            aria-hidden="true"
+          />
           {t('refresh')}
         </Button>
         <Button
@@ -41,7 +59,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
           {t('maggot')}
         </Button>
       </div>
-      {profile.pending && <Loading />}
+      {profile.pending && !p && <Loading />}
       {profile.error && <Notice error>{profile.error}</Notice>}
       {p && (
         <>
@@ -63,26 +81,6 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
             <Notice>
               {t('stale')} · {formatTime(p.info.updatedAt, locale)}
             </Notice>
-          )}
-          {p.info && !report.data && (
-            <>
-              <Stats
-                items={[
-                  { label: 'ELO', value: formatMetric(p.info.elo, 0) },
-                  { label: t('latestKd'), value: formatMetric(p.info.kd) },
-                  {
-                    label: t(p.info.fallback ? 'winRate' : 'recentWinRate'),
-                    value: formatMetric(p.info.winRate, 0) + '%',
-                  },
-                  { label: t('totalMatches'), value: p.info.matchCount },
-                  { label: t('samples'), value: p.info.sampleCount ?? '—' },
-                ]}
-              />
-              <div className="report-tags">
-                <Badge>{p.info.category || '—'}</Badge>
-                <span>{p.info.topUnits}</span>
-              </div>
-            </>
           )}
           <div className="profile-columns">
             <section>
@@ -164,10 +162,30 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
           </div>
         </>
       )}
-      {report.pending && <Loading />}
+      {report.pending && !report.data && <Loading />}
       {report.error && <Notice error>{report.error}</Notice>}
+      {report.error && !report.data && p?.info && (
+        <>
+          <Stats
+            items={[
+              { label: 'ELO', value: formatMetric(p.info.elo, 0) },
+              { label: t('latestKd'), value: formatMetric(p.info.kd) },
+              {
+                label: t(p.info.fallback ? 'winRate' : 'recentWinRate'),
+                value: formatMetric(p.info.winRate, 0) + '%',
+              },
+              { label: t('totalMatches'), value: p.info.matchCount },
+              { label: t('samples'), value: p.info.sampleCount ?? '—' },
+            ]}
+          />
+          <div className="report-tags">
+            <Badge>{p.info.category || '—'}</Badge>
+            <span>{p.info.topUnits}</span>
+          </div>
+        </>
+      )}
       {report.data && <ReportView report={report.data} />}
-      <MaggotProgress />
+      <MaggotProgress id={id} />
       {maggot.id === id && maggot.error && <Notice error>{maggot.error}</Notice>}
       {maggot.id === id && maggot.data && <MaggotView report={maggot.data} />}
     </Dialog>

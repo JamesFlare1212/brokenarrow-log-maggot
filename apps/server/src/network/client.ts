@@ -25,12 +25,6 @@ export interface DataResult {
 export interface HttpPort {
   fetch: typeof fetch;
   offline?: boolean;
-  challenge?: () => Promise<void>;
-}
-export function isChallenge(value: string): boolean {
-  return /TencentEOCaptchaWidget|EO-Bot-Captcha-Token|Security Verification|__tst_status/.test(
-    value,
-  );
 }
 export class BatraceClient {
   private queue: Promise<unknown> = Promise.resolve();
@@ -123,8 +117,6 @@ export class BatraceClient {
           });
           const raw = await response.text(),
             html = response.headers.get('content-type')?.includes('text/html') || /^\s*</.test(raw);
-          if (html && isChallenge(raw))
-            return { challenge: true as const, status: response.status };
           if (!response.ok) {
             const error = new Error(`BATrace HTTP ${response.status}`);
             Object.assign(error, {
@@ -140,7 +132,6 @@ export class BatraceClient {
           }
           try {
             return {
-              challenge: false as const,
               value: options.parse ? options.parse(raw) : (JSON.parse(raw) as unknown),
               status: response.status,
             };
@@ -162,26 +153,6 @@ export class BatraceClient {
         const scheduled = this.queue.then(run, run);
         this.queue = scheduled.catch(() => {});
         const result = await scheduled;
-        if (result.challenge) {
-          last = Object.assign(new Error('BATrace verification did not complete'), {
-            verification: true,
-            status: result.status,
-          });
-          if (options.health || !this.http.challenge)
-            throw Object.assign(new Error('BATrace verification required'), {
-              verification: true,
-              status: result.status,
-            });
-          try {
-            await this.http.challenge();
-          } catch (error) {
-            throw Object.assign(error instanceof Error ? error : new Error(String(error)), {
-              verification: true,
-              status: result.status,
-            });
-          }
-          continue;
-        }
         this.lifetime.signal.throwIfAborted();
         options.signal?.throwIfAborted();
         const at = this.now();
@@ -192,20 +163,13 @@ export class BatraceClient {
         last = error;
         if (this.lifetime.signal.aborted || options.signal?.aborted) throw error;
         const e = object(error);
-        if (
-          e.verification ||
-          e.invalidResponse ||
-          e.status === 404 ||
-          e.status === 401 ||
-          e.status === 403
-        )
-          break;
+        if (e.invalidResponse || e.status === 404 || e.status === 401 || e.status === 403) break;
         if (attempt < 2) await this.wait(Math.max(this.interval, Number(e.retryAfter) || 0));
       }
     }
     if (startedAt !== undefined)
       this.report(failedHealthCheck(path, this.now() - startedAt, last), options);
-    if (options.fallback && !object(last).verification) {
+    if (options.fallback) {
       try {
         const result = await this.request(options.fallback.path, key, ttl, {
           ...options,

@@ -1,5 +1,7 @@
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect, useState } from 'react';
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { Match, Replay } from '@ba/contracts';
 import {
   formatMetric,
@@ -14,7 +16,7 @@ import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Dialog, Loading, Notice, Stats, Badge } from '../../components/ui';
 export function MatchDialog({ fid }: { fid: string }) {
-  const { api, openModal, closeModal } = useApp(),
+  const { api, openModal, closeModal, backModal } = useApp(),
     { t, locale } = useI18n(),
     request = useRequest<Match>(),
     [replays, setReplays] = useState<Replay[]>([]);
@@ -43,16 +45,19 @@ export function MatchDialog({ fid }: { fid: string }) {
     <Dialog
       open
       onClose={closeModal}
+      onBack={backModal}
       title={`${t('matchDetail')} · #${fid}`}
       className="dialog-wide"
     >
       <div className="actions">
         <Button
           disabled={request.pending}
+          aria-busy={request.pending}
           onClick={() =>
             void request.load(() => api.invoke('matches.detail', { fid, force: true }), true)
           }
         >
+          <Icon icon={faArrowsRotate} size={16} spin={request.pending} aria-hidden="true" />
           {t('refresh')}
         </Button>
         <Button
@@ -71,7 +76,7 @@ export function MatchDialog({ fid }: { fid: string }) {
           </Button>
         ))}
       </div>
-      {request.pending && <Loading />}
+      {request.pending && !match && <Loading />}
       {request.error && <Notice error>{request.error}</Notice>}
       {match && (
         <>

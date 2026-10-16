@@ -9,17 +9,15 @@ export function failedHealthCheck(path: string, ms: number, error: unknown): Api
     ok: false,
     ms,
     status: typeof status === 'number' ? status : null,
-    failure: detail.verification
-      ? 'verification'
-      : detail.blocked
-        ? 'blocked'
-        : detail.invalidResponse
-          ? 'invalid-response'
-          : detail.name === 'TimeoutError' || detail.name === 'AbortError'
-            ? 'timeout'
-            : typeof status === 'number'
-              ? 'http'
-              : 'network',
+    failure: detail.blocked
+      ? 'blocked'
+      : detail.invalidResponse
+        ? 'invalid-response'
+        : detail.name === 'TimeoutError' || detail.name === 'AbortError'
+          ? 'timeout'
+          : typeof status === 'number'
+            ? 'http'
+            : 'network',
     ...(typeof detail.rayId === 'string' ? { rayId: detail.rayId } : {}),
   };
 }

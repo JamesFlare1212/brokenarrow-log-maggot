@@ -20,6 +20,7 @@ import { Icon } from './Icon';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { useI18n } from '../hooks/useI18n';
 import { TooltipAutoFocusContext, TooltipButton } from './Tooltip';
+const dialogOpeners = new WeakMap<Document, HTMLElement>();
 export function Button({
   variant = 'ghost',
   className = '',
@@ -103,6 +104,7 @@ export function Dialog({
   className = '',
   showHeader = true,
   banner,
+  onBack,
 }: {
   open: boolean;
   onClose: () => void;
@@ -111,6 +113,7 @@ export function Dialog({
   className?: string;
   showHeader?: boolean;
   banner?: ReactNode;
+  onBack?: () => void;
 }) {
   const { t } = useI18n();
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -145,12 +148,28 @@ export function Dialog({
               });
               returnFocus.current =
                 document.activeElement instanceof HTMLElement ? document.activeElement : null;
+              const active = returnFocus.current;
+              if (active && active !== document.body && !active.closest('[role="dialog"]')) {
+                const menu = active.closest('[role="menu"]');
+                const triggerId = menu?.getAttribute('aria-labelledby');
+                dialogOpeners.set(
+                  document,
+                  (triggerId ? document.getElementById(triggerId) : null) ?? active,
+                );
+              }
             }}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
               queueMicrotask(() => {
-                if (!document.querySelector('[role="dialog"]') && returnFocus.current?.isConnected)
-                  returnFocus.current.focus();
+                if (document.querySelector('[role="dialog"]')) return;
+                const opener = dialogOpeners.get(document);
+                const target = opener?.isConnected
+                  ? opener
+                  : returnFocus.current?.isConnected
+                    ? returnFocus.current
+                    : document.getElementById('main-content');
+                target?.focus({ preventScroll: true });
+                dialogOpeners.delete(document);
               });
             }}
           >
@@ -164,6 +183,7 @@ export function Dialog({
               </>
             ) : (
               <div className={showHeader ? 'dialog-header' : 'dialog-headerless-controls'}>
+                {onBack && <Button onClick={onBack}>{t('dialogBack')}</Button>}
                 {dialogTitle}
                 {closeButton}
               </div>
@@ -284,7 +304,7 @@ export function Toggle({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <div className="toggle">
+    <label className="toggle" htmlFor={id}>
       <span id={`${id}-label`}>{label}</span>
       <input
         id={id}
@@ -296,7 +316,7 @@ export function Toggle({
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="toggle-track" aria-hidden="true" />
-    </div>
+    </label>
   );
 }
 function menuItems(children: ReactNode): ReactElement[] {

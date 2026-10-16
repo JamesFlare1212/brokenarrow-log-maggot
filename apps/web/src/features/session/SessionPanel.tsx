@@ -9,6 +9,7 @@ import {
   faCrosshairs,
 } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
+import { TooltipButton } from '../../components/Tooltip';
 import type { Match, Player } from '@ba/contracts';
 import { formatDuration, formatMetric, teamLabel } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -115,10 +116,11 @@ export function SessionPanel() {
           <Button
             variant="primary"
             disabled={pending || !players.length}
+            aria-busy={pending}
             onClick={() => void query(view)}
           >
             <Icon icon={faArrowsRotate} size={15} spin={pending} aria-hidden="true" />
-            {pending ? t('loading') : t('query')}
+            {t('query')}
           </Button>
         </>
       }
@@ -255,8 +257,9 @@ export function SessionPanel() {
                           ?.click();
                       }}
                     >
-                      <button
+                      <TooltipButton
                         className="player-main"
+                        tooltip={row?.error || undefined}
                         onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}
                       >
                         <span className="player-avatar" aria-hidden="true">
@@ -269,24 +272,32 @@ export function SessionPanel() {
                               <Badge tone="success">{t('you')}</Badge>
                             )}
                           </strong>
-                          <small className="muted">
-                            #{p.id}
-                            {info && (
-                              <>
-                                {' '}
-                                · {t(info.fallback ? 'winRate' : 'recentWinRate')}{' '}
-                                {formatMetric(info.winRate, 0)}% · {t('latestKd')}{' '}
-                                {formatMetric(info.kd)}
-                              </>
-                            )}
+                          <small className="muted">#{p.id}</small>
+                          <small className="player-analysis muted">
+                            <span className="player-analysis-placeholder" aria-hidden="true">
+                              {t('recentWinRate')} 100% · {t('latestKd')} 999.99
+                            </span>
+                            <span
+                              className={
+                                row?.error ? 'player-analysis-error text-danger' : undefined
+                              }
+                            >
+                              {row?.error ||
+                                (info && (
+                                  <>
+                                    {t(info.fallback ? 'winRate' : 'recentWinRate')}{' '}
+                                    {formatMetric(info.winRate, 0)}% · {t('latestKd')}{' '}
+                                    {formatMetric(info.kd)}
+                                  </>
+                                ))}
+                            </span>
                           </small>
-                          {row?.error && <small className="text-danger">{row.error}</small>}
                         </span>
                         <span className="player-rating">
                           <strong>{formatMetric(rating(p), 0)}</strong>
                           <small>ELO</small>
                         </span>
-                      </button>
+                      </TooltipButton>
                       <PlayerActions player={p} info={info} />
                     </div>
                   );

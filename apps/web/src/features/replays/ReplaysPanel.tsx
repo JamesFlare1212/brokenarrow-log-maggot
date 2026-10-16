@@ -69,14 +69,27 @@ export function ReplaysPanel() {
         </Button>
       </div>
       {recording.error && <Notice error>{recording.error}</Notice>}
-      {state.preview && recording.phase === 'recording' && (
-        <figure className="recording-preview">
-          <img src={state.preview.dataUrl} alt={t('preview')} />
-          <figcaption>
-            {t('preview')} · {t(state.preview.hasAudio ? 'audio' : 'audioOff')}
-          </figcaption>
-        </figure>
-      )}
+      <figure className="recording-preview">
+        <div className="recording-preview-media">
+          {state.preview && recording.phase === 'recording' ? (
+            <img src={state.preview.dataUrl} alt={t('preview')} />
+          ) : (
+            <span className="muted">
+              {t(
+                recording.phase === 'recording' || recording.phase === 'starting'
+                  ? 'previewWaiting'
+                  : 'recordingOff',
+              )}
+            </span>
+          )}
+        </div>
+        <figcaption>
+          {t('preview')}
+          {state.preview && recording.phase === 'recording' && (
+            <> · {t(state.preview.hasAudio ? 'audio' : 'audioOff')}</>
+          )}
+        </figcaption>
+      </figure>
       <section className="card">
         <div className="card-body">
           <div className="section-heading">

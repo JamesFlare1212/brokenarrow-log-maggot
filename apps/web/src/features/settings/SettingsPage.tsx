@@ -17,7 +17,7 @@ import { Icon } from '../../components/Icon';
 import type { Account, PublicConfig } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
-import { Button, Field, Toggle, Notice, Empty } from '../../components/ui';
+import { Button, Dialog, Field, Toggle, Notice, Empty } from '../../components/ui';
 import { PageToolbar, SidebarToggle } from '../../components/PageToolbar';
 import {
   Sidebar,
@@ -54,13 +54,17 @@ export function SettingsPage() {
     [accounts, setAccounts] = useState<Account[]>([]),
     [accountsLoading, setAccountsLoading] = useState(true),
     [returning, setReturning] = useState(false),
+    [confirmLeaving, setConfirmLeaving] = useState(false),
+    [healthPending, setHealthPending] = useState(false),
+    [healthError, setHealthError] = useState<string | null>(null),
     [recordingStatus, setRecordingStatus] = useState<SettingsSaveStatus>('saved'),
     [detecting, setDetecting] = useState(false),
     [defaultDecksDir, setDefaultDecksDir] = useState(''),
     [logFeedback, setLogFeedback] = useState<{ key: string; error: boolean } | null>(null),
     [error, setError] = useState<string | null>(null);
   const logRevision = useRef(0),
-    logRequest = useRef(0);
+    logRequest = useRef(0),
+    healthRunning = useRef(false);
   const draft = settings.draft ?? state.config;
   const orderList = useRef<HTMLOListElement>(null),
     orderPositions = useRef(new Map<string, number>()),
@@ -99,7 +103,31 @@ export function SettingsPage() {
   const back = async () => {
     setReturning(true);
     if (await flush()) closeSettings();
-    else setReturning(false);
+    else {
+      setReturning(false);
+      setConfirmLeaving(true);
+    }
+  };
+  const discardAndReturn = async () => {
+    setReturning(true);
+    await settings.discard();
+    setConfirmLeaving(false);
+    closeSettings();
+  };
+  const checkHealth = async () => {
+    if (healthRunning.current) return;
+    healthRunning.current = true;
+    setHealthPending(true);
+    setHealthError(null);
+    try {
+      await api.invoke('api.health', { force: true });
+      notify(t('success'));
+    } catch (error) {
+      setHealthError(String(error));
+    } finally {
+      healthRunning.current = false;
+      setHealthPending(false);
+    }
   };
   useEffect(() => {
     document.getElementById('settings-content')?.focus({ preventScroll: true });
@@ -183,6 +211,7 @@ export function SettingsPage() {
     }
   };
   const choose = async (kind: 'logs' | 'decks') => {
+    setError(null);
     try {
       const dir = await api.invoke('directory.select', { kind });
       if (dir) set(kind === 'logs' ? 'logDir' : 'decksDir', dir);
@@ -291,6 +320,9 @@ export function SettingsPage() {
           <div className="settings-errors">
             <Notice error>{settings.error ?? error}</Notice>
             {settings.error && <Button onClick={() => void flush()}>{t('settingsRetry')}</Button>}
+            {settings.error && (
+              <Button onClick={() => void settings.discard()}>{t('settingsDiscard')}</Button>
+            )}
           </div>
         )}
         {tabs.map(({ id, label }) => (
@@ -379,14 +411,17 @@ export function SettingsPage() {
                   <div>
                     <h3>{t('health')}</h3>
                     <p>{t('healthHint')}</p>
+                    <div
+                      className="settings-health-feedback"
+                      role={healthError ? 'alert' : 'status'}
+                    >
+                      {healthError || (healthPending ? t('loading') : '')}
+                    </div>
                   </div>
                   <Button
-                    onClick={() =>
-                      void api
-                        .invoke('api.health', { force: true })
-                        .then(() => notify(t('success')))
-                        .catch((e) => setError(String(e)))
-                    }
+                    disabled={healthPending}
+                    aria-busy={healthPending}
+                    onClick={() => void checkHealth()}
                   >
                     {t('healthCheck')}
                   </Button>
@@ -503,6 +538,24 @@ export function SettingsPage() {
           </div>
         ))}
       </main>
+      <Dialog
+        open={confirmLeaving}
+        onClose={() => setConfirmLeaving(false)}
+        title={t('settingsUnsavedTitle')}
+      >
+        <p>{t('settingsUnsavedDescription')}</p>
+        <div className="actions">
+          <Button disabled={returning} onClick={() => void back()}>
+            {t('settingsRetry')}
+          </Button>
+          <Button disabled={returning} onClick={() => setConfirmLeaving(false)}>
+            {t('settingsKeepEditing')}
+          </Button>
+          <Button variant="danger" disabled={returning} onClick={() => void discardAndReturn()}>
+            {t('settingsDiscard')}
+          </Button>
+        </div>
+      </Dialog>
     </section>
   );
 }

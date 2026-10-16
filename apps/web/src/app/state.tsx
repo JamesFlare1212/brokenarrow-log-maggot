@@ -129,6 +129,7 @@ interface AppContextValue {
   modal: ModalRoute;
   openModal: (route: ModalRoute) => void;
   closeModal: () => void;
+  backModal?: () => void;
   patchConfig: (patch: Partial<PublicConfig>) => Promise<void>;
   notify: (message: string, error?: boolean) => void;
   maggot: {
@@ -157,7 +158,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     [settingsTab, updateSettingsTab] = useState<SettingsTab | null>(() =>
       settingsTabFromHash(location.hash),
     ),
-    [modal, openModal] = useState<ModalRoute>(null),
+    [modalStack, setModalStack] = useState<NonNullable<ModalRoute>[]>([]),
     [error, setError] = useState<string | null>(null),
     [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
   const [maggot, setMaggot] = useState<AppContextValue['maggot']>({
@@ -169,6 +170,15 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     }),
     maggotRunning = useRef(false);
   const settings = useSettingsAutosave(api, state?.config);
+  const modal = modalStack.at(-1) ?? null;
+  const openModal = (route: ModalRoute) =>
+    setModalStack((stack) =>
+      route === null
+        ? []
+        : JSON.stringify(stack.at(-1)) === JSON.stringify(route)
+          ? stack
+          : [...stack, route],
+    );
   const setPage = (next: Panel) => {
     if (location.hash !== `#${next}`) history.pushState(null, '', `#${next}`);
     updateSettingsTab(null);
@@ -273,6 +283,8 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     modal,
     openModal,
     closeModal: () => openModal(null),
+    backModal:
+      modalStack.length > 1 ? () => setModalStack((stack) => stack.slice(0, -1)) : undefined,
     patchConfig: async (patch) => {
       try {
         await api.invoke('config.update', patch);

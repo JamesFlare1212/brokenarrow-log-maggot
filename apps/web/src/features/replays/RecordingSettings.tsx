@@ -17,7 +17,7 @@ export function RecordingSettings({
   inline?: boolean;
   onStatusChange?: (status: SettingsSaveStatus) => void;
 }) {
-  const { api, state, closeModal, notify } = useApp(),
+  const { api, state, closeModal, backModal, notify } = useApp(),
     { t } = useI18n(),
     [directory, setDirectory] = useState(state.config.replaySaveDir),
     [displays, setDisplays] = useState<Display[]>([]),
@@ -39,10 +39,11 @@ export function RecordingSettings({
   useEffect(() => {
     onStatusChange?.(status);
   }, [status, onStatusChange]);
-  const latest = useRef({ directory, notify, t });
-  latest.current = { directory, notify, t };
+  const latest = useRef({ directory, notify, t, discarded: false });
+  Object.assign(latest.current, { directory, notify, t });
   useEffect(
     () => () => {
+      if (latest.current.discarded) return;
       change({ replaySaveDir: latest.current.directory });
       void flush().then((saved) => {
         if (!saved) latest.current.notify(latest.current.t('settingsSaveFailed'), true);
@@ -60,20 +61,37 @@ export function RecordingSettings({
       .catch((e) => setError(String(e)));
   }, [api]);
   useEffect(() => {
-    const refresh = () =>
-      void thumbnail.load(
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = async () => {
+      await thumbnail.load(
         () => api.invoke('displays.thumbnail', { id: draft.replayDisplayId }),
         true,
       );
-    refresh();
-    const timer = setInterval(refresh, 2000);
-    return () => clearInterval(timer);
+      if (active) timer = setTimeout(() => void refresh(), 2000);
+    };
+    void refresh();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [api, draft.replayDisplayId]);
   const set = <K extends keyof PublicConfig>(key: K, value: PublicConfig[K], delay = 0) =>
     change({ [key]: value }, delay);
-  const close = async () => {
+  const close = async (back = false) => {
     set('replaySaveDir', directory);
-    if (await flush()) closeModal();
+    if (await flush()) {
+      if (back && backModal) backModal();
+      else closeModal();
+    }
+  };
+  const discard = async () => {
+    latest.current.discarded = true;
+    await settings.discard();
+    setDirectory(state.config.replaySaveDir);
+    latest.current.directory = state.config.replaySaveDir;
+    if (!inline) closeModal();
+    else latest.current.discarded = false;
   };
   const test = async () => {
     if (busy) return;
@@ -136,11 +154,17 @@ export function RecordingSettings({
               </select>
             </Field>
           </div>
-          {thumbnail.data && (
-            <div className="recording-setting-row">
-              <img className="display-preview" src={thumbnail.data} alt={t('display')} />
+          <div className="recording-setting-row">
+            <div className="display-preview-slot" aria-busy={thumbnail.pending && !thumbnail.data}>
+              {thumbnail.data ? (
+                <img className="display-preview" src={thumbnail.data} alt={t('display')} />
+              ) : (
+                <span role={thumbnail.error ? 'alert' : 'status'} className="muted">
+                  {thumbnail.error || t(thumbnail.pending ? 'loading' : 'previewUnavailable')}
+                </span>
+              )}
             </div>
-          )}
+          </div>
           <div className="recording-setting-row">
             <Field id="rec-quality" label={`${t('quality')} · ${draft.replayQuality}p`}>
               <input
@@ -266,6 +290,7 @@ export function RecordingSettings({
         <Notice error>
           {settings.error}
           <Button onClick={() => void flush()}>{t('settingsRetry')}</Button>
+          <Button onClick={() => void discard()}>{t('settingsDiscard')}</Button>
         </Notice>
       )}
       {!inline && (
@@ -287,6 +312,7 @@ export function RecordingSettings({
     <Dialog
       open
       onClose={() => void close()}
+      onBack={backModal ? () => void close(true) : undefined}
       title={t('recordingSettings')}
       showHeader={false}
       className="recording-settings-dialog"

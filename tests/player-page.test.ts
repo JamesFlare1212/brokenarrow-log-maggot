@@ -247,19 +247,13 @@ describe('BATrace player info fallback', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('does not fall back after cancelled verification', async () => {
-    const cancelled = new Error('Verification cancelled');
+  it('reports an HTML access-denied response when both sources fail', async () => {
     const fetchImpl = vi.fn<typeof fetch>(
-      async () => new Response('<html>TencentEOCaptchaWidget</html>'),
+      async () => new Response('<html>Access denied</html>', { status: 403 }),
     );
-    const { client } = setup({
-      fetch: fetchImpl,
-      challenge: async () => {
-        throw cancelled;
-      },
-    });
-    await expect(client.playerInfo('8863')).rejects.toBe(cancelled);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const { client } = setup({ fetch: fetchImpl });
+    await expect(client.playerInfo('8863')).rejects.toThrow('BATrace HTTP 403');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it('aborts and drains the fallback page before closing the database', async () => {

@@ -20,6 +20,7 @@
   align-items: center;
   gap: 12px;
   padding: 16px 32px 0;
+  flex-wrap: wrap;
 }
 .settings-errors .notice {
   flex: 1;
@@ -293,6 +294,35 @@
 }
 .settings-health .button {
   flex-shrink: 0;
+}
+.settings-health-feedback {
+  min-height: 3.2em;
+  max-height: 6.4em;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  color: var(--danger);
+  font-size: 12px;
+}
+.settings-health-feedback[role='status'] {
+  color: var(--muted);
+}
+.settings-save-alert {
+  position: fixed;
+  z-index: 150;
+  bottom: 24px;
+  right: 24px;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 80px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--danger-bg);
+  box-shadow: var(--shadow);
+}
+.settings-save-alert p {
+  margin: 8px 0 12px;
+  overflow-wrap: anywhere;
 }
 .settings-content .panel-order {
   grid-template-columns: 1fr;

@@ -299,7 +299,6 @@ describe('business request health updates', () => {
           headers: { server: 'cloudflare', 'cf-ray': 'business-ray' },
         }),
     ],
-    ['verification', () => new Response('<html>TencentEOCaptchaWidget</html>', { status: 403 })],
     ['invalid-response', () => new Response('<html>Unexpected page</html>')],
     [
       'timeout',
@@ -395,7 +394,6 @@ describe('BATrace health checks', () => {
           headers: { server: 'cloudflare', 'cf-ray': 'test-ray-EWR' },
         }),
     ],
-    ['verification', () => new Response('<html>TencentEOCaptchaWidget</html>', { status: 403 })],
     ['invalid-response', () => new Response('<html>Unexpected page</html>')],
     ['http', () => new Response('Forbidden', { status: 403 })],
     [
@@ -405,8 +403,7 @@ describe('BATrace health checks', () => {
       },
     ],
   ] as const)('preserves %s failure details for health tooltips', async (failure, respond) => {
-    const challenge = vi.fn(async () => {});
-    const { db, client } = setup({ fetch: vi.fn<typeof fetch>(async () => respond()), challenge });
+    const { db, client } = setup({ fetch: vi.fn<typeof fetch>(async () => respond()) });
     const health = await new StatusService(db, client).probe();
     expect(health.state).toBe('down');
     expect(health.checks.every((check) => check.failure === failure)).toBe(true);
@@ -419,63 +416,39 @@ describe('BATrace health checks', () => {
           (failure === 'timeout' ? null : failure === 'invalid-response' ? 200 : 403),
       ),
     ).toBe(true);
-    expect(challenge).not.toHaveBeenCalled();
   });
 });
 
-describe('verification and shutdown', () => {
-  it('does not treat a verification phrase inside valid JSON as a CAPTCHA page', async () => {
-    const challenge = vi.fn(async () => {});
+describe('invalid responses and shutdown', () => {
+  it('accepts arbitrary player names inside valid JSON', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () =>
       Response.json({ players: [{ id: 8863, name: 'Security Verification' }] }),
     );
-    const { client } = setup({ fetch: fetchImpl, challenge });
+    const { client } = setup({ fetch: fetchImpl });
     expect((await client.get('/api/players/search', 'verification-name', 60_000)).value).toEqual({
       players: [{ id: 8863, name: 'Security Verification' }],
     });
-    expect(challenge).not.toHaveBeenCalled();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
-  it('unlocks a real HTML challenge once and retries through the scheduler', async () => {
-    const challenge = vi.fn(async () => {});
-    let state!: ReturnType<typeof setup>;
-    const times: number[] = [];
-    const fetchImpl = vi.fn<typeof fetch>(async () => {
-      times.push(state.clock.now);
-      return times.length === 1
-        ? new Response('<html>TencentEOCaptchaWidget</html>', {
+  it.each([200, 403])(
+    'fails an unexpected HTML response with status %s without retrying',
+    async (status) => {
+      const fetchImpl = vi.fn<typeof fetch>(
+        async () =>
+          new Response('<html>Access denied</html>', {
+            status,
             headers: { 'Content-Type': 'text/html' },
-          })
-        : Response.json({ unlocked: true });
-    });
-    state = setup({ fetch: fetchImpl, challenge });
-    expect((await state.client.get('/api/protected', 'protected', 60_000)).value).toEqual({
-      unlocked: true,
-    });
-    expect(challenge).toHaveBeenCalledTimes(1);
-    expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(1_200);
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
-  });
-
-  it('does not retry a user-cancelled verification flow', async () => {
-    const cancelled = Object.assign(new Error('Verification cancelled'), {
-      code: 'BATRACE_VERIFY_CANCELLED',
-    });
-    const challenge = vi.fn(async () => {
-      throw cancelled;
-    });
-    const fetchImpl = vi.fn<typeof fetch>(
-      async () =>
-        new Response('<html>TencentEOCaptchaWidget</html>', {
-          headers: { 'Content-Type': 'text/html' },
-        }),
-    );
-    const { client } = setup({ fetch: fetchImpl, challenge });
-    await expect(client.get('/api/protected', 'cancelled', 60_000)).rejects.toBe(cancelled);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(challenge).toHaveBeenCalledTimes(1);
-  });
+          }),
+      );
+      const { db, client } = setup({ fetch: fetchImpl });
+      await expect(client.get('/api/protected', 'protected', 60_000)).rejects.toThrow(
+        status === 403 ? 'BATrace HTTP 403' : 'BATrace returned invalid JSON',
+      );
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      expect(db.cache('protected', true)).toBeNull();
+    },
+  );
 
   it('replaces legacy client identity headers case-insensitively and preserves private headers', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));

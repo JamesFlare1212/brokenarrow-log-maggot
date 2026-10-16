@@ -192,7 +192,7 @@ export interface ApiHealthCheck {
   ok: boolean;
   ms: number;
   status: number | null;
-  failure?: 'http' | 'blocked' | 'verification' | 'timeout' | 'invalid-response' | 'network';
+  failure?: 'http' | 'blocked' | 'timeout' | 'invalid-response' | 'network';
   rayId?: string;
 }
 export interface ApiHealth {

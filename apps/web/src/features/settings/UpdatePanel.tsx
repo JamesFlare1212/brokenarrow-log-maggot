@@ -1,10 +1,10 @@
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
-import { Button, Notice } from '../../components/ui';
+import { Button } from '../../components/ui';
 import { UpdateButton } from './UpdateButton';
 
-export function UpdatePanel({ compact = false }: { compact?: boolean }) {
-  const { api, state, notify, openSettings } = useApp(),
+export function UpdatePanel() {
+  const { api, state, notify } = useApp(),
     { t } = useI18n();
   const update = state.updates;
   const blocked =
@@ -18,23 +18,6 @@ export function UpdatePanel({ compact = false }: { compact?: boolean }) {
         percent: update.downloadPercent ?? 0,
       });
 
-  if (compact) {
-    if (
-      !['available', 'downloading', 'downloaded', 'installing'].includes(update.status) &&
-      !update.notAppliedVersion
-    )
-      return null;
-    return (
-      <Notice>
-        <span role="status">
-          {update.notAppliedVersion
-            ? t('updateNotApplied', { version: update.notAppliedVersion })
-            : status}
-        </span>
-        <Button onClick={() => openSettings('general')}>{t('updateDetails')}</Button>
-      </Notice>
-    );
-  }
   return (
     <div className="settings-about-row" aria-label={t('appUpdates')}>
       <div className="settings-about-copy">

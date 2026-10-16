@@ -45,7 +45,6 @@ import { BansPanel, BanAlertDialog } from '../features/bans/BansPanel';
 import { DecksPanel } from '../features/decks/DecksPanel';
 import { ApmPanel } from '../features/apm/ApmPanel';
 import { ReplaysPanel } from '../features/replays/ReplaysPanel';
-import { UpdatePanel } from '../features/settings/UpdatePanel';
 import { UpdateButton } from '../features/settings/UpdateButton';
 const ProfileDialog = lazy(() =>
   import('../features/players/ProfileDialog').then((module) => ({ default: module.ProfileDialog })),
@@ -232,6 +231,21 @@ export function App() {
             <strong>{t(page === 'current' ? 'overview' : page)}</strong>
           </div>
           <div className="topbar-actions">
+            <Button
+              className="update-details-button button-borderless"
+              aria-label={t('updateDetails')}
+              tooltip={t('update.' + state.updates.status, {
+                version: state.updates.availableVersion || '',
+                percent: state.updates.downloadPercent ?? 0,
+              })}
+              onClick={() => openSettings('general')}
+            >
+              <Icon icon={faCircleInfo} size={18} aria-hidden="true" />
+              {(['available', 'downloaded', 'error'].includes(state.updates.status) ||
+                state.updates.notAppliedVersion) && (
+                <span className="update-dot" aria-hidden="true" />
+              )}
+            </Button>
             <BatraceStatus health={state.health} />
             <TooltipButton
               className="account-button"
@@ -278,7 +292,6 @@ export function App() {
                 <Button onClick={() => openSettings('connection')}>{t('select')}</Button>
               </Notice>
             )}
-            <UpdatePanel compact />
             {[...new Set([...visited, page])].map((panel) => (
               <div key={panel} className={`feature-page page-${panel}`} hidden={page !== panel}>
                 {components[panel]}
@@ -347,6 +360,16 @@ export function App() {
       >
         <ModalRouter />
       </Suspense>
+      {settings.error && !settingsTab && (
+        <div className="settings-save-alert" role="alert">
+          <strong>{t('settingsSaveFailed')}</strong>
+          <p>{settings.error}</p>
+          <div className="actions">
+            <Button onClick={() => void settings.flush()}>{t('settingsRetry')}</Button>
+            <Button onClick={() => void settings.discard()}>{t('settingsDiscard')}</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

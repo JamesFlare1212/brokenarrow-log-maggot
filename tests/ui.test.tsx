@@ -40,6 +40,8 @@ import { translate } from '../apps/web/src/hooks/useI18n';
 import { SessionPanel } from '../apps/web/src/features/session/SessionPanel';
 import { PlayersPanel } from '../apps/web/src/features/players/PlayersPanel';
 import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
+import { ReplayDialog } from '../apps/web/src/features/replays/ReplayDialog';
+import { RecordingSettings } from '../apps/web/src/features/replays/RecordingSettings';
 import { ReplaysPanel } from '../apps/web/src/features/replays/ReplaysPanel';
 import { Button, Dialog } from '../apps/web/src/components/ui';
 import { BatraceStatus } from '../apps/web/src/components/BatraceStatus';
@@ -315,7 +317,7 @@ describe('BATrace status indicator', () => {
           ok: false,
           ms: 50,
           status: 200,
-          failure: 'verification' as const,
+          failure: 'invalid-response' as const,
         },
       ],
     };
@@ -333,7 +335,7 @@ describe('BATrace status indicator', () => {
       'HTTP 403 · 456 ms',
       '请求超时',
       '未收到 HTTP 响应 · 15000 ms',
-      '需要人机验证',
+      translate('zh', 'healthFailure_invalid-response'),
     ])
       expect(within(tooltip).getByText(text)).toBeTruthy();
     expect(tooltip.textContent).toContain('上次检查：');
@@ -649,7 +651,7 @@ describe('settings pages and automatic saving', () => {
     },
   );
 
-  it('opens General from the update notice and keeps download and project links working', async () => {
+  it('opens General from the stable update toolbar entry and keeps download and project links working', async () => {
     const initial = bootstrapForApp();
     initial.updates = {
       ...initial.updates,
@@ -1032,7 +1034,7 @@ describe('settings pages and automatic saving', () => {
     );
   });
 
-  it('opens a settings tab directly from its URL and autosaves only switch activation', async () => {
+  it('opens a settings tab directly and saves both label and switch activation', async () => {
     history.replaceState(null, '', '#settings/automation');
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
@@ -1042,14 +1044,13 @@ describe('settings pages and automatic saving', () => {
       name: translate('zh', 'autoQuery'),
     }) as HTMLInputElement;
     fireEvent.click(page.getByText(translate('zh', 'autoQuery')));
-    fireEvent.click(checkbox.closest('.toggle')!);
-    expect(checkbox.checked).toBe(true);
-    expect(native.backend.config.autoQueryCurrentMatch).toBe(true);
-    fireEvent.click(checkbox);
     await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(false));
+    expect(checkbox.checked).toBe(false);
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(true));
     checkbox.focus();
     await userEvent.setup().keyboard(' ');
-    await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(true));
+    await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(false));
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
     expect(location.hash).toBe('#current');
@@ -1516,7 +1517,7 @@ describe('user interaction regressions', () => {
       'accounts.list': () =>
         ['1', '2'].map((id) => ({
           id,
-          name: `Account ${id}`,
+          name: 'Shared name',
           persona: id,
           firstSeen: 0,
           lastSeen: 0,
@@ -1529,6 +1530,10 @@ describe('user interaction regressions', () => {
       </AppProvider>,
     );
     await screen.findByRole('button', { name: 'Archive map 524' });
+    expect(screen.getByRole('option', { name: 'Shared name · #1' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Shared name · #2' })).toBeTruthy();
+    const table = document.querySelector<HTMLDivElement>('.archive-table')!;
+    table.scrollTop = 900;
     expect(screen.getAllByRole('row')).toHaveLength(51);
     expect(screen.getByText('样本数: 525')).toBeTruthy();
     expect(screen.getByText('第 1–50 条，共 525 条')).toBeTruthy();
@@ -1536,6 +1541,7 @@ describe('user interaction regressions', () => {
     fireEvent.click(screen.getByRole('button', { name: '下一页' }));
     expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('2');
     expect(screen.getByRole('button', { name: 'Archive map 474' })).toBeTruthy();
+    expect(table.scrollTop).toBe(0);
     expect(screen.getByText('第 51–100 条，共 525 条')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('页码'), { target: { value: '11' } });
     expect(screen.getByRole('button', { name: 'Archive map 0' })).toBeTruthy();
@@ -1544,7 +1550,9 @@ describe('user interaction regressions', () => {
     expect(screen.getByText('第 501–525 条，共 525 条')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '上一页' }));
     expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('10');
+    table.scrollTop = 500;
     fireEvent.click(screen.getByRole('button', { name: '胜利' }));
+    expect(table.scrollTop).toBe(0);
     expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
     expect(screen.getByText('样本数: 263')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '全部结果' }));
@@ -1587,7 +1595,7 @@ describe('user interaction regressions', () => {
     ]);
   });
 
-  it('replaces the ban alert with the player investigation in a single dialog', async () => {
+  it('keeps one dialog active while allowing a return from the player to the ban alert', async () => {
     const ban = bannedPlayer();
     const profile: PlayerProfile = {
       id: ban.id,
@@ -1622,6 +1630,9 @@ describe('user interaction regressions', () => {
     await waitFor(() =>
       expect(native.calls.some((call) => call.method === 'players.profile')).toBe(true),
     );
+    fireEvent.click(screen.getByRole('button', { name: '返回上一级' }));
+    await screen.findByRole('dialog', { name: translate('zh', 'banAlert') });
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 
   it('changes language in settings while preserving the listening state and live status indicator', async () => {
@@ -2120,6 +2131,209 @@ describe('profile refresh and report scopes', () => {
   });
 });
 
+describe('UX failure recovery', () => {
+  it('discards a failed sidebar preference and provides an exit after a settings save failure', async () => {
+    const initial = bootstrapForApp();
+    const native = nativeFixture(initial, {
+      'config.update': () => {
+        throw new Error('Preferences are read-only');
+      },
+    });
+    render(<App />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: '折叠侧边栏' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Preferences are read-only');
+    fireEvent.click(within(alert).getByRole('button', { name: '放弃未保存的更改' }));
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(document.querySelector('.app-shell')?.classList.contains('sidebar-collapsed')).toBe(
+      false,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    const page = within(await screen.findByRole('main', { name: '设置' }));
+    fireEvent.click(page.getByRole('button', { name: '森林 · 深色' }));
+    await page.findByRole('alert');
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    const prompt = within(await screen.findByRole('dialog', { name: '更改尚未保存' }));
+    fireEvent.click(prompt.getByRole('button', { name: '放弃未保存的更改' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe(initial.config.theme));
+    const writes = native.calls.filter((call) => call.method === 'config.update').length;
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    await screen.findByRole('main', { name: '设置' });
+    expect(native.calls.filter((call) => call.method === 'config.update')).toHaveLength(writes);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('clears a connection error on retry and blocks duplicate checks while waiting', async () => {
+    history.replaceState(null, '', '#settings/connection');
+    const pending = deferred<RpcOutputs['api.health']>();
+    let attempts = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'api.health': () => {
+        if (++attempts === 1) throw new Error('Connection timed out');
+        return pending.promise;
+      },
+    });
+    render(<App />, { wrapper: wrapper(native.api) });
+    const check = await screen.findByRole('button', { name: '检查连接' });
+    fireEvent.click(check);
+    await screen.findByText('Error: Connection timed out');
+    fireEvent.click(check);
+    fireEvent.click(check);
+    expect(attempts).toBe(2);
+    expect(check.hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByText('Error: Connection timed out')).toBeNull();
+    await act(async () => pending.resolve(fixtureBootstrap.health));
+    await waitFor(() => expect(check.hasAttribute('disabled')).toBe(false));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('invalidates the previous selection and its late report when a new search is submitted', async () => {
+    const pending = deferred<RpcOutputs['players.report']>();
+    let reports = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'players.search': ({ query }) => ({
+        source: 'network',
+        players: query === 'first' ? [localPlayer] : [],
+      }),
+      'players.report': () =>
+        ++reports === 1
+          ? { ...reportFixture({ id: localPlayer.id }), name: 'Previous selection' }
+          : pending.promise,
+    });
+    render(<PlayersPanel />, { wrapper: wrapper(native.api) });
+    const search = await screen.findByLabelText(translate('zh', 'searchLabel'));
+    fireEvent.change(search, { target: { value: 'first' } });
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }));
+    const result = await screen.findByRole('button', { name: new RegExp('^' + localPlayer.name) });
+    fireEvent.click(result);
+    await screen.findByRole('heading', { name: /^Previous selection/ });
+    fireEvent.click(result);
+    fireEvent.change(search, { target: { value: 'missing' } });
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }));
+    await screen.findByText('没有找到匹配的玩家');
+    await act(async () =>
+      pending.resolve({ ...reportFixture({ id: localPlayer.id }), name: 'Late selection' }),
+    );
+    expect(screen.queryByRole('heading', { name: /Previous selection|Late selection/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: '查蛆指数' })).toBeNull();
+  });
+
+  it('keeps profile content in place while its two refresh requests finish separately', async () => {
+    const nextProfile = deferred<PlayerProfile>();
+    const nextReport = deferred<RpcOutputs['players.report']>();
+    const profile: PlayerProfile = {
+      id: localPlayer.id,
+      name: 'Profile owner',
+      names: [],
+      firstSeen: null,
+      lastSeen: null,
+      encounters: [],
+      banned: null,
+      recentMatches: [],
+      recentError: null,
+      latestElo: 1500,
+      info: {
+        elo: 1500,
+        kd: 2,
+        winRate: 50,
+        matchCount: 100,
+        sampleCount: 100,
+        category: null,
+        topUnits: '',
+        updatedAt: Date.now(),
+        stale: false,
+      },
+    };
+    const native = nativeFixture(bootstrapForApp(), {
+      'players.profile': ({ force }) => (force ? nextProfile.promise : profile),
+      'players.report': ({ force }) => (force ? nextReport.promise : reportFixture({ elo: 1501 })),
+    });
+    render(<ProfileDialog id={localPlayer.id} name="Profile owner" />, {
+      wrapper: wrapper(native.api),
+    });
+    const report = await screen.findByText('1,501');
+    const columns = document.querySelector('.profile-columns');
+    const refresh = screen.getByRole('button', { name: '刷新' });
+    fireEvent.click(refresh);
+    expect(report.isConnected).toBe(true);
+    expect(document.querySelector('.profile-columns')).toBe(columns);
+    expect(screen.queryByText('加载中…')).toBeNull();
+    await act(async () => nextProfile.resolve({ ...profile, latestElo: 1600 }));
+    expect(document.querySelector('.profile-columns')).toBe(columns);
+    expect(screen.getAllByText('最近一场 K/D')).toHaveLength(1);
+    expect(refresh.hasAttribute('disabled')).toBe(true);
+    await act(async () => nextReport.resolve(reportFixture({ elo: 1601 })));
+    await screen.findByText('1,601');
+    expect(refresh.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('retries failed playback in place and exposes the selected playback speed', async () => {
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    const load = vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
+    let attempts = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'replays.play': () => {
+        if (++attempts === 1) throw new Error('Replay temporarily unavailable');
+        return { url: 'ba-replay://test/clip.webm' };
+      },
+    });
+    const view = render(<ReplayDialog id="clip.webm" title="Replay" />, {
+      wrapper: wrapper(native.api),
+    });
+    try {
+      await screen.findByText('Replay temporarily unavailable');
+      fireEvent.click(screen.getByRole('button', { name: '重试' }));
+      await waitFor(() =>
+        expect(view.container.ownerDocument.querySelector('video')).not.toBeNull(),
+      );
+      const speed = screen.getByRole('button', { name: '3×' });
+      fireEvent.click(speed);
+      expect(speed.getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByRole('button', { name: '1×' }).getAttribute('aria-pressed')).toBe('false');
+      const video = document.querySelector('video')!;
+      expect(video.playbackRate).toBe(3);
+      fireEvent.error(video);
+      fireEvent.click(screen.getByRole('button', { name: '重试' }));
+      await waitFor(() => expect(attempts).toBe(3));
+      fireEvent.loadedMetadata(document.querySelector('video')!);
+      expect(document.querySelector('video')!.playbackRate).toBe(3);
+    } finally {
+      view.unmount();
+      pause.mockRestore();
+      load.mockRestore();
+    }
+  });
+
+  it('waits for a slow display thumbnail before polling again', async () => {
+    vi.useFakeTimers();
+    const pending = deferred<string | null>();
+    const native = nativeFixture(bootstrapForApp(), {
+      'displays.thumbnail': () => pending.promise,
+    });
+    try {
+      await act(async () => {
+        render(<RecordingSettings />, { wrapper: wrapper(native.api) });
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(native.calls.filter((call) => call.method === 'displays.thumbnail')).toHaveLength(1);
+      await act(async () => pending.resolve('data:image/png;base64,preview'));
+      expect(screen.getByAltText('显示器').getAttribute('src')).toBe(
+        'data:image/png;base64,preview',
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      expect(native.calls.filter((call) => call.method === 'displays.thumbnail')).toHaveLength(2);
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('shared dialog focus recovery', () => {
   function FocusHarness() {
     const [route, setRoute] = useState<'first' | 'second' | null>(null);
@@ -2164,5 +2378,8 @@ describe('shared dialog focus recovery', () => {
     await waitFor(() => expect(second.contains(document.activeElement)).toBe(true));
     expect(screen.queryByRole('dialog', { name: 'First dialog' })).toBeNull();
     expect(focus).not.toHaveBeenCalled();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(opener));
   });
 });

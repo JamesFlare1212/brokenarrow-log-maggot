@@ -92,7 +92,7 @@ export class StatusService {
       for (const probe of probes) {
         const check: ApiHealth['checks'][number] = await this.check(probe.path, probe.parse);
         this.update(check);
-        if (!check.ok && check.failure !== 'verification' && probe.fallback)
+        if (!check.ok && probe.fallback)
           this.update(await this.check(probe.fallback.path, probe.fallback.parse));
       }
       return this.publish();
