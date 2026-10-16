@@ -28,18 +28,31 @@ export class StatusService {
       for (const path of paths) {
         const at = Date.now();
         try {
-          await this.client.get(path, 'health:' + path, 0, {
+          const response = await this.client.get(path, 'health:' + path, 0, {
             health: true,
             force: true,
           });
-          checks.push({ path, ok: true, ms: Date.now() - at, status: 200 });
+          checks.push({ path, ok: true, ms: Date.now() - at, status: response.status ?? 200 });
         } catch (error) {
-          const status = object(error).status;
+          const detail = object(error);
+          const status = detail.status;
           checks.push({
             path,
             ok: false,
             ms: Date.now() - at,
             status: typeof status === 'number' ? status : null,
+            failure: detail.verification
+              ? 'verification'
+              : detail.blocked
+                ? 'blocked'
+                : detail.invalidResponse
+                  ? 'invalid-response'
+                  : detail.name === 'TimeoutError' || detail.name === 'AbortError'
+                    ? 'timeout'
+                    : typeof status === 'number'
+                      ? 'http'
+                      : 'network',
+            ...(typeof detail.rayId === 'string' ? { rayId: detail.rayId } : {}),
           });
         }
       }

@@ -1,4 +1,5 @@
 import { BrowserWindow, net } from 'electron';
+import { BATRACE_ORIGIN } from '@ba/contracts';
 import { isChallenge } from '@ba/server';
 export class VerificationGate {
   private pending: Promise<void> | null = null;
@@ -35,7 +36,7 @@ export class VerificationGate {
         if (busy || complete) return;
         busy = true;
         try {
-          const res = await net.fetch('https://app.batrace.top/api/players/search?q=test&limit=1', {
+          const res = await net.fetch(`${BATRACE_ORIGIN}/api/players/search?q=test&limit=1`, {
               signal: AbortSignal.timeout(8000),
             }),
             raw = await res.text();
@@ -55,12 +56,12 @@ export class VerificationGate {
       win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
       win.webContents.on('will-navigate', (event, url) => {
         if (
-          !url.startsWith('https://app.batrace.top/') &&
+          !url.startsWith(BATRACE_ORIGIN + '/') &&
           !url.startsWith('https://turing.captcha.qcloud.com/')
         )
           event.preventDefault();
       });
-      void win.loadURL('https://app.batrace.top/').catch((error) => finish(error));
+      void win.loadURL(BATRACE_ORIGIN + '/').catch((error) => finish(error));
     }).finally(() => (this.pending = null));
     return this.pending;
   }

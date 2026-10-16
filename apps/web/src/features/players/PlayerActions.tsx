@@ -1,3 +1,4 @@
+import { BATRACE_ORIGIN } from '@ba/contracts';
 import type { Player, MiniInfo } from '@ba/contracts';
 import { formatMetric } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -14,7 +15,7 @@ export function PlayerActions({ player, info }: { player: Player; info?: MiniInf
       <Button
         onClick={() => {
           void api
-            .invoke('external.open', { url: `https://app.batrace.top/player/${player.id}` })
+            .invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${player.id}` })
             .catch((e) => notify(String(e), true));
         }}
       >

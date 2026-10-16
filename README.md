@@ -88,4 +88,4 @@ Broken Arrow のローカル対局アシスタントです。対局分析、履�
 
 ## 致谢与参考
 
-作者 Zola；数据由 [BATrace](https://app.batrace.top/) 提供。应用职责划分参考 [T3 Code apps](https://github.com/pingdotgg/t3code/tree/main/apps)，未复制其业务代码。旧入口保留在 Git 历史中。
+作者 Zola；数据由 [BATrace](https://dash.batrace.top/) 提供。应用职责划分参考 [T3 Code apps](https://github.com/pingdotgg/t3code/tree/main/apps)，未复制其业务代码。旧入口保留在 Git 历史中。

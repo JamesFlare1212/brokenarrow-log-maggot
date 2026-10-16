@@ -1,4 +1,4 @@
-﻿# 依赖与构建产物
+# 依赖与构建产物
 node_modules/
 dist/
 *.tgz
@@ -36,9 +36,6 @@ smoke-result.txt
 
 # 本地对象存储凭证（含真实 AccessKey/SecretKey，绝不提交）
 replay-secret.json
-
-# 交接文档（含本地凭证/部署信息，保持私有，不提交）
-AGENTS.md
 
 # 本地管理站（版本发布/心跳统计，仅本机使用，不提交）
 /admin/

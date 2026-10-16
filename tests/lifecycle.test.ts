@@ -432,7 +432,7 @@ describe('application shutdown', () => {
     expect(fetchImpl.mock.calls.length).toBeGreaterThan(0);
     expect(
       fetchImpl.mock.calls.every(
-        ([input]) => new URL(String(input)).hostname === 'app.batrace.top',
+        ([input]) => new URL(String(input)).hostname === 'dash.batrace.top',
       ),
     ).toBe(true);
     const closedAt = close.mock.invocationCallOrder[0]!;

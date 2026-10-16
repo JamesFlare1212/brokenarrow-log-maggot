@@ -1,3 +1,4 @@
+import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect, useMemo, useState } from 'react';
 import { Archive, Plus, RefreshCw } from 'lucide-react';
 import type { Match, Account } from '@ba/contracts';
@@ -211,7 +212,7 @@ export function MatchArchive() {
                             <Button
                               onClick={() =>
                                 void api.invoke('external.open', {
-                                  url: `https://app.batrace.top/match/${m.fid}`,
+                                  url: `${BATRACE_ORIGIN}/match/${m.fid}`,
                                 })
                               }
                             >

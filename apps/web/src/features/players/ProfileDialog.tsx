@@ -1,3 +1,4 @@
+import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect } from 'react';
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
 import { formatTime, formatMetric, formatDelta } from '@ba/shared';
@@ -31,7 +32,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
         </Button>
         <Button
           onClick={() =>
-            void api.invoke('external.open', { url: `https://app.batrace.top/player/${id}` })
+            void api.invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${id}` })
           }
         >
           {t('openBatrace')}

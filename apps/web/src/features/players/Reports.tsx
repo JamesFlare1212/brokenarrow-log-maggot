@@ -1,3 +1,4 @@
+import { BATRACE_ORIGIN } from '@ba/contracts';
 import type { MaggotReport, PlayerReport } from '@ba/contracts';
 import { formatMetric, formatDelta, formatTime } from '@ba/shared';
 import { Badge, Button, Notice, Stats } from '../../components/ui';
@@ -137,7 +138,7 @@ export function ReportView({ report }: { report: PlayerReport }) {
       <Button
         onClick={() =>
           void api
-            .invoke('external.open', { url: `https://app.batrace.top/player/${report.id}` })
+            .invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${report.id}` })
             .catch((e) => notify(String(e), true))
         }
       >

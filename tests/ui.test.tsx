@@ -42,6 +42,7 @@ import { PlayersPanel } from '../apps/web/src/features/players/PlayersPanel';
 import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
 import { ReplaysPanel } from '../apps/web/src/features/replays/ReplaysPanel';
 import { Button, Dialog } from '../apps/web/src/components/ui';
+import { BatraceStatus } from '../apps/web/src/components/BatraceStatus';
 import { UpdatePanel } from '../apps/web/src/features/settings/UpdatePanel';
 import { MatchArchive } from '../apps/web/src/features/matches/MatchArchive';
 
@@ -201,13 +202,79 @@ afterEach(() => {
 });
 
 describe('BATrace status indicator', () => {
+  it('shows endpoint diagnostics on hover, focus and tap, and dismisses on Escape or outside pointer', async () => {
+    const initial = bootstrapForApp();
+    const native = nativeFixture(initial);
+    const health = {
+      state: 'partial' as const,
+      at: Date.now(),
+      checks: [
+        { path: '/api/players/search?q=test&limit=1', ok: true, ms: 123, status: 200 },
+        {
+          path: '/api/players/info?stbid=8863',
+          ok: false,
+          ms: 456,
+          status: 403,
+          failure: 'blocked' as const,
+          rayId: 'test-ray-EWR',
+        },
+        {
+          path: '/api/leaderboard/ban?limit=1',
+          ok: false,
+          ms: 15000,
+          status: null,
+          failure: 'timeout' as const,
+        },
+        {
+          path: '/api/players/matches?stbid=8863&limit=1',
+          ok: false,
+          ms: 50,
+          status: 200,
+          failure: 'verification' as const,
+        },
+      ],
+    };
+    const view = render(<BatraceStatus health={health} />, { wrapper: wrapper(native.api) });
+    const trigger = await screen.findByRole('button', { name: 'BATrace · 服务部分可用' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.mouseEnter(trigger);
+    const tooltip = screen.getByRole('tooltip');
+    expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id);
+    for (const text of [
+      '玩家资料',
+      '被 Cloudflare 拦截',
+      'Ray ID: test-ray-EWR',
+      '/api/players/info?stbid=8863',
+      'HTTP 403 · 456 ms',
+      '请求超时',
+      '未收到 HTTP 响应 · 15000 ms',
+      '需要人机验证',
+    ])
+      expect(within(tooltip).getByText(text)).toBeTruthy();
+    expect(tooltip.textContent).toContain('上次检查：');
+    expect(tooltip.textContent).toContain('每 60 秒');
+    fireEvent.mouseLeave(trigger);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.focus(trigger);
+    expect(screen.getByRole('tooltip')).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.click(trigger);
+    expect(screen.getByRole('tooltip')).toBeTruthy();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    view.rerender(<BatraceStatus health={{ state: 'unknown', at: 0, checks: [] }} />);
+    fireEvent.focus(trigger);
+    expect(within(screen.getByRole('tooltip')).getByText('尚无检查结果。')).toBeTruthy();
+  });
+
   it('shows readable state and matching dot colors as health events arrive', async () => {
     const initial = bootstrapForApp();
     initial.health = { state: 'unknown', at: 0, checks: [] };
     const native = nativeFixture(initial);
     const { container } = render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByText('BATrace');
-    const badge = container.querySelector('.topbar-actions > .badge')!;
+    const badge = container.querySelector('.health-status-trigger')!;
     expect(badge.textContent).toContain('未知');
     expect(badge.querySelector('.sr-only')).toBeNull();
     for (const [state, tone, label] of [

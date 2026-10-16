@@ -180,6 +180,43 @@ describe('BATrace health checks', () => {
     const health = await new StatusService(db, client).probe();
     expect(health.state).toBe('down');
     expect(health.checks.every((check) => check.status === null)).toBe(true);
+    expect(health.checks.every((check) => check.failure === 'network')).toBe(true);
+  });
+
+  it.each([
+    [
+      'blocked',
+      () =>
+        new Response('<html><div id="cf-error-details">Sorry, you have been blocked</div></html>', {
+          status: 403,
+          headers: { server: 'cloudflare', 'cf-ray': 'test-ray-EWR' },
+        }),
+    ],
+    ['verification', () => new Response('<html>TencentEOCaptchaWidget</html>', { status: 403 })],
+    ['invalid-response', () => new Response('<html>Unexpected page</html>')],
+    ['http', () => new Response('Forbidden', { status: 403 })],
+    [
+      'timeout',
+      () => {
+        throw new DOMException('Timed out', 'TimeoutError');
+      },
+    ],
+  ] as const)('preserves %s failure details for health tooltips', async (failure, respond) => {
+    const challenge = vi.fn(async () => {});
+    const { db, client } = setup({ fetch: vi.fn<typeof fetch>(async () => respond()), challenge });
+    const health = await new StatusService(db, client).probe();
+    expect(health.state).toBe('down');
+    expect(health.checks.every((check) => check.failure === failure)).toBe(true);
+    if (failure === 'blocked')
+      expect(health.checks.every((check) => check.rayId === 'test-ray-EWR')).toBe(true);
+    expect(
+      health.checks.every(
+        (check) =>
+          check.status ===
+          (failure === 'timeout' ? null : failure === 'invalid-response' ? 200 : 403),
+      ),
+    ).toBe(true);
+    expect(challenge).not.toHaveBeenCalled();
   });
 });
 

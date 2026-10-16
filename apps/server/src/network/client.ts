@@ -1,11 +1,22 @@
 import { setTimeout as sleep } from 'node:timers/promises';
+import { BATRACE_ORIGIN } from '@ba/contracts';
 import { object } from '@ba/shared';
 import type { Database } from '../storage/database';
+import { parsePlayerPage, validatePlayerInfo } from './player-page';
+interface RequestOptions {
+  force?: boolean;
+  allowStale?: boolean;
+  signal?: AbortSignal;
+  health?: boolean;
+  parse?: (raw: string) => unknown;
+  fallback?: { path: string; parse: (raw: string) => unknown };
+}
 export interface DataResult {
   value: unknown;
   source: 'network' | 'cache' | 'stale';
   at: number;
   attempts?: number;
+  status?: number;
 }
 export interface HttpPort {
   fetch: typeof fetch;
@@ -33,7 +44,7 @@ export class BatraceClient {
     path: string,
     key: string,
     ttl: number,
-    options: { force?: boolean; allowStale?: boolean; signal?: AbortSignal; health?: boolean } = {},
+    options: RequestOptions = {},
   ): Promise<DataResult> {
     this.lifetime.signal.throwIfAborted();
     if (this.http.offline) {
@@ -58,7 +69,7 @@ export class BatraceClient {
     path: string,
     key: string,
     ttl: number,
-    options: { force?: boolean; allowStale?: boolean; signal?: AbortSignal; health?: boolean },
+    options: RequestOptions,
   ): Promise<DataResult> {
     let last: unknown;
     let attempts = 0;
@@ -82,7 +93,7 @@ export class BatraceClient {
             ),
           );
           safeHeaders.delete('user-agent');
-          const response = await this.http.fetch('https://app.batrace.top' + path, {
+          const response = await this.http.fetch(BATRACE_ORIGIN + path, {
             headers: safeHeaders,
             signal: AbortSignal.any([
               this.lifetime.signal,
@@ -92,16 +103,40 @@ export class BatraceClient {
           });
           const raw = await response.text(),
             html = response.headers.get('content-type')?.includes('text/html') || /^\s*</.test(raw);
-          if (html && isChallenge(raw)) return { challenge: true as const };
+          if (html && isChallenge(raw))
+            return { challenge: true as const, status: response.status };
           if (!response.ok) {
             const error = new Error(`BATrace HTTP ${response.status}`);
             Object.assign(error, {
               status: response.status,
               retryAfter: Number(response.headers.get('retry-after')) * 1000,
+              blocked:
+                html &&
+                response.headers.get('server')?.toLowerCase() === 'cloudflare' &&
+                /cf-error-details|Sorry, you have been blocked/.test(raw),
+              rayId: response.headers.get('cf-ray') ?? undefined,
             });
             throw error;
           }
-          return { challenge: false as const, value: JSON.parse(raw) as unknown };
+          try {
+            return {
+              challenge: false as const,
+              value: options.parse ? options.parse(raw) : (JSON.parse(raw) as unknown),
+              status: response.status,
+            };
+          } catch {
+            throw Object.assign(
+              new Error(
+                options.parse
+                  ? 'BATrace returned incomplete player data'
+                  : 'BATrace returned invalid JSON',
+              ),
+              {
+                invalidResponse: true,
+                status: response.status,
+              },
+            );
+          }
         };
         const scheduled = this.queue.then(run, run);
         this.queue = scheduled.catch(() => {});
@@ -109,7 +144,10 @@ export class BatraceClient {
         if (result.challenge) {
           last = new Error('BATrace verification did not complete');
           if (options.health || !this.http.challenge)
-            throw Object.assign(new Error('BATrace verification required'), { verification: true });
+            throw Object.assign(new Error('BATrace verification required'), {
+              verification: true,
+              status: result.status,
+            });
           try {
             await this.http.challenge();
           } catch (error) {
@@ -122,13 +160,35 @@ export class BatraceClient {
         this.lifetime.signal.throwIfAborted();
         const at = this.now();
         if (!options.health) this.db.saveCache(key, result.value, ttl, at);
-        return { value: result.value, source: 'network', at, attempts };
+        return { value: result.value, source: 'network', at, attempts, status: result.status };
       } catch (error) {
         last = error;
         if (this.lifetime.signal.aborted || options.signal?.aborted) throw error;
         const e = object(error);
-        if (e.verification || e.status === 404 || e.status === 401 || e.status === 403) break;
+        if (
+          e.verification ||
+          e.invalidResponse ||
+          e.status === 404 ||
+          e.status === 401 ||
+          e.status === 403
+        )
+          break;
         if (attempt < 2) await this.wait(Math.max(this.interval, Number(e.retryAfter) || 0));
+      }
+    }
+    if (options.fallback && !object(last).verification) {
+      try {
+        const result = await this.request(options.fallback.path, key, ttl, {
+          ...options,
+          parse: options.fallback.parse,
+          fallback: undefined,
+          allowStale: false,
+        });
+        return { ...result, attempts: attempts + (result.attempts ?? 0) };
+      } catch (error) {
+        if (this.lifetime.signal.aborted || options.signal?.aborted) throw error;
+        last = error;
+        attempts += Number(object(error).attempts) || 0;
       }
     }
     const stale = options.allowStale ? this.db.cache(key, true, this.now()) : null;
@@ -147,6 +207,11 @@ export class BatraceClient {
     return this.get(`/api/players/info?stbid=${encodeURIComponent(id)}`, `info:${id}`, 21600000, {
       force,
       allowStale: !force,
+      parse: (raw) => validatePlayerInfo(JSON.parse(raw), id),
+      fallback: {
+        path: `/player/${encodeURIComponent(id)}`,
+        parse: (raw) => parsePlayerPage(raw, id),
+      },
     });
   }
   playerMatches(id: string, force = false): Promise<DataResult> {

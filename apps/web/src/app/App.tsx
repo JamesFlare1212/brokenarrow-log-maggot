@@ -26,9 +26,11 @@ import {
   Video,
 } from 'lucide-react';
 import type { Panel } from '@ba/contracts';
+import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
 import { Badge, Button, Card, Dialog, Loading, Notice } from '../components/ui';
+import { BatraceStatus } from '../components/BatraceStatus';
 import { Dashboard } from '../features/overview/Dashboard';
 import { SessionPanel } from '../features/session/SessionPanel';
 import { PlayersPanel } from '../features/players/PlayersPanel';
@@ -131,7 +133,7 @@ function About() {
       <UpdatePanel />
       <div className="actions">
         {[
-          ['BATrace', 'https://app.batrace.top/'],
+          ['BATrace', BATRACE_ORIGIN + '/'],
           ['GitHub', 'https://github.com/JamesFlare1212/brokenarrow-log-maggot'],
         ].map(([label, url]) => (
           <Button
@@ -213,14 +215,6 @@ export function App() {
           : 'notListening',
     );
   const isListening = state.watcher.listening && !state.watcher.error;
-  const healthTone =
-    state.health.state === 'ok'
-      ? 'success'
-      : state.health.state === 'partial'
-        ? 'warning'
-        : state.health.state === 'down'
-          ? 'danger'
-          : 'muted';
   const title = t(page === 'current' ? 'commandCenter' : page);
   const account = state.session.localName || t('noAccount');
   const collapsed = settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed;
@@ -280,23 +274,7 @@ export function App() {
             <strong>{t(page === 'current' ? 'overview' : page)}</strong>
           </div>
           <div className="topbar-actions">
-            <Badge tone={healthTone}>
-              <span className={`status-dot status-${healthTone}`} aria-hidden="true" />
-              BATrace
-              <span>
-                {' '}
-                ·{' '}
-                {t(
-                  state.health.state === 'ok'
-                    ? 'serviceConnected'
-                    : state.health.state === 'down'
-                      ? 'serviceDown'
-                      : state.health.state === 'partial'
-                        ? 'servicePartial'
-                        : 'unknown',
-                )}
-              </span>
-            </Badge>
+            <BatraceStatus health={state.health} />
             <button
               className="account-button"
               aria-label={`${t('currentAccount')}: ${account}`}

@@ -190,7 +190,14 @@ export interface PlayerProfile {
 export interface ApiHealth {
   state: 'unknown' | 'ok' | 'partial' | 'down';
   at: number;
-  checks: Array<{ path: string; ok: boolean; ms: number; status: number | null }>;
+  checks: Array<{
+    path: string;
+    ok: boolean;
+    ms: number;
+    status: number | null;
+    failure?: 'http' | 'blocked' | 'verification' | 'timeout' | 'invalid-response' | 'network';
+    rayId?: string;
+  }>;
 }
 export interface VersionInfo {
   current: string;

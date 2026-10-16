@@ -1,3 +1,4 @@
+import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect, useState } from 'react';
 import type { Match, Replay } from '@ba/contracts';
 import {
@@ -56,7 +57,7 @@ export function MatchDialog({ fid }: { fid: string }) {
         </Button>
         <Button
           onClick={() =>
-            void api.invoke('external.open', { url: `https://app.batrace.top/match/${fid}` })
+            void api.invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${fid}` })
           }
         >
           {t('openBatrace')}
