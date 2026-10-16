@@ -160,7 +160,7 @@ describe('captured local real data', () => {
     const db = database();
     seedRealData(db, data, '');
     const fetchImpl = vi.fn<typeof fetch>();
-    const client = new BatraceClient(db, { fetch: fetchImpl, offline: true });
+    const client = new BatraceClient(db, { fetch: fetchImpl, offline: true }, '4.0.0');
     clients.push(client);
     const id = data.activeAccountId!;
     const analyzer = new Analyzer(client, db);

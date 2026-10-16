@@ -33,6 +33,7 @@ function setup(http: HttpPort) {
         return http.fetch(url, init);
       },
     },
+    '4.0.0',
     1200,
     () => now,
     async (ms) => {
@@ -163,7 +164,7 @@ describe('BATrace player info fallback', () => {
     const { db, client, times } = setup({ fetch: fetchImpl });
     const results = await Promise.all([client.playerInfo('8863'), client.playerInfo('8863')]);
     expect(fetchImpl.mock.calls.map(([url]) => String(url))).toEqual([
-      'https://dash.batrace.top/api/players/info?stbid=8863',
+      'https://bot.batrace.top/api/players/info?stbid=8863',
       'https://dash.batrace.top/player/8863',
     ]);
     expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(1200);

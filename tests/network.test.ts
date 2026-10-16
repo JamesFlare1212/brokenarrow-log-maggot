@@ -5,10 +5,11 @@ import { BatraceClient, type HttpPort } from '../apps/server/src/network/client'
 import { StatusService } from '../apps/server/src/network/status';
 import { parseMatchPage } from '../apps/server/src/network/match-page';
 
-const capturedMatch = parseMatchPage(
-  readFileSync(new URL('./fixtures/batrace/match-9227650.html', import.meta.url), 'utf8'),
-  '9227650',
+const capturedMatchHtml = readFileSync(
+  new URL('./fixtures/batrace/match-9227650.html', import.meta.url),
+  'utf8',
 );
+const capturedMatch = parseMatchPage(capturedMatchHtml, '9227650');
 
 const databases = new Set<Database>();
 const clients = new Set<BatraceClient>();
@@ -20,6 +21,7 @@ function setup(http: HttpPort, interval = 1_200) {
   const client = new BatraceClient(
     db,
     http,
+    '4.0.0',
     interval,
     () => clock.now,
     async (ms) => {
@@ -83,12 +85,20 @@ describe('BATrace scheduling and cache boundaries', () => {
         : Response.json({ ok: true });
     });
     state = setup({ fetch: fetchImpl });
+    const changed = vi.fn();
+    const statuses = new StatusService(state.db, state.client, true, changed);
     const result = await state.client.get('/api/retry', 'retry', 60_000);
     expect(result.source).toBe('network');
     expect(fetchImpl).toHaveBeenCalledTimes(3);
     expect(result.attempts).toBe(3);
+    expect(statuses.health().state).toBe('ok');
+    expect(changed).toHaveBeenCalledTimes(1);
     expect(attemptTimes[1]! - attemptTimes[0]!).toBeGreaterThanOrEqual(2_000);
     expect(attemptTimes[2]! - attemptTimes[1]!).toBeGreaterThanOrEqual(2_000);
+    for (const [url, init] of fetchImpl.mock.calls) {
+      expect(url).toBe('https://bot.batrace.top/api/retry');
+      expect(new Headers(init?.headers).get('X-Client')).toBe('brokenarrow-log-maggot');
+    }
   });
 
   it('uses a fresh cache without a request, and force replaces it from the network', async () => {
@@ -139,6 +149,188 @@ describe('BATrace scheduling and cache boundaries', () => {
   });
 });
 
+describe('business request health updates', () => {
+  it('publishes failures and recovery by endpoint without extra probes or duplicate query rows', async () => {
+    let available = false;
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      available ? Response.json({ players: [] }) : new Response('Forbidden', { status: 403 }),
+    );
+    const { db, client } = setup({ fetch: fetchImpl });
+    const changed = vi.fn();
+    const statuses = new StatusService(db, client, true, changed);
+    await expect(client.get('/api/players/search?q=first', 'first', 60000)).rejects.toThrow('403');
+    expect(statuses.health()).toMatchObject({
+      state: 'down',
+      checks: [{ path: '/api/players/search?q=first', ok: false, status: 403 }],
+    });
+    available = true;
+    await client.get('/api/players/search?q=second', 'second', 60000);
+    expect(statuses.health()).toMatchObject({
+      state: 'ok',
+      checks: [{ path: '/api/players/search?q=second', ok: true, status: 200 }],
+    });
+    expect(statuses.health().checks).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(changed).toHaveBeenCalledTimes(2);
+    expect(db.state('health', null)).toEqual(statuses.health());
+  });
+
+  it('does not turn fresh, stale, or offline cached responses into connection recovery', async () => {
+    let available = true;
+    const http: HttpPort = {
+      fetch: vi.fn<typeof fetch>(async () =>
+        available ? Response.json({ players: [] }) : new Response('Forbidden', { status: 403 }),
+      ),
+    };
+    const { db, client } = setup(http);
+    const changed = vi.fn();
+    const statuses = new StatusService(db, client, true, changed);
+    const path = '/api/players/search?q=cached';
+    await client.get(path, 'cached', 60000);
+    available = false;
+    expect(
+      await client.get(path, 'cached', 60000, { force: true, allowStale: true }),
+    ).toMatchObject({
+      source: 'stale',
+    });
+    expect(statuses.health().state).toBe('down');
+    expect((await client.get(path, 'cached', 60000)).source).toBe('cache');
+    http.offline = true;
+    expect((await client.get(path, 'cached', 60000)).source).toBe('stale');
+    expect(statuses.health().state).toBe('down');
+    expect(changed).toHaveBeenCalledTimes(2);
+    expect(http.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains API failure alongside a working page fallback and clears it on API recovery', async () => {
+    let available = false;
+    const fetchImpl = vi.fn<typeof fetch>(async (url) =>
+      !String(url).includes('/api/')
+        ? new Response(capturedMatchHtml)
+        : available
+          ? Response.json(capturedMatch)
+          : new Response('Forbidden', { status: 403 }),
+    );
+    const { db, client } = setup({ fetch: fetchImpl });
+    const statuses = new StatusService(db, client);
+    await client.match('9227650', true);
+    expect(statuses.health()).toMatchObject({
+      state: 'partial',
+      checks: [
+        {
+          path: '/api/match?matchid=9227650',
+          ok: false,
+          status: 403,
+          fallback: { path: '/match/9227650', ok: true, status: 200 },
+        },
+      ],
+    });
+    available = true;
+    await client.match('9227650', true);
+    expect(statuses.health()).toMatchObject({ state: 'ok' });
+    expect(statuses.health().checks).toHaveLength(1);
+    expect(statuses.health().checks[0]?.fallback).toBeUndefined();
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps a newer business result when an overlapping full probe finishes', async () => {
+    let release!: (response: Response) => void;
+    const fetchImpl = vi.fn<typeof fetch>(async (url) => {
+      if (String(url).includes('/search?q=test')) return new Response('Forbidden', { status: 403 });
+      if (String(url).includes('/info?'))
+        return new Promise<Response>((resolve) => {
+          release = resolve;
+        });
+      return Response.json(capturedMatch);
+    });
+    const { db, client } = setup({ fetch: fetchImpl });
+    const statuses = new StatusService(db, client);
+    const probe = statuses.probe();
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    const business = client.get('/api/players/search?q=live', 'live', 60000);
+    release(Response.json({ info: {} }));
+    await business;
+    await probe;
+    expect(statuses.health().state).toBe('ok');
+    expect(
+      statuses.health().checks.find((check) => check.path.startsWith('/api/players/search')),
+    ).toMatchObject({ path: '/api/players/search?q=live', ok: true });
+    expect(statuses.health().checks).toHaveLength(5);
+  });
+
+  it('ignores cancelled requests and late responses after shutdown', async () => {
+    let release!: (response: Response) => void;
+    const fetchImpl = vi.fn<typeof fetch>(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const { db, client } = setup({ fetch: fetchImpl });
+    const changed = vi.fn();
+    const statuses = new StatusService(db, client, true, changed);
+    const controller = new AbortController();
+    const pending = client.get('/api/players/search', 'cancelled-health', 60000, {
+      signal: controller.signal,
+    });
+    const rejected = expect(pending).rejects.toThrow();
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    controller.abort();
+    release(Response.json({ players: [] }));
+    await rejected;
+    expect(statuses.health().state).toBe('unknown');
+    const closingRequest = client.get('/api/players/search', 'closing-health', 60000);
+    const closingRejected = expect(closingRequest).rejects.toThrow();
+    await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+    const closing = client.close();
+    release(Response.json({ players: [] }));
+    await Promise.all([closing, closingRejected]);
+    expect(changed).not.toHaveBeenCalled();
+    expect(db.state('health', null)).toBeNull();
+  });
+
+  it.each([
+    ['http', () => new Response('Forbidden', { status: 403 })],
+    [
+      'blocked',
+      () =>
+        new Response('<html>Sorry, you have been blocked</html>', {
+          status: 403,
+          headers: { server: 'cloudflare', 'cf-ray': 'business-ray' },
+        }),
+    ],
+    ['verification', () => new Response('<html>TencentEOCaptchaWidget</html>', { status: 403 })],
+    ['invalid-response', () => new Response('<html>Unexpected page</html>')],
+    [
+      'timeout',
+      () => {
+        throw new DOMException('Timed out', 'TimeoutError');
+      },
+    ],
+    [
+      'network',
+      () => {
+        throw new Error('Connection closed');
+      },
+    ],
+  ] as const)('preserves %s errors from business requests', async (failure, respond) => {
+    const { db, client } = setup({ fetch: vi.fn<typeof fetch>(async () => respond()) });
+    const changed = vi.fn();
+    const statuses = new StatusService(db, client, true, changed);
+    await expect(client.analysisPlayer('8863', true)).rejects.toThrow();
+    expect(statuses.health()).toMatchObject({ state: 'down', checks: [{ failure }] });
+    expect(statuses.health().checks[0]?.status).toBe(
+      failure === 'timeout' || failure === 'network'
+        ? null
+        : failure === 'invalid-response'
+          ? 200
+          : 403,
+    );
+    if (failure === 'blocked') expect(statuses.health().checks[0]?.rayId).toBe('business-ray');
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('BATrace health checks', () => {
   it('ignores a previous run and forced probes bypass cached responses', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json(capturedMatch));
@@ -152,6 +344,10 @@ describe('BATrace health checks', () => {
     expect(await one).toMatchObject({ state: 'ok', checks: expect.any(Array) });
     expect(fetchImpl).toHaveBeenCalledTimes(5);
     expect(statuses.health().checks.every((check) => check.ok)).toBe(true);
+    for (const [url, init] of fetchImpl.mock.calls) {
+      expect(new URL(String(url)).origin).toBe('https://bot.batrace.top');
+      expect(new Headers(init?.headers).get('X-Client')).toBe('brokenarrow-log-maggot');
+    }
   });
 
   it('reports partial failure, full failure, then recovery on subsequent probes', async () => {
@@ -281,18 +477,25 @@ describe('verification and shutdown', () => {
     expect(challenge).toHaveBeenCalledTimes(1);
   });
 
-  it('removes legacy User-Agent headers case-insensitively', async () => {
+  it('replaces legacy client identity headers case-insensitively and preserves private headers', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
     const { db, client } = setup({ fetch: fetchImpl });
     db.setState('privateHeaders', {
       'User-Agent': 'legacy',
       'user-agent': 'also legacy',
+      'x-client': 'legacy-app/1.0.0',
       'X-BA-Bypass': 'retained',
+      ignored: 123,
     });
     await client.get('/api/headers', 'headers', 60_000);
     const headers = new Headers(fetchImpl.mock.calls[0]?.[1]?.headers);
-    expect(headers.has('user-agent')).toBe(false);
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe('https://bot.batrace.top/api/headers');
+    expect(headers.get('User-Agent')).toBe(
+      'brokenarrow-log-maggot/4.0.0 (+https://github.com/JamesFlare1212/brokenarrow-log-maggot)',
+    );
+    expect(headers.get('X-Client')).toBe('brokenarrow-log-maggot');
     expect(headers.get('X-BA-Bypass')).toBe('retained');
+    expect(headers.has('ignored')).toBe(false);
   });
 
   it('aborts late responses and drains them before the database can be closed', async () => {

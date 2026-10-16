@@ -18,7 +18,7 @@ function setup(
   },
 ) {
   const db = new Database(':memory:');
-  const client = new BatraceClient(db, { fetch: fetchImpl }, 0);
+  const client = new BatraceClient(db, { fetch: fetchImpl }, '4.0.0', 0);
   resources.push({ db, client });
   const analyzer = new Analyzer(client, db);
   return { db, client, analyzer, tracker: new TrackerService(db, client, analyzer) };

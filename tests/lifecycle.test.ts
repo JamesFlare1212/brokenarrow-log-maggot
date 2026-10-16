@@ -88,7 +88,7 @@ afterEach(async () => {
   applications.clear();
 });
 
-it('probes health at startup and publishes recovery after one minute independently of hourly sync', async () => {
+it('probes health at startup and publishes recovery after ten minutes independently of hourly sync', async () => {
   vi.useFakeTimers();
   let available = false;
   const fetchImpl = vi.fn<typeof fetch>(async () =>
@@ -111,7 +111,13 @@ it('probes health at startup and publishes recovery after one minute independent
       true,
     );
     available = true;
-    await vi.advanceTimersByTimeAsync(60000);
+    await vi.advanceTimersByTimeAsync(55_000);
+    expect(app.snapshot().health.state).toBe('down');
+    expect(requests).toHaveBeenCalledTimes(7);
+    await vi.advanceTimersByTimeAsync(539_999);
+    expect(app.snapshot().health.state).toBe('down');
+    expect(requests).toHaveBeenCalledTimes(7);
+    await vi.advanceTimersByTimeAsync(1);
     expect(app.snapshot().health.state).toBe('ok');
     expect(events.some((event) => event.type === 'health' && event.health.state === 'ok')).toBe(
       true,
@@ -121,6 +127,24 @@ it('probes health at startup and publishes recovery after one minute independent
     await app.stop();
     vi.useRealTimers();
   }
+});
+
+it('publishes business request health changes without waiting for a scheduled probe', async () => {
+  let available = false;
+  const fetchImpl = vi.fn<typeof fetch>(async () =>
+    available ? Response.json({ players: [] }) : new Response('Forbidden', { status: 403 }),
+  );
+  const events: AppEvent[] = [];
+  const app = application(platform(fetchImpl), events);
+  await app.invoke('players.search', { query: 'first' });
+  expect(app.snapshot().health.state).toBe('down');
+  available = true;
+  await app.invoke('players.search', { query: 'second' });
+  expect(app.snapshot().health.state).toBe('ok');
+  expect(
+    events.filter((event) => event.type === 'health').map((event) => event.health.state),
+  ).toEqual(['down', 'ok']);
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
 });
 
 it('imports historical logs on startup and directory change without replacing the live session or running historical effects', async () => {
@@ -434,7 +458,9 @@ describe('application shutdown', () => {
     expect(fetchImpl.mock.calls.length).toBeGreaterThan(0);
     expect(
       fetchImpl.mock.calls.every(
-        ([input]) => new URL(String(input)).hostname === 'dash.batrace.top',
+        ([input, init]) =>
+          new URL(String(input)).hostname === 'bot.batrace.top' &&
+          new Headers(init?.headers).get('X-Client') === 'brokenarrow-log-maggot',
       ),
     ).toBe(true);
     const closedAt = close.mock.invocationCallOrder[0]!;

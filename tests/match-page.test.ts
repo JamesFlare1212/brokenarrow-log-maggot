@@ -33,6 +33,7 @@ function setup(http: HttpPort) {
         return http.fetch(url, init);
       },
     },
+    '4.0.0',
     1200,
     () => now,
     async (ms) => {
@@ -108,7 +109,7 @@ describe('BATrace match detail fallback', () => {
     expect(await tracker.detail(id, true)).toMatchObject({ outcome: 'win', eloAfter: 1993.9521 });
     expect(db.match(id)).toMatchObject({ outcome: 'win', mode: 'ranked' });
     expect(fetchImpl.mock.calls.map(([url]) => String(url))).toEqual([
-      `https://dash.batrace.top/api/match?matchid=${id}`,
+      `https://bot.batrace.top/api/match?matchid=${id}`,
       `https://dash.batrace.top/match/${id}`,
     ]);
     expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(1200);

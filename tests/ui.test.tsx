@@ -337,7 +337,8 @@ describe('BATrace status indicator', () => {
     ])
       expect(within(tooltip).getByText(text)).toBeTruthy();
     expect(tooltip.textContent).toContain('上次检查：');
-    expect(tooltip.textContent).toContain('每 60 秒');
+    expect(tooltip.textContent).toContain('每 10 分钟');
+    expect(tooltip.textContent).toContain('业务请求也会更新状态');
     fireEvent.mouseLeave(trigger);
     expect(screen.queryByRole('tooltip')).toBeNull();
     fireEvent.focus(trigger);

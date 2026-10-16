@@ -1,9 +1,11 @@
 import { setTimeout as sleep } from 'node:timers/promises';
-import { BATRACE_ORIGIN } from '@ba/contracts';
+import { BATRACE_API_ORIGIN, BATRACE_ORIGIN, batraceClientHeaders } from '@ba/contracts';
+import type { ApiHealthCheck } from '@ba/contracts';
 import { object } from '@ba/shared';
 import type { Database } from '../storage/database';
 import { parsePlayerPage, validatePlayerInfo } from './player-page';
 import { parseMatchPage, validateMatchInfo } from './match-page';
+import { failedHealthCheck } from './health';
 interface RequestOptions {
   force?: boolean;
   allowStale?: boolean;
@@ -35,13 +37,25 @@ export class BatraceClient {
   private lastAttempt = 0;
   private pending = new Map<string, Promise<DataResult>>();
   private lifetime = new AbortController();
+  private resultListeners = new Set<(check: ApiHealthCheck) => void>();
   constructor(
     private db: Database,
     private http: HttpPort,
+    private version: string,
     private interval = 1200,
     private now: () => number = Date.now,
     private wait: (ms: number) => Promise<unknown> = (ms) => sleep(ms),
   ) {}
+  onResult(listener: (check: ApiHealthCheck) => void): () => void {
+    this.resultListeners.add(listener);
+    return () => {
+      this.resultListeners.delete(listener);
+    };
+  }
+  private report(check: ApiHealthCheck, options: RequestOptions): void {
+    if (options.health || this.lifetime.signal.aborted || options.signal?.aborted) return;
+    for (const listener of this.resultListeners) listener(check);
+  }
   async get(
     path: string,
     key: string,
@@ -75,6 +89,7 @@ export class BatraceClient {
   ): Promise<DataResult> {
     let last: unknown;
     let attempts = 0;
+    let startedAt: number | undefined;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         this.lifetime.signal.throwIfAborted();
@@ -86,6 +101,7 @@ export class BatraceClient {
           options.signal?.throwIfAborted();
           if (!options.health) attempts++;
           this.lastAttempt = this.now();
+          startedAt ??= this.now();
           const headers = object(this.db.state<unknown>('privateHeaders', {}));
           const safeHeaders = new Headers(
             Object.fromEntries(
@@ -94,8 +110,10 @@ export class BatraceClient {
               ),
             ),
           );
-          safeHeaders.delete('user-agent');
-          const response = await this.http.fetch(BATRACE_ORIGIN + path, {
+          for (const [name, value] of Object.entries(batraceClientHeaders(this.version)))
+            safeHeaders.set(name, value);
+          const origin = path.startsWith('/api/') ? BATRACE_API_ORIGIN : BATRACE_ORIGIN;
+          const response = await this.http.fetch(origin + path, {
             headers: safeHeaders,
             signal: AbortSignal.any([
               this.lifetime.signal,
@@ -145,7 +163,10 @@ export class BatraceClient {
         this.queue = scheduled.catch(() => {});
         const result = await scheduled;
         if (result.challenge) {
-          last = new Error('BATrace verification did not complete');
+          last = Object.assign(new Error('BATrace verification did not complete'), {
+            verification: true,
+            status: result.status,
+          });
           if (options.health || !this.http.challenge)
             throw Object.assign(new Error('BATrace verification required'), {
               verification: true,
@@ -156,12 +177,15 @@ export class BatraceClient {
           } catch (error) {
             throw Object.assign(error instanceof Error ? error : new Error(String(error)), {
               verification: true,
+              status: result.status,
             });
           }
           continue;
         }
         this.lifetime.signal.throwIfAborted();
+        options.signal?.throwIfAborted();
         const at = this.now();
+        this.report({ path, ok: true, ms: at - startedAt!, status: result.status }, options);
         if (!options.health) this.db.saveCache(key, result.value, ttl, at);
         return { value: result.value, source: 'network', at, attempts, status: result.status };
       } catch (error) {
@@ -179,6 +203,8 @@ export class BatraceClient {
         if (attempt < 2) await this.wait(Math.max(this.interval, Number(e.retryAfter) || 0));
       }
     }
+    if (startedAt !== undefined)
+      this.report(failedHealthCheck(path, this.now() - startedAt, last), options);
     if (options.fallback && !object(last).verification) {
       try {
         const result = await this.request(options.fallback.path, key, ttl, {
@@ -245,6 +271,7 @@ export class BatraceClient {
     );
   }
   async close(): Promise<void> {
+    this.resultListeners.clear();
     this.lifetime.abort();
     await Promise.allSettled([...this.pending.values()]);
   }

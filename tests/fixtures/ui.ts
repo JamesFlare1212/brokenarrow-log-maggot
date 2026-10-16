@@ -10,12 +10,16 @@ import { Database } from '../../apps/server/src/storage/database';
 const { data } = await loadRealData(resolve('tests/fixtures/real'));
 const captured = await (async () => {
   const db = new Database(':memory:');
-  const client = new BatraceClient(db, {
-    offline: true,
-    fetch: async () => {
-      throw new Error('UI fixtures must remain offline');
+  const client = new BatraceClient(
+    db,
+    {
+      offline: true,
+      fetch: async () => {
+        throw new Error('UI fixtures must remain offline');
+      },
     },
-  });
+    '4.0.0',
+  );
   try {
     seedRealData(db, data, '');
     return {
