@@ -14,14 +14,16 @@
 }
 .button.update-button {
   position: relative;
-  width: 44px;
-  min-height: 44px;
+  width: 42px;
+  min-height: 42px;
   padding: 0;
-  border-radius: 50%;
+  border-radius: 8px;
   background: transparent;
+  color: var(--muted);
 }
 .button.update-button:not(:disabled):is(:hover, :focus-visible) {
-  background: color-mix(in srgb, var(--surface-alt) 90%, var(--text) 10%);
+  background: var(--surface-hover);
+  color: var(--text);
 }
 .button.update-button[aria-busy='true'] {
   opacity: 1;
@@ -36,34 +38,26 @@
 .update-symbol {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   flex: none;
 }
 .update-glyph {
   position: relative;
 }
 .update-symbol > .update-icon {
-  width: 24px;
-  height: 24px;
-}
-.update-symbol > .update-icon-download {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 .settings-update-button > .update-icon {
   width: 18px;
   height: 18px;
 }
-.settings-update-button > .update-icon-download {
-  width: 20px;
-  height: 20px;
-}
 .update-ring {
   position: absolute;
-  inset: -2px;
-  width: 36px;
-  height: 36px;
+  inset: -1px;
+  width: 28px;
+  height: 28px;
   opacity: 0;
   transform: rotate(-90deg);
   transition: opacity var(--motion-normal) var(--ease-out);
@@ -88,10 +82,10 @@
 }
 .update-dot {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 7px;
-  height: 7px;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--text);
   box-shadow: 0 0 0 2px var(--surface);

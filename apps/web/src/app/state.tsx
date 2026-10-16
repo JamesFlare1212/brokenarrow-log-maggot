@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from 'react';
+import { faXmark } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../components/Icon';
 import type {
   AppEvent,
   Bootstrap,
@@ -309,7 +311,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
               aria-label={translate(state.config.lang, 'close')}
               onClick={() => setToast(null)}
             >
-              ×
+              <Icon icon={faXmark} size={18} />
             </button>
           </div>
         )}

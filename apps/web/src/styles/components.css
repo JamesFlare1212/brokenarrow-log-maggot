@@ -234,14 +234,6 @@
   padding: 20px;
   color: var(--muted);
 }
-.spinner {
-  animation: spin 1.2s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 .badge {
   display: inline-flex;
   align-items: center;

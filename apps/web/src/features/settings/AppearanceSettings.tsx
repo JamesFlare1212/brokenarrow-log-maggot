@@ -1,9 +1,10 @@
-import { Monitor, Sun, Moon, Check } from 'lucide-react';
+import { faDisplay, faSun, faMoon, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import { COLOR_SCHEMES, THEME_MODES, type PublicConfig } from '@ba/contracts';
 import { useI18n } from '../../hooks/useI18n';
 import { colorSchemeFor } from '../../hooks/useAppearance';
 
-const icons = { system: Monitor, light: Sun, dark: Moon };
+const icons = { system: faDisplay, light: faSun, dark: faMoon };
 export function AppearanceSettings({
   draft,
   change,
@@ -18,7 +19,7 @@ export function AppearanceSettings({
         <h3 id="settings-mode-heading">{t('theme')}</h3>
         <div className="appearance-modes" role="group" aria-labelledby="settings-mode-heading">
           {THEME_MODES.map((mode) => {
-            const Icon = icons[mode];
+            const icon = icons[mode];
             return (
               <button
                 key={mode}
@@ -40,9 +41,9 @@ export function AppearanceSettings({
                   </span>
                 </span>
                 <span className="appearance-mode-label">
-                  <Icon size={15} aria-hidden="true" />
+                  <Icon icon={icon} size={15} aria-hidden="true" />
                   {t('themeMode.' + mode)}
-                  {draft.themeMode === mode && <Check size={14} aria-hidden="true" />}
+                  {draft.themeMode === mode && <Icon icon={faCheck} size={14} aria-hidden="true" />}
                 </span>
               </button>
             );
@@ -77,7 +78,7 @@ export function AppearanceSettings({
                 <div className="palette-preview">
                   {(['light', 'dark'] as const).map((mode) => {
                     const selected = colorSchemeFor(draft, mode) === color;
-                    const Icon = icons[mode];
+                    const icon = icons[mode];
                     const label = t('theme.' + color) + ' · ' + t('themeMode.' + mode);
                     return (
                       <button
@@ -96,7 +97,11 @@ export function AppearanceSettings({
                       >
                         <span className="palette-orb" aria-hidden="true" />
                         <span className="palette-mode-icon" aria-hidden="true">
-                          {selected ? <Check size={11} /> : <Icon size={11} />}
+                          {selected ? (
+                            <Icon icon={faCheck} size={11} />
+                          ) : (
+                            <Icon icon={icon} size={11} />
+                          )}
                         </span>
                       </button>
                     );

@@ -1,4 +1,5 @@
-import { ArrowUpRight } from 'lucide-react';
+import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
@@ -32,7 +33,7 @@ export function AboutSettings() {
                 }
               >
                 {label}
-                <ArrowUpRight size={14} />
+                <Icon icon={faArrowUpRightFromSquare} size={14} />
               </Button>
             ))}
           </div>

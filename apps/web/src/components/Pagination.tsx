@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from './Icon';
 import { useI18n } from '../hooks/useI18n';
 import { Button } from './ui';
 
@@ -42,7 +43,7 @@ export function Pagination({
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
         >
-          <ChevronLeft size={16} />
+          <Icon icon={faChevronLeft} size={16} />
         </Button>
         <select
           aria-label={t('pageNumber')}
@@ -62,7 +63,7 @@ export function Pagination({
           disabled={currentPage === pages}
           onClick={() => onPageChange(currentPage + 1)}
         >
-          <ChevronRight size={16} />
+          <Icon icon={faChevronRight} size={16} />
         </Button>
       </div>
     </nav>

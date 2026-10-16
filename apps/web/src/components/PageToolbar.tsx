@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef } from 'react';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { faOutdent, faIndent } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from './Icon';
 import { useI18n } from '../hooks/useI18n';
 import { Button } from './ui';
 
@@ -22,7 +23,7 @@ export function SidebarToggle({
       aria-expanded={!collapsed}
       onClick={onToggle}
     >
-      {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+      {collapsed ? <Icon icon={faIndent} size={18} /> : <Icon icon={faOutdent} size={18} />}
     </Button>
   );
 }

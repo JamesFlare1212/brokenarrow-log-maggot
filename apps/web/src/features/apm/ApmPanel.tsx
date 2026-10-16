@@ -1,4 +1,5 @@
-import { Activity } from 'lucide-react';
+import { faWaveSquare } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import { formatDuration, formatMetric } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
@@ -12,7 +13,7 @@ export function ApmPanel() {
   return (
     <Card
       title={t('apm')}
-      icon={<Activity size={19} />}
+      icon={<Icon icon={faWaveSquare} size={19} />}
       collapsed={collapsed}
       onToggle={() =>
         void patchConfig({
@@ -24,7 +25,7 @@ export function ApmPanel() {
     >
       {apm.status === 'disabled' ? (
         <Empty
-          icon={<Activity size={30} />}
+          icon={<Icon icon={faWaveSquare} size={30} />}
           description={t('apmDescription')}
           action={
             <Button variant="primary" onClick={() => openSettings('automation')}>

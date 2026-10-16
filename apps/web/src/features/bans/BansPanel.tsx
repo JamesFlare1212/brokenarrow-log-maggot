@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Shield } from 'lucide-react';
+import { faShieldHalved } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { Ban } from '@ba/contracts';
 import { formatMetric, formatTime } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -92,7 +93,10 @@ export function BansPanel() {
           </div>
         ) : (
           !request.pending && (
-            <Empty icon={<Shield size={28} />} description={t('bansDescription')}>
+            <Empty
+              icon={<Icon icon={faShieldHalved} size={28} />}
+              description={t('bansDescription')}
+            >
               {t('empty')}
             </Empty>
           )

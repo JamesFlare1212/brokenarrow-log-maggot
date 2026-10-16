@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Layers, FileText, FolderOpen } from 'lucide-react';
+import { faLayerGroup, faFileLines, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { DeckList, DeckFile } from '@ba/contracts';
 import { formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -48,7 +49,7 @@ function DeckFiles({
                   )
                 }
               />
-              <FileText size={17} className="muted" aria-hidden="true" />
+              <Icon icon={faFileLines} size={17} className="muted" aria-hidden="true" />
               <span>{f.name}</span>
               <small>{formatSize(f.size)}</small>
             </label>
@@ -103,7 +104,7 @@ export function DecksPanel() {
   return (
     <Card
       title={t('decks')}
-      icon={<Layers size={19} />}
+      icon={<Icon icon={faLayerGroup} size={19} />}
       collapsed={collapsed}
       onToggle={() =>
         void patchConfig({
@@ -158,7 +159,7 @@ export function DecksPanel() {
                     setBackupNames(front);
                   }}
                 >
-                  <Layers size={16} aria-hidden="true" />
+                  <Icon icon={faLayerGroup} size={16} aria-hidden="true" />
                   {t('backupSelected')}
                 </Button>
                 <Button
@@ -173,7 +174,7 @@ export function DecksPanel() {
                 <Button
                   onClick={() => void operate(() => api.invoke('decks.open', { kind: 'decks' }))}
                 >
-                  <FolderOpen size={16} aria-hidden="true" />
+                  <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                   {t('folder')}
                 </Button>
                 <Button

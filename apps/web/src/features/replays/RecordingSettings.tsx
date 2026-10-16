@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { FolderOpen } from 'lucide-react';
+import { faFolderOpen } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { Display, PublicConfig } from '@ba/contracts';
 import { QUALITIES, normalizeQuality, estimateRecordingBytes, formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -252,7 +253,7 @@ export function RecordingSettings({
                       .catch((e) => setError(String(e)))
                   }
                 >
-                  <FolderOpen size={16} aria-hidden="true" />
+                  <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                   {t('select')}
                 </Button>
               </div>

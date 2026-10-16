@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowUp,
-  ArrowDown,
-  FolderOpen,
-  Palette,
-  SlidersHorizontal,
-  LayoutList,
-  Cable,
-  Settings2,
-  Users,
-  ArrowLeft,
-  Check,
-  LoaderCircle,
-  Video,
-} from 'lucide-react';
+  faArrowUp,
+  faArrowDown,
+  faFolderOpen,
+  faPalette,
+  faSliders,
+  faList,
+  faPlug,
+  faUsers,
+  faArrowLeft,
+  faCheck,
+  faSpinner,
+  faVideo,
+} from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { Account, PublicConfig } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
@@ -32,13 +32,13 @@ import { RecordingSettings } from '../replays/RecordingSettings';
 import type { SettingsSaveStatus } from '../../hooks/useSettingsAutosave';
 
 const tabs = [
-  { id: 'general', label: 'generalSettings', icon: Settings2 },
-  { id: 'appearance', label: 'appearance', icon: Palette },
-  { id: 'connection', label: 'gameConnection', icon: Cable },
-  { id: 'automation', label: 'automation', icon: SlidersHorizontal },
-  { id: 'recording', label: 'recordingSettings', icon: Video },
-  { id: 'navigation', label: 'navigationSettings', icon: LayoutList },
-  { id: 'accounts', label: 'accounts', icon: Users },
+  { id: 'general', label: 'generalSettings', icon: faSliders },
+  { id: 'appearance', label: 'appearance', icon: faPalette },
+  { id: 'connection', label: 'gameConnection', icon: faPlug },
+  { id: 'automation', label: 'automation', icon: faSliders },
+  { id: 'recording', label: 'recordingSettings', icon: faVideo },
+  { id: 'navigation', label: 'navigationSettings', icon: faList },
+  { id: 'accounts', label: 'accounts', icon: faUsers },
 ] as const;
 const flags = [
   ['autoQueryCurrentMatch', 'autoQuery'],
@@ -161,7 +161,7 @@ export function SettingsPage() {
       aria-labelledby="settings-title"
     >
       <Sidebar className="settings-sidebar" collapsed={collapsed}>
-        <SidebarHeading className="settings-brand" icon={<Settings2 size={22} />}>
+        <SidebarHeading className="settings-brand" icon={<Icon icon={faSliders} size={22} />}>
           <h1 id="settings-title">{t('settings')}</h1>
         </SidebarHeading>
         <SidebarNavigation
@@ -170,10 +170,10 @@ export function SettingsPage() {
           role="tablist"
           aria-label={t('settings')}
         >
-          {tabs.map(({ id, label, icon: Icon }, index) => (
+          {tabs.map(({ id, label, icon }, index) => (
             <SidebarItem
               key={id}
-              icon={<Icon size={18} />}
+              icon={<Icon icon={icon} size={18} />}
               label={t(label)}
               selected={tab === id}
               role="tab"
@@ -206,7 +206,11 @@ export function SettingsPage() {
           <SidebarItem
             className="settings-back"
             icon={
-              returning ? <LoaderCircle size={18} className="spinner" /> : <ArrowLeft size={18} />
+              returning ? (
+                <Icon icon={faSpinner} size={18} spin />
+              ) : (
+                <Icon icon={faArrowLeft} size={18} />
+              )
             }
             label={t('settingsBack')}
             onClick={() => void back()}
@@ -234,9 +238,9 @@ export function SettingsPage() {
           </div>
           <div className="settings-save-state" role="status" aria-live="polite">
             {saveStatus === 'saved' ? (
-              <Check size={14} aria-hidden="true" />
+              <Icon icon={faCheck} size={14} aria-hidden="true" />
             ) : saveStatus !== 'error' ? (
-              <LoaderCircle size={14} className="spinner" aria-hidden="true" />
+              <Icon icon={faSpinner} size={14} spin aria-hidden="true" />
             ) : null}
             {t(
               saveStatus === 'saved'
@@ -301,7 +305,7 @@ export function SettingsPage() {
                         aria-describedby={logFeedback ? 'settings-log-feedback' : undefined}
                       />
                       <Button onClick={() => void choose('logs')}>
-                        <FolderOpen size={16} />
+                        <Icon icon={faFolderOpen} size={16} />
                         {t('select')}
                       </Button>
                       <Button
@@ -385,14 +389,14 @@ export function SettingsPage() {
                           aria-label={t('moveUp') + ' ' + t(panel)}
                           onClick={() => move(index, -1)}
                         >
-                          <ArrowUp size={16} />
+                          <Icon icon={faArrowUp} size={16} />
                         </Button>
                         <Button
                           disabled={index === draft.panelOrder.length - 1}
                           aria-label={t('moveDown') + ' ' + t(panel)}
                           onClick={() => move(index, 1)}
                         >
-                          <ArrowDown size={16} />
+                          <Icon icon={faArrowDown} size={16} />
                         </Button>
                       </div>
                     </li>
@@ -406,7 +410,7 @@ export function SettingsPage() {
                   <p role="status">{t('loading')}</p>
                 ) : accounts.length === 0 ? (
                   <Empty
-                    icon={<Users size={26} aria-hidden="true" />}
+                    icon={<Icon icon={faUsers} size={26} aria-hidden="true" />}
                     description={t('accountsEmptyHint')}
                   >
                     {t('accountsEmpty')}

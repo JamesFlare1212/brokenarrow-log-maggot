@@ -1,17 +1,18 @@
 import { useEffect, type ReactNode } from 'react';
 import {
-  ArrowRight,
-  Archive,
-  Crosshair,
-  Layers,
-  Search,
-  ShieldCheck,
-  Trophy,
-  Users,
-  Video,
-  CirclePlay,
-  Clock3,
-} from 'lucide-react';
+  faArrowRight,
+  faBoxArchive,
+  faCrosshairs,
+  faLayerGroup,
+  faMagnifyingGlass,
+  faShieldHalved,
+  faTrophy,
+  faUsers,
+  faVideo,
+  faCirclePlay,
+  faClock,
+} from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { Match } from '@ba/contracts';
 import { formatDuration, formatMetric, formatTime, outcomeTone } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -86,7 +87,7 @@ export function Dashboard() {
           label={t('recentRating')}
           value={formatMetric(latest?.eloAfter ?? null, 0)}
           detail={t('completedMatch')}
-          icon={<Crosshair size={18} />}
+          icon={<Icon icon={faCrosshairs} size={18} />}
         />
         <Metric
           label={t('recentWinRate')}
@@ -94,19 +95,19 @@ export function Dashboard() {
           detail={
             recent.length ? t('winLossCount', { wins, losses: recent.length - wins }) : t('empty')
           }
-          icon={<Trophy size={18} />}
+          icon={<Icon icon={faTrophy} size={18} />}
         />
         <Metric
           label={t('archiveCount')}
           value={count}
           detail={t('localArchive')}
-          icon={<Archive size={18} />}
+          icon={<Icon icon={faBoxArchive} size={18} />}
         />
         <Metric
           label={t('livePlayers')}
           value={roster.length}
           detail={t(state.session.phase === 'match' ? 'liveMatch' : 'waiting')}
-          icon={<Users size={18} />}
+          icon={<Icon icon={faUsers} size={18} />}
         />
       </div>
       {error && (
@@ -120,13 +121,17 @@ export function Dashboard() {
       <div className="dashboard-grid">
         <SessionPanel />
         <aside className="dashboard-side" aria-label={t('quickTools')}>
-          <Card title={t('replays')} icon={<Video size={18} />} className="recording-widget">
+          <Card
+            title={t('replays')}
+            icon={<Icon icon={faVideo} size={18} />}
+            className="recording-widget"
+          >
             <div
               className={`recording-illustration ${recordingActive ? 'is-recording' : ''}`}
               aria-hidden="true"
             >
               <div className="recording-frame">
-                <CirclePlay size={32} strokeWidth={1.25} />
+                <Icon icon={faCirclePlay} size={32} />
               </div>
               <span className="recording-rec">
                 REC <span />
@@ -140,8 +145,8 @@ export function Dashboard() {
             </div>
             {recordingActive ? (
               <p className="muted">
-                <Clock3 size={14} aria-hidden="true" /> {formatDuration(recording.seconds)} ·{' '}
-                {recording.map || '—'}
+                <Icon icon={faClock} size={14} aria-hidden="true" />{' '}
+                {formatDuration(recording.seconds)} · {recording.map || '—'}
               </p>
             ) : (
               <p className="muted">{t('recordingHint')}</p>
@@ -154,15 +159,15 @@ export function Dashboard() {
               }
             >
               {t(state.config.replayEnabled ? 'recordingSettings' : 'enableRecording')}
-              <ArrowRight size={15} />
+              <Icon icon={faArrowRight} size={15} />
             </Button>
           </Card>
           <Card title={t('quickTools')} className="quick-tools">
             {(
               [
-                ['players', <Search size={18} />, 'playerShortcut'],
-                ['decks', <Layers size={18} />, 'deckShortcut'],
-                ['bans', <ShieldCheck size={18} />, 'banShortcut'],
+                ['players', <Icon icon={faMagnifyingGlass} size={18} />, 'playerShortcut'],
+                ['decks', <Icon icon={faLayerGroup} size={18} />, 'deckShortcut'],
+                ['bans', <Icon icon={faShieldHalved} size={18} />, 'banShortcut'],
               ] as const
             ).map(([page, icon, hint]) => (
               <button className="quick-tool" key={page} onClick={() => setPage(page)}>
@@ -173,7 +178,7 @@ export function Dashboard() {
                   <strong>{t(page)}</strong>
                   <small>{t(hint)}</small>
                 </span>
-                <ArrowRight size={15} aria-hidden="true" />
+                <Icon icon={faArrowRight} size={15} aria-hidden="true" />
               </button>
             ))}
           </Card>
@@ -181,12 +186,12 @@ export function Dashboard() {
       </div>
       <Card
         title={t('recent')}
-        icon={<Archive size={18} />}
+        icon={<Icon icon={faBoxArchive} size={18} />}
         className="recent-card"
         actions={
           <Button className="text-button" onClick={() => setPage('archive')}>
             {t('viewAll')}
-            <ArrowRight size={15} />
+            <Icon icon={faArrowRight} size={15} />
           </Button>
         }
       >
@@ -205,7 +210,7 @@ export function Dashboard() {
                   className={`recent-match-mark mark-${outcomeTone(m.outcome)}`}
                   aria-hidden="true"
                 >
-                  <Crosshair size={21} />
+                  <Icon icon={faCrosshairs} size={21} />
                 </span>
                 <span className="recent-match-description">
                   <strong>{m.map || `#${m.id}`}</strong>
@@ -224,12 +229,12 @@ export function Dashboard() {
                     : '—'}{' '}
                   <small>ELO</small>
                 </span>
-                <ArrowRight size={15} className="muted" aria-hidden="true" />
+                <Icon icon={faArrowRight} size={15} className="muted" aria-hidden="true" />
               </button>
             ))}
           </div>
         ) : (
-          <Empty icon={<Archive size={24} />} description={t('noMatchesHint')}>
+          <Empty icon={<Icon icon={faBoxArchive} size={24} />} description={t('noMatchesHint')}>
             {t('empty')}
           </Empty>
         )}

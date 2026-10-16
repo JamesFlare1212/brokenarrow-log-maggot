@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, Users } from 'lucide-react';
+import { faMagnifyingGlass, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { PlayerReport, RpcOutputs } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
@@ -14,7 +15,7 @@ export function PlayersPanel() {
   const results = useRequest<RpcOutputs['players.search']>(),
     report = useRequest<PlayerReport>();
   return (
-    <Card title={t('players')} icon={<Search size={19} />}>
+    <Card title={t('players')} icon={<Icon icon={faMagnifyingGlass} size={19} />}>
       <form
         className="search-form"
         aria-busy={results.pending}
@@ -26,7 +27,7 @@ export function PlayersPanel() {
       >
         <Field id="player-search" label={t('searchLabel')} hint={t('searchHint')}>
           <div className="search-input-wrap">
-            <Search size={18} aria-hidden="true" />
+            <Icon icon={faMagnifyingGlass} size={18} aria-hidden="true" />
             <input
               id="player-search"
               type="search"
@@ -38,7 +39,7 @@ export function PlayersPanel() {
           </div>
         </Field>
         <Button type="submit" disabled={results.pending || !query.trim()} variant="primary">
-          <Search size={16} aria-hidden="true" />
+          <Icon icon={faMagnifyingGlass} size={16} aria-hidden="true" />
           {t(results.pending ? 'loading' : 'search')}
         </Button>
       </form>
@@ -62,7 +63,10 @@ export function PlayersPanel() {
               </div>
             ))
           ) : (
-            <Empty icon={<Search size={24} />} description={t('searchEmptyHint')}>
+            <Empty
+              icon={<Icon icon={faMagnifyingGlass} size={24} />}
+              description={t('searchEmptyHint')}
+            >
               {t('searchEmpty')}
             </Empty>
           )}
@@ -70,7 +74,7 @@ export function PlayersPanel() {
       )}
       {!results.data && !results.pending && !report.data && !report.pending && (
         <>
-          <Empty icon={<Users size={28} />} description={t('searchHint')}>
+          <Empty icon={<Icon icon={faUsers} size={28} />} description={t('searchHint')}>
             {t('report')}
           </Empty>
           {!!(state.session.current?.players ?? state.session.lobbyPlayers).length && (

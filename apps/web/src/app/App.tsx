@@ -8,20 +8,21 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  Activity,
-  Archive,
-  ChevronRight,
-  Crosshair,
-  Info,
-  Layers,
-  LayoutDashboard,
-  Menu,
-  Radar,
-  Search,
-  Settings,
-  ShieldCheck,
-  Video,
-} from 'lucide-react';
+  faWaveSquare,
+  faBoxArchive,
+  faChevronRight,
+  faCrosshairs,
+  faCircleInfo,
+  faLayerGroup,
+  faTableCellsLarge,
+  faBars,
+  faSatelliteDish,
+  faMagnifyingGlass,
+  faGear,
+  faShieldHalved,
+  faVideo,
+} from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../components/Icon';
 import type { Panel } from '@ba/contracts';
 import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
@@ -66,20 +67,20 @@ const SettingsPage = lazy(() =>
 );
 
 const icons: Record<Panel, ReactNode> = {
-  current: <LayoutDashboard size={19} />,
-  radar: <Radar size={19} />,
-  players: <Search size={19} />,
-  apm: <Activity size={19} />,
-  archive: <Archive size={19} />,
-  replays: <Video size={19} />,
-  decks: <Layers size={19} />,
-  bans: <ShieldCheck size={19} />,
+  current: <Icon icon={faTableCellsLarge} size={19} />,
+  radar: <Icon icon={faSatelliteDish} size={19} />,
+  players: <Icon icon={faMagnifyingGlass} size={19} />,
+  apm: <Icon icon={faWaveSquare} size={19} />,
+  archive: <Icon icon={faBoxArchive} size={19} />,
+  replays: <Icon icon={faVideo} size={19} />,
+  decks: <Icon icon={faLayerGroup} size={19} />,
+  bans: <Icon icon={faShieldHalved} size={19} />,
 };
 
 function Brand() {
   const { t } = useI18n();
   return (
-    <SidebarHeading className="brand" icon={<Crosshair size={22} strokeWidth={1.7} />}>
+    <SidebarHeading className="brand" icon={<Icon icon={faCrosshairs} size={22} />}>
       <strong>{t('brand')}</strong>
     </SidebarHeading>
   );
@@ -199,7 +200,7 @@ export function App() {
         <SidebarFooter className="sidebar-footer">
           <SidebarItem
             className="settings-button"
-            icon={<Settings size={18} />}
+            icon={<Icon icon={faGear} size={18} />}
             label={t('settings')}
             aria-label={t('settings')}
             title={t('settings')}
@@ -221,10 +222,10 @@ export function App() {
               aria-expanded={navigationOpen}
               onClick={() => setNavigationOpen(true)}
             >
-              <Menu size={20} />
+              <Icon icon={faBars} size={20} />
             </Button>
             <span>Broken Arrow</span>
-            <ChevronRight size={14} className="muted" aria-hidden="true" />
+            <Icon icon={faChevronRight} size={14} className="muted" aria-hidden="true" />
             <strong>{t(page === 'current' ? 'overview' : page)}</strong>
           </div>
           <div className="topbar-actions">
@@ -284,7 +285,7 @@ export function App() {
           {showHistoricalFooter && (
             <footer className="app-footer">
               <span>
-                <Info size={13} aria-hidden="true" />
+                <Icon icon={faCircleInfo} size={13} aria-hidden="true" />
                 {t('historical')}
               </span>
               <span>
@@ -301,7 +302,7 @@ export function App() {
                       .finally(() => setHealthBusy(false));
                   }}
                 >
-                  <Activity size={14} className={healthBusy ? 'spinner' : ''} />
+                  <Icon icon={faWaveSquare} size={14} spin={healthBusy} />
                 </Button>
               </span>
             </footer>
@@ -324,7 +325,7 @@ export function App() {
               openSettings();
             }}
           >
-            <Settings size={18} />
+            <Icon icon={faGear} size={18} />
             {t('settings')}
           </Button>
         </Dialog>

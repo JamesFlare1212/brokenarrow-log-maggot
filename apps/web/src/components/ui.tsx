@@ -9,7 +9,14 @@ import {
   useRef,
   type ReactElement,
 } from 'react';
-import { X, ChevronDown, ChevronUp, LoaderCircle, MoreHorizontal } from 'lucide-react';
+import {
+  faXmark,
+  faChevronDown,
+  faChevronUp,
+  faSpinner,
+  faEllipsis,
+} from '@fortawesome/free-solid-svg-icons';
+import { Icon } from './Icon';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { useI18n } from '../hooks/useI18n';
 export function Button({
@@ -20,12 +27,7 @@ export function Button({
 }: ComponentPropsWithRef<'button'> & { variant?: 'primary' | 'danger' | 'ghost' }) {
   return (
     <button type="button" {...props} className={`button button-${variant} ${className}`}>
-      {Children.map(children, (child) =>
-        isValidElement<{ size?: number; 'aria-hidden'?: boolean }>(child) &&
-        ('size' in child.props || child.type === 'svg')
-          ? cloneElement(child, { 'aria-hidden': child.props['aria-hidden'] ?? true })
-          : child,
-      )}
+      {children}
     </button>
   );
 }
@@ -71,7 +73,11 @@ export function Card({
                 aria-expanded={!collapsed}
                 aria-controls={contentId}
               >
-                {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                {collapsed ? (
+                  <Icon icon={faChevronDown} size={16} />
+                ) : (
+                  <Icon icon={faChevronUp} size={16} />
+                )}
               </Button>
             )}
           </div>
@@ -110,7 +116,7 @@ export function Dialog({
   const closeButton = (
     <RadixDialog.Close asChild>
       <Button aria-label={t('close')} className={showHeader ? undefined : 'dialog-close-button'}>
-        <X size={showHeader ? 18 : 22} />
+        <Icon icon={faXmark} size={showHeader ? 18 : 22} />
       </Button>
     </RadixDialog.Close>
   );
@@ -186,7 +192,7 @@ export function Loading() {
   const { t } = useI18n();
   return (
     <div className="loading" role="status">
-      <LoaderCircle className="spinner" size={18} aria-hidden="true" />
+      <Icon icon={faSpinner} spin size={18} aria-hidden="true" />
       {t('loading')}
     </div>
   );
@@ -292,7 +298,7 @@ export function Menu({ children, label }: { children: ReactNode; label?: string 
     <Dropdown.Root>
       <Dropdown.Trigger asChild>
         <Button data-menu-trigger aria-label={label || t('actions')}>
-          <MoreHorizontal size={18} />
+          <Icon icon={faEllipsis} size={18} />
         </Button>
       </Dropdown.Trigger>
       <Dropdown.Portal>

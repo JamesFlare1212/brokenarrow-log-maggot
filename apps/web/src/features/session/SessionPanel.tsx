@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, MapPin, Copy, History, Clock3, Users, Crosshair } from 'lucide-react';
+import {
+  faArrowsRotate,
+  faLocationDot,
+  faCopy,
+  faClockRotateLeft,
+  faClock,
+  faUsers,
+  faCrosshairs,
+} from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { Match, Player } from '@ba/contracts';
 import { formatDuration, formatMetric, teamLabel } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -83,7 +92,7 @@ export function SessionPanel() {
     <Card
       className="session-card"
       title={view === 'previous' ? t('previous') : t('current')}
-      icon={<Crosshair size={19} />}
+      icon={<Icon icon={faCrosshairs} size={19} />}
       collapsed={collapsed}
       onToggle={() =>
         void patchConfig({
@@ -100,7 +109,7 @@ export function SessionPanel() {
             onClick={previousView}
             aria-pressed={view === 'previous'}
           >
-            <History size={15} aria-hidden="true" />
+            <Icon icon={faClockRotateLeft} size={15} aria-hidden="true" />
             {view === 'previous' ? t('back') : t('previous')}
           </Button>
           <Button
@@ -108,7 +117,7 @@ export function SessionPanel() {
             disabled={pending || !players.length}
             onClick={() => void query(view)}
           >
-            <RefreshCw size={15} className={pending ? 'spinner' : ''} aria-hidden="true" />
+            <Icon icon={faArrowsRotate} size={15} spin={pending} aria-hidden="true" />
             {pending ? t('loading') : t('query')}
           </Button>
         </>
@@ -134,17 +143,17 @@ export function SessionPanel() {
           <div className="match-meta">
             {match && (
               <span>
-                <MapPin size={13} aria-hidden="true" />
+                <Icon icon={faLocationDot} size={13} aria-hidden="true" />
                 {t(match.mode)}
               </span>
             )}
             <span>
-              <Users size={13} aria-hidden="true" />
+              <Icon icon={faUsers} size={13} aria-hidden="true" />
               {t('playersCount', { n: players.length })}
             </span>
             {elapsed !== null && (
               <span>
-                <Clock3 size={13} aria-hidden="true" />
+                <Icon icon={faClock} size={13} aria-hidden="true" />
                 {formatDuration(elapsed)}
               </span>
             )}
@@ -172,7 +181,7 @@ export function SessionPanel() {
         </svg>
       </div>
       {!players.length ? (
-        <Empty icon={<Crosshair size={28} />} description={t('waitingHint')}>
+        <Empty icon={<Icon icon={faCrosshairs} size={28} />} description={t('waitingHint')}>
           {t('waiting')}
         </Empty>
       ) : (
@@ -215,7 +224,7 @@ export function SessionPanel() {
                     }
                     className="text-button icon-button"
                   >
-                    <Copy size={14} aria-hidden="true" />
+                    <Icon icon={faCopy} size={14} aria-hidden="true" />
                   </Button>
                 </div>
                 <div className="team-rating">

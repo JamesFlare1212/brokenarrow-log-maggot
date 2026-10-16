@@ -1,6 +1,7 @@
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Archive, Plus, RefreshCw } from 'lucide-react';
+import { faBoxArchive, faPlus, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, outcomeTone } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -85,7 +86,7 @@ export function MatchArchive() {
             />
           </Field>
           <Button variant="primary" type="submit" disabled={adding || !/^\d+$/.test(fid)}>
-            <Plus size={16} aria-hidden="true" />
+            <Icon icon={faPlus} size={16} aria-hidden="true" />
             {t(adding ? 'loading' : 'addMatch')}
           </Button>
         </form>
@@ -142,9 +143,10 @@ export function MatchArchive() {
             onClick={() => void scan()}
             aria-busy={scanning}
           >
-            <RefreshCw
+            <Icon
+              icon={faArrowsRotate}
               size={15}
-              className={matches.pending || scanning ? 'spinner' : ''}
+              spin={matches.pending || scanning}
               aria-hidden="true"
             />
             {t(scanning ? 'scanningLogs' : 'refresh')}
@@ -266,7 +268,7 @@ export function MatchArchive() {
         ) : (
           !matches.pending && (
             <Empty
-              icon={<Archive size={26} />}
+              icon={<Icon icon={faBoxArchive} size={26} />}
               description={t('noMatchesHint')}
               action={
                 outcome !== 'all' || account ? (

@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
-import { Video, Play, FolderOpen, RefreshCw, Settings2 } from 'lucide-react';
+import {
+  faVideo,
+  faPlay,
+  faFolderOpen,
+  faArrowsRotate,
+  faSliders,
+} from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
 import type { Replay } from '@ba/contracts';
 import { formatSize, formatTime, formatDuration } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -56,7 +63,7 @@ export function ReplaysPanel() {
           )}
         </div>
         <Button onClick={() => openModal({ type: 'recordingSettings' })}>
-          <Settings2 size={16} aria-hidden="true" />
+          <Icon icon={faSliders} size={16} aria-hidden="true" />
           {t('recordingSettings')}
         </Button>
       </div>
@@ -85,15 +92,11 @@ export function ReplaysPanel() {
                   void api.invoke('replays.open', null).catch((e) => notify(String(e), true))
                 }
               >
-                <FolderOpen size={16} aria-hidden="true" />
+                <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                 {t('folder')}
               </Button>
               <Button onClick={refresh} disabled={request.pending}>
-                <RefreshCw
-                  size={16}
-                  className={request.pending ? 'spinner' : ''}
-                  aria-hidden="true"
-                />
+                <Icon icon={faArrowsRotate} size={16} spin={request.pending} aria-hidden="true" />
                 {t('refresh')}
               </Button>
               <Menu>
@@ -137,7 +140,7 @@ export function ReplaysPanel() {
                       openModal({ type: 'replay', id: r.id, title: r.map || r.uploaderName })
                     }
                   >
-                    <Video size={36} strokeWidth={1.25} aria-hidden="true" />
+                    <Icon icon={faVideo} size={36} aria-hidden="true" />
                     <Badge>{formatDuration(r.durationSec)}</Badge>
                   </button>
                   <div className="replay-description">
@@ -154,7 +157,7 @@ export function ReplaysPanel() {
                       openModal({ type: 'replay', id: r.id, title: r.map || r.uploaderName })
                     }
                   >
-                    <Play size={15} aria-hidden="true" />
+                    <Icon icon={faPlay} size={15} aria-hidden="true" />
                     {t('play')}
                   </Button>
                   <Menu label={`${t('actions')}: ${r.map || r.id}`}>
@@ -185,7 +188,7 @@ export function ReplaysPanel() {
           ) : (
             !request.pending && (
               <Empty
-                icon={<Video size={28} />}
+                icon={<Icon icon={faVideo} size={28} />}
                 description={t('recordingHint')}
                 action={
                   <Button onClick={() => openModal({ type: 'recordingSettings', enable: true })}>
