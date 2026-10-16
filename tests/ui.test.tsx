@@ -1031,14 +1031,24 @@ describe('settings pages and automatic saving', () => {
     );
   });
 
-  it('opens a settings tab directly from its URL and autosaves switches', async () => {
+  it('opens a settings tab directly from its URL and autosaves only switch activation', async () => {
     history.replaceState(null, '', '#settings/automation');
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
     const page = within(await screen.findByRole('main', { name: '设置' }));
     expect(screen.getByRole('tab', { name: '自动化' }).getAttribute('aria-selected')).toBe('true');
-    fireEvent.click(page.getByRole('checkbox', { name: translate('zh', 'autoQuery') }));
+    const checkbox = page.getByRole('checkbox', {
+      name: translate('zh', 'autoQuery'),
+    }) as HTMLInputElement;
+    fireEvent.click(page.getByText(translate('zh', 'autoQuery')));
+    fireEvent.click(checkbox.closest('.toggle')!);
+    expect(checkbox.checked).toBe(true);
+    expect(native.backend.config.autoQueryCurrentMatch).toBe(true);
+    fireEvent.click(checkbox);
     await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(false));
+    checkbox.focus();
+    await userEvent.setup().keyboard(' ');
+    await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(true));
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
     expect(location.hash).toBe('#current');

@@ -339,17 +339,6 @@ main {
   gap: 20px;
   min-width: 0;
 }
-.session-card .card-header {
-  padding: 15px 18px;
-}
-.session-card .card-header h2 {
-  font-size: 13px;
-}
-.session-card .card-header .button {
-  font-size: 12px;
-  min-height: 34px;
-  padding: 7px 10px;
-}
 .session-card .card-header .button:last-child:not(.button-primary) {
   padding: 7px;
 }
@@ -670,9 +659,17 @@ main {
   color: var(--accent);
   justify-content: space-between;
 }
+.quick-tools,
+.recent-card {
+  overflow: hidden;
+}
 .quick-tools .card-body {
-  padding: 7px 0;
+  padding: 0;
   gap: 0;
+}
+.quick-tool:focus-visible,
+.recent-match:focus-visible {
+  outline-offset: -3px;
 }
 .quick-tool {
   display: flex;
@@ -725,14 +722,14 @@ main {
   color: var(--muted);
 }
 .recent-card .card-body {
-  padding: 0 18px 4px;
+  padding: 0;
 }
 .recent-match {
   display: flex;
   align-items: center;
   gap: 14px;
   width: 100%;
-  padding: 14px 0;
+  padding: 14px 18px;
   text-align: left;
   color: var(--text);
   border: 0;
@@ -1545,19 +1542,12 @@ main {
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;
-    padding: 16px;
-  }
-  .session-card .card-header h2 {
-    font-size: 14px;
   }
   .session-card .card-header .actions {
     width: 100%;
   }
   .session-card .card-header .actions .button:last-child {
     margin-left: auto;
-  }
-  .session-card .card-header .button {
-    min-height: 40px;
   }
   .session-card .card-body {
     padding: 14px;
@@ -1622,7 +1612,7 @@ main {
   .recent-match {
     gap: 9px;
     flex-wrap: wrap;
-    padding: 16px 0;
+    padding: 16px 18px;
   }
   .recent-match-mark {
     width: 32px;

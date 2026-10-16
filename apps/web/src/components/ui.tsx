@@ -284,18 +284,19 @@ export function Toggle({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="toggle" htmlFor={id}>
-      <span>{label}</span>
+    <div className="toggle">
+      <span id={`${id}-label`}>{label}</span>
       <input
         id={id}
         type="checkbox"
         aria-label={ariaLabel}
+        aria-labelledby={ariaLabel ? undefined : `${id}-label`}
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="toggle-track" aria-hidden="true" />
-    </label>
+    </div>
   );
 }
 function menuItems(children: ReactNode): ReactElement[] {
