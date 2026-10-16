@@ -1,4 +1,6 @@
 :root {
+  --sidebar-width: 224px;
+  --sidebar-rail-width: 76px;
   color-scheme: dark;
   --bg: #0d1114;
   --surface: #141a1e;

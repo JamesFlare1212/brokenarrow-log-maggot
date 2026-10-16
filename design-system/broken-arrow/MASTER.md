@@ -22,37 +22,40 @@ The settings reference is the T3 Code layout supplied for this project: a catego
 
 ## Workspace and navigation
 
-The sidebar provides overview, 蛐雷达 (player radar), player search, APM, archives, recordings, decks, bans and about. Configured navigation order remains authoritative. Existing configurations gain the radar entry after overview when that entry is available; an existing custom radar position is preserved.
+The sidebar provides overview, 蛐雷达 (player radar), player search, APM, archives, recordings, decks and bans. About belongs in Settings → General. Configured navigation order remains authoritative. Existing configurations gain the radar entry after overview when that entry is available; an existing custom radar position is preserved. Remove the legacy About entry from saved navigation and collapsed-panel lists while preserving other preferences.
 
 - Overview keeps the current-room and previous-match tools. The radar page at `#radar` provides an additional copy of those tools, not a replacement. Each destination retains its own current/previous view while navigating.
 - The overview has four summary cards, the room roster, recording status, shortcuts and recent results. On wide screens, the roster spans three summary columns and the supporting tools occupy the fourth. The tool column must share both edges and width with the 房间玩家 summary above it; use the same four-column grid and 16px gap rather than a fixed sidebar width.
 - Optional APM follows the user's configuration. The full ban list belongs only on the dedicated bans page, even when an older configuration has `banCardVisible` enabled. Do not expose an overview ban-panel toggle.
 - Visited screens retain local state and scroll position. Hash routes support direct links and browser history.
-- Both workspace and settings sidebars can collapse to a 76px icon rail and share the persisted `sidebarCollapsed` preference. Keep accessible names and hover titles for icon-only entries. The expanded workspace sidebar is 224px, or 200px at the narrower desktop breakpoint; settings uses 224px.
+- Workspace and Settings use the shared `Sidebar`, `SidebarHeading`, `SidebarNavigation`, `SidebarItem` and `SidebarFooter` components from `components/Sidebar.tsx`, styled by `styles/sidebar.css`. Both sidebars use a 224px expanded width and a 76px icon rail, with shared tokens and the persisted `sidebarCollapsed` preference. Keep accessible names and hover titles for icon-only entries.
+- Use Settings' compact layout throughout: 42px navigation rows, 5px gaps, neutral selected backgrounds and accent-colored selected icons. Navigation and footer labels are 14px bold (700); heading labels are 17px bold. Both sides share padding, heading spacing and footer placement. The workspace uses a plain brand icon and title without the former boxed logo, English subtitle or section label.
+- Preserve workspace navigation landmarks and Settings tab semantics, roving focus and arrow/Home/End shortcuts. On small screens, workspace navigation opens in its existing dialog while Settings tabs form a horizontal scrollable row.
 
 ## Header and page hierarchy
 
 The workspace topbar is sticky at the viewport top with a 56px minimum height and 8px vertical padding. Keep it above page content and below dialogs. Its bottom edge fades into the content through a 24px gradient based on `--bg`; do not restore a hard divider. The gradient must not intercept pointer events. Document scroll padding is 88px so focused or linked content can clear the header and fade.
 
-Keep the collapse control, breadcrumb, service status and account control in the topbar. The brand mark stays in the sidebar and about page. Do not repeat it beside the breadcrumb, add a topbar language selector, or restore the uppercase `BROKEN ARROW / …` eyebrow above the page title. Language selection belongs in Settings → General. The sidebar footer contains the settings entry and version, without a separate local-storage notice.
+Keep the collapse control, breadcrumb, service status and account control in the topbar. The brand mark stays in the sidebar. Do not repeat it beside the breadcrumb, add a topbar language selector, or restore the uppercase `BROKEN ARROW / …` eyebrow above the page title. Language selection belongs in Settings → General. The sidebar footer contains a content-sized settings entry and a round update button aligned to the right. The update button has a transparent resting background, a brighter hover background and an icon transition; respect reduced motion. It checks for updates, changes to a download action when available and shows progress while downloading.
 
-Settings has its own toolbar: 68px on desktop and 58px in its compact layout. These dimensions are separate from the workspace topbar.
+Workspace and Settings reuse `PageToolbar` and `SidebarToggle` from `components/PageToolbar.tsx`. The shared toolbar owns the 56px minimum height, 8px vertical padding, responsive horizontal padding, background, stacking and 24px bottom fade. Neither page overrides toolbar dimensions or uses a hard bottom divider. Settings' independently scrolling content has 32px scroll padding so focused elements clear the fade.
 
 ## Settings page and persistence
 
 Settings opens as a full page, not a modal. The initial category is Appearance. A visible Back control returns to the previous workspace page; returning preserves that page's state. Short windows scroll the category list while keeping Back available.
 
-| Category                   | Route                  | Content                                                                       |
-| -------------------------- | ---------------------- | ----------------------------------------------------------------------------- |
-| 常规 / General             | `#settings/general`    | Interface language                                                            |
-| 外观 / Appearance          | `#settings/appearance` | Theme mode and palette pairs                                                  |
-| 游戏连接 / Game connection | `#settings/connection` | Log and deck folders, log detection, API health                               |
-| 自动化 / Automation        | `#settings/automation` | Automatic queries, input monitoring, ban polling, match sync, account linking |
-| 导航 / Navigation          | `#settings/navigation` | Sidebar page order                                                            |
-| 本机账号 / Local accounts  | `#settings/accounts`   | Detected accounts and account removal                                         |
-| 应用更新 / App updates     | `#settings/updates`    | Update status, actions and migration notices                                  |
+| Category                   | Route                  | Content                                                                             |
+| -------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| 常规 / General             | `#settings/general`    | Interface language, About, version, update action, project links and import notices |
+| 外观 / Appearance          | `#settings/appearance` | Theme mode and palette pairs                                                        |
+| 游戏连接 / Game connection | `#settings/connection` | Log and deck folders, log detection, API health                                     |
+| 自动化 / Automation        | `#settings/automation` | Automatic queries, input monitoring, ban polling, match sync, account linking       |
+| 导航 / Navigation          | `#settings/navigation` | Sidebar page order                                                                  |
+| 本机账号 / Local accounts  | `#settings/accounts`   | Detected accounts and account removal                                               |
 
 - `#settings` resolves to Appearance. Category changes replace the current settings history entry, so Back returns to the workspace rather than stepping through categories.
+- `#about`, `#settings/about` and `#settings/updates` redirect to General. About uses a compact card with a version/status row and a project-links row. Keep update actions beside the version, show recovery details only when needed, and omit the former large brand panel and feature introduction.
+- General places the language label on the left and a compact 160px selector on the right. Omit the language and appearance autosave footnotes; the toolbar already displays save status.
 - Changes apply immediately and save automatically. There are no Save or Cancel buttons. Changes to an inactive appearance's palette only update that mode's saved choice.
 - Toggles, selects and palette controls save immediately. Folder text inputs debounce for 500ms; blur and Back flush pending input. Save requests run in order and submit changed fields, preserving newer input when an older response arrives.
 - Show saving, saved and failed states. Keep failed changes available and offer Retry; do not report success before persistence completes. Back waits for pending saves and stays on settings if saving fails.
@@ -98,6 +101,8 @@ Use semantic surface, border, accent, feedback and control-border tokens in comp
 Use local Segoe UI and Microsoft YaHei fonts, tabular figures for numbers, and Cascadia Code or Consolas for identifiers. Use Lucide SVG icons consistently. Decorative icons are hidden from assistive technology; icon buttons receive contextual names. No remote font dependency.
 
 Spacing uses 4/8px increments. Card radius is 14px and control radius is 8–9px. Short hover feedback uses 140ms; dialogs use 220ms. Respect reduced motion and avoid decorative animation.
+
+Archive pagination uses the shared `components/Pagination.tsx` component: a muted record-range summary on the left and a compact previous/page-selector/next group on the right. Controls share a 34px height. Keep the page selector accessible without a stacked visible label, disable arrows at the boundaries, and allow the footer to wrap on narrow screens.
 
 ### Control states
 

@@ -184,6 +184,8 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
   useEffect(() => {
     const navigate = () => {
       const tab = settingsTabFromHash(location.hash);
+      if (tab && location.hash !== `#settings/${tab}`)
+        history.replaceState(history.state, '', `#settings/${tab}`);
       updateSettingsTab(tab);
       if (tab) {
         const from = PANELS.find((panel) => panel === history.state?.baSettingsFrom);
@@ -193,6 +195,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       const panel = PANELS.find((candidate) => location.hash === `#${candidate}`);
       if (panel || !location.hash) updatePage(panel || 'current');
     };
+    navigate();
     window.addEventListener('hashchange', navigate);
     window.addEventListener('popstate', navigate);
     return () => {

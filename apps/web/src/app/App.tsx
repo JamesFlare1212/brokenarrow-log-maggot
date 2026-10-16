@@ -10,15 +10,12 @@ import {
 import {
   Activity,
   Archive,
-  ArrowUpRight,
   ChevronRight,
   Crosshair,
   Info,
   Layers,
   LayoutDashboard,
   Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
   Radar,
   Search,
   Settings,
@@ -26,11 +23,18 @@ import {
   Video,
 } from 'lucide-react';
 import type { Panel } from '@ba/contracts';
-import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
-import { Badge, Button, Card, Dialog, Loading, Notice } from '../components/ui';
+import { Badge, Button, Dialog, Loading, Notice } from '../components/ui';
 import { BatraceStatus } from '../components/BatraceStatus';
+import { PageToolbar, SidebarToggle } from '../components/PageToolbar';
+import {
+  Sidebar,
+  SidebarFooter,
+  SidebarHeading,
+  SidebarItem,
+  SidebarNavigation,
+} from '../components/Sidebar';
 import { Dashboard } from '../features/overview/Dashboard';
 import { SessionPanel } from '../features/session/SessionPanel';
 import { PlayersPanel } from '../features/players/PlayersPanel';
@@ -40,6 +44,7 @@ import { DecksPanel } from '../features/decks/DecksPanel';
 import { ApmPanel } from '../features/apm/ApmPanel';
 import { ReplaysPanel } from '../features/replays/ReplaysPanel';
 import { UpdatePanel } from '../features/settings/UpdatePanel';
+import { UpdateButton } from '../features/settings/UpdateButton';
 const ProfileDialog = lazy(() =>
   import('../features/players/ProfileDialog').then((module) => ({ default: module.ProfileDialog })),
 );
@@ -69,21 +74,14 @@ const icons: Record<Panel, ReactNode> = {
   replays: <Video size={19} />,
   decks: <Layers size={19} />,
   bans: <ShieldCheck size={19} />,
-  about: <Info size={19} />,
 };
 
 function Brand() {
   const { t } = useI18n();
   return (
-    <div className="brand">
-      <span className="brand-mark" aria-hidden="true">
-        <Crosshair size={24} strokeWidth={1.7} />
-      </span>
-      <div>
-        <strong>{t('brand')}</strong>
-        <small>BROKEN ARROW</small>
-      </div>
-    </div>
+    <SidebarHeading className="brand" icon={<Crosshair size={22} strokeWidth={1.7} />}>
+      <strong>{t('brand')}</strong>
+    </SidebarHeading>
   );
 }
 
@@ -91,11 +89,14 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   const { state, page, setPage, settings } = useApp(),
     { t } = useI18n();
   return (
-    <nav aria-label={t('workspaceNav')}>
+    <SidebarNavigation aria-label={t('workspaceNav')}>
       {state.config.panelOrder.map((panel) => (
-        <button
+        <SidebarItem
           key={panel}
-          className={`nav-item ${page === panel ? 'active' : ''}`}
+          className="nav-item"
+          icon={icons[panel]}
+          label={t(panel === 'current' ? 'overview' : panel)}
+          selected={page === panel}
           onClick={() => {
             setPage(panel);
             onNavigate?.();
@@ -107,47 +108,9 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
               ? t(panel === 'current' ? 'overview' : panel)
               : undefined
           }
-        >
-          <span aria-hidden="true">{icons[panel]}</span>
-          <span>{t(panel === 'current' ? 'overview' : panel)}</span>
-        </button>
+        />
       ))}
-    </nav>
-  );
-}
-
-function About() {
-  const { t } = useI18n(),
-    { api, state, notify } = useApp();
-  return (
-    <Card title={t('about')} icon={icons.about} className="about-card">
-      <div className="about-brand">
-        <span className="brand-mark" aria-hidden="true">
-          <Crosshair size={40} />
-        </span>
-        <h3>{t('brand')}</h3>
-        <Badge>v{state.version.current}</Badge>
-      </div>
-      <p>{t('aboutText')}</p>
-      <p className="muted">{t('companion')} · by Zola</p>
-      <UpdatePanel />
-      <div className="actions">
-        {[
-          ['BATrace', BATRACE_ORIGIN + '/'],
-          ['GitHub', 'https://github.com/JamesFlare1212/brokenarrow-log-maggot'],
-        ].map(([label, url]) => (
-          <Button
-            key={label}
-            onClick={() =>
-              void api.invoke('external.open', { url: url! }).catch((e) => notify(String(e), true))
-            }
-          >
-            {label}
-            <ArrowUpRight size={15} />
-          </Button>
-        ))}
-      </div>
-    </Card>
+    </SidebarNavigation>
   );
 }
 
@@ -203,7 +166,6 @@ export function App() {
     decks: <DecksPanel />,
     bans: <BansPanel />,
     apm: <ApmPanel />,
-    about: <About />,
   };
   const status =
     state.watcher.error ||
@@ -233,34 +195,28 @@ export function App() {
       >
         {t('skipContent')}
       </a>
-      <aside className="sidebar" hidden={Boolean(settingsTab)}>
+      <Sidebar className="sidebar" collapsed={collapsed} hidden={Boolean(settingsTab)}>
         <Brand />
-        <div className="nav-section-label">{t('workspaceNav')}</div>
         <Navigation />
-        <div className="sidebar-footer">
-          <Button
-            className="settings-button button-borderless"
+        <SidebarFooter className="sidebar-footer">
+          <SidebarItem
+            className="settings-button"
+            icon={<Settings size={18} />}
+            label={t('settings')}
             aria-label={t('settings')}
             title={t('settings')}
             onClick={() => openSettings()}
-          >
-            <Settings size={18} aria-hidden="true" />
-            <span className="settings-button-label">{t('settings')}</span>
-            <span className="version-label">v{state.version.current}</span>
-          </Button>
-        </div>
-      </aside>
+          />
+          <UpdateButton />
+        </SidebarFooter>
+      </Sidebar>
       <div className="workspace" hidden={Boolean(settingsTab)}>
-        <header className="topbar">
+        <PageToolbar className="topbar">
           <div className="topbar-location">
-            <Button
-              className="sidebar-collapse-toggle button-borderless"
-              aria-label={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
-              aria-expanded={!collapsed}
-              onClick={() => settings.change({ sidebarCollapsed: !collapsed })}
-            >
-              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-            </Button>
+            <SidebarToggle
+              collapsed={collapsed}
+              onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
+            />
             <Button
               className="mobile-menu"
               aria-label={t('openNavigation')}
@@ -287,7 +243,7 @@ export function App() {
               {account.slice(0, 1).toUpperCase()}
             </button>
           </div>
-        </header>
+        </PageToolbar>
         <main id="main-content" ref={main} tabIndex={-1} aria-labelledby="page-title">
           <div className="page-heading">
             <div>

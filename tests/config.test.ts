@@ -73,11 +73,11 @@ describe('configuration patches', () => {
     }
   });
 
-  it('adds the radar after overview when loading a legacy navigation order and preserves other preferences', async () => {
+  it('migrates legacy navigation by adding radar and removing About while preserving preferences', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'ba-radar-config-'));
     const db = new Database(join(dir, 'assistant.sqlite'));
     try {
-      const oldOrder: PublicConfig['panelOrder'] = [
+      const oldOrder = [
         'players',
         'current',
         'apm',
@@ -91,21 +91,28 @@ describe('configuration patches', () => {
         'public',
         JSON.stringify({
           panelOrder: oldOrder,
+          collapsedPanels: ['about', 'decks'],
           theme: 'forest',
           lang: 'ja',
           sidebarCollapsed: true,
         }),
       );
-      const expectedOrder = ['players', 'current', 'radar', ...oldOrder.slice(2)];
+      const expectedOrder = [
+        'players',
+        'current',
+        'radar',
+        ...oldOrder.slice(2).filter((panel) => panel !== 'about'),
+      ];
       expect(db.config()).toMatchObject({
         panelOrder: expectedOrder,
+        collapsedPanels: ['decks'],
         theme: 'forest',
         lang: 'ja',
         sidebarCollapsed: true,
       });
       db.updateConfig({ banPollEnabled: false });
       expect(db.config().panelOrder).toEqual(expectedOrder);
-      db.updateConfig({ panelOrder: oldOrder });
+      db.updateConfig(rpcSchemas['config.update'].parse({ panelOrder: oldOrder }));
       expect(db.config().panelOrder).toEqual(expectedOrder);
     } finally {
       db.close();

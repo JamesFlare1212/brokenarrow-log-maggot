@@ -5,10 +5,10 @@ export const SETTINGS_TABS = [
   'automation',
   'navigation',
   'accounts',
-  'updates',
 ] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 export function settingsTabFromHash(hash: string): SettingsTab | null {
+  if (['#about', '#settings/about', '#settings/updates'].includes(hash)) return 'general';
   if (hash === '#settings') return 'appearance';
   return SETTINGS_TABS.find((tab) => hash === `#settings/${tab}`) ?? null;
 }

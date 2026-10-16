@@ -9,18 +9,23 @@ import {
   Cable,
   Settings2,
   Users,
-  Download,
   ArrowLeft,
   Check,
   LoaderCircle,
-  PanelLeftClose,
-  PanelLeftOpen,
 } from 'lucide-react';
 import type { Account, PublicConfig } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Button, Field, Toggle, Notice, Empty } from '../../components/ui';
-import { UpdatePanel } from './UpdatePanel';
+import { PageToolbar, SidebarToggle } from '../../components/PageToolbar';
+import {
+  Sidebar,
+  SidebarFooter,
+  SidebarHeading,
+  SidebarItem,
+  SidebarNavigation,
+} from '../../components/Sidebar';
+import { AboutSettings } from './AboutSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 
 const tabs = [
@@ -30,7 +35,6 @@ const tabs = [
   { id: 'automation', label: 'automation', icon: SlidersHorizontal },
   { id: 'navigation', label: 'navigationSettings', icon: LayoutList },
   { id: 'accounts', label: 'accounts', icon: Users },
-  { id: 'updates', label: 'appUpdates', icon: Download },
 ] as const;
 const flags = [
   ['autoQueryCurrentMatch', 'autoQuery'],
@@ -47,6 +51,7 @@ export function SettingsPage() {
     [accountsLoading, setAccountsLoading] = useState(true),
     [returning, setReturning] = useState(false),
     [detecting, setDetecting] = useState(false),
+    [defaultDecksDir, setDefaultDecksDir] = useState(''),
     [logFeedback, setLogFeedback] = useState<{ key: string; error: boolean } | null>(null),
     [error, setError] = useState<string | null>(null);
   const logRevision = useRef(0),
@@ -84,6 +89,21 @@ export function SettingsPage() {
       active = false;
     };
   }, [api]);
+  useEffect(() => {
+    if (tab !== 'connection' || state.config.decksDir) return;
+    let active = true;
+    void api
+      .invoke('decks.list', null)
+      .then((result) => {
+        if (active) setDefaultDecksDir(result.decksDir);
+      })
+      .catch((e) => {
+        if (active) setError(String(e));
+      });
+    return () => {
+      active = false;
+    };
+  }, [api, tab, state.config.decksDir]);
   const set = <K extends keyof PublicConfig>(key: K, value: PublicConfig[K], delay = 0) => {
     if (key === 'logDir') {
       logRevision.current++;
@@ -134,16 +154,22 @@ export function SettingsPage() {
       className={`settings-page ${collapsed ? 'settings-page-collapsed' : ''}`}
       aria-labelledby="settings-title"
     >
-      <aside className="settings-sidebar">
-        <div className="settings-brand">
-          <Settings2 size={22} aria-hidden="true" />
+      <Sidebar className="settings-sidebar" collapsed={collapsed}>
+        <SidebarHeading className="settings-brand" icon={<Settings2 size={22} />}>
           <h1 id="settings-title">{t('settings')}</h1>
-        </div>
-        <div className="settings-tabs" role="tablist" aria-label={t('settings')}>
+        </SidebarHeading>
+        <SidebarNavigation
+          as="div"
+          className="settings-tabs"
+          role="tablist"
+          aria-label={t('settings')}
+        >
           {tabs.map(({ id, label, icon: Icon }, index) => (
-            <button
+            <SidebarItem
               key={id}
-              type="button"
+              icon={<Icon size={18} />}
+              label={t(label)}
+              selected={tab === id}
               role="tab"
               id={'settings-tab-' + id}
               aria-controls={'settings-panel-' + id}
@@ -167,38 +193,34 @@ export function SettingsPage() {
                 setTab(target.id);
                 document.getElementById('settings-tab-' + target.id)?.focus();
               }}
-            >
-              <Icon size={17} aria-hidden="true" />
-              <span>{t(label)}</span>
-            </button>
+            />
           ))}
-        </div>
-        <Button
-          className="settings-back button-borderless"
-          onClick={() => void back()}
-          disabled={returning}
-          aria-label={t('settingsBack')}
-          title={t('settingsBack')}
-        >
-          {returning ? <LoaderCircle size={17} className="spinner" /> : <ArrowLeft size={17} />}
-          <span>{t('settingsBack')}</span>
-        </Button>
-      </aside>
+        </SidebarNavigation>
+        <SidebarFooter>
+          <SidebarItem
+            className="settings-back"
+            icon={
+              returning ? <LoaderCircle size={18} className="spinner" /> : <ArrowLeft size={18} />
+            }
+            label={t('settingsBack')}
+            onClick={() => void back()}
+            disabled={returning}
+            aria-label={t('settingsBack')}
+            title={t('settingsBack')}
+          />
+        </SidebarFooter>
+      </Sidebar>
       <main
         className="settings-main"
         id="settings-content"
         aria-label={t('settings')}
         tabIndex={-1}
       >
-        <div className="settings-page-toolbar">
-          <Button
-            className="sidebar-collapse-toggle button-borderless"
-            aria-label={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
-            aria-expanded={!collapsed}
-            onClick={() => settings.change({ sidebarCollapsed: !collapsed })}
-          >
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-          </Button>
+        <PageToolbar className="settings-page-toolbar">
+          <SidebarToggle
+            collapsed={collapsed}
+            onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
+          />
           <div className="settings-breadcrumb">
             <span>{t('settings')}</span>
             <span>/</span>
@@ -218,7 +240,7 @@ export function SettingsPage() {
                   : 'settingsSaving',
             )}
           </div>
-        </div>
+        </PageToolbar>
         {(settings.error || error) && (
           <div className="settings-errors">
             <Notice error>{settings.error ?? error}</Notice>
@@ -243,8 +265,9 @@ export function SettingsPage() {
             )}
             {id === 'appearance' && <AppearanceSettings draft={draft} change={settings.change} />}
             {id === 'general' && (
-              <section className="settings-section settings-card">
-                <Field id="settings-language" label={t('language')} hint={t('languageHint')}>
+              <>
+                <section className="settings-section settings-card settings-language-row">
+                  <label htmlFor="settings-language">{t('language')}</label>
                   <select
                     id="settings-language"
                     value={draft.lang}
@@ -255,8 +278,9 @@ export function SettingsPage() {
                     <option value="ja">日本語</option>
                     <option value="ru">Русский</option>
                   </select>
-                </Field>
-              </section>
+                </section>
+                <AboutSettings />
+              </>
             )}
             {id === 'connection' && (
               <>
@@ -296,7 +320,7 @@ export function SettingsPage() {
                     <div className="input-action">
                       <input
                         id="settings-decks"
-                        value={draft.decksDir}
+                        value={draft.decksDir || defaultDecksDir}
                         onChange={(e) => set('decksDir', e.target.value, 500)}
                         onBlur={() => void flush()}
                         placeholder={t('defaultDirectory')}
@@ -406,21 +430,6 @@ export function SettingsPage() {
                   </div>
                 )}
               </section>
-            )}
-            {id === 'updates' && (
-              <>
-                <UpdatePanel />
-                {state.migration.warnings.length > 0 && (
-                  <Notice error>
-                    <strong>{t('migrationWarnings')}</strong>
-                    <ul>
-                      {state.migration.warnings.map((w) => (
-                        <li key={w}>{w}</li>
-                      ))}
-                    </ul>
-                  </Notice>
-                )}
-              </>
             )}
           </div>
         ))}

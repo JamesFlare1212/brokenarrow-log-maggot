@@ -1,4 +1,4 @@
-# 断箭蛆工具 · v4
+# 断箭蛐工具 · v4
 
 本地 Broken Arrow 对局助手，使用 React + Vite + Electron + Node.js + TypeScript + SQLite，以及 pnpm。
 

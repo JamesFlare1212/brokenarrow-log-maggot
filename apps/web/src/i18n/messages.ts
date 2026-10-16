@@ -1,7 +1,27 @@
 export const messages: Record<string, readonly [string, string, string, string]> = {
+  paginationRange: [
+    '第 {start}–{end} 条，共 {total} 条',
+    'Showing {start}–{end} of {total}',
+    '{total} 件中 {start}–{end} 件',
+    '{start}–{end} из {total}',
+  ],
+  version: ['版本', 'Version', 'バージョン', 'Версия'],
+  projectLinks: ['项目链接', 'Project links', 'プロジェクトリンク', 'Ссылки проекта'],
   appUpdates: ['应用更新', 'App updates', 'アプリの更新', 'Обновления приложения'],
   updateCheck: ['检查更新', 'Check for updates', '更新を確認', 'Проверить обновления'],
   updateDownload: ['下载更新', 'Download update', '更新をダウンロード', 'Скачать обновление'],
+  updateAutoInstall: [
+    '下载完成后将自动重启安装。',
+    'The app will restart and install automatically after downloading.',
+    'ダウンロード完了後、自動的に再起動してインストールします。',
+    'После загрузки приложение автоматически перезапустится и установит обновление.',
+  ],
+  updateLatest: [
+    '当前已是最新版本。',
+    'You are using the latest version.',
+    '最新バージョンを使用しています。',
+    'У вас установлена последняя версия.',
+  ],
   updateRetryDownload: ['重试下载', 'Retry download', '再ダウンロード', 'Повторить загрузку'],
   updateInstall: [
     '重启并安装',
@@ -41,10 +61,10 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Для портативной версии скачайте новый файл и замените его после закрытия приложения.',
   ],
   updateBlocked: [
-    '请在对局和录制结束后重启安装。',
-    'Wait for the match and recording to finish before restarting.',
-    '対局と録画の終了後に再起動してください。',
-    'Дождитесь завершения матча и записи перед перезапуском.',
+    '更新已就绪，将在对局和录制结束后自动重启安装。',
+    'The update is ready. The app will restart and install after the match and recording finish.',
+    '更新の準備ができました。対局と録画の終了後、自動的に再起動してインストールします。',
+    'Обновление готово. Приложение перезапустится и установит его после завершения матча и записи.',
   ],
   updateNotApplied: [
     '上次更新到 v{version} 未生效，请重试或手动下载安装。',
@@ -83,10 +103,10 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Загрузка обновления: {percent}%',
   ],
   'update.downloaded': [
-    'v{version} 已下载，可重启安装。',
-    'Version {version} is ready to install.',
-    'v{version} のインストール準備ができました。',
-    'Версия {version} готова к установке.',
+    'v{version} 已下载，等待自动重启安装。',
+    'Version {version} is downloaded and waiting to restart and install automatically.',
+    'v{version} をダウンロードしました。自動再起動とインストールを待機中です。',
+    'Версия {version} загружена и ожидает автоматического перезапуска и установки.',
   ],
   'update.installing': [
     '正在保存数据并重启安装…',
@@ -115,7 +135,7 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Записи хранятся локально и захватывают выбранный экран целиком.',
   ],
   brand: [
-    '断箭蛆工具',
+    '断箭蛐工具',
     'Broken Arrow Log Assistant',
     'Broken Arrow 対局アシスタント',
     'Помощник Broken Arrow',
@@ -511,13 +531,6 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'ゲームログを接続してプレイすると、ここに表示されます。',
     'Аккаунты появятся после подключения логов и запуска игры.',
   ],
-  unsavedSettings: [
-    '有未保存的更改',
-    'Unsaved changes',
-    '未保存の変更があります',
-    'Есть несохранённые изменения',
-  ],
-  settingsSaved: ['设置已保存', 'Settings saved', '設定は保存済みです', 'Настройки сохранены'],
   gameConnection: ['游戏连接', 'Game connection', 'ゲーム接続', 'Подключение к игре'],
   automation: ['自动化', 'Automation', '自動化', 'Автоматизация'],
   navigationSettings: ['导航', 'Navigation', 'ナビゲーション', 'Навигация'],
@@ -778,10 +791,10 @@ export const messages: Record<string, readonly [string, string, string, string]>
   detect: ['自动检测 Steam', 'Detect Steam', 'Steamを検出', 'Найти Steam'],
   detectingLogs: ['正在检测…', 'Detecting…', '検出中…', 'Поиск…'],
   logDetectFound: [
-    '已找到日志目录，保存后开始监听。',
-    'Log folder found. Save to start listening.',
-    'ログフォルダが見つかりました。保存すると監視を開始します。',
-    'Папка логов найдена. Сохраните, чтобы начать отслеживание.',
+    '已找到日志目录，将自动保存并开始监听。',
+    'Log folder found. The path will be saved automatically and monitoring will start.',
+    'ログフォルダが見つかりました。自動保存後に監視を開始します。',
+    'Папка логов найдена. Путь будет сохранён автоматически, затем начнётся отслеживание.',
   ],
   logDetectNotFound: [
     '未找到可用的 GameLogs 目录，已保留原路径。请先启动一次游戏，或通过 Steam 的“浏览本地文件”找到 GameLogs 后手动选择。',

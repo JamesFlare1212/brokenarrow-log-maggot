@@ -8,7 +8,7 @@ export type Theme = 'dark' | 'light' | 'cyan' | 'orange' | 'violet' | 'forest' |
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type ColorScheme = Exclude<Theme, 'light'>;
 export type Panel =
-  'current' | 'radar' | 'players' | 'apm' | 'archive' | 'replays' | 'decks' | 'bans' | 'about';
+  'current' | 'radar' | 'players' | 'apm' | 'archive' | 'replays' | 'decks' | 'bans';
 export interface Player {
   id: Id;
   name: string;

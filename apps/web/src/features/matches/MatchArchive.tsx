@@ -7,6 +7,7 @@ import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Card, Badge, Field, Loading, Notice, Empty, Menu } from '../../components/ui';
+import { Pagination } from '../../components/Pagination';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
   const { api, state, openModal, notify } = useApp(),
@@ -239,29 +240,13 @@ export function MatchArchive() {
               </tbody>
             </table>
           </div>
-          {pages > 1 && (
-            <nav className="filter-row" aria-label={t('archivePagination')}>
-              <Button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
-                {t('previousPage')}
-              </Button>
-              <Field id="archive-page" label={t('pageNumber')}>
-                <select
-                  id="archive-page"
-                  value={currentPage}
-                  onChange={(event) => setPage(Number(event.target.value))}
-                >
-                  {Array.from({ length: pages }, (_, index) => (
-                    <option key={index + 1} value={index + 1}>
-                      {index + 1} / {pages}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Button disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>
-                {t('nextPage')}
-              </Button>
-            </nav>
-          )}
+          <Pagination
+            page={currentPage}
+            pageSize={PAGE_SIZE}
+            total={filtered.length}
+            label={t('archivePagination')}
+            onPageChange={setPage}
+          />
         </>
       ) : (
         !matches.pending && (

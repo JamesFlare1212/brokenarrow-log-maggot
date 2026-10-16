@@ -29,8 +29,11 @@ export const PANELS = [
   'replays',
   'decks',
   'bans',
-  'about',
 ] as const;
+// Accept saved navigation from older versions while moving About into settings.
+const panelListSchema = z
+  .array(z.enum([...PANELS, 'about']))
+  .transform((panels) => panels.filter((panel) => panel !== 'about'));
 export const THEMES = ['dark', 'light', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
 export const THEME_MODES = ['system', 'light', 'dark'] as const;
 // Keep legacy palette keys so existing installations retain their colors.
@@ -53,8 +56,8 @@ export const configSchema = z.object({
   darkTheme: z.enum(COLOR_SCHEMES).optional(),
   sidebarCollapsed: z.boolean().default(false),
   lang: z.enum(['zh', 'en', 'ja', 'ru']).default('zh'),
-  panelOrder: z.array(z.enum(PANELS)).default([...PANELS]),
-  collapsedPanels: z.array(z.enum(PANELS)).default(['decks']),
+  panelOrder: panelListSchema.default([...PANELS]),
+  collapsedPanels: panelListSchema.default(['decks']),
   replayEnabled: z.boolean().default(false),
   replayDisplayId: z.string().max(256).default(''),
   replayQuality: z

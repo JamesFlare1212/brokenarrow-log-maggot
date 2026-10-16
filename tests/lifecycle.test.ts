@@ -186,7 +186,7 @@ it('reports automatic archive scan failures and leaves manual scans available fo
   }
 });
 
-it('settles the update install RPC before draining application tasks and closing the database', async () => {
+it('settles the update download RPC before automatically installing and closing the database', async () => {
   const p = platform(vi.fn<typeof fetch>());
   const app = application(p);
   const info = { version: '4.0.1', files: [], path: '', sha512: '', releaseDate: '' };
@@ -216,8 +216,7 @@ it('settles the update install RPC before draining application tasks and closing
   p.updates = controller;
   try {
     await controller.check();
-    await controller.download();
-    expect((await app.invoke('updates.install', null)).status).toBe('installing');
+    expect((await app.invoke('updates.download', null)).status).toBe('installing');
     await vi.waitFor(() => expect(engine.quitAndInstall).toHaveBeenCalledWith(true, true));
     expect(p.recordings.stop).toHaveBeenCalled();
     await expect(app.invoke('app.bootstrap', null)).rejects.toThrow('Application closed');

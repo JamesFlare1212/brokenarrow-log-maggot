@@ -108,7 +108,6 @@ export function AppearanceSettings({
           })}
         </div>
       </section>
-      <p className="settings-preview-note">{t('themeHint')}</p>
     </>
   );
 }

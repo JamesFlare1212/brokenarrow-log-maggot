@@ -44,6 +44,7 @@ import { ReplaysPanel } from '../apps/web/src/features/replays/ReplaysPanel';
 import { Button, Dialog } from '../apps/web/src/components/ui';
 import { BatraceStatus } from '../apps/web/src/components/BatraceStatus';
 import { UpdatePanel } from '../apps/web/src/features/settings/UpdatePanel';
+import { UpdateButton } from '../apps/web/src/features/settings/UpdateButton';
 import { MatchArchive } from '../apps/web/src/features/matches/MatchArchive';
 
 type Handler<K extends RpcMethod> = (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
@@ -86,6 +87,13 @@ function nativeFixture(
       ),
     }),
     'bans.list': () => [],
+    'decks.list': () => ({
+      found: false,
+      decksDir: 'test-profile/Decks',
+      backupsDir: '',
+      decks: [],
+      backups: [],
+    }),
     'replays.list': () => [],
     'replays.directory': () => ({ dir: 'test-profile/recordings', count: 0 }),
     'displays.list': () => [],
@@ -297,6 +305,107 @@ describe('BATrace status indicator', () => {
 });
 
 describe('application updates', () => {
+  it('checks directly from the sidebar and replaces refresh with download when an update is found', async () => {
+    const initial = bootstrapForApp();
+    initial.updates = { ...initial.updates, mode: 'installed', status: 'idle' };
+    const f = nativeFixture(initial, {
+      'updates.check': () => initial.updates,
+      'updates.download': () => initial.updates,
+    });
+    render(<App />, { wrapper: wrapper(f.api) });
+    const check = await screen.findByRole('button', { name: '检查更新' });
+    expect(check.closest('.sidebar-footer')).not.toBeNull();
+    expect(check.querySelector('.lucide-refresh-cw')).not.toBeNull();
+    fireEvent.click(check);
+    await waitFor(() =>
+      expect(f.calls.filter((call) => call.method === 'updates.check')).toHaveLength(1),
+    );
+    act(() =>
+      f.emit({
+        type: 'updates',
+        updates: { ...initial.updates, status: 'available', availableVersion: '4.0.1' },
+        revision: 1,
+      }),
+    );
+    const download = screen.getByRole('button', { name: '下载更新' });
+    expect(download.querySelector('.lucide-download')).not.toBeNull();
+    expect(download.querySelector('.update-dot')).not.toBeNull();
+    expect(download.title).toContain('下载完成后将自动重启安装');
+    expect(f.calls.some((call) => call.method === 'updates.download')).toBe(false);
+    fireEvent.click(download);
+    await waitFor(() =>
+      expect(f.calls.filter((call) => call.method === 'updates.download')).toHaveLength(1),
+    );
+    expect(screen.queryByRole('main', { name: '设置' })).toBeNull();
+  });
+
+  it('shows download progress and disables repeated actions until automatic installation', async () => {
+    const initial = structuredClone(fixtureBootstrap);
+    initial.updates = {
+      ...initial.updates,
+      mode: 'installed',
+      status: 'downloading',
+      downloadPercent: 37,
+    };
+    const f = nativeFixture(initial);
+    render(<UpdateButton />, { wrapper: wrapper(f.api) });
+    const download = (await screen.findByRole('button', {
+      name: '正在下载更新：37%',
+    })) as HTMLButtonElement;
+    expect(download.disabled).toBe(true);
+    expect(download.textContent).toBe('37%');
+    fireEvent.click(download);
+    expect(f.calls.some((call) => call.method.startsWith('updates.'))).toBe(false);
+    act(() =>
+      f.emit({
+        type: 'updates',
+        updates: { ...initial.updates, status: 'installing', downloadPercent: 100 },
+        revision: 1,
+      }),
+    );
+    expect(
+      (screen.getByRole('button', { name: '正在保存数据并重启安装…' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(f.calls.some((call) => call.method === 'updates.install')).toBe(false);
+  });
+
+  it('retries failed downloads from the same button and offers portable downloads', async () => {
+    const initial = structuredClone(fixtureBootstrap);
+    initial.updates = {
+      ...initial.updates,
+      mode: 'installed',
+      status: 'error',
+      errorContext: 'download',
+      error: 'Network unavailable',
+      availableVersion: '4.0.1',
+    };
+    const f = nativeFixture(initial, {
+      'updates.download': () => initial.updates,
+      'updates.openDownload': () => null,
+    });
+    render(<UpdateButton />, { wrapper: wrapper(f.api) });
+    fireEvent.click(await screen.findByRole('button', { name: '下载更新' }));
+    await waitFor(() =>
+      expect(f.calls.filter((call) => call.method === 'updates.download')).toHaveLength(1),
+    );
+    act(() =>
+      f.emit({
+        type: 'updates',
+        updates: { ...initial.updates, mode: 'portable', status: 'available', error: null },
+        revision: 1,
+      }),
+    );
+    const download = screen.getByRole('button', { name: '下载更新' });
+    expect(download.title).toContain('便携版');
+    await waitFor(() => expect((download as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(download);
+    await waitFor(() =>
+      expect(f.calls.filter((call) => call.method === 'updates.openDownload')).toHaveLength(1),
+    );
+    expect(f.calls.filter((call) => call.method === 'updates.download')).toHaveLength(1);
+  });
+
   it('downloads only on click, shows native progress, and blocks restart until the match ends', async () => {
     const initial = structuredClone(fixtureBootstrap);
     initial.updates = {
@@ -333,7 +442,7 @@ describe('application updates', () => {
     );
     const install = screen.getByRole('button', { name: '重启并安装' }) as HTMLButtonElement;
     expect(install.disabled).toBe(true);
-    expect(screen.getByText('请在对局和录制结束后重启安装。')).toBeTruthy();
+    expect(screen.getByText('更新已就绪，将在对局和录制结束后自动重启安装。')).toBeTruthy();
     act(() =>
       f.emit({ type: 'session', session: { ...initial.session, current: null }, revision: 3 }),
     );
@@ -399,6 +508,66 @@ describe('application updates', () => {
 });
 
 describe('settings pages and automatic saving', () => {
+  it.each(['#about', '#settings/about', '#settings/updates'])(
+    'redirects the legacy %s route to the compact About section in General settings',
+    async (route) => {
+      window.history.replaceState(null, '', route);
+      const initial = bootstrapForApp();
+      const native = nativeFixture(initial);
+      render(<App />, { wrapper: wrapper(native.api) });
+      const settings = within(await screen.findByRole('main', { name: '设置' }));
+      expect(location.hash).toBe('#settings/general');
+      expect(screen.getByRole('tab', { name: '常规' }).getAttribute('aria-selected')).toBe('true');
+      const about = within(settings.getByRole('region', { name: '关于' }));
+      expect(about.getByText('v' + initial.version.current)).toBeTruthy();
+      expect(about.getByRole('button', { name: '检查更新' })).toBeTruthy();
+      expect(about.getByRole('button', { name: 'GitHub' })).toBeTruthy();
+      expect(about.getByRole('button', { name: 'BATrace' })).toBeTruthy();
+      expect(settings.queryByText(translate('zh', 'aboutText'))).toBeNull();
+      expect(screen.queryByRole('tab', { name: '应用更新' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: '返回' }));
+      await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+      expect(
+        within(screen.getByRole('navigation')).queryByRole('button', { name: '关于' }),
+      ).toBeNull();
+    },
+  );
+
+  it('opens General from the update notice and keeps download and project links working', async () => {
+    const initial = bootstrapForApp();
+    initial.updates = {
+      ...initial.updates,
+      mode: 'installed',
+      status: 'available',
+      availableVersion: '4.1.1',
+    };
+    const native = nativeFixture(initial, {
+      'updates.download': () => initial.updates,
+      'external.open': () => null,
+    });
+    render(<App />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: '查看更新' }));
+    const settings = within(await screen.findByRole('main', { name: '设置' }));
+    expect(location.hash).toBe('#settings/general');
+    const about = within(settings.getByRole('region', { name: '关于' }));
+    expect(about.getByText('发现新版本 v4.1.1')).toBeTruthy();
+    expect(about.getByText('下载完成后将自动重启安装。')).toBeTruthy();
+    fireEvent.click(about.getByRole('button', { name: '下载更新' }));
+    await waitFor(() =>
+      expect(native.calls.filter((call) => call.method === 'updates.download')).toHaveLength(1),
+    );
+    fireEvent.click(about.getByRole('button', { name: 'GitHub' }));
+    fireEvent.click(about.getByRole('button', { name: 'BATrace' }));
+    await waitFor(() =>
+      expect(
+        native.calls.filter((call) => call.method === 'external.open').map((call) => call.input),
+      ).toEqual([
+        { url: 'https://github.com/JamesFlare1212/brokenarrow-log-maggot' },
+        { url: 'https://dash.batrace.top/' },
+      ]),
+    );
+  });
+
   async function openSettings(native: ReturnType<typeof nativeFixture>) {
     render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByText('监听中');
@@ -427,7 +596,7 @@ describe('settings pages and automatic saving', () => {
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     const page = within(await screen.findByRole('main', { name: '设置' }));
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.getAllByRole('tab')).toHaveLength(7);
+    expect(screen.getAllByRole('tab')).toHaveLength(6);
     expect(page.queryByRole('button', { name: '保存' })).toBeNull();
     expect(page.queryByRole('button', { name: '取消' })).toBeNull();
     expect(location.hash).toBe('#settings/appearance');
@@ -701,6 +870,27 @@ describe('settings pages and automatic saving', () => {
       themeMode: 'dark',
     });
     expect(page.getByRole('status').textContent).toBe('已自动保存');
+  });
+
+  it('preserves settings tab keyboard navigation through the shared sidebar items', async () => {
+    const user = userEvent.setup();
+    await openSettings(nativeFixture(bootstrapForApp()));
+    screen.getByRole('tab', { name: '外观' }).focus();
+    await user.keyboard('{ArrowDown}');
+    const connection = screen.getByRole('tab', { name: '游戏连接' });
+    expect(document.activeElement).toBe(connection);
+    expect(connection.getAttribute('aria-selected')).toBe('true');
+    expect(connection.tabIndex).toBe(0);
+    expect(screen.getByRole('tabpanel', { name: '游戏连接' })).toBeTruthy();
+    await user.keyboard('{End}');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: '本机账号' }));
+    await user.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: '常规' }));
+    await user.keyboard('{ArrowUp}');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: '本机账号' }));
+    await user.keyboard('{Home}');
+    expect(location.hash).toBe('#settings/general');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: '常规' }));
   });
 
   it('persists sidebar collapse and shares it between the workspace and settings', async () => {
@@ -1023,10 +1213,19 @@ describe('user interaction regressions', () => {
     await screen.findByRole('button', { name: 'Archive map 524' });
     expect(screen.getAllByRole('row')).toHaveLength(51);
     expect(screen.getByText('样本数: 525')).toBeTruthy();
+    expect(screen.getByText('第 1–50 条，共 525 条')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '上一页' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
+    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('2');
+    expect(screen.getByRole('button', { name: 'Archive map 474' })).toBeTruthy();
+    expect(screen.getByText('第 51–100 条，共 525 条')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('页码'), { target: { value: '11' } });
     expect(screen.getByRole('button', { name: 'Archive map 0' })).toBeTruthy();
     expect(screen.getAllByRole('row')).toHaveLength(26);
     expect(screen.getByRole('button', { name: '下一页' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('第 501–525 条，共 525 条')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '上一页' }));
+    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('10');
     fireEvent.click(screen.getByRole('button', { name: '胜利' }));
     expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
     expect(screen.getByText('样本数: 263')).toBeTruthy();

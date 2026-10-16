@@ -1,3 +1,44 @@
+.page-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 56px;
+  padding: 8px 32px;
+  background: var(--bg);
+}
+.page-toolbar::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(
+    to bottom,
+    var(--bg),
+    color-mix(in srgb, var(--bg) 60%, transparent) 45%,
+    transparent
+  );
+  pointer-events: none;
+}
+@media (max-width: 1180px) {
+  .page-toolbar {
+    padding-inline: 24px;
+  }
+}
+@media (max-width: 800px) {
+  .page-toolbar {
+    padding-inline: 20px;
+  }
+}
+@media (max-width: 600px) {
+  .page-toolbar {
+    padding-inline: 12px;
+  }
+}
 .button {
   display: inline-flex;
   align-items: center;
@@ -56,6 +97,41 @@
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.pagination-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.pagination .pagination-step {
+  width: 34px;
+  min-height: 34px;
+  padding: 8px;
+}
+.pagination select {
+  width: auto;
+  min-width: 90px;
+  height: 34px;
+  min-height: 34px;
+  padding: 6px 8px;
+  font: 12px var(--font-mono);
+  text-align: center;
 }
 .card {
   background: var(--surface);
@@ -124,20 +200,6 @@
   border-radius: 18px;
   background: var(--surface-subtle);
   color: var(--accent);
-}
-.update-panel {
-  display: grid;
-  gap: 12px;
-  padding-block: 16px;
-  min-width: 0;
-}
-.update-panel p {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.update-panel progress {
-  width: 100%;
-  accent-color: var(--accent);
 }
 .notice {
   display: flex;
