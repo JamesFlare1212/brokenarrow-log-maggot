@@ -68,6 +68,7 @@ describe('browser development with repository fixtures', () => {
 
   it('validates requests and keeps native features and filesystem paths out of browser RPC', async () => {
     const service = await create();
+    expect(await service.invoke('apm.history', null)).toEqual([]);
     for (const [method, input] of [
       ['config.update', { logDir: 'C:/real-game/GameLogs' }],
       ['config.update', { inputHookEnabled: true }],

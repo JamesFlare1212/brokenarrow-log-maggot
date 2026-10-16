@@ -6,7 +6,9 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppEvent, ApmState, RecordingState } from '@ba/contracts';
 import type { Platform } from '../apps/server/src/ports';
-import { InputCounter, type Hook } from '../apps/desktop/src/apm';
+import { initialApmState } from '@ba/contracts';
+import { ApmController } from '../apps/desktop/src/apm';
+import type { InputFrame } from '../apps/desktop/src/apm/windows-input';
 
 // Application keeps its real repositories and SQL behavior; only the DB location changes.
 vi.mock('../apps/server/src/storage/database', async (importOriginal) => {
@@ -31,16 +33,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 function platform(fetchImpl: typeof fetch): Platform {
-  const apm: ApmState = {
-    status: 'idle',
-    totalActions: 0,
-    durationSec: 0,
-    apm: 0,
-    peak: 0,
-    perMinute: [],
-    focused: false,
-    fid: null,
-  };
+  const apm: ApmState = initialApmState('idle');
   const recording: RecordingState = {
     phase: 'idle',
     sessionId: null,
@@ -60,7 +53,13 @@ function platform(fetchImpl: typeof fetch): Platform {
     openPath: vi.fn(async () => {}),
     openExternal: vi.fn(async () => {}),
     notify: vi.fn(),
-    apm: { status: () => apm, start: vi.fn(), stop: vi.fn(), disable: vi.fn() },
+    apm: {
+      status: () => apm,
+      start: vi.fn(),
+      updateMatch: vi.fn(),
+      stop: vi.fn(),
+      disable: vi.fn(),
+    },
     recordings: {
       status: () => recording,
       start: vi.fn(async () => {}),
@@ -252,11 +251,6 @@ it('keeps the app open after downloading and settles the install RPC before clos
   }
 });
 
-class FakeHook extends EventEmitter implements Hook {
-  start = vi.fn();
-  stop = vi.fn();
-}
-
 describe('configuration updates', () => {
   it('does not reset other settings or stop recording and input when changing language', async () => {
     const p = platform(vi.fn<typeof fetch>());
@@ -280,60 +274,6 @@ describe('configuration updates', () => {
     expect(watch).not.toHaveBeenCalled();
     expect(p.recordings.stop).not.toHaveBeenCalled();
     expect(p.apm.disable).not.toHaveBeenCalled();
-  });
-});
-
-describe('input-hook lifecycle', () => {
-  it('counts one click after every enable/disable cycle and detaches every listener', () => {
-    const hook = new FakeHook();
-    const count = vi.fn();
-    const counter = new InputCounter(hook, count);
-    for (let cycle = 0; cycle < 3; cycle++) {
-      counter.start();
-      counter.start();
-      expect(hook.listenerCount('mousedown')).toBe(1);
-      hook.emit('mousedown', { button: 1 });
-      expect(count).toHaveBeenCalledTimes(cycle + 1);
-      counter.stop();
-      expect(hook.listenerCount('mousedown')).toBe(0);
-      expect(hook.listenerCount('keydown')).toBe(0);
-      expect(hook.listenerCount('keyup')).toBe(0);
-    }
-    expect(hook.start).toHaveBeenCalledTimes(3);
-    expect(hook.stop).toHaveBeenCalledTimes(3);
-  });
-
-  it('counts a held key once, then counts a fresh press after release', () => {
-    const hook = new FakeHook();
-    const count = vi.fn();
-    const counter = new InputCounter(hook, count);
-    counter.start();
-    hook.emit('keydown', { keycode: 30 });
-    hook.emit('keydown', { keycode: 30 });
-    hook.emit('keydown', { keycode: 30 });
-    expect(count).toHaveBeenCalledTimes(1);
-    hook.emit('keyup', { keycode: 30 });
-    hook.emit('keydown', { keycode: 30 });
-    expect(count).toHaveBeenCalledTimes(2);
-    counter.stop();
-    counter.start();
-    hook.emit('keydown', { keycode: 30 });
-    expect(count).toHaveBeenCalledTimes(3);
-    counter.stop();
-  });
-
-  it('cleans up listeners after a native start failure', () => {
-    const hook = new FakeHook();
-    hook.start.mockImplementationOnce(() => {
-      throw new Error('Native start failed');
-    });
-    const counter = new InputCounter(hook, vi.fn());
-    expect(() => counter.start()).toThrow('Native start failed');
-    expect(hook.listenerCount('mousedown')).toBe(0);
-    expect(hook.listenerCount('keydown')).toBe(0);
-    counter.start();
-    expect(hook.listenerCount('mousedown')).toBe(1);
-    counter.stop();
   });
 });
 
@@ -466,5 +406,140 @@ describe('application shutdown', () => {
     const closedAt = close.mock.invocationCallOrder[0]!;
     expect(write.mock.invocationCallOrder.every((order) => order < closedAt)).toBe(true);
     expect(close).toHaveBeenCalledTimes(1);
+  });
+});
+
+function measuredApm(finalization = Promise.resolve()) {
+  let receive!: (frame: InputFrame) => void;
+  const controller = new ApmController(
+    () => ({
+      start: (frame) => {
+        receive = frame;
+        frame({ type: 'ready', elapsedMs: 0, focusedMs: 0, focused: true, seconds: [] });
+      },
+      stop: async () => {
+        await finalization;
+        receive({
+          type: 'stopped',
+          elapsedMs: 2000,
+          focusedMs: 2000,
+          focused: true,
+          seconds: [[1, 3]],
+        });
+      },
+    }),
+    () => 0,
+    () => 1000000,
+  );
+  return controller;
+}
+
+describe('APM application lifecycle', () => {
+  it('serializes rapid match events and saves the final aggregate with a late FID', async () => {
+    const p = platform(vi.fn<typeof fetch>());
+    p.apm = measuredApm();
+    const events: AppEvent[] = [];
+    const app = application(p, events);
+    app.db.updateConfig({ inputHookEnabled: true });
+    app.parser.feed([
+      'Log: Start loading battle... map: Dam, scenario: Test',
+      'Log: FID:123',
+      'Log: GameController dispose called',
+      'Log: [NET_ROOM] Connection closed. FightId=123 LiveTime: 300 sec',
+    ]);
+    await vi.waitFor(() => expect(p.apm.status().status).toBe('complete'));
+    expect(await app.invoke('apm.history', null)).toEqual([
+      expect.objectContaining({
+        status: 'complete',
+        fid: '123',
+        totalActions: 3,
+        durationSec: 2,
+        partial: false,
+        focused: false,
+        matchDurationSec: 300,
+      }),
+    ]);
+    expect(
+      events.some(
+        (event) =>
+          event.type === 'apm' && event.apm.status === 'complete' && event.apm.fid === '123',
+      ),
+    ).toBe(true);
+  });
+
+  it('publishes and checkpoints interrupted capture on log reset', async () => {
+    const p = platform(vi.fn<typeof fetch>());
+    p.apm = measuredApm();
+    const events: AppEvent[] = [];
+    const app = application(p, events);
+    app.db.updateConfig({ inputHookEnabled: true });
+    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
+    await vi.waitFor(() => expect(p.apm.status().status).toBe('active'));
+    app.parser.reset();
+    await vi.waitFor(() =>
+      expect(events.some((event) => event.type === 'apm' && event.apm.status === 'complete')).toBe(
+        true,
+      ),
+    );
+    expect(app.db.apmHistory()[0]).toMatchObject({
+      partial: true,
+      interrupted: true,
+      totalActions: 3,
+    });
+  });
+
+  it('keeps an active capture when recovery and match-start paths identify the same session', async () => {
+    const p = platform(vi.fn<typeof fetch>());
+    p.apm = measuredApm();
+    const start = vi.spyOn(p.apm, 'start');
+    const app = application(p);
+    app.db.updateConfig({ inputHookEnabled: true });
+    vi.spyOn(app.watcher, 'status').mockReturnValue({ ...app.watcher.status(), live: true });
+    vi.spyOn(app.parser, 'isRecoveredMatch').mockReturnValue(true);
+    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
+    await vi.waitFor(() => expect(p.apm.status().status).toBe('active'));
+    const id = p.apm.status().captureId;
+    await vi.waitFor(() => expect(start).toHaveBeenCalledOnce());
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(start).toHaveBeenCalledOnce();
+    expect(p.apm.status().captureId).toBe(id);
+  });
+
+  it('marks capture enabled mid-match as partial and saves it before disabling', async () => {
+    const p = platform(vi.fn<typeof fetch>());
+    p.apm = measuredApm();
+    const app = application(p);
+    vi.spyOn(app.watcher, 'status').mockReturnValue({ ...app.watcher.status(), live: true });
+    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
+    await app.invoke('config.update', { inputHookEnabled: true });
+    expect(p.apm.status()).toMatchObject({ status: 'active', partial: true });
+    await app.invoke('config.update', { inputHookEnabled: false });
+    expect(p.apm.status().status).toBe('disabled');
+    expect(app.db.apmHistory()[0]).toMatchObject({
+      status: 'complete',
+      partial: true,
+      totalActions: 3,
+    });
+  });
+
+  it('waits for the last native batch before closing SQLite on shutdown', async () => {
+    const finalization = deferred<void>();
+    const p = platform(vi.fn<typeof fetch>());
+    p.apm = measuredApm(finalization.promise);
+    const app = application(p);
+    const close = vi.spyOn(app.db, 'close');
+    app.db.updateConfig({ inputHookEnabled: true });
+    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
+    await vi.waitFor(() => expect(p.apm.status().status).toBe('active'));
+    const stopping = app.stop();
+    try {
+      await Promise.resolve();
+      expect(close).not.toHaveBeenCalled();
+    } finally {
+      finalization.resolve();
+    }
+    await stopping;
+    expect(p.apm.status()).toMatchObject({ totalActions: 3, partial: true });
+    expect(close).toHaveBeenCalledOnce();
   });
 });

@@ -1,3 +1,4 @@
+import { initialApmState } from '@ba/contracts';
 import { join } from 'node:path';
 import type { AppEvent, RpcMethod } from '@ba/contracts';
 import { rpcSchemas } from '@ba/contracts';
@@ -7,6 +8,7 @@ import { prepareRealData } from './real-data';
 
 const methods = new Set<RpcMethod>([
   'app.bootstrap',
+  'apm.history',
   'config.update',
   'updates.check',
   'players.search',
@@ -88,16 +90,8 @@ export async function createBrowserFixtures(
       playback: async () => desktopOnly(),
     },
     apm: {
-      status: () => ({
-        status: 'unavailable',
-        totalActions: 0,
-        durationSec: 0,
-        apm: 0,
-        peak: 0,
-        perMinute: [],
-        focused: false,
-        fid: null,
-      }),
+      status: () => initialApmState('unavailable'),
+      updateMatch: () => {},
       start: () => desktopOnly(),
       stop: () => {},
       disable: () => {},

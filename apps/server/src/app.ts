@@ -3,6 +3,7 @@ import { stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import type {
   AppEvent,
+  ApmState,
   Ban,
   Bootstrap,
   DeckSwitchAlert,
@@ -66,6 +67,9 @@ export class Application {
     backupDir: null,
   };
   private handlers: Handlers;
+  private apmTasks = Promise.resolve();
+  private lastApmStatus: ApmState['status'] | null = null;
+  private apmCheckpointAt = -Infinity;
   constructor(
     private dir: string,
     private platform: Platform,
@@ -73,6 +77,7 @@ export class Application {
     private network = true,
   ) {
     this.db = new Database(join(dir, 'assistant.sqlite'));
+    this.db.recoverApmCaptures();
     this.files = new ReplayFiles(this.db, dir);
     const http = {
       ...platform.http,
@@ -98,6 +103,7 @@ export class Application {
     );
     this.archive = new LogArchive(this.db, () => this.event({ type: 'matches' }));
     this.handlers = {
+      'apm.history': () => this.db.apmHistory(),
       'updates.check': () => platform.updates?.check() ?? initialUpdateState(platform.version),
       'updates.download': () => {
         if (!platform.updates) throw new Error('Updates unavailable');
@@ -131,13 +137,17 @@ export class Application {
           next = this.db.updateConfig(patch);
         this.event({ type: 'config', config: next });
         if (before.logDir !== next.logDir) {
+          await this.queueApm(() => this.finishApm(true));
           this.archive.cancel();
           this.watcher.start(next.logDir);
           this.scanArchive(next.logDir);
         }
         if (before.inputHookEnabled && !next.inputHookEnabled) {
-          this.platform.apm.disable();
-          this.event({ type: 'apm', apm: this.platform.apm.status() });
+          await this.queueApm(async () => {
+            await this.finishApm(true);
+            await this.platform.apm.disable();
+            this.publishApm();
+          });
         }
         if (
           !before.inputHookEnabled &&
@@ -145,8 +155,8 @@ export class Application {
           this.watcher.status().live &&
           this.parser.snapshot().current
         ) {
-          this.platform.apm.start(this.parser.snapshot().current!);
-          this.event({ type: 'apm', apm: this.platform.apm.status() });
+          const match = this.parser.snapshot().current!;
+          await this.queueApm(() => this.startApm(match, true));
         }
         if (before.replayEnabled && !next.replayEnabled)
           await this.platform.recordings.stop(this.parser.snapshot().current || undefined);
@@ -380,7 +390,8 @@ export class Application {
     this.timers.push(
       setInterval(() => {
         const apm = this.platform.apm.status();
-        if (apm.status === 'active') this.event({ type: 'apm', apm });
+        if (apm.status === 'active' || apm.status !== this.lastApmStatus)
+          this.publishApm(performance.now() - this.apmCheckpointAt >= 5000);
         const recording = this.platform.recordings.status();
         if (recording.phase === 'recording') this.event({ type: 'recording', recording });
       }, 1000),
@@ -397,10 +408,48 @@ export class Application {
         .catch((error) => this.event({ type: 'error', message: errorMessage(error) })),
     );
   }
+  private queueApm(work: () => Promise<void>): Promise<void> {
+    const task = this.apmTasks.then(work);
+    this.apmTasks = task.catch((error) => {
+      this.event({ type: 'error', message: errorMessage(error) });
+    });
+    return this.apmTasks;
+  }
+  private publishApm(checkpoint = true): void {
+    const apm = this.platform.apm.status();
+    if (checkpoint || apm.status !== 'active') {
+      this.db.saveApm(apm);
+      this.apmCheckpointAt = performance.now();
+    }
+    this.lastApmStatus = apm.status;
+    this.event({ type: 'apm', apm });
+  }
+  private async startApm(match: Match, partial = false): Promise<void> {
+    const current = this.platform.apm.status();
+    if (current.status === 'active' && current.sessionId === match.sessionId) {
+      this.platform.apm.updateMatch(match);
+      return;
+    }
+    await this.finishApm(true);
+    await this.platform.apm.start(match, partial);
+    this.publishApm();
+  }
+  private async finishApm(interrupted = false, match?: Match): Promise<void> {
+    if (match) this.platform.apm.updateMatch(match);
+    await this.platform.apm.stop(interrupted);
+    this.publishApm();
+  }
   private onLog(event: LogEvent): void {
     if (this.disposed || this.closing) return;
     if (event.type === 'session') {
       const session = event.session;
+      if (session.current) {
+        const match = session.current;
+        void this.queueApm(async () => {
+          this.platform.apm.updateMatch(match);
+          this.db.updateApmMatch(match);
+        });
+      }
       this.event({ type: 'session', session });
       if (this.debounce) clearTimeout(this.debounce);
       this.debounce = setTimeout(() => {
@@ -412,7 +461,7 @@ export class Application {
       this.queryIds.clear();
       this.autoKey = '';
       this.restoredSession = '';
-      this.platform.apm.stop();
+      void this.queueApm(() => this.finishApm(true));
       if (this.platform.recordings.status().phase !== 'stopping')
         void this.platform.recordings
           .abort()
@@ -420,7 +469,7 @@ export class Application {
     }
     if (event.type === 'started' && !event.recovering) {
       const config = this.db.config();
-      if (config.inputHookEnabled) this.platform.apm.start(event.match);
+      if (config.inputHookEnabled) void this.queueApm(() => this.startApm(event.match));
       this.fire(
         this.decks
           .onMatchStart(this.parser.snapshot())
@@ -437,12 +486,16 @@ export class Application {
       this.db.saveMatch(event.match, !event.recovering);
       this.event({ type: 'matches' });
       if (event.type === 'ended' && !event.recovering) {
-        this.platform.apm.stop();
-        this.event({ type: 'apm', apm: this.platform.apm.status() });
+        void this.queueApm(() => this.finishApm(false, event.match));
         void this.platform.recordings
           .stop(event.match)
           .catch((e) => this.event({ type: 'error', message: errorMessage(e) }));
       }
+      void this.queueApm(async () => {
+        this.platform.apm.updateMatch(event.match);
+        this.db.updateApmMatch(event.match);
+        if (this.platform.apm.status().sessionId === event.match.sessionId) this.publishApm();
+      });
     }
   }
   private flushSession(session: Session): void {
@@ -467,7 +520,8 @@ export class Application {
       this.restoredSession !== session.current.sessionId
     ) {
       this.restoredSession = session.current.sessionId;
-      if (this.db.config().inputHookEnabled) this.platform.apm.start(session.current);
+      if (this.db.config().inputHookEnabled)
+        void this.queueApm(() => this.startApm(session.current!, true));
       if (this.db.config().replayEnabled && this.platform.recordings.status().phase === 'idle')
         void this.platform.recordings
           .start(session.current, this.db.config())
@@ -624,7 +678,10 @@ export class Application {
     this.queryIds.clear();
     this.watcher.stop();
     this.archive.cancel();
-    this.platform.apm.disable();
+    await this.queueApm(async () => {
+      await this.finishApm(true, match || undefined);
+      await this.platform.apm.disable();
+    });
     const recording = this.platform.recordings.stop(match || undefined);
     void recording.catch(() => {});
     this.lifetime.abort();

@@ -30,9 +30,6 @@
     "dist": "pnpm build && node scripts/prepare-icon.mjs && electron-builder --win --publish never",
     "pack:desktop": "pnpm build && node scripts/prepare-icon.mjs && electron-builder --dir --publish never"
   },
-  "optionalDependencies": {
-    "uiohook-napi": "^1.5.5"
-  },
   "devDependencies": {
     "@fortawesome/fontawesome-svg-core": "7.3.1",
     "@fortawesome/free-solid-svg-icons": "7.3.1",

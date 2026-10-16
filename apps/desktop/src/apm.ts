@@ -1,180 +1,151 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
-import type { ApmState, Match } from '@ba/contracts';
-interface HookEvent {
-  button?: number;
-  keycode?: number;
-}
-export interface Hook {
-  on(event: string, callback: (event: HookEvent) => void): unknown;
-  off(event: string, callback: (event: HookEvent) => void): unknown;
-  start(): void;
-  stop(): void;
-}
-export class InputCounter {
-  private pressed = new Set<number>();
-  private active = false;
-  private mouse = (event: HookEvent) => {
-    if (event.button) this.count();
-  };
-  private down = (event: HookEvent) => {
-    if (event.keycode === undefined || this.pressed.has(event.keycode)) return;
-    this.pressed.add(event.keycode);
-    this.count();
-  };
-  private up = (event: HookEvent) => {
-    if (event.keycode !== undefined) this.pressed.delete(event.keycode);
-  };
-  constructor(
-    private hook: Hook,
-    private count: () => void,
-  ) {}
-  start(): void {
-    if (this.active) return;
-    this.hook.on('mousedown', this.mouse);
-    this.hook.on('keydown', this.down);
-    this.hook.on('keyup', this.up);
-    try {
-      this.hook.start();
-      this.active = true;
-    } catch (error) {
-      this.detach();
-      throw error;
-    }
-  }
-  stop(): void {
-    try {
-      if (this.active) this.hook.stop();
-    } finally {
-      this.active = false;
-      this.detach();
-      this.pressed.clear();
-    }
-  }
-  private detach(): void {
-    this.hook.off('mousedown', this.mouse);
-    this.hook.off('keydown', this.down);
-    this.hook.off('keyup', this.up);
-  }
-}
-const FOCUS_SCRIPT = String.raw`Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class BAWindow { [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint p); }'; while ($true) { try { $baPid = 0; [BAWindow]::GetWindowThreadProcessId([BAWindow]::GetForegroundWindow(), [ref]$baPid) | Out-Null; (Get-Process -Id $baPid -ErrorAction Stop).ProcessName } catch { '' }; Start-Sleep -Milliseconds 750 }`;
-export class FocusWatcher {
-  private child: ChildProcessWithoutNullStreams | null = null;
-  private buffer = '';
-  focused = false;
-  start(): void {
-    this.stop();
-    if (process.platform !== 'win32') return;
-    const child = spawn(
-      'powershell.exe',
-      ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', FOCUS_SCRIPT],
-      { windowsHide: true },
-    );
-    this.child = child;
-    child.stdout.on('data', (data: Buffer) => {
-      if (this.child !== child) return;
-      this.buffer += data.toString();
-      const lines = this.buffer.split(/\r?\n/);
-      this.buffer = lines.pop() || '';
-      for (const line of lines) this.focused = /^broken[_ ]?arrow(?:_beta)?$/i.test(line.trim());
-    });
-    child.on('error', () => {
-      if (this.child === child) {
-        this.child = null;
-        this.focused = false;
-      }
-    });
-    child.on('exit', () => {
-      if (this.child === child) {
-        this.child = null;
-        this.focused = false;
-        this.buffer = '';
-      }
-    });
-  }
-  stop(): void {
-    const child = this.child;
-    this.child = null;
-    this.focused = false;
-    this.buffer = '';
-    if (child) child.kill();
-  }
-}
+import { randomUUID } from 'node:crypto';
+import { initialApmState, type ApmState, type Match } from '@ba/contracts';
+import { WindowsInputCollector, type InputCollector, type InputFrame } from './apm/windows-input';
+
+const round = (value: number) => Math.round(value * 10) / 10;
+
 export class ApmController {
-  private counter: InputCounter | null = null;
-  private focus = new FocusWatcher();
-  private startedAt = 0;
-  private buckets: number[] = [];
-  private value: ApmState = {
-    status: 'disabled',
-    totalActions: 0,
-    durationSec: 0,
-    apm: 0,
-    peak: 0,
-    perMinute: [],
-    focused: false,
-    fid: null,
-  };
+  private collector: InputCollector | null = null;
+  private seconds = new Map<number, number>();
+  private elapsedMs = 0;
+  private receivedAt = 0;
+  private ready = false;
+  private value = initialApmState();
+  constructor(
+    private createCollector: () => InputCollector = () => new WindowsInputCollector(),
+    private now: () => number = () => performance.now(),
+    private wallTime: () => number = Date.now,
+  ) {}
+
   status(): ApmState {
-    if (this.value.status === 'active') {
-      const durationSec = Math.max(0, (Date.now() - this.startedAt) / 1000),
-        minutes = Math.max(1, Math.ceil(durationSec / 60));
-      return {
-        ...this.value,
-        durationSec,
-        apm: Math.round((this.value.totalActions / minutes) * 10) / 10,
-        perMinute: Array.from({ length: minutes }, (_, i) => this.buckets[i] || 0),
-        focused: this.focus.focused,
-      };
-    }
-    return { ...this.value, perMinute: [...this.value.perMinute] };
+    if (this.value.status !== 'active') return structuredClone(this.value);
+    const elapsed = this.ready ? this.elapsedMs + Math.max(0, this.now() - this.receivedAt) : 0;
+    return this.snapshot(elapsed);
   }
-  start(match: Match): void {
-    this.disable();
-    this.startedAt = Date.now();
-    this.buckets = [];
+
+  private snapshot(elapsed: number): ApmState {
+    const durationSec = elapsed / 1000;
+    const perMinute = Array.from({ length: Math.ceil(durationSec / 60) }, () => 0);
+    let totalActions = 0;
+    for (const [second, count] of this.seconds) {
+      totalActions += count;
+      const minute = Math.floor(second / 60);
+      perMinute[minute] = (perMinute[minute] || 0) + count;
+    }
+    // Current and peak APM use rolling 60-second windows at one-second resolution.
+    const completedSeconds = Math.floor(durationSec);
+    let rolling = 0,
+      peak = 0;
+    for (let second = 0; second < completedSeconds; second++) {
+      rolling += this.seconds.get(second) || 0;
+      if (second >= 60) rolling -= this.seconds.get(second - 60) || 0;
+      if (second >= 59) peak = Math.max(peak, rolling);
+    }
+    return {
+      ...this.value,
+      durationSec,
+      totalActions,
+      apm: durationSec > 0 ? round((totalActions * 60) / durationSec) : 0,
+      currentApm: durationSec >= 60 ? rolling : null,
+      peak,
+      perMinute,
+      focusedDurationSec: Math.min(
+        durationSec,
+        this.value.focusedDurationSec +
+          (this.value.focused ? Math.max(0, elapsed - this.elapsedMs) / 1000 : 0),
+      ),
+    };
+  }
+
+  async start(match: Match, partial = false): Promise<void> {
+    await this.stop(true);
+    this.seconds.clear();
+    this.elapsedMs = 0;
+    this.ready = false;
     this.value = {
-      status: 'active',
-      totalActions: 0,
-      durationSec: 0,
-      apm: 0,
-      peak: 0,
-      perMinute: [],
-      focused: false,
+      ...initialApmState('active'),
+      captureId: randomUUID(),
+      sessionId: match.sessionId,
       fid: match.fid,
+      map: match.map,
+      matchDurationSec: match.durationSec,
+      partial,
     };
     try {
-      const require = createRequire(
-          typeof __filename === 'string' ? __filename : join(process.cwd(), 'package.json'),
-        ),
-        mod = require('uiohook-napi') as { uIOhook: Hook };
-      this.counter = new InputCounter(mod.uIOhook, () => {
-        if (this.value.status !== 'active' || !this.focus.focused) return;
-        const minute = Math.floor((Date.now() - this.startedAt) / 60000);
-        this.buckets[minute] = (this.buckets[minute] || 0) + 1;
-        this.value.totalActions++;
-      });
-      this.focus.start();
-      this.counter.start();
-    } catch {
-      this.counter?.stop();
-      this.counter = null;
-      this.focus.stop();
-      this.value.status = 'unavailable';
+      const collector = this.createCollector();
+      this.collector = collector;
+      collector.start(
+        (frame) => {
+          if (this.collector !== collector || this.value.status !== 'active') return;
+          this.accept(frame);
+        },
+        (error) => {
+          if (this.collector === collector) this.fail(error);
+        },
+      );
+    } catch (error) {
+      this.fail(error instanceof Error ? error : new Error(String(error)));
     }
   }
-  stop(): void {
-    if (this.value.status === 'active') {
-      const value = this.status();
-      this.value = { ...value, status: 'complete', peak: Math.max(0, ...value.perMinute) };
+
+  private accept(frame: InputFrame): void {
+    if (frame.elapsedMs < this.elapsedMs) throw new Error('Input collector clock moved backwards');
+    for (const [second, count] of frame.seconds) {
+      if (count < (this.seconds.get(second) || 0))
+        throw new Error('Input collector count moved backwards');
+      this.seconds.set(second, count);
     }
-    this.counter?.stop();
-    this.counter = null;
-    this.focus.stop();
+    this.elapsedMs = frame.elapsedMs;
+    this.receivedAt = this.now();
+    this.ready = true;
+    this.value.startedAt ??= this.wallTime() - frame.elapsedMs;
+    this.value.focused = frame.focused;
+    this.value.focusedDurationSec = frame.focusedMs / 1000;
   }
-  disable(): void {
-    this.stop();
+
+  updateMatch(match: Match): void {
+    if (match.sessionId !== this.value.sessionId) return;
+    this.value.fid = match.fid ?? this.value.fid;
+    this.value.map = match.map || this.value.map;
+    this.value.matchDurationSec = match.durationSec ?? this.value.matchDurationSec;
+  }
+
+  private fail(error: Error): void {
+    this.value = {
+      ...this.snapshot(this.elapsedMs),
+      status: 'unavailable',
+      focused: false,
+      partial: true,
+      interrupted: true,
+      endedAt: this.wallTime(),
+      error: error.message,
+    };
+  }
+
+  async stop(interrupted = false): Promise<void> {
+    const collector = this.collector;
+    if (collector) {
+      try {
+        // Consume the final native aggregate before saving the completed capture.
+        await collector.stop();
+      } catch (error) {
+        this.fail(error instanceof Error ? error : new Error(String(error)));
+      }
+      if (this.collector === collector) this.collector = null;
+    }
+    if (this.value.status === 'active')
+      this.value = {
+        ...this.snapshot(this.elapsedMs),
+        status: 'complete',
+        focused: false,
+        partial: this.value.partial || interrupted,
+        interrupted,
+        endedAt: this.wallTime(),
+      };
+  }
+
+  async disable(): Promise<void> {
+    await this.stop(true);
     this.value = { ...this.value, status: 'disabled', focused: false };
   }
 }

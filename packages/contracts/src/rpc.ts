@@ -100,6 +100,7 @@ export const rpcSchemas = {
   'updates.install': empty,
   'updates.openDownload': empty,
   'app.bootstrap': empty,
+  'apm.history': empty,
   'config.update': configPatchSchema,
   'directory.select': z.object({ kind: z.enum(['logs', 'replays', 'decks']) }),
   'directory.detect': empty,
@@ -149,6 +150,7 @@ export interface RpcOutputs {
   'updates.install': import('./updates').UpdateState;
   'updates.openDownload': null;
   'app.bootstrap': Bootstrap;
+  'apm.history': import('./models').ApmState[];
   'config.update': PublicConfig;
   'directory.select': string | null;
   'directory.detect': string;

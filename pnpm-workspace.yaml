@@ -3,7 +3,6 @@ packages:
   - packages/*
 onlyBuiltDependencies:
   - electron
-  - uiohook-napi
   - esbuild
   - rolldown
   - '@swc/core'

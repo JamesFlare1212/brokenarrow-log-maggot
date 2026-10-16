@@ -1,3 +1,4 @@
+import { initialApmState } from '@ba/contracts';
 import { resolve } from 'node:path';
 import type { Bootstrap, Match, PlayerReport } from '@ba/contracts';
 import { configSchema, initialUpdateState } from '@ba/contracts';
@@ -89,16 +90,7 @@ export const fixtureBootstrap: Bootstrap = {
     hasAudio: false,
     error: null,
   },
-  apm: {
-    status: 'disabled',
-    totalActions: 0,
-    durationSec: 0,
-    apm: 0,
-    peak: 0,
-    perMinute: [],
-    focused: false,
-    fid: null,
-  },
+  apm: initialApmState(),
   health: { state: 'ok', at: data.capturedAt, checks: [] },
   version: { current: '4.0.0' },
   migration: { completed: true, imported: {}, warnings: [], backupDir: null },

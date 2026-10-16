@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type {
   Account,
+  ApmState,
   Ban,
   Encounter,
   Match,
@@ -32,6 +33,9 @@ export class Database {
       CREATE TABLE IF NOT EXISTS migrations(version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS app_state(key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
+      CREATE TABLE IF NOT EXISTS apm_captures(id TEXT PRIMARY KEY,session_id TEXT NOT NULL,fid TEXT,started_at INTEGER NOT NULL,payload TEXT NOT NULL) STRICT;
+      CREATE INDEX IF NOT EXISTS apm_capture_time ON apm_captures(started_at DESC);
+      CREATE INDEX IF NOT EXISTS apm_capture_session ON apm_captures(session_id);
       CREATE TABLE IF NOT EXISTS players(id TEXT PRIMARY KEY,name TEXT NOT NULL,first_seen INTEGER,last_seen INTEGER,observed INTEGER NOT NULL DEFAULT 0) STRICT;
       CREATE TABLE IF NOT EXISTS player_names(player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,name TEXT NOT NULL,first_seen INTEGER NOT NULL,last_seen INTEGER NOT NULL,PRIMARY KEY(player_id,name)) STRICT;
       CREATE TABLE IF NOT EXISTS accounts(id TEXT PRIMARY KEY,name TEXT NOT NULL,persona TEXT NOT NULL,first_seen INTEGER NOT NULL,last_seen INTEGER NOT NULL) STRICT;
@@ -83,6 +87,62 @@ export class Database {
         'INSERT INTO app_state VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
       )
       .run(key, JSON.stringify(value));
+  }
+  recoverApmCaptures(): void {
+    this.sql.exec(`UPDATE apm_captures SET payload=json_set(payload,
+      '$.status','complete','$.focused',json('false'),'$.partial',json('true'),
+      '$.interrupted',json('true'),'$.currentApm',NULL,
+      '$.endedAt',json_extract(payload,'$.startedAt')+json_extract(payload,'$.durationSec')*1000)
+      WHERE json_extract(payload,'$.status')='active'`);
+  }
+  saveApm(value: ApmState): void {
+    if (
+      !value.captureId ||
+      !value.sessionId ||
+      value.startedAt === null ||
+      !['active', 'complete', 'unavailable'].includes(value.status)
+    )
+      return;
+    if (
+      this.sql
+        .prepare('SELECT 1 FROM deleted_log_matches WHERE id IN (?,?)')
+        .get('local:' + value.sessionId, value.fid)
+    )
+      return;
+    this.sql
+      .prepare(
+        `INSERT INTO apm_captures VALUES(?,?,?,?,?)
+      ON CONFLICT(id) DO UPDATE SET fid=excluded.fid,payload=excluded.payload`,
+      )
+      .run(
+        value.captureId,
+        value.sessionId,
+        value.fid,
+        Math.round(value.startedAt),
+        JSON.stringify(value),
+      );
+  }
+  apmHistory(): ApmState[] {
+    return this.sql
+      .prepare('SELECT payload FROM apm_captures ORDER BY started_at DESC LIMIT 50')
+      .all()
+      .map((row) => JSON.parse(String(row.payload)) as ApmState);
+  }
+  updateApmMatch(match: Match): void {
+    const rows = this.sql
+      .prepare('SELECT payload FROM apm_captures WHERE session_id=?')
+      .all(match.sessionId);
+    this.transaction(() => {
+      for (const row of rows) {
+        const value = JSON.parse(String(row.payload)) as ApmState;
+        this.saveApm({
+          ...value,
+          fid: match.fid ?? value.fid,
+          map: match.map || value.map,
+          matchDurationSec: match.durationSec ?? value.matchDurationSec,
+        });
+      }
+    });
   }
   config(): PublicConfig {
     const row = this.sql.prepare('SELECT value FROM settings WHERE key=?').get('public');
@@ -242,6 +302,9 @@ export class Database {
       const remember = this.sql.prepare('INSERT OR IGNORE INTO deleted_log_matches VALUES(?)');
       remember.run(match.id);
       remember.run('local:' + match.sessionId);
+      this.sql
+        .prepare('DELETE FROM apm_captures WHERE session_id=? OR fid=?')
+        .run(match.sessionId, match.fid);
       return this.sql.prepare('DELETE FROM matches WHERE id=?').run(match.id).changes > 0;
     });
   }

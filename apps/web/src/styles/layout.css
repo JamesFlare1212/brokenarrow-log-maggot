@@ -1466,6 +1466,19 @@ main {
   overflow-x: auto;
   padding: 8px 0;
 }
+.apm-history {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.apm-history select {
+  width: 100%;
+  min-width: 0;
+}
+.apm-bar-partial {
+  background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 6px);
+  border: 1px solid var(--accent);
+}
 .apm-bar-wrap {
   flex: 1;
   min-width: 22px;

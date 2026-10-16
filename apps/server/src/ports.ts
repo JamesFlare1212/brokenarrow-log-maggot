@@ -23,5 +23,11 @@ export interface Platform {
     thumbnail(id: string): Promise<string | null>;
     playback(path: string): Promise<string>;
   };
-  apm: { status(): ApmState; start(match: Match): void; stop(): void; disable(): void };
+  apm: {
+    status(): ApmState;
+    start(match: Match, partial?: boolean): Promise<void> | void;
+    updateMatch(match: Match): void;
+    stop(interrupted?: boolean): Promise<void> | void;
+    disable(): Promise<void> | void;
+  };
 }

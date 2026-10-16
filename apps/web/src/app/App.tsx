@@ -234,10 +234,7 @@ export function App() {
             <Button
               className="update-details-button button-borderless"
               aria-label={t('updateDetails')}
-              tooltip={t('update.' + state.updates.status, {
-                version: state.updates.availableVersion || '',
-                percent: state.updates.downloadPercent ?? 0,
-              })}
+              tooltip={null}
               onClick={() => openSettings('general')}
             >
               <Icon icon={faCircleInfo} size={18} aria-hidden="true" />

@@ -205,13 +205,24 @@ export interface VersionInfo {
 }
 export interface ApmState {
   status: 'disabled' | 'unavailable' | 'replay' | 'active' | 'complete' | 'idle';
+  captureId: string | null;
+  sessionId: string | null;
+  map: string;
+  startedAt: number | null;
+  endedAt: number | null;
   totalActions: number;
   durationSec: number;
+  matchDurationSec: number | null;
+  focusedDurationSec: number;
   apm: number;
+  currentApm: number | null;
   peak: number;
   perMinute: number[];
   focused: boolean;
   fid: Id | null;
+  partial: boolean;
+  interrupted: boolean;
+  error: string | null;
 }
 export interface DeckFile {
   name: string;

@@ -30,7 +30,6 @@ export default defineConfig({
       external: [
         'electron',
         'electron-updater',
-        'uiohook-napi',
         ...builtinModules,
         ...builtinModules.map((m) => `node:${m}`),
       ],
