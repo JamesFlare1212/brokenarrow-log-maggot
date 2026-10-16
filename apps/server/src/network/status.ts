@@ -3,6 +3,12 @@ import { object } from '@ba/shared';
 import type { Database } from '../storage/database';
 import type { BatraceClient } from './client';
 import { parsePlayerPage } from './player-page';
+import { parseMatchPage, validateMatchInfo } from './match-page';
+interface HealthProbe {
+  path: string;
+  parse?: (raw: string) => unknown;
+  fallback?: { path: string; parse: (raw: string) => unknown };
+}
 export class StatusService {
   private healthPending: Promise<ApiHealth> | null = null;
   private currentHealth: ApiHealth = { state: 'unknown', at: 0, checks: [] };
@@ -51,17 +57,28 @@ export class StatusService {
     if (!this.online) return Promise.resolve(this.health());
     if (this.healthPending) return this.healthPending;
     this.healthPending = (async () => {
-      const paths = [
-        '/api/players/search?q=test&limit=1',
-        '/api/players/info?stbid=8863',
-        '/api/leaderboard/ban?limit=1',
-        '/api/players/matches?stbid=8863&limit=1',
+      const probes: HealthProbe[] = [
+        { path: '/api/players/search?q=test&limit=1' },
+        {
+          path: '/api/players/info?stbid=8863',
+          fallback: { path: '/player/8863', parse: (raw) => parsePlayerPage(raw, '8863') },
+        },
+        { path: '/api/leaderboard/ban?limit=1' },
+        { path: '/api/players/matches?stbid=8863&limit=1' },
+        {
+          path: '/api/match?matchid=9227650',
+          parse: (raw) => validateMatchInfo(JSON.parse(raw)),
+          fallback: {
+            path: '/match/9227650',
+            parse: (raw) => parseMatchPage(raw, '9227650'),
+          },
+        },
       ];
       const checks: ApiHealth['checks'] = [];
-      for (const path of paths) {
-        const check: ApiHealth['checks'][number] = await this.check(path);
-        if (!check.ok && check.failure !== 'verification' && path === paths[1])
-          check.fallback = await this.check('/player/8863', (raw) => parsePlayerPage(raw, '8863'));
+      for (const probe of probes) {
+        const check: ApiHealth['checks'][number] = await this.check(probe.path, probe.parse);
+        if (!check.ok && check.failure !== 'verification' && probe.fallback)
+          check.fallback = await this.check(probe.fallback.path, probe.fallback.parse);
         checks.push(check);
       }
       const available = checks.some((check) => check.ok || check.fallback?.ok),

@@ -481,6 +481,7 @@ export const messages: Record<string, readonly [string, string, string, string]>
   healthPlayerInfo: ['玩家资料', 'Player details', 'プレイヤー情報', 'Данные игрока'],
   healthBanLeaderboard: ['封禁排行榜', 'Ban leaderboard', 'BANランキング', 'Рейтинг блокировок'],
   healthPlayerMatches: ['玩家比赛记录', 'Player matches', '対戦履歴', 'Матчи игрока'],
+  healthMatchDetail: ['对局详情', 'Match details', '対戦詳細', 'Данные матча'],
   healthEndpoint: ['接口', 'Endpoint', 'API', 'API'],
   healthSuccess: ['正常', 'Available', '正常', 'Доступен'],
   healthFallbackSuccess: [

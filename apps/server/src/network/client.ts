@@ -3,12 +3,14 @@ import { BATRACE_ORIGIN } from '@ba/contracts';
 import { object } from '@ba/shared';
 import type { Database } from '../storage/database';
 import { parsePlayerPage, validatePlayerInfo } from './player-page';
+import { parseMatchPage, validateMatchInfo } from './match-page';
 interface RequestOptions {
   force?: boolean;
   allowStale?: boolean;
   signal?: AbortSignal;
   health?: boolean;
   parse?: (raw: string) => unknown;
+  invalidMessage?: string;
   fallback?: { path: string; parse: (raw: string) => unknown };
 }
 export interface DataResult {
@@ -127,9 +129,10 @@ export class BatraceClient {
           } catch {
             throw Object.assign(
               new Error(
-                options.parse
-                  ? 'BATrace returned incomplete player data'
-                  : 'BATrace returned invalid JSON',
+                options.invalidMessage ??
+                  (options.parse
+                    ? 'BATrace returned incomplete player data'
+                    : 'BATrace returned invalid JSON'),
               ),
               {
                 invalidResponse: true,
@@ -226,6 +229,12 @@ export class BatraceClient {
     return this.get(`/api/match?matchid=${encodeURIComponent(id)}`, `match:${id}`, 86400000, {
       force,
       allowStale: !force,
+      parse: (raw) => validateMatchInfo(JSON.parse(raw)),
+      invalidMessage: 'BATrace returned incomplete match data',
+      fallback: {
+        path: `/match/${encodeURIComponent(id)}`,
+        parse: (raw) => parseMatchPage(raw, id),
+      },
     });
   }
   analysisMatch(id: string): Promise<DataResult> {

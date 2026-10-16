@@ -114,7 +114,7 @@ describe('BATrace player health fallback', () => {
         },
       ]),
     });
-    expect(health.health().checks).toHaveLength(4);
+    expect(health.health().checks).toHaveLength(5);
     expect(db.cache('health:/player/8863', true)?.at).toBe(now);
     available = false;
     expect(await health.probe()).toMatchObject({ state: 'down' });

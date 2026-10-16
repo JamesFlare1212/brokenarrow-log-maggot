@@ -211,6 +211,43 @@ afterEach(() => {
 });
 
 describe('BATrace status indicator', () => {
+  it('names the match detail API and preserves its block diagnostics beside the page fallback', async () => {
+    const native = nativeFixture(bootstrapForApp());
+    render(
+      <BatraceStatus
+        health={{
+          state: 'partial',
+          at: Date.now(),
+          checks: [
+            {
+              path: '/api/match?matchid=9227650',
+              ok: false,
+              status: 403,
+              ms: 100,
+              failure: 'blocked',
+              rayId: 'match-health-ray',
+              fallback: { path: '/match/9227650', ok: true, status: 200, ms: 200 },
+            },
+          ],
+        }}
+      />,
+      { wrapper: wrapper(native.api) },
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'BATrace · 服务部分可用' }));
+    const tooltip = within(screen.getByRole('tooltip'));
+    for (const text of [
+      '对局详情',
+      '/api/match?matchid=9227650',
+      '被 Cloudflare 拦截',
+      'HTTP 403 · 100 ms',
+      'Ray ID: match-health-ray',
+      'fallback 成功',
+      '/match/9227650',
+      'HTTP 200 · 200 ms',
+    ])
+      expect(tooltip.getByText(text)).toBeTruthy();
+  });
+
   it.each([true, false])(
     'shows fallback success %s below the API failure with the matching colors',
     async (ok) => {

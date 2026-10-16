@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { Database } from '../apps/server/src/storage/database';
 import { BatraceClient, type HttpPort } from '../apps/server/src/network/client';
 import { StatusService } from '../apps/server/src/network/status';
+import { parseMatchPage } from '../apps/server/src/network/match-page';
+
+const capturedMatch = parseMatchPage(
+  readFileSync(new URL('./fixtures/batrace/match-9227650.html', import.meta.url), 'utf8'),
+  '9227650',
+);
 
 const databases = new Set<Database>();
 const clients = new Set<BatraceClient>();
@@ -134,7 +141,7 @@ describe('BATrace scheduling and cache boundaries', () => {
 
 describe('BATrace health checks', () => {
   it('ignores a previous run and forced probes bypass cached responses', async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json(capturedMatch));
     const { db, client, clock } = setup({ fetch: fetchImpl });
     db.setState('health', { state: 'down', at: clock.now, checks: [] });
     db.saveCache('health:/api/players/search?q=test&limit=1', {}, 60_000, clock.now);
@@ -143,7 +150,7 @@ describe('BATrace health checks', () => {
     const one = statuses.probe();
     expect(statuses.probe()).toBe(one);
     expect(await one).toMatchObject({ state: 'ok', checks: expect.any(Array) });
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
     expect(statuses.health().checks.every((check) => check.ok)).toBe(true);
   });
 
@@ -152,7 +159,7 @@ describe('BATrace health checks', () => {
     const fetchImpl = vi.fn<typeof fetch>(async (input) => {
       if (mode === 'down' || (mode === 'partial' && String(input).includes('/info?')))
         return new Response('unavailable', { status: 403 });
-      return Response.json({ ok: true });
+      return Response.json(capturedMatch);
     });
     const { db, client } = setup({ fetch: fetchImpl });
     const statuses = new StatusService(db, client);

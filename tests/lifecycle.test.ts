@@ -116,7 +116,7 @@ it('probes health at startup and publishes recovery after one minute independent
     expect(events.some((event) => event.type === 'health' && event.health.state === 'ok')).toBe(
       true,
     );
-    expect(requests).toHaveBeenCalledTimes(9);
+    expect(requests).toHaveBeenCalledTimes(12);
   } finally {
     await app.stop();
     vi.useRealTimers();

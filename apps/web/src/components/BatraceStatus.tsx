@@ -7,6 +7,7 @@ const endpoints: Record<string, string> = {
   '/api/players/info': 'healthPlayerInfo',
   '/api/leaderboard/ban': 'healthBanLeaderboard',
   '/api/players/matches': 'healthPlayerMatches',
+  '/api/match': 'healthMatchDetail',
 };
 
 export function BatraceStatus({ health }: { health: ApiHealth }) {
