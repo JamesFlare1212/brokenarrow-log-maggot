@@ -118,6 +118,7 @@ export function RecordingSettings({
             <Toggle
               id="rec-enabled"
               label={t('autoRecord')}
+              labelClickable={false}
               checked={draft.replayEnabled}
               onChange={(value) => set('replayEnabled', value)}
             />

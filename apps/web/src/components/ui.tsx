@@ -294,6 +294,7 @@ export function Toggle({
   'aria-label': ariaLabel,
   checked,
   disabled,
+  labelClickable = true,
   onChange,
 }: {
   id: string;
@@ -301,10 +302,15 @@ export function Toggle({
   'aria-label'?: string;
   checked: boolean;
   disabled?: boolean;
+  labelClickable?: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const Container = labelClickable ? 'label' : 'div';
   return (
-    <label className="toggle" htmlFor={id}>
+    <Container
+      className={`toggle${labelClickable ? '' : ' toggle-control-only'}`}
+      htmlFor={labelClickable ? id : undefined}
+    >
       <span id={`${id}-label`}>{label}</span>
       <input
         id={id}
@@ -316,7 +322,7 @@ export function Toggle({
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="toggle-track" aria-hidden="true" />
-    </label>
+    </Container>
   );
 }
 function menuItems(children: ReactNode): ReactElement[] {

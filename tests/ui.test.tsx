@@ -1057,6 +1057,69 @@ describe('settings pages and automatic saving', () => {
   });
 });
 
+describe('auto-record controls and preview', () => {
+  it('toggles directly only from the switch and keeps settings behind their own button', async () => {
+    history.replaceState(null, '', '#replays');
+    const initial = bootstrapForApp();
+    initial.config.replayEnabled = false;
+    const native = nativeFixture(initial, { 'displays.thumbnail': () => null });
+    render(<App />, { wrapper: wrapper(native.api) });
+    const toggle = (await screen.findByRole('checkbox', {
+      name: '自动录制',
+    })) as HTMLInputElement;
+    const user = userEvent.setup();
+
+    await user.click(screen.getByText('自动录制'));
+    await user.click(toggle.parentElement!);
+    expect(native.calls.filter((call) => call.method === 'config.update')).toHaveLength(0);
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    await user.click(toggle);
+    await waitFor(() => expect(toggle.checked).toBe(true));
+    expect(native.backend.config.replayEnabled).toBe(true);
+    expect(native.calls.filter((call) => call.method === 'config.update').at(-1)?.input).toEqual({
+      replayEnabled: true,
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByText('录制开始后显示预览')).toBeTruthy();
+    expect(screen.queryByText('自动录制未开启')).toBeNull();
+
+    toggle.focus();
+    await user.keyboard(' ');
+    await waitFor(() => expect(toggle.checked).toBe(false));
+    expect(native.backend.config.replayEnabled).toBe(false);
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: '录像设置' }));
+    const dialog = within(await screen.findByRole('dialog', { name: '录像设置' }));
+    const saves = native.calls.filter((call) => call.method === 'config.update').length;
+    await user.click(dialog.getByText('自动录制'));
+    expect(native.calls.filter((call) => call.method === 'config.update')).toHaveLength(saves);
+    expect(native.backend.config.replayEnabled).toBe(false);
+  });
+
+  it.each([
+    { enabled: false, phase: 'idle', message: '自动录制未开启' },
+    { enabled: true, phase: 'idle', message: '录制开始后显示预览' },
+    { enabled: true, phase: 'starting', message: '等待预览画面' },
+    { enabled: true, phase: 'recording', message: '等待预览画面' },
+    { enabled: false, phase: 'stopping', message: '保存中' },
+    { enabled: true, phase: 'error', message: '预览暂不可用' },
+  ] as const)(
+    'shows the correct preview for $phase with auto-record $enabled',
+    async ({ enabled, phase, message }) => {
+      const initial = bootstrapForApp();
+      initial.config.replayEnabled = enabled;
+      initial.recording.phase = phase;
+      const native = nativeFixture(initial);
+      render(<ReplaysPanel />, { wrapper: wrapper(native.api) });
+      await screen.findByRole('checkbox', { name: '自动录制' });
+      const preview = document.querySelector('.recording-preview-media') as HTMLElement;
+      expect(within(preview).getByText(message)).toBeTruthy();
+    },
+  );
+});
+
 describe('recording settings automatic saving', () => {
   async function open(native: ReturnType<typeof nativeFixture>) {
     history.replaceState(null, '', '#replays');

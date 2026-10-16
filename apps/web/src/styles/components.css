@@ -362,6 +362,9 @@
   min-height: 38px;
   cursor: pointer;
 }
+.toggle-control-only {
+  cursor: default;
+}
 .toggle > input {
   position: absolute;
   top: 50%;

@@ -413,6 +413,12 @@ export const messages: Record<string, readonly [string, string, string, string]>
     '前の画面に戻る',
     'Назад к предыдущему экрану',
   ],
+  previewIdle: [
+    '录制开始后显示预览',
+    'Preview appears when recording starts',
+    '録画を開始するとプレビューを表示します',
+    'Предпросмотр появится после начала записи',
+  ],
   previewWaiting: [
     '等待预览画面',
     'Waiting for preview',

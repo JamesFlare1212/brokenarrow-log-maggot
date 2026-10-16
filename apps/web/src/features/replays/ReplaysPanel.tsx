@@ -31,11 +31,9 @@ export function ReplaysPanel() {
         <Toggle
           id="auto-record"
           label={t('autoRecord')}
+          labelClickable={false}
           checked={state.config.replayEnabled}
-          onChange={(value) => {
-            if (value) openModal({ type: 'recordingSettings', enable: true });
-            else void patchConfig({ replayEnabled: false });
-          }}
+          onChange={(value) => void patchConfig({ replayEnabled: value }).catch(() => {})}
         />
         <div className="recording-state" role="status">
           <Badge
@@ -78,7 +76,13 @@ export function ReplaysPanel() {
               {t(
                 recording.phase === 'recording' || recording.phase === 'starting'
                   ? 'previewWaiting'
-                  : 'recordingOff',
+                  : recording.phase === 'stopping'
+                    ? 'stopping'
+                    : recording.phase === 'error'
+                      ? 'previewUnavailable'
+                      : state.config.replayEnabled
+                        ? 'previewIdle'
+                        : 'recordingOff',
               )}
             </span>
           )}
