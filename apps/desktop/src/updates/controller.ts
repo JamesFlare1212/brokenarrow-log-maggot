@@ -41,7 +41,6 @@ export class UpdateController {
   private prepared = false;
   private recoveryStarted = false;
   private installTimer: ReturnType<typeof setTimeout> | null = null;
-  private autoInstallTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private options: UpdateOptions) {
     this.state = initialUpdateState(options.version, options.mode);
@@ -154,19 +153,7 @@ export class UpdateController {
     } finally {
       this.action = null;
     }
-    if (this.status().status === 'downloaded') this.autoInstall();
     return this.status();
-  }
-
-  private autoInstall(): void {
-    if (this.disposed || this.state.status !== 'downloaded' || this.state.error) return;
-    this.install();
-    if (this.state.status === 'downloaded' && !this.autoInstallTimer) {
-      this.autoInstallTimer = setTimeout(() => {
-        this.autoInstallTimer = null;
-        this.autoInstall();
-      }, 1_000);
-    }
   }
 
   install = (): UpdateState => {
@@ -195,7 +182,6 @@ export class UpdateController {
       if (!this.options.canInstall()) {
         this.action = null;
         this.set({ status: 'downloaded' });
-        this.autoInstall();
         return;
       }
       await this.options.prepareInstall(this.state.availableVersion!);
@@ -229,7 +215,6 @@ export class UpdateController {
     this.disposed = true;
     for (const timer of this.timers) clearTimeout(timer);
     if (this.installTimer) clearTimeout(this.installTimer);
-    if (this.autoInstallTimer) clearTimeout(this.autoInstallTimer);
     for (const [event, listener] of this.listeners)
       this.options.engine?.removeListener(event, listener);
     // A download being torn down may still emit an error before process exit.

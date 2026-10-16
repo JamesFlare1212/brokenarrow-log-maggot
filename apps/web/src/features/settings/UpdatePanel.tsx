@@ -45,7 +45,7 @@ export function UpdatePanel({ compact = false }: { compact?: boolean }) {
         <p role="status">{status}</p>
         {update.mode === 'portable' && <p>{t('updatePortable')}</p>}
         {update.mode === 'installed' && update.status === 'available' && (
-          <p>{t('updateAutoInstall')}</p>
+          <p>{t('updateManualInstall')}</p>
         )}
         {update.status === 'downloading' && (
           <progress

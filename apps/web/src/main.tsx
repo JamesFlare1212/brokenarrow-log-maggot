@@ -1,9 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { config as fontAwesomeConfig } from '@fortawesome/fontawesome-svg-core';
+import '@fortawesome/fontawesome-svg-core/styles.css';
 import type { Bridge } from '@ba/contracts';
 import { App } from './app/App';
 import { AppProvider } from './app/state';
 import './styles/index.css';
+
+fontAwesomeConfig.autoAddCss = false;
 declare global {
   interface Window {
     assistant?: Bridge;

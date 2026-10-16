@@ -10,11 +10,11 @@ export const messages: Record<string, readonly [string, string, string, string]>
   appUpdates: ['应用更新', 'App updates', 'アプリの更新', 'Обновления приложения'],
   updateCheck: ['检查更新', 'Check for updates', '更新を確認', 'Проверить обновления'],
   updateDownload: ['下载更新', 'Download update', '更新をダウンロード', 'Скачать обновление'],
-  updateAutoInstall: [
-    '下载完成后将自动重启安装。',
-    'The app will restart and install automatically after downloading.',
-    'ダウンロード完了後、自動的に再起動してインストールします。',
-    'После загрузки приложение автоматически перезапустится и установит обновление.',
+  updateManualInstall: [
+    '下载完成后，点击“重启并安装”应用更新。',
+    'After downloading, click “Restart and install” to apply the update.',
+    'ダウンロード完了後、「再起動してインストール」をクリックして更新を適用してください。',
+    'После загрузки нажмите «Перезапустить и установить», чтобы применить обновление.',
   ],
   updateLatest: [
     '当前已是最新版本。',
@@ -61,10 +61,10 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Для портативной версии скачайте новый файл и замените его после закрытия приложения.',
   ],
   updateBlocked: [
-    '更新已就绪，将在对局和录制结束后自动重启安装。',
-    'The update is ready. The app will restart and install after the match and recording finish.',
-    '更新の準備ができました。対局と録画の終了後、自動的に再起動してインストールします。',
-    'Обновление готово. Приложение перезапустится и установит его после завершения матча и записи.',
+    '更新已就绪，请在对局和录制结束后点击“重启并安装”。',
+    'The update is ready. Click “Restart and install” after the match and recording finish.',
+    '更新の準備ができました。対局と録画の終了後、「再起動してインストール」をクリックしてください。',
+    'Обновление готово. После завершения матча и записи нажмите «Перезапустить и установить».',
   ],
   updateNotApplied: [
     '上次更新到 v{version} 未生效，请重试或手动下载安装。',
@@ -97,16 +97,16 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Доступна версия {version}',
   ],
   'update.downloading': [
-    '正在下载更新：{percent}%',
-    'Downloading update: {percent}%',
-    '更新をダウンロード中：{percent}%',
-    'Загрузка обновления: {percent}%',
+    '正在下载更新…',
+    'Downloading update…',
+    '更新をダウンロード中…',
+    'Загрузка обновления…',
   ],
   'update.downloaded': [
-    'v{version} 已下载，等待自动重启安装。',
-    'Version {version} is downloaded and waiting to restart and install automatically.',
-    'v{version} をダウンロードしました。自動再起動とインストールを待機中です。',
-    'Версия {version} загружена и ожидает автоматического перезапуска и установки.',
+    'v{version} 已下载，点击“重启并安装”应用更新。',
+    'Version {version} is downloaded. Click “Restart and install” to apply the update.',
+    'v{version} をダウンロードしました。「再起動してインストール」をクリックして更新を適用してください。',
+    'Версия {version} загружена. Нажмите «Перезапустить и установить», чтобы применить обновление.',
   ],
   'update.installing': [
     '正在保存数据并重启安装…',

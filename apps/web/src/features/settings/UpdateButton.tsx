@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Check, Download, LoaderCircle, RefreshCw, RotateCw } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRotateRight, faArrowsRotate, faDownload } from '@fortawesome/free-solid-svg-icons';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Button } from '../../components/ui';
@@ -40,9 +41,8 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
       : blocked
         ? t('updateBlocked')
         : available
-          ? `${t('update.available', { version: update.availableVersion || '' })}. ${t(update.mode === 'portable' ? 'updatePortable' : 'updateAutoInstall')}`
+          ? `${t('update.available', { version: update.availableVersion || '' })}. ${t(update.mode === 'portable' ? 'updatePortable' : 'updateManualInstall')}`
           : update.error || label;
-  const Icon = busy ? LoaderCircle : ready ? RotateCw : available ? Download : RefreshCw;
   const visualStatus = active
     ? update.status
     : pending
@@ -55,11 +55,17 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
         ? 'available'
         : update.status;
   const downloadIcon = ['available', 'downloading'].includes(visualStatus);
-  const complete = !busy && (ready || (update.status === 'idle' && update.checkedAt !== null));
+  const icon = downloadIcon
+    ? faDownload
+    : ready || visualStatus === 'installing'
+      ? faArrowRotateRight
+      : faArrowsRotate;
+  const spinning = ['checking', 'installing'].includes(visualStatus);
+  const iconClass = `update-icon update-icon-${downloadIcon ? 'download' : 'refresh'}`;
   const progress = Math.min(100, Math.max(0, update.downloadPercent ?? 0));
 
   async function activate() {
-    if (busy) return;
+    if (busy || blocked || update.mode === 'disabled') return;
     setPending(true);
     try {
       if (available && update.mode === 'portable') {
@@ -90,13 +96,13 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
         onClick={() => void activate()}
       >
         {inline ? (
-          <Icon size={18} className={busy ? 'spinner' : undefined} aria-hidden="true" />
+          <FontAwesomeIcon icon={icon} spin={spinning} className={iconClass} aria-hidden="true" />
         ) : (
           <span className="update-glyph" data-state={visualStatus} aria-hidden="true">
             <svg className="update-ring" viewBox="0 0 36 36" fill="none">
               <circle className="update-ring-track" cx="18" cy="18" r="15.5" />
               <circle
-                className={`update-ring-progress${visualStatus === 'downloading' && update.downloadPercent === null ? ' update-ring-indeterminate' : ''}`}
+                className={`update-ring-progress${visualStatus === 'downloading' && update.downloadPercent === null ? ' update-ring-indeterminate fa-spin' : ''}`}
                 cx="18"
                 cy="18"
                 r="15.5"
@@ -105,23 +111,13 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
                 strokeDashoffset={visualStatus === 'available' ? 0 : 100 - progress}
               />
             </svg>
-            <span key={downloadIcon ? 'download' : 'refresh'} className="update-symbol">
-              {downloadIcon ? <Download size={18} /> : <RefreshCw size={18} />}
+            <span className="update-symbol">
+              <FontAwesomeIcon icon={icon} spin={spinning} className={iconClass} />
             </span>
-            {complete && (
-              <span className="update-complete">
-                <Check size={9} strokeWidth={3} />
-              </span>
-            )}
           </span>
         )}
         {inline && <span>{actionLabel}</span>}
-        {!inline && available && <span className="update-dot" aria-hidden="true" />}
-        {!inline && update.status === 'downloading' && (
-          <span className="update-percent" aria-hidden="true">
-            {update.downloadPercent ?? 0}%
-          </span>
-        )}
+        {!inline && (available || ready) && <span className="update-dot" aria-hidden="true" />}
       </Button>
       {!inline && (
         <span className="sr-only" role="status">

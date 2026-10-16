@@ -14,8 +14,8 @@
 }
 .button.update-button {
   position: relative;
-  width: 36px;
-  min-height: 36px;
+  width: 44px;
+  min-height: 44px;
   padding: 0;
   border-radius: 50%;
   background: transparent;
@@ -26,43 +26,49 @@
 .button.update-button[aria-busy='true'] {
   opacity: 1;
 }
-.update-glyph {
-  position: relative;
+.update-icon {
+  display: block;
+  flex: none;
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+.update-glyph,
+.update-symbol {
   display: grid;
   place-items: center;
   width: 32px;
   height: 32px;
   flex: none;
 }
-.update-symbol {
-  display: flex;
-  animation: update-symbol-enter var(--motion-normal) var(--ease-out) both;
+.update-glyph {
+  position: relative;
 }
-.update-symbol > svg {
-  transition: transform var(--motion-normal) var(--ease-out);
+.update-symbol > .update-icon {
+  width: 24px;
+  height: 24px;
 }
-.update-button:not(:disabled):is(:hover, :focus-visible) .lucide-refresh-cw {
-  transform: rotate(90deg);
+.update-symbol > .update-icon-download {
+  width: 20px;
+  height: 20px;
 }
-.update-button:not(:disabled):is(:hover, :focus-visible) .lucide-download {
-  transform: translateY(2px);
+.settings-update-button > .update-icon {
+  width: 18px;
+  height: 18px;
 }
-.update-glyph:is([data-state='checking'], [data-state='installing']) .update-symbol > svg {
-  animation: spin 1.2s linear infinite;
-}
-.update-glyph[data-state='downloading'] .update-symbol > svg {
-  animation: update-download 1.4s ease-in-out infinite;
+.settings-update-button > .update-icon-download {
+  width: 20px;
+  height: 20px;
 }
 .update-ring {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -2px;
+  width: 36px;
+  height: 36px;
   opacity: 0;
   transform: rotate(-90deg);
   transition: opacity var(--motion-normal) var(--ease-out);
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 2.2;
 }
 .update-glyph:is([data-state='available'], [data-state='downloading']) .update-ring {
   opacity: 1;
@@ -77,75 +83,18 @@
 .update-ring-indeterminate {
   stroke-dasharray: 24 76;
   stroke-dashoffset: 0;
-  transform-origin: center;
-  animation: spin 1.2s linear infinite;
-}
-.update-complete {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  display: grid;
-  place-items: center;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--text);
-  color: var(--surface);
-  box-shadow: 0 0 0 2px var(--surface);
-  animation: update-complete-enter 320ms cubic-bezier(0.2, 1.5, 0.5, 1) both;
-}
-@keyframes update-symbol-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.75);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-@keyframes update-download {
-  0%,
-  100% {
-    transform: translateY(-1px);
-  }
-  50% {
-    transform: translateY(2px);
-  }
-}
-@keyframes update-complete-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .update-button:not(:disabled):is(:hover, :focus-visible) .update-symbol > svg {
-    transform: none;
-  }
+  transform-box: view-box;
+  transform-origin: 50% 50%;
 }
 .update-dot {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 0;
+  right: 0;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--text);
   box-shadow: 0 0 0 2px var(--surface);
-}
-.update-percent {
-  position: absolute;
-  bottom: -6px;
-  padding: 0 3px;
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--text);
-  font: 9px var(--font-mono);
 }
 .workspace {
   display: flex;

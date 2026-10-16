@@ -385,15 +385,20 @@ describe('application updates', () => {
   it('checks directly from the sidebar and replaces refresh with download when an update is found', async () => {
     const initial = bootstrapForApp();
     initial.updates = { ...initial.updates, mode: 'installed', status: 'idle' };
+    const checking = deferred<RpcOutputs['updates.check']>();
     const f = nativeFixture(initial, {
-      'updates.check': () => initial.updates,
+      'updates.check': () => checking.promise,
       'updates.download': () => initial.updates,
     });
     render(<App />, { wrapper: wrapper(f.api) });
     const check = await screen.findByRole('button', { name: '检查更新' });
     expect(check.closest('.sidebar-footer')).not.toBeNull();
-    expect(check.querySelector('.lucide-refresh-cw')).not.toBeNull();
+    expect(check.querySelector('[data-icon="arrows-rotate"]')).not.toBeNull();
     fireEvent.click(check);
+    expect(check.querySelector('[data-icon="arrows-rotate"].fa-spin')).not.toBeNull();
+    expect(check.getAttribute('disabled')).not.toBeNull();
+    fireEvent.click(check);
+    await act(async () => checking.resolve(initial.updates));
     await waitFor(() =>
       expect(f.calls.filter((call) => call.method === 'updates.check')).toHaveLength(1),
     );
@@ -405,9 +410,9 @@ describe('application updates', () => {
       }),
     );
     const download = screen.getByRole('button', { name: '下载更新' });
-    expect(download.querySelector('.lucide-download')).not.toBeNull();
+    expect(download.querySelector('[data-icon="download"]')).not.toBeNull();
     expect(download.querySelector('.update-dot')).not.toBeNull();
-    expect(download.title).toContain('下载完成后将自动重启安装');
+    expect(download.title).toContain('下载完成后，点击“重启并安装”应用更新');
     expect(f.calls.some((call) => call.method === 'updates.download')).toBe(false);
     fireEvent.click(download);
     await waitFor(() =>
@@ -416,35 +421,62 @@ describe('application updates', () => {
     expect(screen.queryByRole('main', { name: '设置' })).toBeNull();
   });
 
-  it('shows download progress and disables repeated actions until automatic installation', async () => {
+  it('shows ring progress without percentages and installs only after clicking the ready button', async () => {
     const initial = structuredClone(fixtureBootstrap);
+    initial.session.current = null;
+    initial.recording.phase = 'idle';
     initial.updates = {
       ...initial.updates,
       mode: 'installed',
       status: 'downloading',
       downloadPercent: 37,
     };
-    const f = nativeFixture(initial);
+    const f = nativeFixture(initial, {
+      'updates.install': () => ({ ...initial.updates, status: 'installing', downloadPercent: 100 }),
+    });
     render(<UpdateButton />, { wrapper: wrapper(f.api) });
     const download = (await screen.findByRole('button', {
-      name: '正在下载更新：37%',
+      name: '正在下载更新…',
     })) as HTMLButtonElement;
     expect(download.disabled).toBe(true);
-    expect(download.textContent).toBe('37%');
+    expect(download.textContent).toBe('');
+    expect(download.querySelector('.update-ring-progress')?.getAttribute('stroke-dashoffset')).toBe(
+      '63',
+    );
+    expect(download.querySelector('.update-percent')).toBeNull();
+    expect(download.querySelector('[data-icon="download"].fa-spin')).toBeNull();
     fireEvent.click(download);
     expect(f.calls.some((call) => call.method.startsWith('updates.'))).toBe(false);
     act(() =>
       f.emit({
         type: 'updates',
-        updates: { ...initial.updates, status: 'installing', downloadPercent: 100 },
+        updates: { ...initial.updates, status: 'downloaded', downloadPercent: 100 },
         revision: 1,
+      }),
+    );
+    const install = screen.getByRole('button', { name: '重启并安装' }) as HTMLButtonElement;
+    expect(install.disabled).toBe(false);
+    expect(install.querySelector('[data-icon="arrow-rotate-right"]')).not.toBeNull();
+    expect(install.querySelector('.update-dot')).not.toBeNull();
+    expect(f.calls.some((call) => call.method === 'updates.install')).toBe(false);
+    fireEvent.click(install);
+    await waitFor(() =>
+      expect(f.calls.filter((call) => call.method === 'updates.install')).toHaveLength(1),
+    );
+    act(() =>
+      f.emit({
+        type: 'updates',
+        updates: { ...initial.updates, status: 'installing', downloadPercent: 100 },
+        revision: 2,
       }),
     );
     expect(
       (screen.getByRole('button', { name: '正在保存数据并重启安装…' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    expect(f.calls.some((call) => call.method === 'updates.install')).toBe(false);
+    expect(install.querySelector('[data-icon="arrow-rotate-right"].fa-spin')).not.toBeNull();
+    fireEvent.click(install);
+    expect(f.calls.filter((call) => call.method === 'updates.install')).toHaveLength(1);
   });
 
   it('retries failed downloads from the same button and offers portable downloads', async () => {
@@ -519,7 +551,7 @@ describe('application updates', () => {
     );
     const install = screen.getByRole('button', { name: '重启并安装' }) as HTMLButtonElement;
     expect(install.disabled).toBe(true);
-    expect(screen.getByText('更新已就绪，将在对局和录制结束后自动重启安装。')).toBeTruthy();
+    expect(screen.getByText('更新已就绪，请在对局和录制结束后点击“重启并安装”。')).toBeTruthy();
     act(() =>
       f.emit({ type: 'session', session: { ...initial.session, current: null }, revision: 3 }),
     );
@@ -628,7 +660,7 @@ describe('settings pages and automatic saving', () => {
     expect(location.hash).toBe('#settings/general');
     const about = within(settings.getByRole('region', { name: '关于' }));
     expect(about.getByText('发现新版本 v4.1.1')).toBeTruthy();
-    expect(about.getByText('下载完成后将自动重启安装。')).toBeTruthy();
+    expect(about.getByText('下载完成后，点击“重启并安装”应用更新。')).toBeTruthy();
     fireEvent.click(about.getByRole('button', { name: '下载更新' }));
     await waitFor(() =>
       expect(native.calls.filter((call) => call.method === 'updates.download')).toHaveLength(1),

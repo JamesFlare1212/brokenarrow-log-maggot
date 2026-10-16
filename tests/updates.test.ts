@@ -146,7 +146,7 @@ describe('desktop updates', () => {
     expect(f.engine.quitAndInstall).not.toHaveBeenCalled();
     expect(f.controller.status()).toMatchObject({ status: 'error', errorContext: 'download' });
     await f.controller.download();
-    expect(f.controller.status().status).toBe('installing');
+    expect(f.controller.status().status).toBe('downloaded');
   });
 
   it('clears an old offered version when a check reports no update', async () => {
@@ -190,37 +190,47 @@ describe('desktop updates', () => {
     expect(f.prepareInstall).not.toHaveBeenCalled();
   });
 
-  it('automatically installs a completed download after the download RPC settles', async () => {
+  it('keeps a completed download ready until installation is explicitly requested', async () => {
     vi.useFakeTimers();
     const f = fixture();
     await f.controller.check();
-    expect((await f.controller.download()).status).toBe('installing');
+    expect((await f.controller.download()).status).toBe('downloaded');
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(f.controller.status().status).toBe('downloaded');
     expect(f.prepareInstall).not.toHaveBeenCalled();
     expect(f.engine.quitAndInstall).not.toHaveBeenCalled();
+    expect(f.controller.install().status).toBe('installing');
     await vi.advanceTimersByTimeAsync(0);
     expect(f.prepareInstall).toHaveBeenCalledExactlyOnceWith('4.0.1');
     expect(f.engine.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
   });
 
-  it('automatically resumes installation when the match or recording ends, including startup races', async () => {
+  it('requires another install request after a match or recording blocks installation', async () => {
     vi.useFakeTimers();
     const f = fixture();
     f.canInstall.mockReturnValue(false);
     await f.controller.check();
     await f.controller.download();
+    f.controller.install();
     await vi.advanceTimersByTimeAsync(5_000);
     expect(f.controller.status().status).toBe('downloaded');
     expect(f.prepareInstall).not.toHaveBeenCalled();
-    f.canInstall.mockReturnValueOnce(true).mockReturnValue(false);
-    await vi.advanceTimersByTimeAsync(1_001);
+    f.canInstall.mockReturnValue(true);
+    f.controller.install();
+    f.canInstall.mockReturnValue(false);
+    await vi.advanceTimersByTimeAsync(0);
     expect(f.controller.status().status).toBe('downloaded');
     expect(f.prepareInstall).not.toHaveBeenCalled();
     f.canInstall.mockReturnValue(true);
-    await vi.advanceTimersByTimeAsync(1_001);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(f.prepareInstall).not.toHaveBeenCalled();
+    expect(f.engine.quitAndInstall).not.toHaveBeenCalled();
+    f.controller.install();
+    await vi.advanceTimersByTimeAsync(0);
     expect(f.engine.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
   });
 
-  it('cancels deferred automatic installation on disposal', async () => {
+  it('ignores install requests after disposal even when a download is ready', async () => {
     vi.useFakeTimers();
     const f = fixture();
     f.canInstall.mockReturnValue(false);
@@ -228,6 +238,7 @@ describe('desktop updates', () => {
     await f.controller.download();
     f.controller.dispose();
     f.canInstall.mockReturnValue(true);
+    f.controller.install();
     await vi.advanceTimersByTimeAsync(5_000);
     expect(f.prepareInstall).not.toHaveBeenCalled();
     expect(f.engine.quitAndInstall).not.toHaveBeenCalled();
