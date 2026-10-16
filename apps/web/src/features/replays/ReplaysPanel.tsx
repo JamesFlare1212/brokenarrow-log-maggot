@@ -7,6 +7,7 @@ import {
   faSliders,
 } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
+import { TooltipButton } from '../../components/Tooltip';
 import type { Replay } from '@ba/contracts';
 import { formatSize, formatTime, formatDuration } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -133,7 +134,7 @@ export function ReplaysPanel() {
             <div className="replay-list">
               {list.map((r) => (
                 <div className="replay-row" key={r.id}>
-                  <button
+                  <TooltipButton
                     className="replay-thumbnail"
                     aria-label={`${t('play')}: ${r.map || r.uploaderName}`}
                     onClick={() =>
@@ -142,7 +143,7 @@ export function ReplaysPanel() {
                   >
                     <Icon icon={faVideo} size={36} aria-hidden="true" />
                     <Badge>{formatDuration(r.durationSec)}</Badge>
-                  </button>
+                  </TooltipButton>
                   <div className="replay-description">
                     <strong>
                       {r.map || '#' + (r.fid || '—')}

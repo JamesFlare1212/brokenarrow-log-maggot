@@ -52,6 +52,7 @@ try {
       'theme',
       'lang',
       'panelOrder',
+      'hiddenPanels',
       'collapsedPanels',
       'multiAccountBond',
       'banCardVisible',

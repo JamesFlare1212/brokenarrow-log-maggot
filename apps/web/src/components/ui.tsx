@@ -19,16 +19,20 @@ import {
 import { Icon } from './Icon';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { useI18n } from '../hooks/useI18n';
+import { TooltipAutoFocusContext, TooltipButton } from './Tooltip';
 export function Button({
   variant = 'ghost',
   className = '',
   children,
   ...props
-}: ComponentPropsWithRef<'button'> & { variant?: 'primary' | 'danger' | 'ghost' }) {
+}: ComponentPropsWithRef<'button'> & {
+  variant?: 'primary' | 'danger' | 'ghost';
+  tooltip?: ReactNode;
+}) {
   return (
-    <button type="button" {...props} className={`button button-${variant} ${className}`}>
+    <TooltipButton {...props} className={`button button-${variant} ${className}`}>
       {children}
-    </button>
+    </TooltipButton>
   );
 }
 export function Card({
@@ -110,6 +114,7 @@ export function Dialog({
 }) {
   const { t } = useI18n();
   const returnFocus = useRef<HTMLElement | null>(null);
+  const autoFocus = useRef(false);
   const dialogTitle = (
     <RadixDialog.Title className={showHeader ? undefined : 'sr-only'}>{title}</RadixDialog.Title>
   );
@@ -121,47 +126,53 @@ export function Dialog({
     </RadixDialog.Close>
   );
   return (
-    <RadixDialog.Root
-      open={open}
-      onOpenChange={(value) => {
-        if (!value) onClose();
-      }}
-    >
-      <RadixDialog.Portal>
-        <RadixDialog.Overlay className="dialog-overlay" />
-        <RadixDialog.Content
-          className={`dialog ${className}`}
-          aria-describedby={undefined}
-          onOpenAutoFocus={() => {
-            returnFocus.current =
-              document.activeElement instanceof HTMLElement ? document.activeElement : null;
-          }}
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            queueMicrotask(() => {
-              if (!document.querySelector('[role="dialog"]') && returnFocus.current?.isConnected)
-                returnFocus.current.focus();
-            });
-          }}
-        >
-          {!showHeader && banner ? (
-            <>
-              {dialogTitle}
-              <div className="dialog-banner">
-                {banner}
+    <TooltipAutoFocusContext value={autoFocus}>
+      <RadixDialog.Root
+        open={open}
+        onOpenChange={(value) => {
+          if (!value) onClose();
+        }}
+      >
+        <RadixDialog.Portal>
+          <RadixDialog.Overlay className="dialog-overlay" />
+          <RadixDialog.Content
+            className={`dialog ${className}`}
+            aria-describedby={undefined}
+            onOpenAutoFocus={() => {
+              autoFocus.current = true;
+              queueMicrotask(() => {
+                autoFocus.current = false;
+              });
+              returnFocus.current =
+                document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              queueMicrotask(() => {
+                if (!document.querySelector('[role="dialog"]') && returnFocus.current?.isConnected)
+                  returnFocus.current.focus();
+              });
+            }}
+          >
+            {!showHeader && banner ? (
+              <>
+                {dialogTitle}
+                <div className="dialog-banner">
+                  {banner}
+                  {closeButton}
+                </div>
+              </>
+            ) : (
+              <div className={showHeader ? 'dialog-header' : 'dialog-headerless-controls'}>
+                {dialogTitle}
                 {closeButton}
               </div>
-            </>
-          ) : (
-            <div className={showHeader ? 'dialog-header' : 'dialog-headerless-controls'}>
-              {dialogTitle}
-              {closeButton}
-            </div>
-          )}
-          <div className="dialog-body">{children}</div>
-        </RadixDialog.Content>
-      </RadixDialog.Portal>
-    </RadixDialog.Root>
+            )}
+            <div className="dialog-body">{children}</div>
+          </RadixDialog.Content>
+        </RadixDialog.Portal>
+      </RadixDialog.Root>
+    </TooltipAutoFocusContext>
   );
 }
 export function Empty({
@@ -260,12 +271,14 @@ export function Field({
 export function Toggle({
   id,
   label,
+  'aria-label': ariaLabel,
   checked,
   disabled,
   onChange,
 }: {
   id: string;
   label: string;
+  'aria-label'?: string;
   checked: boolean;
   disabled?: boolean;
   onChange: (value: boolean) => void;
@@ -276,6 +289,7 @@ export function Toggle({
       <input
         id={id}
         type="checkbox"
+        aria-label={ariaLabel}
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}

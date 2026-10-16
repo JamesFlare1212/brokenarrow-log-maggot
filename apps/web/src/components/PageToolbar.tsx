@@ -20,6 +20,7 @@ export function SidebarToggle({
     <Button
       className="sidebar-collapse-toggle button-borderless"
       aria-label={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
+      title={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
       aria-expanded={!collapsed}
       onClick={onToggle}
     >

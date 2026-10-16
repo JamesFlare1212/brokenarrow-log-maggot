@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from 'react';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../components/Icon';
+import { TooltipButton } from '../components/Tooltip';
 import type {
   AppEvent,
   Bootstrap,
@@ -307,12 +308,12 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
             role={toast.error ? 'alert' : 'status'}
           >
             {toast.message}
-            <button
+            <TooltipButton
               aria-label={translate(state.config.lang, 'close')}
               onClick={() => setToast(null)}
             >
               <Icon icon={faXmark} size={18} />
-            </button>
+            </TooltipButton>
           </div>
         )}
       </LocaleContext.Provider>

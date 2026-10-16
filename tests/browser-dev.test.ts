@@ -42,6 +42,7 @@ describe('browser development with repository fixtures', () => {
       lightTheme: 'forest',
       darkTheme: 'violet',
       sidebarCollapsed: true,
+      hiddenPanels: ['players', 'decks'],
     });
     expect(events).toContainEqual(
       expect.objectContaining({
@@ -52,6 +53,7 @@ describe('browser development with repository fixtures', () => {
           lightTheme: 'forest',
           darkTheme: 'violet',
           sidebarCollapsed: true,
+          hiddenPanels: ['players', 'decks'],
         }),
       }),
     );

@@ -300,15 +300,35 @@
 .settings-content .panel-order li {
   background: var(--surface-subtle);
   border-color: var(--border-subtle);
+  flex-wrap: wrap;
 }
 .panel-order-label {
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .panel-order-label small {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+.panel-order li[data-hidden='true'] .panel-order-label {
+  color: var(--muted);
+}
+.panel-order-actions {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.panel-order-actions .toggle {
+  gap: 8px;
+  min-height: 40px;
+  padding-right: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.panel-order-actions .toggle > input {
+  right: 8px;
 }
 .settings-content .account-row > span {
   display: flex;

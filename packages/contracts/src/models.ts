@@ -283,6 +283,7 @@ export interface PublicConfig {
   sidebarCollapsed: boolean;
   lang: Locale;
   panelOrder: Panel[];
+  hiddenPanels: Panel[];
   collapsedPanels: Panel[];
   replayEnabled: boolean;
   replayDisplayId: string;

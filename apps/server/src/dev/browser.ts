@@ -38,6 +38,7 @@ const preferences = new Set([
   'sidebarCollapsed',
   'lang',
   'panelOrder',
+  'hiddenPanels',
   'collapsedPanels',
   'banCardVisible',
   'multiAccountBond',

@@ -671,7 +671,7 @@ main {
   justify-content: space-between;
 }
 .quick-tools .card-body {
-  padding: 7px 12px;
+  padding: 7px 0;
   gap: 0;
 }
 .quick-tool {
@@ -682,7 +682,7 @@ main {
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--border-subtle);
-  padding: 13px 4px;
+  padding: 13px 16px;
   width: 100%;
   color: var(--text);
   transition: background var(--motion-fast);

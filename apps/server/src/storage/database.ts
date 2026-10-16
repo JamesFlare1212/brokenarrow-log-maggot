@@ -94,6 +94,7 @@ export class Database {
   updateConfig(patch: Partial<PublicConfig>): PublicConfig {
     const value = configSchema.parse({ ...this.config(), ...patch });
     value.panelOrder = [...new Set([...includeRadar(value.panelOrder), ...PANELS])];
+    value.hiddenPanels = [...new Set(value.hiddenPanels)];
     value.collapsedPanels = [...new Set(value.collapsedPanels)];
     this.sql
       .prepare(

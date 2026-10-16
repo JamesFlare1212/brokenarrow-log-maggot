@@ -13,6 +13,8 @@ describe('configuration patches', () => {
     { themeMode: 'light', theme: 'forest' },
     { lightTheme: 'forest', darkTheme: 'violet', sidebarCollapsed: true },
     { collapsedPanels: [] },
+    { hiddenPanels: ['players', 'decks'] },
+    { hiddenPanels: [] },
     { inputHookEnabled: true },
     { replayEnabled: false },
     { replayQuality: 1080, replayFps: 60, replaySaveDir: 'custom-recordings' },
@@ -31,10 +33,14 @@ describe('configuration patches', () => {
       { replayFps: 10 },
       { replayQuality: 1440 },
       { panelOrder: ['invalid'] },
+      { hiddenPanels: ['invalid'] },
+      { hiddenPanels: ['about'] },
+      { hiddenPanels: null },
     ]) {
       expect(rpcSchemas['config.update'].safeParse(patch).success).toBe(false);
     }
     expect(configSchema.parse({}).theme).toBe('dark');
+    expect(configSchema.parse({}).hiddenPanels).toEqual([]);
   });
 
   it('preserves unrelated preferences on disk across patches and a database reopen', async () => {
@@ -51,6 +57,7 @@ describe('configuration patches', () => {
         lightTheme: 'forest',
         darkTheme: 'violet',
         sidebarCollapsed: true,
+        hiddenPanels: ['players', 'decks'],
         lang: 'ja',
         replayEnabled: true,
         replayDisplayId: 'screen:1',
@@ -105,6 +112,7 @@ describe('configuration patches', () => {
       ];
       expect(db.config()).toMatchObject({
         panelOrder: expectedOrder,
+        hiddenPanels: [],
         collapsedPanels: ['decks'],
         theme: 'forest',
         lang: 'ja',

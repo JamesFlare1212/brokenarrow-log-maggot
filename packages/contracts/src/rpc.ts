@@ -57,6 +57,7 @@ export const configSchema = z.object({
   sidebarCollapsed: z.boolean().default(false),
   lang: z.enum(['zh', 'en', 'ja', 'ru']).default('zh'),
   panelOrder: panelListSchema.default([...PANELS]),
+  hiddenPanels: z.array(z.enum(PANELS)).default([]),
   collapsedPanels: panelListSchema.default(['decks']),
   replayEnabled: z.boolean().default(false),
   replayDisplayId: z.string().max(256).default(''),

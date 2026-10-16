@@ -412,7 +412,11 @@ describe('application updates', () => {
     const download = screen.getByRole('button', { name: '下载更新' });
     expect(download.querySelector('[data-icon="download"]')).not.toBeNull();
     expect(download.querySelector('.update-dot')).not.toBeNull();
-    expect(download.title).toContain('下载完成后，点击“重启并安装”应用更新');
+    act(() => download.focus());
+    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toContain(
+      '下载完成后，点击“重启并安装”应用更新',
+    );
+    fireEvent.blur(download);
     expect(f.calls.some((call) => call.method === 'updates.download')).toBe(false);
     fireEvent.click(download);
     await waitFor(() =>
@@ -506,7 +510,9 @@ describe('application updates', () => {
       }),
     );
     const download = screen.getByRole('button', { name: '下载更新' });
-    expect(download.title).toContain('便携版');
+    act(() => download.focus());
+    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toContain('便携版');
+    fireEvent.blur(download);
     await waitFor(() => expect((download as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(download);
     await waitFor(() =>
@@ -1675,6 +1681,74 @@ describe('user interaction regressions', () => {
     ).toBe('false');
     expect(native.backend.config.collapsedPanels).toEqual(['decks', 'apm']);
     expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'apm']);
+  });
+
+  it('saves page visibility in both navigation menus and restores pages in their saved order', async () => {
+    const bootstrap = bootstrapForApp();
+    bootstrap.config.panelOrder = ['current', 'players', 'decks'];
+    const native = nativeFixture(bootstrap);
+    const user = userEvent.setup();
+    const view = render(<App />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: '设置' }));
+    await screen.findByRole('main', { name: '设置' });
+    fireEvent.click(screen.getByRole('tab', { name: '导航' }));
+    const players = screen.getByRole('checkbox', { name: '在导航中显示 玩家查询' });
+    players.focus();
+    await user.keyboard(' ');
+    fireEvent.click(screen.getByRole('checkbox', { name: '在导航中显示 卡组工具' }));
+    fireEvent.click(screen.getByRole('button', { name: '上移 卡组工具' }));
+    await waitFor(() => {
+      expect(native.backend.config.hiddenPanels).toEqual(['players', 'decks']);
+      expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'players']);
+    });
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    expect(within(screen.getByRole('navigation')).getAllByRole('button')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: '打开导航' }));
+    const dialog = within(screen.getByRole('dialog', { name: translate('zh', 'workspaceNav') }));
+    const navigation = within(dialog.getByRole('navigation'));
+    expect(navigation.queryByRole('button', { name: '玩家查询' })).toBeNull();
+    expect(navigation.queryByRole('button', { name: '卡组工具' })).toBeNull();
+    expect(navigation.getByRole('button', { name: '总览' })).toBeTruthy();
+
+    view.unmount();
+    window.history.replaceState(null, '', '#settings/navigation');
+    render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByRole('main', { name: '设置' });
+    const restoredPlayers = screen.getByRole('checkbox', { name: '在导航中显示 玩家查询' });
+    expect((restoredPlayers as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(restoredPlayers);
+    fireEvent.click(screen.getByRole('checkbox', { name: '在导航中显示 卡组工具' }));
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    expect(
+      within(screen.getByRole('navigation'))
+        .getAllByRole('button')
+        .map((button) => button.textContent?.trim()),
+    ).toEqual(['总览', '卡组工具', '玩家查询']);
+    expect(native.backend.config.hiddenPanels).toEqual([]);
+    expect(
+      native.calls.filter((call) => call.method === 'config.update').map((call) => call.input),
+    ).toContainEqual({ hiddenPanels: ['players'] });
+  });
+
+  it('keeps settings available when all navigation pages are hidden', async () => {
+    const bootstrap = bootstrapForApp();
+    bootstrap.config.hiddenPanels = [...bootstrap.config.panelOrder];
+    const native = nativeFixture(bootstrap);
+    render(<App />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: '设置' }));
+    await screen.findByRole('main', { name: '设置' });
+    fireEvent.click(screen.getByRole('tab', { name: '导航' }));
+    const toggle = screen.getByRole('checkbox', { name: '在导航中显示 当前房间 / 对局' });
+    expect((toggle as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    expect(
+      within(screen.getByRole('navigation')).getByRole('button', { name: '总览' }),
+    ).toBeTruthy();
+    expect(native.backend.config.hiddenPanels).toEqual([]);
   });
 
   it('opens a deep link and preserves scroll positions, search and filters when navigating back', async () => {

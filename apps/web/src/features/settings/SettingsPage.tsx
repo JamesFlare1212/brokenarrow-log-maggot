@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   faArrowUp,
   faArrowDown,
@@ -62,6 +62,36 @@ export function SettingsPage() {
   const logRevision = useRef(0),
     logRequest = useRef(0);
   const draft = settings.draft ?? state.config;
+  const orderList = useRef<HTMLOListElement>(null),
+    orderPositions = useRef(new Map<string, number>()),
+    orderAnimations = useRef<Animation[]>([]);
+  useLayoutEffect(() => {
+    const positions = orderPositions.current;
+    orderPositions.current = new Map();
+    if (!positions.size) return;
+    orderAnimations.current.forEach((animation) => animation.cancel());
+    orderAnimations.current = [];
+    const list = orderList.current;
+    if (!list || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const styles = getComputedStyle(list);
+    const movements = Array.from(list.children, (child) => {
+      const row = child as HTMLElement;
+      const previous = positions.get(row.dataset.panel!);
+      return {
+        row,
+        offset: previous === undefined ? 0 : previous - row.getBoundingClientRect().top,
+      };
+    });
+    orderAnimations.current = movements
+      .filter(({ row, offset }) => offset !== 0 && typeof row.animate === 'function')
+      .map(({ row, offset }) =>
+        row.animate([{ transform: `translateY(${offset}px)` }, { transform: 'translateY(0)' }], {
+          duration: Number.parseFloat(styles.getPropertyValue('--motion-normal')) || 220,
+          easing: styles.getPropertyValue('--ease-out').trim() || 'ease-out',
+        }),
+      );
+  }, [draft.panelOrder]);
+  useEffect(() => () => orderAnimations.current.forEach((animation) => animation.cancel()), []);
   const collapsed = draft.sidebarCollapsed;
   const flush = settings.flush;
   const saveStatus = tab === 'recording' ? recordingStatus : settings.status;
@@ -141,6 +171,12 @@ export function SettingsPage() {
     const first = order[index],
       second = order[other];
     if (first && second) {
+      orderPositions.current = new Map(
+        Array.from(orderList.current?.children ?? [], (child) => [
+          (child as HTMLElement).dataset.panel!,
+          child.getBoundingClientRect().top,
+        ]),
+      );
       order[index] = second;
       order[other] = first;
       set('panelOrder', order);
@@ -376,14 +412,34 @@ export function SettingsPage() {
             {id === 'navigation' && (
               <section className="settings-section">
                 <h3>{t('panelOrder')}</h3>
-                <ol className="panel-order">
+                <ol className="panel-order" ref={orderList}>
                   {draft.panelOrder.map((panel, index) => (
-                    <li key={panel}>
+                    <li
+                      key={panel}
+                      data-panel={panel}
+                      data-hidden={draft.hiddenPanels.includes(panel)}
+                    >
                       <span className="panel-order-label">
                         <small>{String(index + 1).padStart(2, '0')}</small>
                         {t(panel)}
                       </span>
-                      <div className="actions">
+                      <div className="actions panel-order-actions">
+                        <Toggle
+                          id={`navigation-visible-${panel}`}
+                          label={t(
+                            draft.hiddenPanels.includes(panel) ? 'pageHidden' : 'pageVisible',
+                          )}
+                          aria-label={t('showInNavigation') + ' ' + t(panel)}
+                          checked={!draft.hiddenPanels.includes(panel)}
+                          onChange={(visible) =>
+                            set(
+                              'hiddenPanels',
+                              visible
+                                ? draft.hiddenPanels.filter((hidden) => hidden !== panel)
+                                : [...draft.hiddenPanels, panel],
+                            )
+                          }
+                        />
                         <Button
                           disabled={index === 0}
                           aria-label={t('moveUp') + ' ' + t(panel)}

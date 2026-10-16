@@ -1,5 +1,6 @@
 import { faDisplay, faSun, faMoon, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
+import { TooltipButton } from '../../components/Tooltip';
 import { COLOR_SCHEMES, THEME_MODES, type PublicConfig } from '@ba/contracts';
 import { useI18n } from '../../hooks/useI18n';
 import { colorSchemeFor } from '../../hooks/useAppearance';
@@ -67,11 +68,10 @@ export function AppearanceSettings({
                 role="group"
                 aria-label={t('theme.' + color)}
               >
-                <button
+                <TooltipButton
                   type="button"
                   className="palette-pair-select"
                   aria-label={pairLabel}
-                  title={pairLabel}
                   aria-pressed={pairSelected}
                   onClick={() => change({ lightTheme: color, darkTheme: color })}
                 />
@@ -81,13 +81,12 @@ export function AppearanceSettings({
                     const icon = icons[mode];
                     const label = t('theme.' + color) + ' · ' + t('themeMode.' + mode);
                     return (
-                      <button
+                      <TooltipButton
                         key={mode}
                         type="button"
                         className="palette-choice"
                         data-mode={mode}
                         aria-label={label}
-                        title={label}
                         aria-pressed={selected}
                         onClick={() =>
                           change({
@@ -103,7 +102,7 @@ export function AppearanceSettings({
                             <Icon icon={icon} size={11} />
                           )}
                         </span>
-                      </button>
+                      </TooltipButton>
                     );
                   })}
                 </div>

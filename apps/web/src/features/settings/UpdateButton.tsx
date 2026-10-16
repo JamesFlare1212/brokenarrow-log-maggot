@@ -90,7 +90,13 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
       <Button
         className={inline ? 'settings-update-button' : 'update-button button-borderless'}
         aria-label={label}
-        title={`${detail} · v${update.currentVersion}`}
+        tooltip={
+          <>
+            <strong className="button-tooltip-label">{label}</strong>
+            {detail !== label && <span className="button-tooltip-detail">{detail}</span>}
+            <span className="button-tooltip-detail">v{update.currentVersion}</span>
+          </>
+        }
         aria-busy={busy}
         disabled={busy || blocked || update.mode === 'disabled'}
         onClick={() => void activate()}

@@ -1,4 +1,5 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { Tooltip } from './Tooltip';
 
 export function Sidebar({
   collapsed,
@@ -40,9 +41,10 @@ export function SidebarItem({
   label,
   selected = false,
   className = '',
+  title,
   ...props
 }: ComponentPropsWithoutRef<'button'> & { icon: ReactNode; label: string; selected?: boolean }) {
-  return (
+  const button = (
     <button
       type="button"
       {...props}
@@ -54,6 +56,13 @@ export function SidebarItem({
       </span>
       <span className="sidebar-item-label">{label}</span>
     </button>
+  );
+  return title ? (
+    <Tooltip content={title} side="right">
+      {button}
+    </Tooltip>
+  ) : (
+    button
   );
 }
 

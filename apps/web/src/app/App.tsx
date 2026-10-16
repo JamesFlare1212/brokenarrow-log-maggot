@@ -23,6 +23,7 @@ import {
   faVideo,
 } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../components/Icon';
+import { TooltipButton } from '../components/Tooltip';
 import type { Panel } from '@ba/contracts';
 import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
@@ -91,26 +92,28 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
     { t } = useI18n();
   return (
     <SidebarNavigation aria-label={t('workspaceNav')}>
-      {state.config.panelOrder.map((panel) => (
-        <SidebarItem
-          key={panel}
-          className="nav-item"
-          icon={icons[panel]}
-          label={t(panel === 'current' ? 'overview' : panel)}
-          selected={page === panel}
-          onClick={() => {
-            setPage(panel);
-            onNavigate?.();
-          }}
-          aria-current={page === panel ? 'page' : undefined}
-          aria-label={t(panel === 'current' ? 'overview' : panel)}
-          title={
-            settings.draft?.sidebarCollapsed
-              ? t(panel === 'current' ? 'overview' : panel)
-              : undefined
-          }
-        />
-      ))}
+      {state.config.panelOrder
+        .filter((panel) => !state.config.hiddenPanels.includes(panel))
+        .map((panel) => (
+          <SidebarItem
+            key={panel}
+            className="nav-item"
+            icon={icons[panel]}
+            label={t(panel === 'current' ? 'overview' : panel)}
+            selected={page === panel}
+            onClick={() => {
+              setPage(panel);
+              onNavigate?.();
+            }}
+            aria-current={page === panel ? 'page' : undefined}
+            aria-label={t(panel === 'current' ? 'overview' : panel)}
+            title={
+              (settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed)
+                ? t(panel === 'current' ? 'overview' : panel)
+                : undefined
+            }
+          />
+        ))}
     </SidebarNavigation>
   );
 }
@@ -230,7 +233,7 @@ export function App() {
           </div>
           <div className="topbar-actions">
             <BatraceStatus health={state.health} />
-            <button
+            <TooltipButton
               className="account-button"
               aria-label={`${t('currentAccount')}: ${account}`}
               onClick={() =>
@@ -240,7 +243,7 @@ export function App() {
               }
             >
               {account.slice(0, 1).toUpperCase()}
-            </button>
+            </TooltipButton>
           </div>
         </PageToolbar>
         <div

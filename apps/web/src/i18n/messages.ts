@@ -413,10 +413,10 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Выберите функции для автоматического запуска.',
   ],
   'settingsHint.navigation': [
-    '调整侧边栏中各个页面的排列顺序。',
-    'Arrange the pages in your sidebar.',
-    'サイドバーのページ順序を変更します。',
-    'Измените порядок страниц в боковой панели.',
+    '设置各个页面在导航中的显示状态与排列顺序。',
+    'Choose which pages appear in navigation and arrange their order.',
+    'ナビゲーションに表示するページと順序を設定します。',
+    'Выберите страницы для отображения в навигации и настройте их порядок.',
   ],
   'settingsHint.accounts': [
     '管理从游戏日志中识别到的本机账号。',
@@ -866,6 +866,14 @@ export const messages: Record<string, readonly [string, string, string, string]>
   theme: ['主题', 'Theme', 'テーマ', 'Тема'],
   language: ['语言', 'Language', '言語', 'Язык'],
   panelOrder: ['导航次序', 'Navigation order', 'ナビゲーション順序', 'Порядок навигации'],
+  showInNavigation: [
+    '在导航中显示',
+    'Show in navigation',
+    'ナビゲーションに表示',
+    'Показывать в навигации',
+  ],
+  pageVisible: ['显示', 'Visible', '表示', 'Показана'],
+  pageHidden: ['隐藏', 'Hidden', '非表示', 'Скрыта'],
   serviceConnected: ['服务可用', 'Service connected', 'サービス接続済み', 'Сервис доступен'],
   servicePartial: [
     '服务部分可用',
