@@ -98,6 +98,8 @@ NSIS 安装版支持应用内下载、校验、差分下载和重启安装。便
 
 BATrace 请求统一排队，默认间隔至少 1200ms；缓存命中不发送请求，手动刷新绕过缓存。
 
+Temporary workaround: the desktop app disables Chromium QUIC/HTTP/3 to avoid observed BATrace stalls. See [scope and removal criteria](docs/architecture.md#temporary-quic-workaround).
+
 数据保存在原 `broken-arrow-log-assistant` 用户目录中的 SQLite。旧 JSON 在首次启动备份并事务导入，原文件保留。录像仍是本地 WebM，播放通过受控 Range 协议按需读取。
 
 APM 和录像默认关闭。APM 仅统计进行中对局、游戏在前台时的真实输入；录像捕获所选显示器完整画面。

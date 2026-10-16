@@ -33,3 +33,23 @@ SQLite 使用 WAL、外键、索引、prepared statements、事务。对局、�
 卡组 ZIP 校验路径、扩展名、CRC、边界和容量。压缩 / 解压使用异步线程池，写入临时文件后 rename，失败明确反馈。
 
 公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout / settings；布局、配色与组件状态约定见[视觉规范](../design-system/broken-arrow/MASTER.md)。
+
+## Temporary QUIC workaround
+
+Added on 2026-10-16: the Electron main process calls
+`app.commandLine.appendSwitch('disable-quic')` before the app becomes ready. This is a
+temporary mitigation for observed BATrace HTTP/3 requests stalling after the QUIC
+handshake, not a confirmed fix for the underlying network or Chromium issue. See
+[Cloudflare's HTTP/3 troubleshooting guidance](https://developers.cloudflare.com/speed/optimization/protocol/troubleshooting/protocol-troubleshooting/#chrome-stalls-or-fails-only-on-http3).
+
+The switch disables QUIC/HTTP/3 throughout the desktop application's Chromium network
+sessions, including `net.fetch`. HTTPS continues over HTTP/2 or HTTP/1.1 with normal
+DNS resolution, proxy handling and certificate validation. Request scheduling,
+retries and health-check timing are separate concerns.
+
+Revisit this workaround after Electron/Chromium updates or a confirmed network fix.
+Remove the startup switch only after repeated BATrace requests succeed over verified
+HTTP/3 using normal DNS, with the VPN both enabled and disabled. Capture a Chromium
+NetLog to confirm HTTP/3 response headers arrive rather than silently falling back
+to TCP, and compare against a TCP baseline. Run `pnpm check`, `pnpm format:check`,
+`pnpm smoke` and `pnpm smoke:real` when removing the workaround.

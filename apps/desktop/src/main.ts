@@ -13,6 +13,9 @@ import { VerificationGate } from './gate';
 import { selectDirectory, detectLogDirectory, openPath } from './directories';
 import { UpdateController } from './updates/controller';
 import { readInstallRecord, writeInstallRecord } from './updates/install-record';
+// Temporary workaround for BATrace QUIC/HTTP/3 stalls; revisit after Chromium/network fixes.
+// See docs/architecture.md#temporary-quic-workaround for removal criteria.
+app.commandLine.appendSwitch('disable-quic');
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'ba-replay',
