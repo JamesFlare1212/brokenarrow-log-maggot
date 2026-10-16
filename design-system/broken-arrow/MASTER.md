@@ -16,6 +16,8 @@ The settings reference is the T3 Code layout supplied for this project: a catego
 | Application scrollbars                    | [scrollbars.css](../../apps/web/src/styles/scrollbars.css)                                                                                                       |
 | Workspace, overview and responsive layout | [layout.css](../../apps/web/src/styles/layout.css)                                                                                                               |
 | Shared buttons, cards and dialogs         | [components.css](../../apps/web/src/styles/components.css)                                                                                                       |
+| Font Awesome icons and shared sizing      | [Icon.tsx](../../apps/web/src/components/Icon.tsx), [main.tsx](../../apps/web/src/main.tsx)                                                                      |
+| Update action and progress states         | [UpdateButton.tsx](../../apps/web/src/features/settings/UpdateButton.tsx), [layout.css](../../apps/web/src/styles/layout.css)                                    |
 | Settings layout and palette controls      | [settings.css](../../apps/web/src/styles/settings.css)                                                                                                           |
 | Navigation and page composition           | [App.tsx](../../apps/web/src/app/App.tsx)                                                                                                                        |
 | Settings page and appearance controls     | [SettingsPage.tsx](../../apps/web/src/features/settings/SettingsPage.tsx), [AppearanceSettings.tsx](../../apps/web/src/features/settings/AppearanceSettings.tsx) |
@@ -38,7 +40,7 @@ The sidebar provides overview, 蛐雷达 (player radar), player search, APM, arc
 
 The workspace topbar stays at the viewport top with a 56px minimum height and 8px vertical padding. Keep it above page content and below dialogs. The viewport-sized shell does not scroll: `.workspace-scroll` contains the main content and footer, starts immediately below the toolbar and owns workspace scrolling. Remember its scroll position independently for each route, including when returning from Settings.
 
-Keep the collapse control, breadcrumb, service status and account control in the topbar. The brand mark stays in the sidebar. Do not repeat it beside the breadcrumb, add a topbar language selector, or restore the uppercase `BROKEN ARROW / …` eyebrow above the page title. Language selection belongs in Settings → General. The sidebar footer contains a content-sized settings entry and a round update button aligned to the right. The update button has a transparent resting background, a brighter hover background and an icon transition; respect reduced motion. It checks for updates, changes to a download action when available and shows progress while downloading.
+Keep the collapse control, breadcrumb, service status and account control in the topbar. The brand mark stays in the sidebar. Do not repeat it beside the breadcrumb, add a topbar language selector, or restore the uppercase `BROKEN ARROW / …` eyebrow above the page title. Language selection belongs in Settings → General. The sidebar footer contains a content-sized settings entry and a compact update button aligned to the right. Both use 18px icons, a 42px button height, an 8px corner radius and the same transparent resting and surface-highlight hover treatment. The update action checks for updates, changes to a download action when available and shows progress while downloading; see [Update action](#update-action) for its state and animation rules.
 
 Workspace and Settings reuse `PageToolbar` and `SidebarToggle` from `components/PageToolbar.tsx`. The shared toolbar owns the 56px minimum height, 8px vertical padding, responsive horizontal padding, background, stacking and 24px bottom fade based on `--bg`. Neither page overrides toolbar dimensions or uses a hard bottom divider. The fade overlaps the header by 1px, with a 25px total height and a solid first 2px, to avoid a seam at fractional display scaling. It stops `--scrollbar-size` before the right edge so the scrollbar stays fully visible. It never intercepts pointer events and is omitted in forced-colors mode. Both independently scrolling content areas use 32px scroll padding so focused elements clear the fade.
 
@@ -104,7 +106,7 @@ Graphite's key values are:
 
 Use semantic surface, border, accent, feedback and control-border tokens in components. Selection rings, checkmarks, primary actions and focus colors derive from `--accent`, with `--accent-soft` and `--accent-border` for supporting surfaces. Success, danger, warning and information tokens describe status independently of the chosen palette. Do not reintroduce mint as a default graphite accent or use success green for selection.
 
-Use local Segoe UI and Microsoft YaHei fonts, tabular figures for numbers, and Cascadia Code or Consolas for identifiers. Use Lucide SVG icons consistently. Decorative icons are hidden from assistive technology; icon buttons receive contextual names. No remote font dependency.
+Use local Segoe UI and Microsoft YaHei fonts, tabular figures for numbers, and Cascadia Code or Consolas for identifiers. Use Font Awesome SVG icons consistently, following the icon and motion rules below. No remote font dependency.
 
 Spacing uses 4/8px increments. Card radius is 14px and control radius is 8–9px. Short hover feedback uses 140ms; dialogs use 220ms. Respect reduced motion and avoid decorative animation.
 
@@ -115,6 +117,46 @@ Ban tracking reuses the same pagination with 20 records per page. Limit its inde
 Use a compact two-label sliding switch for the ban filter. Clicking anywhere toggles between all bans and encountered bans; Space and Enter also toggle it. Expose `role="switch"`, the encountered-bans label and `aria-checked`. Keep both labels visible and move one shared selection background between equal-width halves with a 220ms transform transition using `--ease-out`. Text colors use the 140ms transition. Keep keyboard focus visible and disable transitions when reduced motion is requested.
 
 Ban rows use shared column widths for player, ELO, encounter state and timestamp so varying name lengths or missing encounter badges cannot move other columns. Left-align player names and encounter markers; right-align ELO values and timestamps with tabular numbers. At list widths of 640px or less, place the player on the first line, ELO and encounter state on the second, and the timestamp on the third. Keep long names readable by wrapping within their column.
+
+### Icons
+
+- Use the Free Solid family from `@fortawesome/free-solid-svg-icons` with the official `@fortawesome/react-fontawesome` renderer. Import individual icon definitions so unused icons can be removed from the bundle. Keep icon assets local for the offline desktop interface; do not load a remote kit or icon font.
+- Use the shared `Icon` component for application icons. Its numeric `size` is in pixels and defaults to 16px; it forwards native Font Awesome properties such as `spin`. Use contextual sizes for inline text, card headings and empty states. Sidebar navigation, Settings and update icons share an 18px size.
+- Existing direct `FontAwesomeIcon` usage in `UpdateButton` follows the same family, sizing and accessibility rules. The entry point imports `@fortawesome/fontawesome-svg-core/styles.css` once and sets `fontAwesomeConfig.autoAddCss = false`.
+- Keep icon semantics consistent across navigation, actions, menus, empty states, dialogs and toast dismissal. Do not introduce Lucide, emoji or hand-drawn SVG glyphs as additional UI icon families. Terrain illustrations and determinate progress rings remain purpose-specific SVG graphics.
+- Decorative icons are hidden from assistive technology; `Icon` defaults to `aria-hidden="true"`. Put contextual accessible names on icon-only controls and expose their expanded, pressed or busy state as applicable. An independently meaningful icon needs an equivalent text alternative.
+
+```tsx
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../../components/Icon';
+
+<Icon icon={faArrowsRotate} size={18} spin={pending} />;
+```
+
+### Motion
+
+- Use [Font Awesome's native React animation properties](https://docs.fontawesome.com/web/use-with/react/style#animate-icons) for icon motion. Loading, refresh, health-check, saving and pending-return indicators use `spin` only while work is pending. Check and install update states use the same native rotation.
+- Do not recreate icon rotation with application `@keyframes`, a custom `.spinner` class, JavaScript timers or per-frame transforms. Use Font Awesome's animation properties and, when needed, its documented `--fa-animation-*` CSS variables. The current continuous rotation uses the library's default 2s cycle.
+- Keep motion tied to an explicit state. End the animation when the request finishes, fails or is superseded; application state must not depend on an animation-end event. Pair pending actions with readable status and disabled or busy semantics as appropriate.
+- Ordinary interface transitions retain their existing CSS: `--motion-fast` is 140ms, `--motion-normal` is 220ms and `--ease-out` defines the shared arrival curve. Dialogs, overlays, hover feedback and the sliding filter are interface transitions; they do not use icon animation utilities.
+- Respect `prefers-reduced-motion: reduce`. Font Awesome and the shared base stylesheet disable animation and transitions in this mode. Preserve the icon, text, progress value and control state so status remains understandable without motion.
+
+### Update action
+
+The sidebar update control matches the Settings entry's visual scale: a 42px square button, an 18px icon and an 8px corner radius. Use `--muted` at rest, `--surface-hover` and `--text` on hover, and retain visible keyboard focus. The glyph container is 26px, the download progress ring is 28px and the available/ready notification dot is 5px. The inline Settings update action also uses an 18px icon.
+
+| State         | Font Awesome icon    | Animation and feedback                                                              |
+| ------------- | -------------------- | ----------------------------------------------------------------------------------- |
+| `idle`        | `faArrowsRotate`     | Static icon; clicking starts a check.                                               |
+| `checking`    | `faArrowsRotate`     | Native `spin`; disable the action and expose busy status.                           |
+| `available`   | `faDownload`         | Static icon, full ring and notification dot; clicking starts the download.          |
+| `downloading` | `faDownload`         | Static icon with a determinate progress ring; disable the action while downloading. |
+| `downloaded`  | `faArrowRotateRight` | Static icon and notification dot; clicking requests restart and installation.       |
+| `installing`  | `faArrowRotateRight` | Native `spin`; disable the action while saving data and preparing installation.     |
+
+Known download progress uses the SVG ring's `stroke-dashoffset`, clamped to 0–100%, with a 220ms linear transition. Do not spin the download icon or put percentage text inside the sidebar button. If progress is unknown, rotate the indeterminate ring segment with Font Awesome's `fa-spin` utility. The SVG ring communicates progress and remains separate from the icon glyph.
+
+Keep the action's accessible name, tooltip and status announcement aligned with the current operation. Pending actions reject repeated activation. Installation remains blocked during an active match or while recording is starting, running or stopping; the disabled update mode also prevents activation. Portable mode opens the release download page for manual installation.
 
 ### Scrollbars
 
@@ -143,6 +185,8 @@ Use `button-borderless` for the specified shared buttons. The settings Back cont
 
 Inputs need visible labels and associated helper text. Errors offer recovery actions, and empty states explain the next step. Deck selection uses labeled checkboxes. Filters expose pressed state and navigation exposes the current page. Radix dialogs retain focus trapping, Escape dismissal and focus restoration; settings itself does not use that dialog workflow.
 
+Shared toggles use a 40×24px track and a 16px thumb, with equal 4px end spacing and vertical centering in both states. Draw the track boundary with an inset outline so fractional zoom cannot change the thumb's positioning geometry. Center the transparent checkbox on the track with matching 40×24px bounds; reset inherited input minimum height, padding and border. The full label remains clickable, and keyboard focus outlines the visible track. Thumb movement uses the shared 140ms transform transition and respects reduced motion.
+
 Keep historical BATrace information distinct from live room data. Missing statistics show a dash; never create substitute values. Win rate uses up to 12 completed win/loss matches for the current player and excludes restarted matches.
 
 ## Responsive behavior and accessibility
@@ -158,7 +202,7 @@ Keep historical BATrace information distinct from live room data. Missing statis
 
 ## Validation
 
-For implementation changes, run `pnpm typecheck`, `pnpm test` and `pnpm build`. Use `pnpm dev:web` with the collaborative preview at `http://127.0.0.1:5174/`. Browser previews use isolated real test fixtures; native desktop integration remains the source of local data.
+For implementation changes, run `pnpm check` for type checking, regression tests and production builds, plus `pnpm format:check`. Run `pnpm smoke` for desktop behavior changes and `pnpm smoke:real` when real-data behavior is affected. Use `pnpm dev:web` with the collaborative preview at `http://127.0.0.1:5174/`. Browser previews use isolated real test fixtures; native desktop integration remains the source of local data.
 
 Check the following when changing visual behavior:
 
@@ -172,5 +216,7 @@ Check the following when changing visual behavior:
 8. Automatic saving handles quick changes, pending text on Back, delayed responses, failures and Retry without losing newer input.
 9. Keyboard navigation, focused controls and dialogs work at 375px portrait, a short landscape viewport and desktop sizes, with reduced motion enabled.
 10. Document, sidebar, settings, dialog, table and horizontal scrollbars share the same geometry and theme tokens. Check resting, hover and drag states in light and dark appearances, retain native scrolling, and use operating-system scrollbars in forced-colors mode.
+11. UI icons use Font Awesome consistently. Settings and sidebar update icons measure 18px, both buttons remain 42px high, and the download ring measures 28px in light and dark appearances.
+12. Check idle, checking, available, downloading, downloaded and installing update states. Native rotation runs only during checks, installation and indeterminate ring progress; determinate progress stays accurate. Reduced motion preserves status without animation, and busy or blocked actions cannot activate twice.
 
 For documentation-only changes, check Markdown formatting, local links and agreement with the source files above; application tests do not need to be rerun.
