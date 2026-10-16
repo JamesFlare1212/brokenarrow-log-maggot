@@ -7,8 +7,6 @@
   border-right: 1px solid var(--border-subtle);
   background: var(--surface);
   overflow: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
 }
 .sidebar-heading {
   display: flex;
@@ -40,7 +38,6 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  scrollbar-width: thin;
 }
 .sidebar-item {
   display: flex;

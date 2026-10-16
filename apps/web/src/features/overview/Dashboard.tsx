@@ -10,7 +10,6 @@ import {
   Users,
   Video,
   CirclePlay,
-  HardDrive,
   Clock3,
 } from 'lucide-react';
 import type { Match } from '@ba/contracts';
@@ -27,16 +26,14 @@ function Metric({
   value,
   detail,
   icon,
-  accent = false,
 }: {
   label: string;
   value: ReactNode;
   detail: ReactNode;
   icon: ReactNode;
-  accent?: boolean;
 }) {
   return (
-    <div className={`metric-card ${accent ? 'metric-accent' : ''}`}>
+    <div className="metric-card">
       <div className="metric-label">
         <span>{label}</span>
         <span className="metric-icon" aria-hidden="true">
@@ -90,7 +87,6 @@ export function Dashboard() {
           value={formatMetric(latest?.eloAfter ?? null, 0)}
           detail={t('completedMatch')}
           icon={<Crosshair size={18} />}
-          accent
         />
         <Metric
           label={t('recentWinRate')}
@@ -131,7 +127,6 @@ export function Dashboard() {
             >
               <div className="recording-frame">
                 <CirclePlay size={32} strokeWidth={1.25} />
-                <span className="recording-corner" />
               </div>
               <span className="recording-rec">
                 REC <span />
@@ -161,10 +156,6 @@ export function Dashboard() {
               {t(state.config.replayEnabled ? 'recordingSettings' : 'enableRecording')}
               <ArrowRight size={15} />
             </Button>
-            <small className="local-note">
-              <HardDrive size={12} aria-hidden="true" />
-              {t('localData')}
-            </small>
           </Card>
           <Card title={t('quickTools')} className="quick-tools">
             {(

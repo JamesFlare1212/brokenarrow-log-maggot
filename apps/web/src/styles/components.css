@@ -12,17 +12,22 @@
 .page-toolbar::after {
   content: '';
   position: absolute;
-  top: 100%;
+  top: calc(100% - 1px);
   left: 0;
-  right: 0;
-  height: 24px;
+  right: var(--scrollbar-size);
+  height: 25px;
   background: linear-gradient(
     to bottom,
-    var(--bg),
+    var(--bg) 2px,
     color-mix(in srgb, var(--bg) 60%, transparent) 45%,
     transparent
   );
   pointer-events: none;
+}
+@media (forced-colors: active) {
+  .page-toolbar::after {
+    display: none;
+  }
 }
 @media (max-width: 1180px) {
   .page-toolbar {
@@ -278,7 +283,7 @@
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
-.stat span {
+.stat > span {
   color: var(--muted);
   font-size: 12px;
 }
@@ -414,6 +419,38 @@
 .dialog-header h2 {
   font-size: 17px;
 }
+.dialog-headerless-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+}
+.dialog-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 0;
+  flex-shrink: 0;
+}
+.dialog-banner > .notice {
+  flex: 1;
+  min-width: 0;
+}
+.button.dialog-close-button {
+  width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  flex-shrink: 0;
+  border-color: transparent;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+}
+.button.dialog-close-button:is(:hover, :focus-visible):not(:disabled) {
+  border-color: transparent;
+  background: var(--surface-hover);
+  color: var(--text);
+}
 .dialog-body {
   padding: 24px;
   overflow: auto;
@@ -452,7 +489,7 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-.section-heading h3 small {
+.section-heading :is(h2, h3) small {
   color: var(--muted);
   font-weight: 400;
 }
@@ -519,6 +556,9 @@
   }
   .dialog-body {
     padding: 16px;
+  }
+  .dialog-banner {
+    padding: 16px 16px 0;
   }
   .button {
     min-height: 44px;

@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Check,
   LoaderCircle,
+  Video,
 } from 'lucide-react';
 import type { Account, PublicConfig } from '@ba/contracts';
 import { useApp } from '../../app/state';
@@ -27,12 +28,15 @@ import {
 } from '../../components/Sidebar';
 import { AboutSettings } from './AboutSettings';
 import { AppearanceSettings } from './AppearanceSettings';
+import { RecordingSettings } from '../replays/RecordingSettings';
+import type { SettingsSaveStatus } from '../../hooks/useSettingsAutosave';
 
 const tabs = [
   { id: 'general', label: 'generalSettings', icon: Settings2 },
   { id: 'appearance', label: 'appearance', icon: Palette },
   { id: 'connection', label: 'gameConnection', icon: Cable },
   { id: 'automation', label: 'automation', icon: SlidersHorizontal },
+  { id: 'recording', label: 'recordingSettings', icon: Video },
   { id: 'navigation', label: 'navigationSettings', icon: LayoutList },
   { id: 'accounts', label: 'accounts', icon: Users },
 ] as const;
@@ -50,6 +54,7 @@ export function SettingsPage() {
     [accounts, setAccounts] = useState<Account[]>([]),
     [accountsLoading, setAccountsLoading] = useState(true),
     [returning, setReturning] = useState(false),
+    [recordingStatus, setRecordingStatus] = useState<SettingsSaveStatus>('saved'),
     [detecting, setDetecting] = useState(false),
     [defaultDecksDir, setDefaultDecksDir] = useState(''),
     [logFeedback, setLogFeedback] = useState<{ key: string; error: boolean } | null>(null),
@@ -59,6 +64,7 @@ export function SettingsPage() {
   const draft = settings.draft ?? state.config;
   const collapsed = draft.sidebarCollapsed;
   const flush = settings.flush;
+  const saveStatus = tab === 'recording' ? recordingStatus : settings.status;
   const setTab = openSettings;
   const back = async () => {
     setReturning(true);
@@ -227,15 +233,15 @@ export function SettingsPage() {
             <h2>{t(currentTab.label)}</h2>
           </div>
           <div className="settings-save-state" role="status" aria-live="polite">
-            {settings.status === 'saved' ? (
+            {saveStatus === 'saved' ? (
               <Check size={14} aria-hidden="true" />
-            ) : settings.status !== 'error' ? (
+            ) : saveStatus !== 'error' ? (
               <LoaderCircle size={14} className="spinner" aria-hidden="true" />
             ) : null}
             {t(
-              settings.status === 'saved'
+              saveStatus === 'saved'
                 ? 'settingsAutoSaved'
-                : settings.status === 'error'
+                : saveStatus === 'error'
                   ? 'settingsSaveFailed'
                   : 'settingsSaving',
             )}
@@ -257,7 +263,7 @@ export function SettingsPage() {
             tabIndex={0}
             className="settings-content"
           >
-            {id !== 'appearance' && (
+            {id !== 'appearance' && id !== 'recording' && (
               <div className="settings-page-heading">
                 <h2>{t(label)}</h2>
                 <p>{t('settingsHint.' + id)}</p>
@@ -359,6 +365,9 @@ export function SettingsPage() {
                   />
                 ))}
               </section>
+            )}
+            {id === 'recording' && tab === id && (
+              <RecordingSettings inline onStatusChange={setRecordingStatus} />
             )}
             {id === 'navigation' && (
               <section className="settings-section">

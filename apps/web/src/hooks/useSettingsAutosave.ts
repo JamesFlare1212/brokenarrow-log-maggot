@@ -2,15 +2,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Bridge, PublicConfig } from '@ba/contracts';
 import { errorMessage } from '@ba/shared';
 
-export function useSettingsAutosave(api: Bridge, config: PublicConfig | undefined) {
+export type SettingsSaveStatus = 'saved' | 'pending' | 'saving' | 'error';
+
+export function useSettingsAutosave(
+  api: Bridge,
+  config: PublicConfig | undefined,
+  beforeSave?: (patch: Partial<PublicConfig>) => Promise<void>,
+) {
   const [draft, setDraft] = useState(config);
-  const [status, setStatus] = useState<'saved' | 'pending' | 'saving' | 'error'>('saved');
+  const [status, setStatus] = useState<SettingsSaveStatus>('saved');
   const [error, setError] = useState<string | null>(null);
   const latest = useRef(config);
   const pending = useRef<Partial<PublicConfig>>({}),
     overrides = useRef<Partial<PublicConfig>>({});
   const running = useRef<Promise<boolean> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prepareSave = useRef(beforeSave);
+  prepareSave.current = beforeSave;
   useEffect(() => {
     if (config) {
       latest.current = { ...config, ...overrides.current };
@@ -31,6 +39,7 @@ export function useSettingsAutosave(api: Bridge, config: PublicConfig | undefine
         setStatus('saving');
         setError(null);
         try {
+          if (prepareSave.current) await prepareSave.current(patch);
           const result = await api.invoke('config.update', patch);
           for (const key of Object.keys(patch) as Array<keyof PublicConfig>) {
             if (

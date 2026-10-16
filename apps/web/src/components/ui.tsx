@@ -87,15 +87,29 @@ export function Dialog({
   title,
   children,
   className = '',
+  showHeader = true,
+  banner,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   className?: string;
+  showHeader?: boolean;
+  banner?: ReactNode;
 }) {
   const { t } = useI18n();
   const returnFocus = useRef<HTMLElement | null>(null);
+  const dialogTitle = (
+    <RadixDialog.Title className={showHeader ? undefined : 'sr-only'}>{title}</RadixDialog.Title>
+  );
+  const closeButton = (
+    <RadixDialog.Close asChild>
+      <Button aria-label={t('close')} className={showHeader ? undefined : 'dialog-close-button'}>
+        <X size={showHeader ? 18 : 22} />
+      </Button>
+    </RadixDialog.Close>
+  );
   return (
     <RadixDialog.Root
       open={open}
@@ -120,14 +134,20 @@ export function Dialog({
             });
           }}
         >
-          <div className="dialog-header">
-            <RadixDialog.Title>{title}</RadixDialog.Title>
-            <RadixDialog.Close asChild>
-              <Button aria-label={t('close')}>
-                <X size={18} />
-              </Button>
-            </RadixDialog.Close>
-          </div>
+          {!showHeader && banner ? (
+            <>
+              {dialogTitle}
+              <div className="dialog-banner">
+                {banner}
+                {closeButton}
+              </div>
+            </>
+          ) : (
+            <div className={showHeader ? 'dialog-header' : 'dialog-headerless-controls'}>
+              {dialogTitle}
+              {closeButton}
+            </div>
+          )}
           <div className="dialog-body">{children}</div>
         </RadixDialog.Content>
       </RadixDialog.Portal>

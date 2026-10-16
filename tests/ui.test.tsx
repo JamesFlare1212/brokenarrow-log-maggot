@@ -46,6 +46,7 @@ import { BatraceStatus } from '../apps/web/src/components/BatraceStatus';
 import { UpdatePanel } from '../apps/web/src/features/settings/UpdatePanel';
 import { UpdateButton } from '../apps/web/src/features/settings/UpdateButton';
 import { MatchArchive } from '../apps/web/src/features/matches/MatchArchive';
+import { BansPanel } from '../apps/web/src/features/bans/BansPanel';
 
 type Handler<K extends RpcMethod> = (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
 type Handlers = { [K in RpcMethod]: Handler<K> };
@@ -596,7 +597,7 @@ describe('settings pages and automatic saving', () => {
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     const page = within(await screen.findByRole('main', { name: '设置' }));
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.getAllByRole('tab')).toHaveLength(6);
+    expect(screen.getAllByRole('tab')).toHaveLength(7);
     expect(page.queryByRole('button', { name: '保存' })).toBeNull();
     expect(page.queryByRole('button', { name: '取消' })).toBeNull();
     expect(location.hash).toBe('#settings/appearance');
@@ -930,6 +931,128 @@ describe('settings pages and automatic saving', () => {
   });
 });
 
+describe('recording settings automatic saving', () => {
+  async function open(native: ReturnType<typeof nativeFixture>) {
+    history.replaceState(null, '', '#replays');
+    render(<App />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: '录像设置' }));
+    return within(await screen.findByRole('dialog', { name: '录像设置' }));
+  }
+
+  it('opens recording settings as a sidebar tab and preserves pending changes when leaving it', async () => {
+    history.replaceState(null, '', '#settings/recording');
+    const native = nativeFixture(bootstrapForApp(), { 'displays.thumbnail': () => null });
+    render(<App />, { wrapper: wrapper(native.api) });
+    const panel = within(await screen.findByRole('tabpanel', { name: '录像设置' }));
+    expect(screen.getByRole('tab', { name: '录像设置' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const directory = panel.getByRole('textbox', { name: '保存目录' });
+    const destination = 'F:\\Recordings';
+    fireEvent.change(directory, { target: { value: destination } });
+    fireEvent.change(panel.getByRole('slider', { name: /帧率/ }), { target: { value: '45' } });
+    fireEvent.click(screen.getByRole('tab', { name: '自动化' }));
+    await waitFor(() => expect(native.backend.config.replaySaveDir).toBe(destination));
+    expect(native.backend.config.replayFps).toBe(45);
+    expect(screen.queryByRole('button', { name: '录像设置' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: '录像设置' }));
+    expect(location.hash).toBe('#settings/recording');
+    expect((screen.getByRole('textbox', { name: '保存目录' }) as HTMLInputElement).value).toBe(
+      destination,
+    );
+  });
+
+  it('autosaves controls and flushes the latest slider value before starting a recording test', async () => {
+    const initial = bootstrapForApp();
+    const saving = deferred<RpcOutputs['config.update']>();
+    let config = initial.config;
+    let saves = 0;
+    const native = nativeFixture(initial, {
+      'displays.thumbnail': () => null,
+      'config.update': async (patch) => {
+        config = configSchema.parse({ ...config, ...patch });
+        if (++saves === 1) return saving.promise;
+        return config;
+      },
+      'replays.test': () => {
+        expect(config.replayFps).toBe(60);
+        return null;
+      },
+    });
+    const dialog = await open(native);
+    expect(dialog.queryByRole('button', { name: '保存' })).toBeNull();
+    expect(dialog.queryByRole('button', { name: '取消' })).toBeNull();
+    fireEvent.change(dialog.getByRole('slider', { name: /帧率/ }), { target: { value: '45' } });
+    fireEvent.click(dialog.getByRole('button', { name: '录制 60 秒测试' }));
+    await waitFor(() => expect(saves).toBe(1));
+    expect(native.calls.some((call) => call.method === 'replays.test')).toBe(false);
+    fireEvent.change(dialog.getByRole('slider', { name: /帧率/ }), { target: { value: '60' } });
+    await act(async () => saving.resolve(config));
+    await waitFor(() =>
+      expect(native.calls.filter((call) => call.method === 'replays.test')).toHaveLength(1),
+    );
+    expect(saves).toBe(2);
+    expect(dialog.getByText('已自动保存')).toBeTruthy();
+    fireEvent.click(dialog.getByRole('checkbox', { name: '自动录制' }));
+    await waitFor(() => expect(config.replayEnabled).toBe(!initial.config.replayEnabled));
+  });
+
+  it('keeps the original folder after a failed migration and retries before saving the new folder', async () => {
+    const initial = bootstrapForApp();
+    const destination = 'D:\\Recordings';
+    let attempts = 0;
+    const native = nativeFixture(initial, {
+      'displays.thumbnail': () => null,
+      'replays.move': () => ({ moved: 0, failed: ++attempts === 1 ? ['match.webm'] : [] }),
+    });
+    const dialog = await open(native);
+    fireEvent.click(dialog.getByRole('checkbox', { name: '更换目录时迁移已有录像' }));
+    const directory = dialog.getByRole('textbox', { name: '保存目录' });
+    fireEvent.change(directory, { target: { value: destination } });
+    expect(native.calls.some((call) => call.method === 'replays.move')).toBe(false);
+    fireEvent.blur(directory);
+    await dialog.findByRole('button', { name: '重试保存' });
+    expect(native.backend.config.replaySaveDir).toBe(initial.config.replaySaveDir);
+    expect(native.calls.some((call) => call.method === 'config.update')).toBe(false);
+    expect((directory as HTMLInputElement).value).toBe(destination);
+    fireEvent.click(dialog.getByRole('button', { name: '重试保存' }));
+    await waitFor(() => expect(native.backend.config.replaySaveDir).toBe(destination));
+    expect(attempts).toBe(2);
+    expect(
+      native.calls
+        .filter((call) => ['replays.move', 'config.update'].includes(call.method))
+        .map((call) => call.method),
+    ).toEqual(['replays.move', 'replays.move', 'config.update']);
+  });
+
+  it('keeps the dialog open when closing cannot save and flushes the directory on retry', async () => {
+    let fail = true;
+    const initial = bootstrapForApp();
+    const native = nativeFixture(initial, {
+      'displays.thumbnail': () => null,
+      'config.update': (patch) => {
+        if (fail) throw new Error('Disk unavailable');
+        return configSchema.parse({ ...initial.config, ...patch });
+      },
+    });
+    const dialog = await open(native);
+    const destination = 'E:\\Recordings';
+    fireEvent.change(dialog.getByRole('textbox', { name: '保存目录' }), {
+      target: { value: destination },
+    });
+    fireEvent.click(dialog.getByRole('button', { name: '关闭' }));
+    await dialog.findByText('Disk unavailable');
+    expect(screen.getByRole('dialog', { name: '录像设置' })).toBeTruthy();
+    fail = false;
+    fireEvent.click(dialog.getByRole('button', { name: '关闭' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(native.calls.filter((call) => call.method === 'config.update').at(-1)?.input).toEqual({
+      replaySaveDir: destination,
+    });
+  });
+});
+
 describe('game log directory detection', () => {
   async function settings(native: ReturnType<typeof nativeFixture>) {
     render(<App />, { wrapper: wrapper(native.api) });
@@ -1184,6 +1307,51 @@ describe('request and native event ordering', () => {
 });
 
 describe('user interaction regressions', () => {
+  it('paginates bans, resets list scrolling and filters, and clamps refreshed results', async () => {
+    let rows = Array.from({ length: 45 }, (_, index) => ({
+      ...bannedPlayer(),
+      id: String(9000 + index),
+      name: `Banned player ${index}`,
+      encountered: index < 3,
+    }));
+    const native = nativeFixture(bootstrapForApp(), {
+      'bans.list': ({ metOnly }) => (metOnly ? rows.filter((row) => row.encountered) : rows),
+      'bans.sync': () => rows,
+    });
+    render(<BansPanel />, { wrapper: wrapper(native.api) });
+    await screen.findByText('第 1–20 条，共 45 条');
+    const filter = screen.getByRole('switch', { name: '我遇到过的作弊者' });
+    expect(filter.getAttribute('aria-checked')).toBe('false');
+    const list = screen.getByRole('list', { name: '封禁追踪' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(20);
+    expect(screen.getByRole('button', { name: '上一页' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.scroll(list, { target: { scrollTop: 150 } });
+    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
+    expect(list.scrollTop).toBe(0);
+    expect(screen.getByRole('button', { name: 'Banned player 20 #9020' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Banned player 0 #9000' })).toBeNull();
+    fireEvent.change(screen.getByLabelText('页码'), { target: { value: '3' } });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.getByRole('button', { name: 'Banned player 44 #9044' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '下一页' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(filter);
+    expect(filter.getAttribute('aria-checked')).toBe('true');
+    await screen.findByRole('button', { name: 'Banned player 0 #9000' });
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.queryByRole('navigation', { name: '封禁追踪' })).toBeNull();
+    filter.focus();
+    await userEvent.setup().keyboard(' ');
+    expect(filter.getAttribute('aria-checked')).toBe('false');
+    await screen.findByText('第 1–20 条，共 45 条');
+    fireEvent.change(screen.getByLabelText('页码'), { target: { value: '3' } });
+    rows = rows.slice(0, 25);
+    fireEvent.click(screen.getByRole('button', { name: '同步' }));
+    await screen.findByText('第 21–25 条，共 25 条');
+    expect(screen.getByRole('button', { name: 'Banned player 24 #9024' })).toBeTruthy();
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('2');
+  });
+
   it('makes archive records beyond 500 reachable and resets pagination when filters change', async () => {
     const rows = Array.from({ length: 525 }, (_, index) => ({
       ...matchFixture({ id: String(1000 + index) }),
@@ -1376,7 +1544,7 @@ describe('user interaction regressions', () => {
     expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'apm']);
   });
 
-  it('opens a deep link and preserves search and result filters when navigating back', async () => {
+  it('opens a deep link and preserves scroll positions, search and filters when navigating back', async () => {
     window.history.replaceState(null, '', '#archive');
     const native = nativeFixture();
     render(
@@ -1385,24 +1553,30 @@ describe('user interaction regressions', () => {
       </AppProvider>,
     );
     await screen.findByRole('heading', { level: 1, name: '对局档案' });
+    const scroll = screen.getByRole('main').parentElement!;
+    fireEvent.scroll(scroll, { target: { scrollTop: 180 } });
     const navigation = screen.getByRole('navigation');
     fireEvent.click(screen.getByRole('button', { name: '失利' }));
     await screen.findByText(
       `样本数: ${capturedMatches.filter((m) => m.outcome === 'loss').length}`,
     );
     fireEvent.click(within(navigation).getByRole('button', { name: '玩家查询' }));
+    expect(scroll.scrollTop).toBe(0);
     const search = screen.getByLabelText(translate('zh', 'searchLabel'));
     fireEvent.change(search, { target: { value: localPlayer.name } });
     fireEvent.click(screen.getByRole('button', { name: '搜索' }));
     const resultName = (name: string) => name.startsWith(`${localPlayer.name} #${localPlayer.id}`);
     await screen.findByRole('button', { name: resultName });
+    fireEvent.scroll(scroll, { target: { scrollTop: 90 } });
     act(() => {
       window.location.hash = 'archive';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     });
     expect(screen.getByRole('button', { name: '失利' }).getAttribute('aria-pressed')).toBe('true');
+    expect(scroll.scrollTop).toBe(180);
     expect(document.activeElement).toBe(screen.getByRole('main'));
     fireEvent.click(within(navigation).getByRole('button', { name: '玩家查询' }));
+    expect(scroll.scrollTop).toBe(90);
     expect((screen.getByLabelText(translate('zh', 'searchLabel')) as HTMLInputElement).value).toBe(
       localPlayer.name,
     );

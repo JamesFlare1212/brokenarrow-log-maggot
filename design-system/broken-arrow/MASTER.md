@@ -13,6 +13,7 @@ The settings reference is the T3 Code layout supplied for this project: a catego
 | Concern                                   | Source                                                                                                                                                           |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Palette values and semantic tokens        | [tokens.css](../../apps/web/src/styles/tokens.css)                                                                                                               |
+| Application scrollbars                    | [scrollbars.css](../../apps/web/src/styles/scrollbars.css)                                                                                                       |
 | Workspace, overview and responsive layout | [layout.css](../../apps/web/src/styles/layout.css)                                                                                                               |
 | Shared buttons, cards and dialogs         | [components.css](../../apps/web/src/styles/components.css)                                                                                                       |
 | Settings layout and palette controls      | [settings.css](../../apps/web/src/styles/settings.css)                                                                                                           |
@@ -26,6 +27,7 @@ The sidebar provides overview, 蛐雷达 (player radar), player search, APM, arc
 
 - Overview keeps the current-room and previous-match tools. The radar page at `#radar` provides an additional copy of those tools, not a replacement. Each destination retains its own current/previous view while navigating.
 - The overview has four summary cards, the room roster, recording status, shortcuts and recent results. On wide screens, the roster spans three summary columns and the supporting tools occupy the fourth. The tool column must share both edges and width with the 房间玩家 summary above it; use the same four-column grid and 16px gap rather than a fixed sidebar width.
+- All four summary cards share the same neutral surface, border and typography. The recent ELO card has no gradient, accent border or accent-colored value/icon.
 - Optional APM follows the user's configuration. The full ban list belongs only on the dedicated bans page, even when an older configuration has `banCardVisible` enabled. Do not expose an overview ban-panel toggle.
 - Visited screens retain local state and scroll position. Hash routes support direct links and browser history.
 - Workspace and Settings use the shared `Sidebar`, `SidebarHeading`, `SidebarNavigation`, `SidebarItem` and `SidebarFooter` components from `components/Sidebar.tsx`, styled by `styles/sidebar.css`. Both sidebars use a 224px expanded width and a 76px icon rail, with shared tokens and the persisted `sidebarCollapsed` preference. Keep accessible names and hover titles for icon-only entries.
@@ -34,11 +36,15 @@ The sidebar provides overview, 蛐雷达 (player radar), player search, APM, arc
 
 ## Header and page hierarchy
 
-The workspace topbar is sticky at the viewport top with a 56px minimum height and 8px vertical padding. Keep it above page content and below dialogs. Its bottom edge fades into the content through a 24px gradient based on `--bg`; do not restore a hard divider. The gradient must not intercept pointer events. Document scroll padding is 88px so focused or linked content can clear the header and fade.
+The workspace topbar stays at the viewport top with a 56px minimum height and 8px vertical padding. Keep it above page content and below dialogs. The viewport-sized shell does not scroll: `.workspace-scroll` contains the main content and footer, starts immediately below the toolbar and owns workspace scrolling. Remember its scroll position independently for each route, including when returning from Settings.
 
 Keep the collapse control, breadcrumb, service status and account control in the topbar. The brand mark stays in the sidebar. Do not repeat it beside the breadcrumb, add a topbar language selector, or restore the uppercase `BROKEN ARROW / …` eyebrow above the page title. Language selection belongs in Settings → General. The sidebar footer contains a content-sized settings entry and a round update button aligned to the right. The update button has a transparent resting background, a brighter hover background and an icon transition; respect reduced motion. It checks for updates, changes to a download action when available and shows progress while downloading.
 
-Workspace and Settings reuse `PageToolbar` and `SidebarToggle` from `components/PageToolbar.tsx`. The shared toolbar owns the 56px minimum height, 8px vertical padding, responsive horizontal padding, background, stacking and 24px bottom fade. Neither page overrides toolbar dimensions or uses a hard bottom divider. Settings' independently scrolling content has 32px scroll padding so focused elements clear the fade.
+Workspace and Settings reuse `PageToolbar` and `SidebarToggle` from `components/PageToolbar.tsx`. The shared toolbar owns the 56px minimum height, 8px vertical padding, responsive horizontal padding, background, stacking and 24px bottom fade based on `--bg`. Neither page overrides toolbar dimensions or uses a hard bottom divider. The fade overlaps the header by 1px, with a 25px total height and a solid first 2px, to avoid a seam at fractional display scaling. It stops `--scrollbar-size` before the right edge so the scrollbar stays fully visible. It never intercepts pointer events and is omitted in forced-colors mode. Both independently scrolling content areas use 32px scroll padding so focused elements clear the fade.
+
+The recordings page places its recording controls in a separate card above the library. Recording state belongs in that control card. Omit the page-heading log-listener status and the BATrace historical-data footer on this page so neither can be mistaken for recording activity.
+
+Show the workspace historical-data footer only on Overview, Radar and Player Search. Omit the entire footer, including its health-check action, on Recordings, Ban Tracking, Decks, Match Archives and APM.
 
 ## Settings page and persistence
 
@@ -104,12 +110,30 @@ Spacing uses 4/8px increments. Card radius is 14px and control radius is 8–9px
 
 Archive pagination uses the shared `components/Pagination.tsx` component: a muted record-range summary on the left and a compact previous/page-selector/next group on the right. Controls share a 34px height. Keep the page selector accessible without a stacked visible label, disable arrows at the boundaries, and allow the footer to wrap on narrow screens.
 
+Ban tracking reuses the same pagination with 20 records per page. Limit its independently scrollable list to `min(560px, 60dvh)` so large ban datasets cannot stretch the card indefinitely; keep filters and pagination outside that list. Changing filters resets the page, changing pages resets the list scroll position, and refreshed results clamp the displayed page to the available range. Every record remains reachable, and profile actions and encounter badges remain available. Keep native keyboard scrolling, a visible focus outline and the shared scrollbar style.
+
+Use a compact two-label sliding switch for the ban filter. Clicking anywhere toggles between all bans and encountered bans; Space and Enter also toggle it. Expose `role="switch"`, the encountered-bans label and `aria-checked`. Keep both labels visible and move one shared selection background between equal-width halves with a 220ms transform transition using `--ease-out`. Text colors use the 140ms transition. Keep keyboard focus visible and disable transitions when reduced motion is requested.
+
+Ban rows use shared column widths for player, ELO, encounter state and timestamp so varying name lengths or missing encounter badges cannot move other columns. Left-align player names and encounter markers; right-align ELO values and timestamps with tabular numbers. At list widths of 640px or less, place the player on the first line, ELO and encounter state on the second, and the timestamp on the third. Keep long names readable by wrapping within their column.
+
+### Scrollbars
+
+Use the supplied narrow, rounded dark scrollbar reference throughout the shared React interface. Workspace content, sidebars, settings, dialog bodies, table wrappers, horizontal navigation and multiline inputs all use the global rules in `styles/scrollbars.css`. Workspace and Settings scrollbars begin below their toolbars. Do not add component-specific scrollbar colors or widths.
+
+- Keep the track and the corner where horizontal and vertical bars meet transparent. Hide arrow buttons. Use a pill-shaped thumb without visible borders, shadows or accent colors.
+- In Electron and Chromium, `--scrollbar-size` is 10px for both axes. A 1px transparent border leaves an 8px visible thumb; `--scrollbar-radius` is 999px. Track ends have 4px margins and the thumb has a 24px minimum length.
+- Thumb colors derive from `--text`, so every palette follows the same rule. Dark mode uses 10% opacity at rest, 20% on thumb hover and 30% while dragging. Light mode uses 18%, 28% and 38% respectively. The resting thumb stays subtle, matching the reference, and interaction increases visibility without changing its size.
+- Browsers without the Chromium scrollbar pseudo-elements use standard `scrollbar-width: thin` and the same thumb/transparent-track colors. Hovering or focusing the scroll container increases visibility in this fallback; exact dimensions and rounding remain browser-controlled. Keep standard scrollbar properties at `auto` in Chromium so they do not override its custom geometry.
+- Preserve native wheel, trackpad, touch, keyboard and thumb dragging behavior. Scrollbar styling must not add nested scrolling or force scrollbars onto content that fits. Use `scrollbar-gutter: stable` in workspace content, settings and the recording dialog to prevent their content from shifting.
+- In forced-colors mode, leave scrollbar rendering to the operating system. No custom scrollbar animations are required; reduced-motion preferences remain respected.
+
 ### Control states
 
 | Control                  | Resting state                                           | Hover                                                                   | Selected or focused state                                       |
 | ------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Sidebar collapse control | Transparent background and border                       | Surface highlight, no border highlight                                  | Visible keyboard focus                                          |
 | Settings entry           | Transparent background and border                       | Same background treatment as other sidebar entries, no border highlight | Visible keyboard focus                                          |
+| Ban player action        | Transparent background and border                       | Surface highlight matching sidebar hover, no border highlight           | Visible keyboard focus; no persistent selected background       |
 | Previous-match action    | No visible border                                       | Background highlight, no accent border                                  | Expose pressed state; preserve keyboard focus                   |
 | Recording widget action  | Soft accent background, accent text, transparent border | Background highlight, no accent border                                  | Visible keyboard focus                                          |
 | Palette card             | Subtle neutral border                                   | Neutral surface/border feedback                                         | Selection lives on its swatches; no selected-card accent border |
@@ -140,12 +164,13 @@ Check the following when changing visual behavior:
 
 1. Desktop overview tool edges align with the 房间玩家 metric at normal and wide widths.
 2. Overview and radar both retain room analysis; the full ban list appears only on its dedicated page.
-3. Workspace headers remain at the top during scrolling, with a soft fade and working controls beneath it.
+3. Workspace and Settings headers remain at the top while their content scrolls below them. The soft fade has no seam at the header boundary, never covers the scrollbar and leaves controls usable. Workspace routes retain their own scroll positions, including after visiting Settings.
 4. Both sidebar layouts collapse, retain names and tooltips, and remember the preference after reload.
 5. Settings opens directly, supports linked categories and returns to the previous workspace page with its state intact.
 6. Individual swatches and whole-card selection never change Light, Dark or System mode. Switching modes applies each saved palette.
 7. Graphite rings, checkmarks and primary controls use neutral gray in both appearances; green is reserved for appropriate status feedback.
 8. Automatic saving handles quick changes, pending text on Back, delayed responses, failures and Retry without losing newer input.
 9. Keyboard navigation, focused controls and dialogs work at 375px portrait, a short landscape viewport and desktop sizes, with reduced motion enabled.
+10. Document, sidebar, settings, dialog, table and horizontal scrollbars share the same geometry and theme tokens. Check resting, hover and drag states in light and dark appearances, retain native scrolling, and use operating-system scrollbars in forced-colors mode.
 
 For documentation-only changes, check Markdown formatting, local links and agreement with the source files above; application tests do not need to be rerun.

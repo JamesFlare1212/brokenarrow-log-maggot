@@ -79,8 +79,6 @@
   scroll-padding: 32px;
   min-height: 0;
   scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
   flex: 1;
   width: 100%;
 }
@@ -197,6 +195,90 @@
 }
 .settings-flags .toggle + .toggle {
   border-top: 1px solid var(--border-subtle);
+}
+.recording-settings {
+  display: grid;
+  gap: 24px;
+}
+.recording-settings-dialog {
+  overflow: hidden;
+}
+.recording-settings-dialog .dialog-body {
+  scrollbar-gutter: stable;
+}
+.settings-card.recording-settings-card {
+  padding: 0;
+}
+.recording-setting-row {
+  min-width: 0;
+  padding: 16px 20px;
+}
+.recording-setting-row + .recording-setting-row {
+  border-top: 1px solid var(--border-subtle);
+}
+.recording-setting-row .field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px);
+  align-items: center;
+  gap: 24px;
+}
+.recording-setting-row .field > label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.recording-setting-row select,
+.recording-setting-row:not(.recording-directory-row) .button {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+.recording-setting-row input[type='range'] {
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+}
+.recording-settings .settings-flags .toggle {
+  min-height: 36px;
+  padding: 0;
+  gap: 20px;
+  font-size: 13px;
+}
+.recording-directory-row .field {
+  display: flex;
+  align-items: stretch;
+  gap: 7px;
+}
+.recording-directory-row .field > label {
+  color: var(--muted);
+  font-weight: 400;
+}
+.recording-test-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.recording-test-row p {
+  color: var(--muted);
+  font-size: 12px;
+}
+.recording-test-row .button {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .recording-setting-row {
+    padding: 14px 16px;
+  }
+  .recording-setting-row .field {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .recording-test-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 .settings-health {
   display: flex;
@@ -504,7 +586,6 @@
     grid-column: 1 / -1;
     flex-direction: row;
     overflow: auto;
-    scrollbar-width: thin;
   }
   .settings-page-toolbar {
     gap: 8px;

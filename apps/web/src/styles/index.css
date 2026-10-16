@@ -1,5 +1,6 @@
 @import './tokens.css';
 @import './base.css';
+@import './scrollbars.css';
 @import './components.css';
 @import './sidebar.css';
 @import './layout.css';

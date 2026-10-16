@@ -27,6 +27,11 @@
   --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--surface));
   --accent-border: color-mix(in srgb, var(--accent) 32%, var(--border));
   --border-subtle: color-mix(in srgb, var(--border) 65%, transparent);
+  --scrollbar-size: 10px;
+  --scrollbar-radius: 999px;
+  --scrollbar-thumb: color-mix(in srgb, var(--text) 10%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--text) 20%, transparent);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--text) 30%, transparent);
   --control-border: color-mix(in srgb, var(--muted) 75%, var(--surface));
   --font-sans: 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
   --font-mono: 'Cascadia Code', 'Consolas', monospace;
@@ -43,6 +48,9 @@
 }
 :root[data-mode='light'] {
   color-scheme: light;
+  --scrollbar-thumb: color-mix(in srgb, var(--text) 18%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--text) 28%, transparent);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--text) 38%, transparent);
   --bg: #f0f3f8;
   --surface: #fff;
   --surface-alt: #edf1f7;

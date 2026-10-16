@@ -1,10 +1,8 @@
-html {
-  scroll-padding-top: 88px;
-}
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
 }
 .sidebar {
   position: sticky;
@@ -18,21 +16,117 @@ html {
   position: relative;
   width: 36px;
   min-height: 36px;
-  padding: 8px;
+  padding: 0;
   border-radius: 50%;
   background: transparent;
 }
-.button.update-button:not([aria-busy='true']):is(:hover, :focus-visible) {
+.button.update-button:not(:disabled):is(:hover, :focus-visible) {
   background: color-mix(in srgb, var(--surface-alt) 90%, var(--text) 10%);
 }
-.update-button > svg {
+.button.update-button[aria-busy='true'] {
+  opacity: 1;
+}
+.update-glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.update-symbol {
+  display: flex;
+  animation: update-symbol-enter var(--motion-normal) var(--ease-out) both;
+}
+.update-symbol > svg {
   transition: transform var(--motion-normal) var(--ease-out);
 }
-.update-button:not([aria-busy='true']):is(:hover, :focus-visible) > svg {
+.update-button:not(:disabled):is(:hover, :focus-visible) .lucide-refresh-cw {
   transform: rotate(90deg);
 }
-.update-button:not([aria-busy='true']):is(:hover, :focus-visible) > .lucide-download {
+.update-button:not(:disabled):is(:hover, :focus-visible) .lucide-download {
   transform: translateY(2px);
+}
+.update-glyph:is([data-state='checking'], [data-state='installing']) .update-symbol > svg {
+  animation: spin 1.2s linear infinite;
+}
+.update-glyph[data-state='downloading'] .update-symbol > svg {
+  animation: update-download 1.4s ease-in-out infinite;
+}
+.update-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transform: rotate(-90deg);
+  transition: opacity var(--motion-normal) var(--ease-out);
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.update-glyph:is([data-state='available'], [data-state='downloading']) .update-ring {
+  opacity: 1;
+}
+.update-ring-track {
+  opacity: 0.2;
+}
+.update-ring-progress {
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--motion-normal) linear;
+}
+.update-ring-indeterminate {
+  stroke-dasharray: 24 76;
+  stroke-dashoffset: 0;
+  transform-origin: center;
+  animation: spin 1.2s linear infinite;
+}
+.update-complete {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--surface);
+  box-shadow: 0 0 0 2px var(--surface);
+  animation: update-complete-enter 320ms cubic-bezier(0.2, 1.5, 0.5, 1) both;
+}
+@keyframes update-symbol-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes update-download {
+  0%,
+  100% {
+    transform: translateY(-1px);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+}
+@keyframes update-complete-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-button:not(:disabled):is(:hover, :focus-visible) .update-symbol > svg {
+    transform: none;
+  }
 }
 .update-dot {
   position: absolute;
@@ -57,6 +151,22 @@ html {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+}
+.workspace-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scroll-padding: 32px;
+}
+.workspace-scroll > main {
+  flex: 1 0 auto;
+}
+.workspace-scroll > .app-footer {
+  flex-shrink: 0;
 }
 .topbar {
   justify-content: space-between;
@@ -263,14 +373,6 @@ main {
 .metric-detail {
   color: var(--muted);
   font-size: 12px;
-}
-.metric-accent {
-  border-color: var(--accent-border);
-  background: linear-gradient(125deg, var(--accent-soft), var(--surface) 95%);
-}
-.metric-accent .metric-value,
-.metric-accent .metric-icon {
-  color: var(--accent);
 }
 .dashboard-grid {
   display: grid;
@@ -618,14 +720,6 @@ main {
   background: var(--accent-soft);
   color: var(--accent);
   justify-content: space-between;
-}
-.local-note {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  color: var(--muted);
-  font-size: 10px;
 }
 .quick-tools .card-body {
   padding: 7px 12px;
@@ -999,11 +1093,119 @@ main {
   background: var(--surface-alt);
   border-color: var(--border);
 }
+.ban-filter-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-subtle);
+  isolation: isolate;
+}
+.ban-filter-switch::before {
+  content: '';
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc((100% - 8px) / 2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+  transition:
+    transform var(--motion-normal) var(--ease-out),
+    background var(--motion-fast);
+  pointer-events: none;
+}
+.ban-filter-switch[aria-checked='true']::before {
+  transform: translateX(100%);
+}
+.ban-filter-switch:hover::before {
+  background: var(--surface-hover);
+}
+.ban-filter-switch > span {
+  position: relative;
+  min-width: 0;
+  padding: 8px 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+  transition: color var(--motion-fast);
+}
+.ban-filter-switch > span[data-selected='true'] {
+  color: var(--text);
+}
 .ban-list,
 .account-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.ban-list-paged {
+  container-type: inline-size;
+  max-height: min(560px, 60dvh);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.ban-list-paged:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.ban-list-paged > .ban-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px 120px 160px;
+  flex-shrink: 0;
+}
+.ban-list-paged .ban-row > .button {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+  justify-self: start;
+  justify-content: flex-start;
+}
+.ban-list-paged .ban-rating {
+  grid-column: 2;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ban-player-button {
+  background: transparent;
+}
+.ban-list-paged .ban-encounter {
+  grid-column: 3;
+  min-width: 0;
+}
+.ban-list-paged .ban-row > time {
+  grid-column: 4;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@container (max-width: 640px) {
+  .ban-list-paged > .ban-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ban-list-paged .ban-row > .button {
+    grid-column: 1 / -1;
+  }
+  .ban-list-paged .ban-rating {
+    grid-column: 1;
+    text-align: left;
+  }
+  .ban-list-paged .ban-encounter {
+    grid-column: 2;
+  }
+  .ban-list-paged .ban-row > time {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
 }
 .ban-row,
 .account-row {
@@ -1073,6 +1275,10 @@ main {
   font-size: 11px;
   margin-top: 4px;
 }
+.replays-panel {
+  display: grid;
+  gap: 24px;
+}
 .recording-controls {
   display: flex;
   gap: 20px;
@@ -1087,6 +1293,9 @@ main {
 .recording-controls .toggle {
   min-width: 180px;
   gap: 24px;
+}
+.recording-controls > .button {
+  margin-left: auto;
 }
 .recording-state {
   display: flex;

@@ -138,21 +138,18 @@ export function App() {
     [navigationOpen, setNavigationOpen] = useState(false);
   const [visited, setVisited] = useState<Panel[]>([page]);
   const main = useRef<HTMLElement>(null),
+    workspaceScroll = useRef<HTMLDivElement>(null),
     scrollPositions = useRef(new Map<string, number>()),
     previousPage = useRef<string>(settingsTab ? `settings/${settingsTab}` : page);
-  useEffect(() => {
-    const remember = () => scrollPositions.current.set(previousPage.current, window.scrollY);
-    window.addEventListener('scroll', remember, { passive: true });
-    return () => window.removeEventListener('scroll', remember);
-  }, []);
   useLayoutEffect(() => {
     const route = settingsTab ? `settings/${settingsTab}` : page;
     if (previousPage.current === route) return;
     previousPage.current = route;
-    const scrollTop = scrollPositions.current.get(route) || 0;
-    document.documentElement.scrollTop = scrollTop;
-    document.body.scrollTop = scrollTop;
-    if (!settingsTab) main.current?.focus({ preventScroll: true });
+    if (!settingsTab) {
+      if (workspaceScroll.current)
+        workspaceScroll.current.scrollTop = scrollPositions.current.get(route) || 0;
+      main.current?.focus({ preventScroll: true });
+    }
   }, [page, settingsTab]);
   useEffect(() => {
     setVisited((pages) => (pages.includes(page) ? pages : [...pages, page]));
@@ -179,6 +176,7 @@ export function App() {
   const isListening = state.watcher.listening && !state.watcher.error;
   const title = t(page === 'current' ? 'commandCenter' : page);
   const account = state.session.localName || t('noAccount');
+  const showHistoricalFooter = ['current', 'radar', 'players'].includes(page);
   const collapsed = settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed;
   return (
     <div
@@ -244,59 +242,71 @@ export function App() {
             </button>
           </div>
         </PageToolbar>
-        <main id="main-content" ref={main} tabIndex={-1} aria-labelledby="page-title">
-          <div className="page-heading">
-            <div>
-              <h1 id="page-title">{title}</h1>
-              <p>{t(page === 'current' ? 'overviewDescription' : `${page}Description`)}</p>
-            </div>
-            <div className="page-heading-status">
-              <span
-                className={`status-dot ${isListening ? 'status-success' : ''}`}
-                aria-hidden="true"
-              />
-              <span title={state.watcher.file || undefined}>{status}</span>
-              {new URLSearchParams(location.search).has('real') && (
-                <Badge tone="warning">{t('realDataOffline')}</Badge>
+        <div
+          className="workspace-scroll"
+          ref={workspaceScroll}
+          onScroll={(event) => {
+            if (!settingsTab) scrollPositions.current.set(page, event.currentTarget.scrollTop);
+          }}
+        >
+          <main id="main-content" ref={main} tabIndex={-1} aria-labelledby="page-title">
+            <div className="page-heading">
+              <div>
+                <h1 id="page-title">{title}</h1>
+                <p>{t(page === 'current' ? 'overviewDescription' : `${page}Description`)}</p>
+              </div>
+              {page !== 'replays' && (
+                <div className="page-heading-status">
+                  <span
+                    className={`status-dot ${isListening ? 'status-success' : ''}`}
+                    aria-hidden="true"
+                  />
+                  <span title={state.watcher.file || undefined}>{status}</span>
+                  {new URLSearchParams(location.search).has('real') && (
+                    <Badge tone="warning">{t('realDataOffline')}</Badge>
+                  )}
+                </div>
               )}
             </div>
-          </div>
-          {!state.config.logDir && page === 'current' && (
-            <Notice>
-              <span>{t('noDirectory')}</span>
-              <Button onClick={() => openSettings('connection')}>{t('select')}</Button>
-            </Notice>
+            {!state.config.logDir && page === 'current' && (
+              <Notice>
+                <span>{t('noDirectory')}</span>
+                <Button onClick={() => openSettings('connection')}>{t('select')}</Button>
+              </Notice>
+            )}
+            <UpdatePanel compact />
+            {[...new Set([...visited, page])].map((panel) => (
+              <div key={panel} className={`feature-page page-${panel}`} hidden={page !== panel}>
+                {components[panel]}
+              </div>
+            ))}
+          </main>
+          {showHistoricalFooter && (
+            <footer className="app-footer">
+              <span>
+                <Info size={13} aria-hidden="true" />
+                {t('historical')}
+              </span>
+              <span>
+                <Button
+                  className="health-button"
+                  disabled={healthBusy}
+                  aria-label={t('health')}
+                  onClick={() => {
+                    setHealthBusy(true);
+                    void api
+                      .invoke('api.health', { force: true })
+                      .then(() => notify(t('success')))
+                      .catch((e) => notify(String(e), true))
+                      .finally(() => setHealthBusy(false));
+                  }}
+                >
+                  <Activity size={14} className={healthBusy ? 'spinner' : ''} />
+                </Button>
+              </span>
+            </footer>
           )}
-          <UpdatePanel compact />
-          {[...new Set([...visited, page])].map((panel) => (
-            <div key={panel} className={`feature-page page-${panel}`} hidden={page !== panel}>
-              {components[panel]}
-            </div>
-          ))}
-        </main>
-        <footer className="app-footer">
-          <span>
-            <Info size={13} aria-hidden="true" />
-            {t('historical')}
-          </span>
-          <span>
-            <Button
-              className="health-button"
-              disabled={healthBusy}
-              aria-label={t('health')}
-              onClick={() => {
-                setHealthBusy(true);
-                void api
-                  .invoke('api.health', { force: true })
-                  .then(() => notify(t('success')))
-                  .catch((e) => notify(String(e), true))
-                  .finally(() => setHealthBusy(false));
-              }}
-            >
-              <Activity size={14} className={healthBusy ? 'spinner' : ''} />
-            </Button>
-          </span>
-        </footer>
+        </div>
       </div>
       {navigationOpen && (
         <Dialog

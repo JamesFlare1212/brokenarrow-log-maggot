@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, LoaderCircle, RefreshCw, RotateCw } from 'lucide-react';
+import { Check, Download, LoaderCircle, RefreshCw, RotateCw } from 'lucide-react';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Button } from '../../components/ui';
@@ -43,6 +43,20 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
           ? `${t('update.available', { version: update.availableVersion || '' })}. ${t(update.mode === 'portable' ? 'updatePortable' : 'updateAutoInstall')}`
           : update.error || label;
   const Icon = busy ? LoaderCircle : ready ? RotateCw : available ? Download : RefreshCw;
+  const visualStatus = active
+    ? update.status
+    : pending
+      ? ready
+        ? 'installing'
+        : available
+          ? 'downloading'
+          : 'checking'
+      : available
+        ? 'available'
+        : update.status;
+  const downloadIcon = ['available', 'downloading'].includes(visualStatus);
+  const complete = !busy && (ready || (update.status === 'idle' && update.checkedAt !== null));
+  const progress = Math.min(100, Math.max(0, update.downloadPercent ?? 0));
 
   async function activate() {
     if (busy) return;
@@ -75,7 +89,32 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
         disabled={busy || blocked || update.mode === 'disabled'}
         onClick={() => void activate()}
       >
-        <Icon size={18} className={busy ? 'spinner' : undefined} aria-hidden="true" />
+        {inline ? (
+          <Icon size={18} className={busy ? 'spinner' : undefined} aria-hidden="true" />
+        ) : (
+          <span className="update-glyph" data-state={visualStatus} aria-hidden="true">
+            <svg className="update-ring" viewBox="0 0 36 36" fill="none">
+              <circle className="update-ring-track" cx="18" cy="18" r="15.5" />
+              <circle
+                className={`update-ring-progress${visualStatus === 'downloading' && update.downloadPercent === null ? ' update-ring-indeterminate' : ''}`}
+                cx="18"
+                cy="18"
+                r="15.5"
+                pathLength="100"
+                strokeDasharray="100"
+                strokeDashoffset={visualStatus === 'available' ? 0 : 100 - progress}
+              />
+            </svg>
+            <span key={downloadIcon ? 'download' : 'refresh'} className="update-symbol">
+              {downloadIcon ? <Download size={18} /> : <RefreshCw size={18} />}
+            </span>
+            {complete && (
+              <span className="update-complete">
+                <Check size={9} strokeWidth={3} />
+              </span>
+            )}
+          </span>
+        )}
         {inline && <span>{actionLabel}</span>}
         {!inline && available && <span className="update-dot" aria-hidden="true" />}
         {!inline && update.status === 'downloading' && (
