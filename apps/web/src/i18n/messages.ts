@@ -361,7 +361,7 @@ export const messages: Record<string, readonly [string, string, string, string]>
   ],
   allResults: ['全部结果', 'All results', 'すべての結果', 'Все результаты'],
   winsOnly: ['胜利', 'Wins', '勝利', 'Победы'],
-  lossesOnly: ['失利', 'Losses', '敗北', 'Поражения'],
+  lossesOnly: ['失败', 'Losses', '敗北', 'Поражения'],
   noFilteredMatches: [
     '没有符合筛选条件的对局',
     'No matches for these filters',
@@ -483,6 +483,18 @@ export const messages: Record<string, readonly [string, string, string, string]>
   healthPlayerMatches: ['玩家比赛记录', 'Player matches', '対戦履歴', 'Матчи игрока'],
   healthEndpoint: ['接口', 'Endpoint', 'API', 'API'],
   healthSuccess: ['正常', 'Available', '正常', 'Доступен'],
+  healthFallbackSuccess: [
+    'fallback 成功',
+    'Fallback available',
+    'フォールバック成功',
+    'Резервный источник доступен',
+  ],
+  healthFallbackFailed: [
+    'fallback 失败',
+    'Fallback failed',
+    'フォールバック失敗',
+    'Резервный источник недоступен',
+  ],
   healthHttp401: ['需要授权', 'Authorization required', '認証が必要', 'Требуется авторизация'],
   healthHttp403: ['访问被拒绝', 'Access denied', 'アクセス拒否', 'Доступ запрещён'],
   healthHttp404: [

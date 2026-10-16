@@ -20,53 +20,53 @@ export function BansPanel() {
   const currentPage = Math.min(page, Math.max(1, Math.ceil(bans.length / PAGE_SIZE)));
   const visible = bans.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   useEffect(() => {
-    void request.load(() => api.invoke('bans.list', { metOnly }));
+    void request.load(() => api.invoke('bans.list', { metOnly }), true);
   }, [api, metOnly, state.bansRevision]);
   return (
-    <Card
-      title={t('bans')}
-      icon={<Shield size={19} />}
-      actions={
-        <>
-          <Button
-            variant="primary"
-            disabled={syncing}
-            onClick={() => {
-              setSyncing(true);
-              void api
-                .invoke('bans.sync', null)
-                .then(() => request.load(() => api.invoke('bans.list', { metOnly })))
-                .catch((e) => notify(String(e), true))
-                .finally(() => setSyncing(false));
-            }}
-          >
-            {t('sync')}
-          </Button>
-        </>
-      }
-    >
-      <button
-        type="button"
-        role="switch"
-        className="ban-filter-switch"
-        aria-label={t('metBans')}
-        aria-checked={metOnly}
-        onClick={() => {
-          setMetOnly((value) => !value);
-          setPage(1);
-        }}
-      >
-        <span aria-hidden="true" data-selected={!metOnly}>
-          {t('allBans')}
-        </span>
-        <span aria-hidden="true" data-selected={metOnly}>
-          {t('metBans')}
-        </span>
-      </button>
-      {request.pending && <Loading />}
+    <Card title={t('bans')} showHeader={false}>
+      <div className="bans-toolbar">
+        <button
+          type="button"
+          role="switch"
+          className="sliding-filter ban-filter-switch"
+          aria-label={t('metBans')}
+          aria-checked={metOnly}
+          onClick={() => {
+            setMetOnly((value) => !value);
+            setPage(1);
+          }}
+        >
+          <span aria-hidden="true" data-selected={!metOnly}>
+            {t('allBans')}
+          </span>
+          <span aria-hidden="true" data-selected={metOnly}>
+            {t('metBans')}
+          </span>
+        </button>
+        <Button
+          variant="primary"
+          disabled={syncing}
+          aria-busy={syncing}
+          onClick={() => {
+            setSyncing(true);
+            void api
+              .invoke('bans.sync', null)
+              .then(() => request.load(() => api.invoke('bans.list', { metOnly }), true))
+              .catch((e) => notify(String(e), true))
+              .finally(() => setSyncing(false));
+          }}
+        >
+          {t('sync')}
+        </Button>
+      </div>
       {request.error && <Notice error>{request.error}</Notice>}
-      {request.data?.length ? (
-        <>
+      <div className="results-viewport bans-results-viewport" aria-busy={request.pending}>
+        {request.pending && (
+          <div className="results-loading">
+            <Loading />
+          </div>
+        )}
+        {request.data?.length ? (
           <div
             className="ban-list ban-list-paged"
             ref={list}
@@ -80,7 +80,7 @@ export function BansPanel() {
                   className="button-borderless ban-player-button"
                   onClick={() => openModal({ type: 'profile', id: b.id, name: b.name })}
                 >
-                  {b.name} <small>#{b.id}</small>
+                  <span>{b.name}</span> <small>#{b.id}</small>
                 </Button>
                 <span className="ban-rating">ELO {formatMetric(b.rating, 0)}</span>
                 <span className="ban-encounter">
@@ -90,24 +90,25 @@ export function BansPanel() {
               </div>
             ))}
           </div>
-          <Pagination
-            page={currentPage}
-            pageSize={PAGE_SIZE}
-            total={bans.length}
-            label={t('bans')}
-            onPageChange={(value) => {
-              setPage(value);
-              if (list.current) list.current.scrollTop = 0;
-            }}
-          />
-        </>
-      ) : (
-        !request.pending && (
-          <Empty icon={<Shield size={28} />} description={t('bansDescription')}>
-            {t('empty')}
-          </Empty>
-        )
-      )}
+        ) : (
+          !request.pending && (
+            <Empty icon={<Shield size={28} />} description={t('bansDescription')}>
+              {t('empty')}
+            </Empty>
+          )
+        )}
+      </div>
+      <Pagination
+        page={currentPage}
+        pageSize={PAGE_SIZE}
+        total={bans.length}
+        label={t('bans')}
+        onPageChange={(value) => {
+          setPage(value);
+          if (list.current) list.current.scrollTop = 0;
+        }}
+        reserveSpace
+      />
     </Card>
   );
 }

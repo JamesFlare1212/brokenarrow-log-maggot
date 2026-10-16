@@ -117,6 +117,10 @@
   color: var(--muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  flex: 1 0 180px;
+}
+.pagination-placeholder {
+  visibility: hidden;
 }
 .pagination-controls {
   display: flex;

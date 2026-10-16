@@ -240,6 +240,12 @@
   justify-content: space-between;
   gap: 12px;
 }
+.health-check-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
 .health-checks code,
 .health-checks small {
   display: block;
@@ -1062,6 +1068,45 @@ main {
 .archive-toolbar input {
   font-family: var(--font-mono);
 }
+.results-viewport {
+  position: relative;
+  height: min(600px, 60dvh);
+  min-height: 240px;
+}
+.bans-results-viewport {
+  height: min(560px, 60dvh);
+}
+.results-viewport > .table-wrap,
+.results-viewport > .ban-list-paged {
+  height: 100%;
+  max-height: none;
+  scrollbar-gutter: stable;
+}
+.results-viewport > .empty {
+  height: 100%;
+  justify-content: center;
+}
+.results-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+.archive-table table {
+  table-layout: fixed;
+  min-width: 820px;
+}
+.archive-table td:nth-child(3),
+.archive-table td:nth-child(6) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.archive-table td:nth-child(3) .button {
+  max-width: 100%;
+}
 .filter-row {
   display: flex;
   align-items: center;
@@ -1071,32 +1116,30 @@ main {
   padding-top: 8px;
   border-top: 1px solid var(--border-subtle);
 }
-.segmented-control {
+.archive-results-actions,
+.bans-toolbar {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface-subtle);
+  gap: 12px;
 }
-.segmented-control .button {
-  border-color: transparent;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  min-height: 36px;
-  padding: 8px 14px;
+.archive-results-actions {
+  margin-left: auto;
 }
-.segmented-control .button[aria-pressed='true'] {
-  color: var(--text);
-  background: var(--surface-alt);
-  border-color: var(--border);
+.archive-results-actions > small {
+  min-width: 12ch;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
-.ban-filter-switch {
+.bans-toolbar > .button {
+  margin-left: auto;
+}
+.sliding-filter {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--segment-count, 2), minmax(0, 1fr));
   align-self: flex-start;
   width: fit-content;
   max-width: 100%;
@@ -1107,26 +1150,27 @@ main {
   background: var(--surface-subtle);
   isolation: isolate;
 }
-.ban-filter-switch::before {
+.sliding-filter::before {
   content: '';
   position: absolute;
-  inset: 4px auto 4px 4px;
-  width: calc((100% - 8px) / 2);
+  grid-area: 1 / 1 / 2 / 2;
+  inset: 0;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface-alt);
+  transform: translateX(calc(var(--segment-index, 0) * 100%));
   transition:
     transform var(--motion-normal) var(--ease-out),
     background var(--motion-fast);
   pointer-events: none;
 }
-.ban-filter-switch[aria-checked='true']::before {
-  transform: translateX(100%);
+.ban-filter-switch[aria-checked='true'] {
+  --segment-index: 1;
 }
-.ban-filter-switch:hover::before {
+.sliding-filter:hover::before {
   background: var(--surface-hover);
 }
-.ban-filter-switch > span {
+.sliding-filter > :is(span, button) {
   position: relative;
   min-width: 0;
   padding: 8px 14px;
@@ -1137,7 +1181,13 @@ main {
   overflow-wrap: anywhere;
   transition: color var(--motion-fast);
 }
-.ban-filter-switch > span[data-selected='true'] {
+.sliding-filter > button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+}
+.sliding-filter > [data-selected='true'],
+.sliding-filter > [aria-pressed='true'] {
   color: var(--text);
 }
 .ban-list,
@@ -1158,19 +1208,32 @@ main {
 }
 .ban-list-paged > .ban-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 100px 120px 160px;
+  grid-template-columns: minmax(0, 1fr) 90px auto 145px;
+  grid-template-areas: 'player rating encounter time';
+  gap: 6px 12px;
   flex-shrink: 0;
 }
 .ban-list-paged .ban-row > .button {
+  grid-area: player;
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
   text-align: left;
   justify-self: start;
   justify-content: flex-start;
+  flex-wrap: wrap;
+  padding: 4px 0;
+  min-height: 32px;
+}
+.ban-player-button > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ban-player-button > small {
+  white-space: nowrap;
 }
 .ban-list-paged .ban-rating {
-  grid-column: 2;
+  grid-area: rating;
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1179,31 +1242,28 @@ main {
   background: transparent;
 }
 .ban-list-paged .ban-encounter {
-  grid-column: 3;
+  grid-area: encounter;
   min-width: 0;
+  justify-self: end;
 }
 .ban-list-paged .ban-row > time {
-  grid-column: 4;
+  grid-area: time;
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-@container (max-width: 640px) {
+@container (max-width: 760px) {
   .ban-list-paged > .ban-row {
     grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .ban-list-paged .ban-row > .button {
-    grid-column: 1 / -1;
+    grid-template-areas:
+      'player rating'
+      'time encounter';
   }
   .ban-list-paged .ban-rating {
-    grid-column: 1;
-    text-align: left;
-  }
-  .ban-list-paged .ban-encounter {
-    grid-column: 2;
+    align-self: start;
+    padding-top: 5px;
   }
   .ban-list-paged .ban-row > time {
-    grid-column: 1 / -1;
     text-align: left;
   }
 }

@@ -211,6 +211,45 @@ afterEach(() => {
 });
 
 describe('BATrace status indicator', () => {
+  it.each([true, false])(
+    'shows fallback success %s below the API failure with the matching colors',
+    async (ok) => {
+      const native = nativeFixture(bootstrapForApp());
+      render(
+        <BatraceStatus
+          health={{
+            state: ok ? 'partial' : 'down',
+            at: Date.now(),
+            checks: [
+              {
+                path: '/api/players/info?stbid=8863',
+                ok: false,
+                ms: 100,
+                status: 403,
+                failure: 'blocked',
+                fallback: { path: '/player/8863', ok, ms: 200, status: ok ? 200 : 403 },
+              },
+            ],
+          }}
+        />,
+        { wrapper: wrapper(native.api) },
+      );
+      const trigger = await screen.findByRole('button', {
+        name: `BATrace · ${ok ? '服务部分可用' : '服务不可用'}`,
+      });
+      expect(trigger.classList.contains(ok ? 'badge-warning' : 'badge-danger')).toBe(true);
+      fireEvent.click(trigger);
+      const tooltip = screen.getByRole('tooltip');
+      const blocked = within(tooltip).getByText('被 Cloudflare 拦截');
+      const fallback = within(tooltip).getByText(ok ? 'fallback 成功' : 'fallback 失败');
+      expect(blocked.className).toBe(ok ? 'text-warning' : 'text-danger');
+      expect(fallback.className).toBe(ok ? 'text-success' : 'text-danger');
+      expect(blocked.nextElementSibling).toBe(fallback);
+      expect(within(tooltip).getByText('/player/8863')).toBeTruthy();
+      expect(within(tooltip).getByText(`HTTP ${ok ? 200 : 403} · 200 ms`)).toBeTruthy();
+    },
+  );
+
   it('shows endpoint diagnostics on hover, focus and tap, and dismisses on Escape or outside pointer', async () => {
     const initial = bootstrapForApp();
     const native = nativeFixture(initial);
@@ -1307,6 +1346,31 @@ describe('request and native event ordering', () => {
 });
 
 describe('user interaction regressions', () => {
+  it('keeps the ban list mounted while a filter request is pending', async () => {
+    const pending = deferred<Ban[]>();
+    const rows = [
+      bannedPlayer(),
+      { ...bannedPlayer(), id: '9001', name: 'Unmet player', encountered: false },
+    ];
+    const native = nativeFixture(bootstrapForApp(), {
+      'bans.list': ({ metOnly }) => (metOnly ? pending.promise : rows),
+    });
+    render(<BansPanel />, { wrapper: wrapper(native.api) });
+    await screen.findByRole('button', { name: 'Unmet player #9001' });
+    const list = screen.getByRole('list', { name: '封禁追踪' });
+    const viewport = list.parentElement!;
+    fireEvent.click(screen.getByRole('switch', { name: '我遇到过的作弊者' }));
+    expect(viewport.getAttribute('aria-busy')).toBe('true');
+    expect(screen.getByRole('list', { name: '封禁追踪' })).toBe(list);
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+    await act(async () => pending.resolve([rows[0]!]));
+    expect(viewport.getAttribute('aria-busy')).toBe('false');
+    expect(screen.getByRole('list', { name: '封禁追踪' })).toBe(list);
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Unmet player #9001' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: '封禁追踪' })).toBeNull();
+  });
+
   it('paginates bans, resets list scrolling and filters, and clamps refreshed results', async () => {
     let rows = Array.from({ length: 45 }, (_, index) => ({
       ...bannedPlayer(),
@@ -1556,7 +1620,7 @@ describe('user interaction regressions', () => {
     const scroll = screen.getByRole('main').parentElement!;
     fireEvent.scroll(scroll, { target: { scrollTop: 180 } });
     const navigation = screen.getByRole('navigation');
-    fireEvent.click(screen.getByRole('button', { name: '失利' }));
+    fireEvent.click(screen.getByRole('button', { name: '失败' }));
     await screen.findByText(
       `样本数: ${capturedMatches.filter((m) => m.outcome === 'loss').length}`,
     );
@@ -1572,7 +1636,7 @@ describe('user interaction regressions', () => {
       window.location.hash = 'archive';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     });
-    expect(screen.getByRole('button', { name: '失利' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '失败' }).getAttribute('aria-pressed')).toBe('true');
     expect(scroll.scrollTop).toBe(180);
     expect(document.activeElement).toBe(screen.getByRole('main'));
     fireEvent.click(within(navigation).getByRole('button', { name: '玩家查询' }));

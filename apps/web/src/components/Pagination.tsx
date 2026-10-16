@@ -8,19 +8,25 @@ export function Pagination({
   total,
   label,
   onPageChange,
+  reserveSpace = false,
 }: {
   page: number;
   pageSize: number;
   total: number;
   label: string;
   onPageChange: (page: number) => void;
+  reserveSpace?: boolean;
 }) {
   const { t } = useI18n();
-  const pages = Math.ceil(total / pageSize);
-  if (pages <= 1) return null;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (pages === 1 && !reserveSpace) return null;
   const currentPage = Math.max(1, Math.min(page, pages));
   return (
-    <nav className="pagination" aria-label={label}>
+    <nav
+      className={`pagination${pages === 1 ? ' pagination-placeholder' : ''}`}
+      aria-label={label}
+      aria-hidden={pages === 1 ? true : undefined}
+    >
       <p className="pagination-summary" role="status">
         {t('paginationRange', {
           start: (currentPage - 1) * pageSize + 1,

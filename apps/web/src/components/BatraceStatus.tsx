@@ -90,7 +90,26 @@ export function BatraceStatus({ health }: { health: ApiHealth }) {
                       <strong>
                         {t(endpoints[check.path.split('?')[0] ?? ''] ?? 'healthEndpoint')}
                       </strong>
-                      <span className={check.ok ? 'text-success' : 'text-danger'}>{t(reason)}</span>
+                      <span className="health-check-status">
+                        <span
+                          className={
+                            check.ok
+                              ? 'text-success'
+                              : check.fallback?.ok
+                                ? 'text-warning'
+                                : 'text-danger'
+                          }
+                        >
+                          {t(reason)}
+                        </span>
+                        {check.fallback && (
+                          <span className={check.fallback.ok ? 'text-success' : 'text-danger'}>
+                            {t(
+                              check.fallback.ok ? 'healthFallbackSuccess' : 'healthFallbackFailed',
+                            )}
+                          </span>
+                        )}
+                      </span>
                     </div>
                     <code>{check.path}</code>
                     <small className="muted">
@@ -99,6 +118,21 @@ export function BatraceStatus({ health }: { health: ApiHealth }) {
                       {check.ms} ms
                     </small>
                     {check.rayId && <small className="muted">Ray ID: {check.rayId}</small>}
+                    {check.fallback && (
+                      <>
+                        <code>{check.fallback.path}</code>
+                        <small className="muted">
+                          {check.fallback.status === null
+                            ? t('healthNoHttpResponse')
+                            : `HTTP ${check.fallback.status}`}
+                          {' · '}
+                          {check.fallback.ms} ms
+                        </small>
+                        {check.fallback.rayId && (
+                          <small className="muted">Ray ID: {check.fallback.rayId}</small>
+                        )}
+                      </>
+                    )}
                   </li>
                 );
               })}

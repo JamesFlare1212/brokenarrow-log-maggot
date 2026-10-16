@@ -104,7 +104,6 @@ table {
   font-variant-numeric: tabular-nums;
 }
 th {
-  text-align: left;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
@@ -114,9 +113,14 @@ th {
 }
 th,
 td {
+  text-align: center;
   padding: 13px 16px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+}
+th.elo-column,
+td.elo-column {
+  text-align: right;
 }
 .table-wrap .button {
   background: transparent;

@@ -37,6 +37,7 @@ export function Card({
   collapsed = false,
   onToggle,
   className = '',
+  showHeader = true,
 }: {
   title: string;
   icon?: ReactNode;
@@ -45,34 +46,37 @@ export function Card({
   collapsed?: boolean;
   onToggle?: () => void;
   className?: string;
+  showHeader?: boolean;
 }) {
   const { t } = useI18n();
   const contentId = useId();
   return (
-    <section className={`card ${className}`}>
-      <div className="card-header">
-        <h2>
-          {icon && (
-            <span className="card-icon" aria-hidden="true">
-              {icon}
-            </span>
-          )}
-          {title}
-        </h2>
-        <div className="actions">
-          {actions}
-          {onToggle && (
-            <Button
-              onClick={onToggle}
-              aria-label={title + ' ' + t(collapsed ? 'expand' : 'collapse')}
-              aria-expanded={!collapsed}
-              aria-controls={contentId}
-            >
-              {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-            </Button>
-          )}
+    <section className={`card ${className}`} aria-label={showHeader ? undefined : title}>
+      {showHeader && (
+        <div className="card-header">
+          <h2>
+            {icon && (
+              <span className="card-icon" aria-hidden="true">
+                {icon}
+              </span>
+            )}
+            {title}
+          </h2>
+          <div className="actions">
+            {actions}
+            {onToggle && (
+              <Button
+                onClick={onToggle}
+                aria-label={title + ' ' + t(collapsed ? 'expand' : 'collapse')}
+                aria-expanded={!collapsed}
+                aria-controls={contentId}
+              >
+                {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       {!collapsed && (
         <div className="card-body" id={contentId}>
           {children}

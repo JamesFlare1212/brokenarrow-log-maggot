@@ -109,7 +109,9 @@ export function MatchDialog({ fid }: { fid: string }) {
                       <thead>
                         <tr>
                           {columns.map((k) => (
-                            <th key={k}>{t(k)}</th>
+                            <th key={k} className={k === 'ELO' ? 'elo-column' : undefined}>
+                              {t(k)}
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -126,7 +128,7 @@ export function MatchDialog({ fid }: { fid: string }) {
                               </Button>
                               <small className="muted">#{p.id}</small>
                             </td>
-                            <td>
+                            <td className="elo-column">
                               {formatMetric(p.newRating)}{' '}
                               <small>
                                 (

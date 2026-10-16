@@ -4,6 +4,7 @@ import { Database } from '../apps/server/src/storage/database';
 import { BatraceClient, type HttpPort } from '../apps/server/src/network/client';
 import { parsePlayerPage } from '../apps/server/src/network/player-page';
 import { Analyzer } from '../apps/server/src/players/analyzer';
+import { StatusService } from '../apps/server/src/network/status';
 
 const capturedHtml = readFileSync(
   new URL('./fixtures/batrace/player-8863.html', import.meta.url),
@@ -79,6 +80,75 @@ describe('BATrace player page parsing', () => {
     ['executable frame', '<script>self.__next_f.push(globalThis.run())</script>'],
   ])('rejects %s instead of generating substitute data', (_name, html) => {
     expect(() => parsePlayerPage(html, '8863')).toThrow(/no complete data/);
+  });
+});
+
+describe('BATrace player health fallback', () => {
+  it('probes the page without cache, preserves the API failure and tracks fallback recovery', async () => {
+    let available = true;
+    const fetchImpl = vi.fn<typeof fetch>(async (url) =>
+      String(url).includes('/api/') || !available
+        ? new Response('<html>Sorry, you have been blocked</html>', {
+            status: 403,
+            headers: { server: 'cloudflare', 'cf-ray': 'health-ray-EWR' },
+          })
+        : new Response(capturedHtml),
+    );
+    const { db, client, now } = setup({ fetch: fetchImpl });
+    db.saveCache('info:8863', capturedData, 60_000, now);
+    db.saveCache('health:/player/8863', capturedData, 60_000, now);
+    const health = new StatusService(db, client);
+    const first = health.probe();
+    expect(health.probe()).toBe(first);
+    expect(await first).toMatchObject({
+      state: 'partial',
+      checks: expect.arrayContaining([
+        {
+          path: '/api/players/info?stbid=8863',
+          ok: false,
+          ms: expect.any(Number),
+          status: 403,
+          failure: 'blocked',
+          rayId: 'health-ray-EWR',
+          fallback: { path: '/player/8863', ok: true, ms: expect.any(Number), status: 200 },
+        },
+      ]),
+    });
+    expect(health.health().checks).toHaveLength(4);
+    expect(db.cache('health:/player/8863', true)?.at).toBe(now);
+    available = false;
+    expect(await health.probe()).toMatchObject({ state: 'down' });
+    expect(health.health().checks[1]?.fallback).toMatchObject({
+      ok: false,
+      status: 403,
+      failure: 'blocked',
+      rayId: 'health-ray-EWR',
+    });
+    available = true;
+    expect(await health.probe()).toMatchObject({ state: 'partial' });
+    expect(
+      fetchImpl.mock.calls.filter(([url]) => String(url).endsWith('/player/8863')),
+    ).toHaveLength(3);
+    expect(db.cache('info:8863', true)?.at).toBe(now);
+  });
+
+  it.each([
+    ['incomplete page', '<html>Login</html>'],
+    ['wrong player', page({ ...capturedData, info: { ...capturedData.info, id: 1 } })],
+  ])('keeps a %s unavailable even with HTTP 200', async (_name, html) => {
+    const { db, client } = setup({
+      fetch: async (url) =>
+        String(url).includes('/api/')
+          ? new Response('Forbidden', { status: 403 })
+          : new Response(html),
+    });
+    const health = await new StatusService(db, client).probe();
+    expect(health.state).toBe('down');
+    expect(health.checks[1]?.fallback).toMatchObject({
+      ok: false,
+      status: 200,
+      failure: 'invalid-response',
+    });
   });
 });
 

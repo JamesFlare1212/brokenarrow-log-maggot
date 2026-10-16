@@ -1,5 +1,5 @@
 import { BATRACE_ORIGIN } from '@ba/contracts';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Archive, Plus, RefreshCw } from 'lucide-react';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, outcomeTone } from '@ba/shared';
@@ -54,24 +54,7 @@ export function MatchArchive() {
       .catch((e) => notify(String(e), true));
   }, [api, state.matchesRevision, account]);
   return (
-    <Card
-      title={t('archive')}
-      icon={<Archive size={19} />}
-      actions={
-        <Button
-          disabled={matches.pending || scanning}
-          onClick={() => void scan()}
-          aria-busy={scanning}
-        >
-          <RefreshCw
-            size={15}
-            className={matches.pending || scanning ? 'spinner' : ''}
-            aria-hidden="true"
-          />
-          {t(scanning ? 'scanningLogs' : 'refresh')}
-        </Button>
-      }
-    >
+    <Card title={t('archive')} showHeader={false}>
       <div className="archive-toolbar">
         <form
           className="search-form"
@@ -125,9 +108,20 @@ export function MatchArchive() {
         </Field>
       </div>
       <div className="filter-row">
-        <div className="segmented-control" role="group" aria-label={t('result')}>
+        <div
+          className="sliding-filter"
+          role="group"
+          aria-label={t('result')}
+          style={
+            {
+              '--segment-count': 3,
+              '--segment-index': ['all', 'win', 'loss'].indexOf(outcome),
+            } as CSSProperties
+          }
+        >
           {(['all', 'win', 'loss'] as const).map((value) => (
-            <Button
+            <button
+              type="button"
               key={value}
               aria-pressed={outcome === value}
               onClick={() => {
@@ -136,24 +130,53 @@ export function MatchArchive() {
               }}
             >
               {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
-            </Button>
+            </button>
           ))}
         </div>
-        <small className="muted">
-          {t('samples')}: {filtered.length}
-        </small>
+        <div className="archive-results-actions">
+          <small className="muted">
+            {t('samples')}: {filtered.length}
+          </small>
+          <Button
+            disabled={matches.pending || scanning}
+            onClick={() => void scan()}
+            aria-busy={scanning}
+          >
+            <RefreshCw
+              size={15}
+              className={matches.pending || scanning ? 'spinner' : ''}
+              aria-hidden="true"
+            />
+            {t(scanning ? 'scanningLogs' : 'refresh')}
+          </Button>
+        </div>
       </div>
-      {matches.pending && !matches.data && <Loading />}
       {matches.error && <Notice error>{matches.error}</Notice>}
-      {filtered.length ? (
-        <>
+      <div className="results-viewport archive-results-viewport" aria-busy={matches.pending}>
+        {matches.pending && (
+          <div className="results-loading">
+            <Loading />
+          </div>
+        )}
+        {filtered.length ? (
           <div className="table-wrap archive-table">
             <table>
               <caption className="sr-only">{t('archive')}</caption>
+              <colgroup>
+                <col style={{ width: 72 }} />
+                <col style={{ width: 84 }} />
+                <col style={{ width: 160 }} />
+                <col style={{ width: 110 }} />
+                <col style={{ width: 160 }} />
+                <col />
+                <col style={{ width: 80 }} />
+              </colgroup>
               <thead>
                 <tr>
                   {['result', 'mode', 'map', 'eloDelta', 'time', 'account', 'actions'].map((k) => (
-                    <th key={k}>{t(k)}</th>
+                    <th key={k} className={k === 'eloDelta' ? 'elo-column' : undefined}>
+                      {t(k)}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -177,7 +200,7 @@ export function MatchArchive() {
                         {m.map || '#' + m.id}
                       </Button>
                     </td>
-                    <td>
+                    <td className="elo-column">
                       <span
                         className={
                           m.eloAfter !== null && m.eloBefore !== null
@@ -240,37 +263,38 @@ export function MatchArchive() {
               </tbody>
             </table>
           </div>
-          <Pagination
-            page={currentPage}
-            pageSize={PAGE_SIZE}
-            total={filtered.length}
-            label={t('archivePagination')}
-            onPageChange={setPage}
-          />
-        </>
-      ) : (
-        !matches.pending && (
-          <Empty
-            icon={<Archive size={26} />}
-            description={t('noMatchesHint')}
-            action={
-              outcome !== 'all' || account ? (
-                <Button
-                  onClick={() => {
-                    setOutcome('all');
-                    setAccount('');
-                    setPage(1);
-                  }}
-                >
-                  {t('clearFilters')}
-                </Button>
-              ) : undefined
-            }
-          >
-            {t(outcome !== 'all' || account ? 'noFilteredMatches' : 'empty')}
-          </Empty>
-        )
-      )}
+        ) : (
+          !matches.pending && (
+            <Empty
+              icon={<Archive size={26} />}
+              description={t('noMatchesHint')}
+              action={
+                outcome !== 'all' || account ? (
+                  <Button
+                    onClick={() => {
+                      setOutcome('all');
+                      setAccount('');
+                      setPage(1);
+                    }}
+                  >
+                    {t('clearFilters')}
+                  </Button>
+                ) : undefined
+              }
+            >
+              {t(outcome !== 'all' || account ? 'noFilteredMatches' : 'empty')}
+            </Empty>
+          )
+        )}
+      </div>
+      <Pagination
+        page={currentPage}
+        pageSize={PAGE_SIZE}
+        total={filtered.length}
+        label={t('archivePagination')}
+        onPageChange={setPage}
+        reserveSpace
+      />
     </Card>
   );
 }

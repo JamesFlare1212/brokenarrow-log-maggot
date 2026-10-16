@@ -94,7 +94,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
                     <tr>
                       <th>{t('map')}</th>
                       <th>{t('result')}</th>
-                      <th>ELO</th>
+                      <th className="elo-column">ELO</th>
                       <th>{t('time')}</th>
                     </tr>
                   </thead>
@@ -107,7 +107,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
                           </Button>
                         </td>
                         <td>{t(m.outcome)}</td>
-                        <td>
+                        <td className="elo-column">
                           {formatDelta(
                             m.eloAfter !== null && m.eloBefore !== null
                               ? m.eloAfter - m.eloBefore

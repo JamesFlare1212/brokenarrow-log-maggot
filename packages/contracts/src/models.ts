@@ -187,17 +187,18 @@ export interface PlayerProfile {
   latestElo: Metric;
   info: MiniInfo | null;
 }
+export interface ApiHealthCheck {
+  path: string;
+  ok: boolean;
+  ms: number;
+  status: number | null;
+  failure?: 'http' | 'blocked' | 'verification' | 'timeout' | 'invalid-response' | 'network';
+  rayId?: string;
+}
 export interface ApiHealth {
   state: 'unknown' | 'ok' | 'partial' | 'down';
   at: number;
-  checks: Array<{
-    path: string;
-    ok: boolean;
-    ms: number;
-    status: number | null;
-    failure?: 'http' | 'blocked' | 'verification' | 'timeout' | 'invalid-response' | 'network';
-    rayId?: string;
-  }>;
+  checks: Array<ApiHealthCheck & { fallback?: ApiHealthCheck }>;
 }
 export interface VersionInfo {
   current: string;

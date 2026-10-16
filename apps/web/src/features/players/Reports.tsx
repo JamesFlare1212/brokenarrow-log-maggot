@@ -105,7 +105,9 @@ export function ReportView({ report }: { report: PlayerReport }) {
                   'objectives',
                   'time',
                 ].map((k) => (
-                  <th key={k}>{t(k)}</th>
+                  <th key={k} className={k === 'eloDelta' ? 'elo-column' : undefined}>
+                    {t(k)}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -122,7 +124,7 @@ export function ReportView({ report }: { report: PlayerReport }) {
                       {m.won === null ? t('unknown') : m.won ? t('win') : t('loss')}
                     </Badge>
                   </td>
-                  <td>{formatDelta(m.eloDelta)}</td>
+                  <td className="elo-column">{formatDelta(m.eloDelta)}</td>
                   <td>{formatMetric(m.kd)}</td>
                   <td>{formatMetric(m.dmr)}</td>
                   <td>{formatMetric(m.destruction, 0)}</td>
@@ -194,7 +196,9 @@ export function MaggotView({ report }: { report: MaggotReport }) {
           <thead>
             <tr>
               {['matchId', 'result', 'MVP', 'kills', 'losses', 'K/D', 'eloDelta'].map((k) => (
-                <th key={k}>{t(k)}</th>
+                <th key={k} className={k === 'eloDelta' ? 'elo-column' : undefined}>
+                  {t(k)}
+                </th>
               ))}
             </tr>
           </thead>
@@ -211,7 +215,7 @@ export function MaggotView({ report }: { report: MaggotReport }) {
                 <td>{formatMetric(r.killRank, 1)}</td>
                 <td>{formatMetric(r.lossRank, 1)}</td>
                 <td>{formatMetric(r.kdRank, 1)}</td>
-                <td>{formatDelta(r.eloDelta)}</td>
+                <td className="elo-column">{formatDelta(r.eloDelta)}</td>
               </tr>
             ))}
           </tbody>
