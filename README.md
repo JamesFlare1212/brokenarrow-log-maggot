@@ -20,6 +20,34 @@
 
 BATrace 是历史数据，可能延迟数天。蛆指数需要最近 12 场有效五人队排位；缺本人、完整 MVP 或足够样本时不生成替代分数。
 
+## Screenshots
+
+Captured from the running application in browser development mode (`pnpm dev:web`), using the repository's [real-data fixtures](tests/fixtures/real/README.md). Player names, match results and statistics come from recorded data.
+
+### Overview
+
+Previous match teams and cached player summaries in dark mode.
+
+![Overview showing the previous match on Dam and both teams](docs/screenshots/overview.png)
+
+### Match archive
+
+Local match history with results, maps, ELO changes and account filters.
+
+![Match archive showing real match results and ELO changes](docs/screenshots/match-archive.png)
+
+### Player analysis
+
+Cached player statistics, preferred units, map win rates and recent match performance.
+
+![Player analysis showing JamesFlare's statistics and recent matches](docs/screenshots/player-analysis.png)
+
+### Appearance settings
+
+Theme modes and all six palette pairs, shown with the light Cyan palette selected.
+
+![Appearance settings showing theme modes and six palette pairs in light mode](docs/screenshots/appearance-settings.png)
+
 ## 开发
 
 安装 Node.js 24 LTS 与 pnpm 10.34.6（最低 Node.js 22.16）：
