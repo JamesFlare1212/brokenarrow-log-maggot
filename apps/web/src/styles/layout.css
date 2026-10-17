@@ -552,10 +552,12 @@ main {
 }
 .player-results-viewport {
   position: relative;
-  height: clamp(240px, 40dvh, 360px);
+}
+.player-results-viewport[aria-busy='true'] {
+  min-height: 120px;
 }
 .player-results-scroll {
-  height: 100%;
+  max-height: clamp(240px, 40dvh, 360px);
   overflow: auto;
   scrollbar-gutter: stable;
 }
