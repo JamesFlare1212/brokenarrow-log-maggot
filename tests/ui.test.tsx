@@ -1735,14 +1735,14 @@ describe('user interaction regressions', () => {
     expect(native.backend.watcher.listening).toBe(true);
   });
 
-  it('applies saved panel order immediately and preserves the collapsed APM and deck panels', async () => {
+  it('applies saved panel order and keeps deck tools visible while preserving collapsed APM', async () => {
     const bootstrap = bootstrapForApp();
     bootstrap.config.panelOrder = ['current', 'apm', 'decks'];
     bootstrap.config.inputHookEnabled = true;
     bootstrap.config.collapsedPanels = ['decks', 'apm'];
     const native = nativeFixture(bootstrap, {
       'decks.list': () => ({
-        found: false,
+        found: true,
         decksDir: '',
         backupsDir: '',
         decks: [],
@@ -1769,9 +1769,13 @@ describe('user interaction regressions', () => {
     ).toEqual([translate('zh', 'overview'), '卡组工具', 'APM 统计']);
     fireEvent.click(within(navigation).getByRole('button', { name: '卡组工具' }));
     expect(screen.getByRole('heading', { level: 1, name: '卡组工具' })).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: '卡组工具 展开' }).getAttribute('aria-expanded'),
-    ).toBe('false');
+    expect(screen.queryByRole('button', { name: '卡组工具 展开' })).toBeNull();
+    expect(await screen.findByRole('group', { name: '前线卡组' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: '后勤仓库' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    await waitFor(() =>
+      expect(native.calls.filter((call) => call.method === 'decks.list')).toHaveLength(2),
+    );
     fireEvent.click(within(navigation).getByRole('button', { name: 'APM 统计' }));
     expect(screen.getByRole('heading', { level: 1, name: 'APM 统计' })).toBeTruthy();
     expect(

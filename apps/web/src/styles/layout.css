@@ -933,6 +933,15 @@ main {
   color: var(--muted);
   font-size: 12px;
 }
+.decks-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.deck-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
 .profile-columns,
 .deck-columns {
   display: grid;

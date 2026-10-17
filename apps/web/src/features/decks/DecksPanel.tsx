@@ -6,7 +6,7 @@ import { formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Card, Dialog, Field, Notice, Loading, Empty } from '../../components/ui';
+import { Button, Dialog, Field, Notice, Loading, Empty } from '../../components/ui';
 function DeckFiles({
   id,
   title,
@@ -72,7 +72,7 @@ function DeckFiles({
   );
 }
 export function DecksPanel() {
-  const { api, state, notify, patchConfig } = useApp(),
+  const { api, state, notify } = useApp(),
     { t } = useI18n(),
     request = useRequest<DeckList>(),
     [front, setFront] = useState<string[]>([]),
@@ -99,26 +99,14 @@ export function DecksPanel() {
       setBusy(false);
     }
   };
-  const list = request.data,
-    collapsed = state.config.collapsedPanels.includes('decks');
+  const list = request.data;
   return (
-    <Card
-      title={t('decks')}
-      icon={<Icon icon={faLayerGroup} size={19} />}
-      collapsed={collapsed}
-      onToggle={() =>
-        void patchConfig({
-          collapsedPanels: collapsed
-            ? state.config.collapsedPanels.filter((p) => p !== 'decks')
-            : [...state.config.collapsedPanels, 'decks'],
-        })
-      }
-      actions={
+    <div className="decks-panel">
+      <div className="deck-toolbar">
         <Button disabled={request.pending || busy} onClick={refresh}>
           {t('refresh')}
         </Button>
-      }
-    >
+      </div>
       {state.deckAlert && (
         <Notice>
           <span>{t('deckSwitch', { name: state.deckAlert.from })}</span>
@@ -262,6 +250,6 @@ export function DecksPanel() {
           <Button onClick={() => setBackupNames(null)}>{t('cancel')}</Button>
         </div>
       </Dialog>
-    </Card>
+    </div>
   );
 }
