@@ -18,10 +18,11 @@ import type { Account, PublicConfig } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Button, Dialog, Field, Toggle, Notice, Empty } from '../../components/ui';
-import { PageToolbar, SidebarToggle } from '../../components/PageToolbar';
+import { PageToolbar } from '../../components/PageToolbar';
 import {
   Sidebar,
   SidebarFooter,
+  SidebarHeader,
   SidebarHeading,
   SidebarItem,
   SidebarNavigation,
@@ -225,10 +226,16 @@ export function SettingsPage() {
       className={`settings-page ${collapsed ? 'settings-page-collapsed' : ''}`}
       aria-labelledby="settings-title"
     >
-      <Sidebar className="settings-sidebar" collapsed={collapsed}>
-        <SidebarHeading className="settings-brand" icon={<Icon icon={faSliders} size={22} />}>
-          <h1 id="settings-title">{t('settings')}</h1>
-        </SidebarHeading>
+      <Sidebar id="settings-sidebar" className="settings-sidebar" collapsed={collapsed}>
+        <SidebarHeader
+          collapsed={collapsed}
+          controls="settings-sidebar"
+          onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
+        >
+          <SidebarHeading className="settings-brand" icon={<Icon icon={faSliders} size={22} />}>
+            <h1 id="settings-title">{t('settings')}</h1>
+          </SidebarHeading>
+        </SidebarHeader>
         <SidebarNavigation
           as="div"
           className="settings-tabs"
@@ -292,10 +299,6 @@ export function SettingsPage() {
         tabIndex={-1}
       >
         <PageToolbar className="settings-page-toolbar">
-          <SidebarToggle
-            collapsed={collapsed}
-            onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
-          />
           <div className="settings-breadcrumb">
             <span>{t('settings')}</span>
             <span>/</span>

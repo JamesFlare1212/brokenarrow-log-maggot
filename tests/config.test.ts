@@ -40,6 +40,7 @@ describe('configuration patches', () => {
       expect(rpcSchemas['config.update'].safeParse(patch).success).toBe(false);
     }
     expect(configSchema.parse({}).theme).toBe('dark');
+    expect(configSchema.parse({}).themeMode).toBe('system');
     expect(configSchema.parse({}).hiddenPanels).toEqual([]);
   });
 
@@ -49,6 +50,8 @@ describe('configuration patches', () => {
     let db: Database | undefined;
     try {
       db = new Database(file);
+      expect(db.config().themeMode).toBe('system');
+      expect(db.updateConfig({ lang: 'en' }).themeMode).toBe('system');
       const initial = db.updateConfig({
         logDir: 'custom-logs',
         decksDir: 'custom-decks',

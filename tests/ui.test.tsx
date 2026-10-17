@@ -653,7 +653,7 @@ describe('settings pages and automatic saving', () => {
     },
   );
 
-  it('opens General from the stable update toolbar entry and keeps download and project links working', async () => {
+  it('keeps updates in General settings and download and project links working', async () => {
     const initial = bootstrapForApp();
     initial.updates = {
       ...initial.updates,
@@ -666,8 +666,11 @@ describe('settings pages and automatic saving', () => {
       'external.open': () => null,
     });
     render(<App />, { wrapper: wrapper(native.api) });
-    fireEvent.click(await screen.findByRole('button', { name: '查看更新' }));
+    await screen.findByText('监听中');
+    expect(screen.queryByRole('button', { name: '查看更新' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
     const settings = within(await screen.findByRole('main', { name: '设置' }));
+    fireEvent.click(screen.getByRole('tab', { name: '常规' }));
     expect(location.hash).toBe('#settings/general');
     const about = within(settings.getByRole('region', { name: '关于' }));
     expect(about.getByText('发现新版本 v4.1.1')).toBeTruthy();
@@ -732,7 +735,9 @@ describe('settings pages and automatic saving', () => {
   });
 
   it('autosaves separate light and dark palettes and restores them when switching modes and reopening', async () => {
-    const native = nativeFixture(bootstrapForApp());
+    const initial = bootstrapForApp();
+    initial.config.themeMode = 'dark';
+    const native = nativeFixture(initial);
     const page = await openSettings(native);
     expect(within(page.getByRole('group', { name: '主题' })).getAllByRole('button')).toHaveLength(
       3,
@@ -881,7 +886,7 @@ describe('settings pages and automatic saving', () => {
     );
   });
 
-  it('uses each saved palette when the OS changes, including after leaving settings', async () => {
+  it('follows the OS by default and uses each saved palette, including after leaving settings', async () => {
     const listeners = new Set<() => void>();
     const media = {
       matches: false,
@@ -894,9 +899,11 @@ describe('settings pages and automatic saving', () => {
     );
     const native = nativeFixture(bootstrapForApp());
     const page = await openSettings(native);
+    expect(page.getByRole('button', { name: '跟随系统' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
     fireEvent.click(page.getByRole('button', { name: '森林 · 浅色' }));
     fireEvent.click(page.getByRole('button', { name: '深海 · 深色' }));
-    fireEvent.click(page.getByRole('button', { name: '跟随系统' }));
     await waitFor(() =>
       expect(native.backend.config).toMatchObject({
         lightTheme: 'forest',
@@ -921,7 +928,9 @@ describe('settings pages and automatic saving', () => {
 
   it('retains failed changes, displays the save error, and retries the same patch', async () => {
     let failed = false;
-    const native = nativeFixture(bootstrapForApp(), {
+    const initial = bootstrapForApp();
+    initial.config.themeMode = 'dark';
+    const native = nativeFixture(initial, {
       'config.update': (patch) => {
         if (!failed) {
           failed = true;
@@ -950,7 +959,9 @@ describe('settings pages and automatic saving', () => {
       patch: RpcInputs['config.update'];
       result: ReturnType<typeof deferred<Bootstrap['config']>>;
     }> = [];
-    const native = nativeFixture(bootstrapForApp(), {
+    const initial = bootstrapForApp();
+    initial.config.themeMode = 'dark';
+    const native = nativeFixture(initial, {
       'config.update': (patch) => {
         const result = deferred<Bootstrap['config']>();
         writes.push({ patch, result });

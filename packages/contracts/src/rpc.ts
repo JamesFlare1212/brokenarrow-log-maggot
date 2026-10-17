@@ -17,6 +17,7 @@ import type {
   RecordingState,
   SearchPlayer,
   Session,
+  ThemeMode,
   WatcherStatus,
   DeckSwitchAlert,
 } from './models';
@@ -38,7 +39,8 @@ export const THEMES = ['dark', 'light', 'cyan', 'orange', 'violet', 'forest', 'o
 export const THEME_MODES = ['system', 'light', 'dark'] as const;
 // Keep legacy palette keys so existing installations retain their colors.
 export const COLOR_SCHEMES = ['dark', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
-export function legacyThemeMode(theme: unknown): 'light' | 'dark' {
+export function legacyThemeMode(theme: unknown): ThemeMode {
+  if (theme === undefined) return 'system';
   return ['light', 'cyan', 'orange'].includes(String(theme)) ? 'light' : 'dark';
 }
 export const configSchema = z.object({
@@ -51,7 +53,7 @@ export const configSchema = z.object({
   banCardVisible: z.boolean().default(false),
   multiAccountBond: z.boolean().default(true),
   theme: z.enum(THEMES).default('dark'),
-  themeMode: z.enum(THEME_MODES).default('dark'),
+  themeMode: z.enum(THEME_MODES).default('system'),
   lightTheme: z.enum(COLOR_SCHEMES).optional(),
   darkTheme: z.enum(COLOR_SCHEMES).optional(),
   sidebarCollapsed: z.boolean().default(false),

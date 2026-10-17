@@ -1,5 +1,9 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { faAnglesLeft, faAnglesRight } from '@fortawesome/free-solid-svg-icons';
+import { useI18n } from '../hooks/useI18n';
+import { Icon } from './Icon';
 import { Tooltip } from './Tooltip';
+import { Button } from './ui';
 
 export function Sidebar({
   collapsed,
@@ -7,6 +11,35 @@ export function Sidebar({
   ...props
 }: ComponentPropsWithoutRef<'aside'> & { collapsed: boolean }) {
   return <aside {...props} className={`app-sidebar ${className}`} data-collapsed={collapsed} />;
+}
+
+export function SidebarHeader({
+  children,
+  collapsed,
+  controls,
+  onToggle,
+}: {
+  children: ReactNode;
+  collapsed: boolean;
+  controls: string;
+  onToggle: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="sidebar-header">
+      {children}
+      <Button
+        className="sidebar-collapse-toggle button-borderless"
+        aria-label={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
+        title={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
+        aria-expanded={!collapsed}
+        aria-controls={controls}
+        onClick={onToggle}
+      >
+        <Icon icon={collapsed ? faAnglesRight : faAnglesLeft} size={16} />
+      </Button>
+    </div>
+  );
 }
 
 export function SidebarHeading({

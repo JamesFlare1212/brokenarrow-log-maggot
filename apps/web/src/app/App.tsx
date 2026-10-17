@@ -29,10 +29,11 @@ import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
 import { Badge, Button, Dialog, Loading, Notice } from '../components/ui';
 import { BatraceStatus } from '../components/BatraceStatus';
-import { PageToolbar, SidebarToggle } from '../components/PageToolbar';
+import { PageToolbar } from '../components/PageToolbar';
 import {
   Sidebar,
   SidebarFooter,
+  SidebarHeader,
   SidebarHeading,
   SidebarItem,
   SidebarNavigation,
@@ -196,8 +197,19 @@ export function App() {
       >
         {t('skipContent')}
       </a>
-      <Sidebar className="sidebar" collapsed={collapsed} hidden={Boolean(settingsTab)}>
-        <Brand />
+      <Sidebar
+        id="workspace-sidebar"
+        className="sidebar"
+        collapsed={collapsed}
+        hidden={Boolean(settingsTab)}
+      >
+        <SidebarHeader
+          collapsed={collapsed}
+          controls="workspace-sidebar"
+          onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
+        >
+          <Brand />
+        </SidebarHeader>
         <Navigation />
         <SidebarFooter className="sidebar-footer">
           <SidebarItem
@@ -214,10 +226,6 @@ export function App() {
       <div className="workspace" hidden={Boolean(settingsTab)}>
         <PageToolbar className="topbar">
           <div className="topbar-location">
-            <SidebarToggle
-              collapsed={collapsed}
-              onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
-            />
             <Button
               className="mobile-menu"
               aria-label={t('openNavigation')}
@@ -231,18 +239,6 @@ export function App() {
             <strong>{t(page === 'current' ? 'overview' : page)}</strong>
           </div>
           <div className="topbar-actions">
-            <Button
-              className="update-details-button button-borderless"
-              aria-label={t('updateDetails')}
-              tooltip={null}
-              onClick={() => openSettings('general')}
-            >
-              <Icon icon={faCircleInfo} size={18} aria-hidden="true" />
-              {(['available', 'downloaded', 'error'].includes(state.updates.status) ||
-                state.updates.notAppliedVersion) && (
-                <span className="update-dot" aria-hidden="true" />
-              )}
-            </Button>
             <BatraceStatus health={state.health} />
             <TooltipButton
               className="account-button"
