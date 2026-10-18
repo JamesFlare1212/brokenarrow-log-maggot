@@ -49,6 +49,50 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe('consented reliable PostHog delivery', () => {
+  it('counts each live match start once without sending its local identifier', async () => {
+    vi.useFakeTimers();
+    const { telemetry, events } = setup();
+    telemetry.matchStarted('before-consent');
+    telemetry.configure(true, 'en');
+    telemetry.matchStarted('before-consent');
+    telemetry.matchStarted('private-match-session-1');
+    telemetry.matchStarted('private-match-session-1');
+    await vi.advanceTimersByTimeAsync(1000);
+    telemetry.identifyAccount('918273645');
+    telemetry.matchStarted('private-match-session-1');
+    telemetry.matchStarted('private-match-session-2');
+    await vi.advanceTimersByTimeAsync(1000);
+    const matches = events().filter((event) => event.event === 'match_started');
+    expect(matches).toHaveLength(2);
+    expect(new Set(matches.map((event) => event.uuid)).size).toBe(2);
+    expect(matches[0].properties.$session_id).toBeTruthy();
+    expect(JSON.stringify(matches)).not.toMatch(/private-match|before-consent|918273645/);
+    telemetry.configure(false, 'en');
+    telemetry.matchStarted('after-opt-out');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(events().filter((event) => event.event === 'match_started')).toHaveLength(2);
+  });
+
+  it('persists match starts and replays the original envelope after restart', async () => {
+    vi.useFakeTimers();
+    const persistence = store();
+    const first = setup({ persistence: persistence.persistence });
+    first.telemetry.configure(true, 'en');
+    first.telemetry.matchStarted('private-match-session');
+    first.telemetry.close();
+    const saved = (persistence.values.get('outbox') as { payload: { event: string } }[]).find(
+      (item) => item.payload.event === 'match_started',
+    )!;
+    expect(saved).toBeDefined();
+    const second = setup({ persistence: persistence.persistence, version: '4.2.0' });
+    second.telemetry.configure(true, 'zh');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(second.events().filter((event) => event.event === 'match_started')).toEqual([
+      saved.payload,
+    ]);
+    expect(persistence.values.get('outbox')).toEqual([]);
+  });
+
   it('sends nothing before consent or when the runtime disallows collection', async () => {
     vi.useFakeTimers();
     const declined = setup(),
@@ -56,6 +100,8 @@ describe('consented reliable PostHog delivery', () => {
     declined.telemetry.configure(false, 'zh');
     disabled.telemetry.configure(true, 'en');
     declined.telemetry.operation('decks.backup', true, 10);
+    declined.telemetry.matchStarted('declined-match');
+    disabled.telemetry.matchStarted('disabled-match');
     disabled.telemetry.error('main', new Error());
     await vi.advanceTimersByTimeAsync(180000);
     expect(declined.fetchImpl).not.toHaveBeenCalled();

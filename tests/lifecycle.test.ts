@@ -88,6 +88,52 @@ afterEach(async () => {
 });
 
 describe('application telemetry', () => {
+  it('counts live match starts while excluding recovered logs, metadata, and repeated room notifications', async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+    const p = platform(fetchImpl);
+    p.telemetry = { enabled: true, distribution: 'installed' };
+    const app = application(p, [], true);
+    try {
+      await app.invoke('config.update', { telemetryEnabled: true });
+      const start = 'Log: Start loading battle... map: Dam, scenario: Test';
+      app.parser.reset('private-game.log');
+      app.parser.feed([start, 'Log: GameController dispose called'], true);
+      app.parser.recovered();
+      app.parser.feed([
+        start,
+        'Log: [NET_ROOM] GameRoom entered, fight id: 9227650',
+        'Log: [NET_ROOM] GameRoom entered, fight id: 9227650',
+        'Log: FID:9227650',
+      ]);
+      app.parser.feed(['Log: TOTAL POINTS: 100', 'Log: GameController dispose called']);
+      app.parser.feed([
+        'Log: Room entered - GameRoom, fight id: 9227651',
+        start,
+        'Log: [NET_ROOM] GameRoom entered, fight id: 9227651',
+      ]);
+      await vi.advanceTimersByTimeAsync(1000);
+      const matches = fetchImpl.mock.calls
+        .flatMap(([, init]) => JSON.parse(String(init?.body)).batch)
+        .filter((event) => event.event === 'match_started');
+      expect(matches).toHaveLength(2);
+      expect(JSON.stringify(matches)).not.toMatch(/private-game|9227650|9227651|Dam|Test/);
+      app.parser.reset('private-game.log');
+      app.parser.feed([start], true);
+      app.parser.recovered();
+      await app.invoke('config.update', { telemetryEnabled: false });
+      app.parser.feed(['Log: GameController dispose called', start]);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(
+        fetchImpl.mock.calls
+          .flatMap(([, init]) => JSON.parse(String(init?.body)).batch)
+          .filter((event) => event.event === 'match_started'),
+      ).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each([true, false])(
     'captures startup failures before service start only with saved consent: %s',
     async (consent) => {
@@ -127,6 +173,7 @@ describe('application telemetry', () => {
       const app = application(p, [], mode !== 'no-network');
       try {
         await app.invoke('config.update', { telemetryEnabled: true });
+        app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
         await vi.advanceTimersByTimeAsync(5000);
         expect(fetchImpl).not.toHaveBeenCalled();
       } finally {

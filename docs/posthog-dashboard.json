@@ -3,6 +3,26 @@
   "description": "Consent-based desktop telemetry. Online means presence in the last five minutes. Validation events are excluded. Installations count first execution.",
   "insights": [
     {
+      "name": "Assisted matches: all-time total",
+      "description": "Live match starts observed with telemetry consent since instrumentation began. Counts assisted player match starts per installation, not globally unique battles or completed matches. Historical recovery and validation events are excluded.",
+      "sql": "SELECT count(DISTINCT uuid) AS assisted_matches FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'match_started'",
+      "display": "BoldNumber",
+      "chartSettings": {
+        "yAxis": [{ "column": "assisted_matches" }]
+      }
+    },
+    {
+      "name": "Assisted matches: daily starts",
+      "description": "Daily assisted player match starts over the last 30 days. Each consenting installation contributes one event per live match start. Recovered logs, archive scans, metadata updates, and validation events are excluded.",
+      "sql": "SELECT toDate(timestamp) AS day, count(DISTINCT uuid) AS assisted_matches FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'match_started' AND timestamp > now() - INTERVAL 30 DAY GROUP BY day ORDER BY day",
+      "display": "ActionsLineGraph",
+      "chartSettings": {
+        "xAxis": { "column": "day" },
+        "yAxis": [{ "column": "assisted_matches" }],
+        "showLegend": false
+      }
+    },
+    {
       "name": "Installations: first runs by day",
       "description": "New local profiles first executed; excludes integration validation. Installer completions without a launch are not observable.",
       "sql": "SELECT toDate(timestamp) AS day, count(DISTINCT properties.installation_id) AS installations FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'app_installed' AND properties.kind = 'first_run' AND timestamp > now() - INTERVAL 30 DAY GROUP BY day ORDER BY day"

@@ -642,6 +642,7 @@ export class Application {
           .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e));
     }
     if (event.type === 'started' && !event.recovering) {
+      this.telemetry.matchStarted(event.match.sessionId);
       const config = this.db.config();
       if (config.inputHookEnabled) void this.queueApm(() => this.startApm(event.match));
       this.fire(

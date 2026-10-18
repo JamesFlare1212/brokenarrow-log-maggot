@@ -18,6 +18,7 @@ export const TELEMETRY_EVENTS = [
   'app_started',
   'app_heartbeat',
   'user_identified',
+  'match_started',
   'feature_used',
   'operation_completed',
   '$exception',
@@ -191,6 +192,7 @@ const exceptionProperties = baseProperties
   })
   .strict();
 const propertySchemas: Partial<Record<TelemetryEventName, z.ZodType>> = {
+  match_started: baseProperties.strict(),
   delivery_summary: baseProperties
     .extend({
       delivery_dropped_total: z.number().int().nonnegative(),

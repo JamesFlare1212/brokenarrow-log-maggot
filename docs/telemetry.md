@@ -53,8 +53,8 @@ automatic page refresh has not been enabled.
 ## Delivery and recovery
 
 The in-memory queue is bounded to 200 events. Installation observations, version
-changes, updater states/results, exceptions, exception summaries, recovered exits,
-and delivery summaries are critical. Up to 50 critical events are stored in local
+changes, live match starts, updater states/results, exceptions, exception summaries,
+recovered exits, and delivery summaries are critical. Up to 50 critical events are stored in local
 SQLite for at most seven days; persisted properties are schema-validated before
 replay. Pending data contains only the same curated fields as the network payload.
 Under pressure, critical events can displace normal events; error samples can be
@@ -98,6 +98,12 @@ manual replacements and downgrades.
   not installer completions, and recreating/copying a profile affects counts.
 - `app_started`: startup after consent becomes available in a launch.
 - `user_identified`: a changed account or confirmation of a cached account.
+- `match_started`: one live match start observed while the application is running
+  with telemetry consent. Loading-battle and GameRoom notifications share the
+  parser's local match session; repeated room notifications and metadata updates
+  do not add events. Startup recovery, log rereads, archive scans, and matches
+  started before consent are excluded. No match identifiers, map, roster, or deck
+  details are sent. Starts are critical events with durable retry and stable UUIDs.
 - `app_heartbeat`: presence, main-process CPU/RSS/heap, aggregate renderer CPU/RSS
   and process count, timer lag, buffered events, and delivery counters. CPU is
   measured relative to one logical core and can exceed 100% with multiple threads
@@ -158,6 +164,12 @@ retain the latest state per account or installation before counting each slice.
 - Online/foreground/active users: latest presence per installation in five minutes,
   then distinct identities. This avoids double-counting an installation fallback
   and a subsequently recognized account from one machine.
+- Assisted matches: distinct `match_started` event UUIDs, shown as an all-time total
+  and a daily trend over the last 30 days. This counts assisted player match starts
+  per installation, so multiple players using the app in the same battle each
+  contribute a start. It is not a count of globally unique battles or completed
+  matches. Collection begins with the instrumented release and requires consent;
+  historical matches are not backfilled. Development and smoke runs remain excluded.
 - Account version share: last confirmed version per account active in seven days;
   each account is counted once. Installation version share covers all installations.
 - Identity coverage: last confidence state per installation, including cached IDs.

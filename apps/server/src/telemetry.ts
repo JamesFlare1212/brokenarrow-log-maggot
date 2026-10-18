@@ -91,6 +91,7 @@ interface ErrorAggregate {
 const criticalEvents = new Set<TelemetryEventName>([
   'app_installed',
   'app_updated',
+  'match_started',
   '$exception',
   'exception_summary',
   'update_state_changed',
@@ -131,6 +132,7 @@ export class TelemetryService {
   private updateAttempt: UpdateAttempt | null = null;
   private notAppliedVersionReported: string | null = null;
   private lastViewedFeature: TelemetryFeature | null = null;
+  private lastStartedMatch = '';
   private installation: { state: InstallationState; delivered: () => void } | null = null;
   private installationQueued = false;
   private acknowledgements = new Map<string, () => void>();
@@ -553,6 +555,12 @@ export class TelemetryService {
         false,
         state.updateEventId,
       );
+  }
+  matchStarted(sessionId: string): void {
+    if (!sessionId || sessionId === this.lastStartedMatch) return;
+    // Keep the local match key out of telemetry and suppress repeated start notifications.
+    this.lastStartedMatch = sessionId;
+    this.track('match_started', {}, true);
   }
   beginOperation(method: RpcMethod): (success: boolean, error?: unknown) => void {
     if (!this.enabled || method === 'diagnostics.report') return () => {};
