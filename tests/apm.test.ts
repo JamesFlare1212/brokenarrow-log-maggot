@@ -87,18 +87,18 @@ describe('APM statistics', () => {
       expect(controller.status().apm).toBe(expected);
     }
   });
-  it('waits for a complete rolling minute and retains the live peak across fixed buckets', async () => {
+  it('waits for ten complete seconds and converts rolling counts to APM across bucket boundaries', async () => {
     const { controller, push } = await capture();
-    push(59000, [[59, 20]]);
+    push(9000, [[9, 20]]);
     expect(controller.status()).toMatchObject({ currentApm: null, peak: 0 });
-    push(60000, [[60, 30]]);
-    expect(controller.status()).toMatchObject({ currentApm: 20, peak: 20 });
-    push(61000);
-    expect(controller.status()).toMatchObject({ currentApm: 50, peak: 50 });
-    push(120000);
-    expect(controller.status()).toMatchObject({ currentApm: 30, peak: 50, perMinute: [20, 30] });
-    push(121000);
-    expect(controller.status()).toMatchObject({ currentApm: 0, peak: 50 });
+    push(10000, [[10, 30]]);
+    expect(controller.status()).toMatchObject({ currentApm: 120, peak: 120 });
+    push(11000);
+    expect(controller.status()).toMatchObject({ currentApm: 300, peak: 300 });
+    push(20000);
+    expect(controller.status()).toMatchObject({ currentApm: 180, peak: 300, perMinute: [50] });
+    push(21000);
+    expect(controller.status()).toMatchObject({ currentApm: 0, peak: 300 });
   });
   it('replaces cumulative second counts without counting a batch twice', async () => {
     const { controller, push } = await capture();
@@ -106,6 +106,7 @@ describe('APM statistics', () => {
     push(1500, [[1, 5]]);
     push(1750, [[1, 5]]);
     expect(controller.status()).toMatchObject({ totalActions: 5, perMinute: [5] });
+    expect(controller.status().perSecond).toEqual([0, 5]);
   });
   it('keeps foreground time separate and ignores wall-clock adjustments', async () => {
     const { controller, push, advance, shiftWall } = await capture();
@@ -142,7 +143,9 @@ describe('APM statistics', () => {
     });
     const value = controller.status();
     value.perMinute.push(999);
+    value.perSecond!.push(999);
     expect(controller.status().perMinute).toEqual([3]);
+    expect(controller.status().perSecond).toEqual([0, 3]);
   });
   it('binds late FIDs to the stable session and identifies partial captures', async () => {
     const { controller } = await capture(true);
@@ -227,6 +230,40 @@ function saved(overrides: Partial<ApmState> = {}): ApmState {
   };
 }
 describe('APM persistence', () => {
+  it('persists second counts through checkpoints, recovery and metadata updates without upgrading legacy data', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'ba-apm-seconds-'));
+    const file = join(directory, 'test.sqlite');
+    let db = new Database(file);
+    try {
+      const { controller, push } = await capture();
+      push(10500, [
+        [0, 2],
+        [9, 3],
+        [10, 4],
+      ]);
+      const snapshot = controller.status();
+      db.saveApm(snapshot);
+      db.saveApm(saved({ captureId: 'legacy', perSecond: undefined, status: 'complete' }));
+      db.close();
+      db = new Database(file);
+      db.recoverApmCaptures();
+      db.updateApmMatch({ ...match(), fid: '123' });
+      const history = db.apmHistory();
+      expect(history.find((value) => value.captureId === snapshot.captureId)).toMatchObject({
+        perSecond: [2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
+        totalActions: 9,
+        durationSec: 10.5,
+        peak: 30,
+        currentApm: null,
+        fid: '123',
+        interrupted: true,
+      });
+      expect(history.find((value) => value.captureId === 'legacy')?.perSecond).toBeUndefined();
+    } finally {
+      db.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
   it('keeps captures across database restarts and marks unfinished checkpoints as partial', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'ba-apm-'));
     let db = new Database(join(directory, 'test.sqlite'));

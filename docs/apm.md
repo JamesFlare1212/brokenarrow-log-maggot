@@ -13,12 +13,15 @@ includes periods when the game is not focused; those periods add no actions.
 Foreground time and the parser's match duration are reported separately.
 
 - Average APM is `totalActions * 60 / captureDurationSec`.
-- Current APM counts the most recent 60 completed one-second buckets. It is
-  unavailable during the first 60 seconds. Updates have one-second resolution.
+- Current APM sums the most recent 10 completed one-second buckets and multiplies
+  by 6 to express actions per minute. It is unavailable during the first 10
+  seconds. Updates have one-second resolution.
 - Peak APM is the maximum of those complete rolling windows, updated while
-  capture is running. Captures shorter than 60 seconds have no displayed peak.
-- Chart columns show actual input counts in fixed capture-minute buckets. A final
-  bucket shorter than 60 seconds is marked with an asterisk and a patterned fill.
+  capture is running. Captures shorter than 10 seconds have no displayed peak.
+- The trend chart shows actual input counts in fixed 10-second capture intervals,
+  with elapsed-time and input-count axes. An incomplete final interval is marked
+  with an asterisk and a dashed segment; its count is not extrapolated. Hover,
+  keyboard focus and the detail table expose exact counts and interval durations.
 
 Enabling monitoring mid-match or resuming a recovered live match creates a new,
 explicitly partial capture. Disabling monitoring, replacing the log source,
@@ -55,9 +58,23 @@ Closing the parent's input pipe also shuts down the helper.
 
 ## Persistence and lifecycle
 
-SQLite stores capture summaries and minute buckets in `apm_captures`, keyed by a
-unique capture ID and associated with the parser's stable session ID. Late FIDs,
-map names and match durations update that association without restarting capture.
+SQLite stores capture summaries, minute buckets and per-second input counts in
+the JSON payload of `apm_captures`, keyed by a unique capture ID and associated
+with the parser's stable session ID. `perSecond[n]` is the cumulative number of
+accepted presses in elapsed second `n`; zero-input seconds are retained. These
+counts allow future regrouping without recording individual input events.
+The default database location is
+`%APPDATA%/broken-arrow-log-assistant/assistant.sqlite` (or the profile selected
+with `BA_USER_DATA`). Individual press timestamps, key identities, text and pointer
+coordinates are not stored.
+
+Older payloads without `perSecond` contain only minute totals and summaries.
+They retain their original 60-second current/peak metrics and minute chart with
+an explanatory notice. Precise 10-second history cannot be reconstructed from
+those totals; no finer-grained input is invented or migrated.
+
+Late FIDs, map names and match durations update that association without restarting
+capture.
 The application checkpoints active capture every five seconds and saves all final
 transitions. A crash can therefore lose input after the last checkpoint; at next
 startup unfinished records are marked partial and interrupted, using only the

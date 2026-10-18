@@ -218,6 +218,8 @@ export interface ApmState {
   currentApm: number | null;
   peak: number;
   perMinute: number[];
+  /** Counts by elapsed capture second; absent in legacy minute-only captures. */
+  perSecond?: number[];
   focused: boolean;
   fid: Id | null;
   partial: boolean;

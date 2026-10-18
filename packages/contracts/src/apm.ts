@@ -16,6 +16,7 @@ export function initialApmState(status: ApmState['status'] = 'disabled'): ApmSta
     currentApm: null,
     peak: 0,
     perMinute: [],
+    perSecond: [],
     focused: false,
     fid: null,
     partial: false,

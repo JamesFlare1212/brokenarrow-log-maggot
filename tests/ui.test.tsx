@@ -2473,10 +2473,11 @@ describe('APM capture presentation', () => {
       captureId: 'capture',
       sessionId: 'session',
       startedAt: 1000000,
-      durationSec: 30,
+      durationSec: 5.5,
       totalActions: 60,
       apm: 120,
       perMinute: [60],
+      perSecond: [10, 10, 10, 10, 10, 10],
       partial: true,
     };
     const native = nativeFixture(bootstrap);
@@ -2488,7 +2489,52 @@ describe('APM capture presentation', () => {
     expect(screen.getByText(translate('zh', 'apmCurrent'))).toBeTruthy();
     expect(screen.getByText(translate('zh', 'apmPeak'))).toBeTruthy();
     fireEvent.click(screen.getByText(translate('zh', 'apmBucketTable')));
-    expect(screen.getByRole('table').textContent).toContain('1 min *');
+    expect(screen.getByRole('table').textContent).toContain('0:00–0:05 *');
+  });
+  it('groups second counts into ten-second intervals and exposes exact values with keyboard navigation', async () => {
+    const bootstrap = structuredClone(fixtureBootstrap);
+    bootstrap.apm = {
+      ...initialApmState('complete'),
+      captureId: 'seconds',
+      durationSec: 25.5,
+      totalActions: 34,
+      apm: 80,
+      currentApm: 60,
+      peak: 120,
+      perMinute: [34],
+      perSecond: [...Array<number>(10).fill(2), ...Array<number>(10).fill(1), 4, 0, 0, 0, 0, 0],
+    };
+    const native = nativeFixture(bootstrap);
+    render(<ApmPanel />, { wrapper: wrapper(native.api) });
+    const chart = await screen.findByRole('group', { name: translate('zh', 'apmBuckets') });
+    const first = within(chart).getByRole('img', { name: '0:00–0:10: 20 操作次数' });
+    const last = within(chart).getByRole('img', { name: '0:20–0:25 *: 4 操作次数' });
+    const band = chart.querySelector('.apm-selection-band')!;
+    const trend = chart.querySelector('.apm-trend-line')!;
+    expect(band.compareDocumentPosition(trend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.mouseEnter(first);
+    expect(band.getAttribute('x')).toBe('0');
+    expect(first.classList.contains('is-active')).toBe(true);
+    fireEvent.focus(first);
+    fireEvent.keyDown(first, { key: 'ArrowRight' });
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('0:10–0:20: 10 操作次数');
+    fireEvent.keyDown(document.activeElement!, { key: 'End' });
+    expect(document.activeElement).toBe(last);
+    expect(band.getAttribute('x')).toBe(last.querySelector('rect')!.getAttribute('x'));
+    expect(band.getAttribute('width')).toBe(last.querySelector('rect')!.getAttribute('width'));
+    expect(screen.queryByText(translate('zh', 'apmLegacyData'))).toBeNull();
+    expect(screen.queryByText(translate('zh', 'apmWarmup'))).toBeNull();
+    fireEvent.click(screen.getByText(translate('zh', 'apmBucketTable')));
+    const rows = within(screen.getByRole('table')).getAllByRole('row');
+    expect(
+      rows
+        .slice(1)
+        .map((row) => Array.from(row.querySelectorAll('td'), (cell) => cell.textContent)),
+    ).toEqual([
+      ['0:00–0:10', '0:10', '20'],
+      ['0:10–0:20', '0:10', '10'],
+      ['0:20–0:25 *', '0:05', '4'],
+    ]);
   });
   it('opens a stored capture while monitoring is disabled without starting input collection', async () => {
     const bootstrap = structuredClone(fixtureBootstrap);
@@ -2505,6 +2551,7 @@ describe('APM capture presentation', () => {
       peak: 60,
       currentApm: 20,
       perMinute: [60, 20],
+      perSecond: undefined,
       partial: true,
     };
     const native = nativeFixture(bootstrap, { 'apm.history': () => [history] });
@@ -2513,6 +2560,9 @@ describe('APM capture presentation', () => {
     fireEvent.change(select, { target: { value: 'saved' } });
     expect(screen.getByText('Saved map')).toBeTruthy();
     expect(screen.getByText(translate('zh', 'apmStopped'))).toBeTruthy();
+    expect(screen.getByText(translate('zh', 'apmLegacyData'))).toBeTruthy();
+    expect(screen.getByText(translate('zh', 'apmCurrentLegacy'))).toBeTruthy();
+    expect(screen.queryByText(translate('zh', 'apmCurrent'))).toBeNull();
     expect(screen.queryByText(translate('zh', 'apmDisabled'))).toBeNull();
     expect(native.calls.some((call) => call.method === 'config.update')).toBe(false);
   });

@@ -26,29 +26,32 @@ export class ApmController {
   private snapshot(elapsed: number): ApmState {
     const durationSec = elapsed / 1000;
     const perMinute = Array.from({ length: Math.ceil(durationSec / 60) }, () => 0);
+    const perSecond = Array.from({ length: Math.ceil(durationSec) }, () => 0);
     let totalActions = 0;
     for (const [second, count] of this.seconds) {
       totalActions += count;
+      perSecond[second] = count;
       const minute = Math.floor(second / 60);
       perMinute[minute] = (perMinute[minute] || 0) + count;
     }
-    // Current and peak APM use rolling 60-second windows at one-second resolution.
+    // Convert complete rolling 10-second input counts to actions per minute.
     const completedSeconds = Math.floor(durationSec);
     let rolling = 0,
       peak = 0;
     for (let second = 0; second < completedSeconds; second++) {
       rolling += this.seconds.get(second) || 0;
-      if (second >= 60) rolling -= this.seconds.get(second - 60) || 0;
-      if (second >= 59) peak = Math.max(peak, rolling);
+      if (second >= 10) rolling -= this.seconds.get(second - 10) || 0;
+      if (second >= 9) peak = Math.max(peak, rolling * 6);
     }
     return {
       ...this.value,
       durationSec,
       totalActions,
       apm: durationSec > 0 ? round((totalActions * 60) / durationSec) : 0,
-      currentApm: durationSec >= 60 ? rolling : null,
+      currentApm: durationSec >= 10 ? rolling * 6 : null,
       peak,
       perMinute,
+      perSecond,
       focusedDurationSec: Math.min(
         durationSec,
         this.value.focusedDurationSec +

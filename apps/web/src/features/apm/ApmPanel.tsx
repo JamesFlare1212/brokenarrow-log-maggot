@@ -6,11 +6,19 @@ import { formatDuration, formatMetric, formatTime } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Button, Card, Empty, Stats, Notice, Badge } from '../../components/ui';
+import { ApmChart } from './ApmChart';
 
 function ApmMetrics({ apm }: { apm: ApmState }) {
   const { t } = useI18n(),
-    peak = Math.max(1, ...apm.perMinute),
-    bucketSeconds = (index: number) => Math.min(60, Math.max(0, apm.durationSec - index * 60));
+    legacy = apm.perSecond === undefined,
+    windowSec = legacy ? 60 : 10,
+    counts = legacy
+      ? apm.perMinute
+      : Array.from({ length: Math.ceil(apm.perSecond!.length / 10) }, (_, index) =>
+          apm.perSecond!.slice(index * 10, (index + 1) * 10).reduce((sum, count) => sum + count, 0),
+        ),
+    bucketSeconds = (index: number) =>
+      Math.min(windowSec, Math.max(0, apm.durationSec - index * windowSec));
   return (
     <>
       {apm.status === 'unavailable' && <Notice error>{t('apmUnavailable')}</Notice>}
@@ -20,10 +28,13 @@ function ApmMetrics({ apm }: { apm: ApmState }) {
         items={[
           { label: t('apmAverage'), value: formatMetric(apm.apm, 1) },
           {
-            label: t('apmCurrent'),
+            label: t(legacy ? 'apmCurrentLegacy' : 'apmCurrent'),
             value: apm.currentApm === null ? '—' : formatMetric(apm.currentApm, 1),
           },
-          { label: t('apmPeak'), value: apm.durationSec < 60 ? '—' : formatMetric(apm.peak, 1) },
+          {
+            label: t(legacy ? 'apmPeakLegacy' : 'apmPeak'),
+            value: apm.durationSec < windowSec ? '—' : formatMetric(apm.peak, 1),
+          },
           { label: t('totalActions'), value: apm.totalActions },
           { label: t('apmCaptureDuration'), value: formatDuration(apm.durationSec) },
           { label: t('apmFocusedDuration'), value: formatDuration(apm.focusedDurationSec) },
@@ -41,30 +52,21 @@ function ApmMetrics({ apm }: { apm: ApmState }) {
         {apm.map && <span>{apm.map}</span>}
       </div>
       <p className="muted">{t('apmDefinition')}</p>
-      {apm.status === 'active' && apm.durationSec < 60 && <Notice>{t('apmWarmup')}</Notice>}
-      {apm.perMinute.length > 0 && (
+      {!legacy && <p className="muted">{t('apmWindowDefinition')}</p>}
+      {legacy && <Notice>{t('apmLegacyData')}</Notice>}
+      {!legacy && apm.status === 'active' && apm.durationSec < windowSec && (
+        <Notice>{t('apmWarmup')}</Notice>
+      )}
+      {counts.length > 0 && (
         <>
-          <p className="muted">{t('apmBuckets')}</p>
-          <div
-            className="apm-chart"
-            role="img"
-            aria-label={`${t('apmBuckets')}: ${apm.perMinute.join(', ')}`}
-          >
-            {apm.perMinute.map((value, index) => (
-              <div className="apm-bar-wrap" key={index}>
-                <span>{value}</span>
-                <div
-                  className={`apm-bar${bucketSeconds(index) < 60 ? ' apm-bar-partial' : ''}`}
-                  style={{ height: `${(value / peak) * 120}px` }}
-                />
-                <small>
-                  {index + 1}
-                  {bucketSeconds(index) < 60 ? '*' : ''}
-                </small>
-              </div>
-            ))}
-          </div>
-          {apm.perMinute.some((_, index) => bucketSeconds(index) < 60) && (
+          <ApmChart
+            key={apm.captureId}
+            counts={counts}
+            bucketSec={windowSec}
+            durationSec={apm.durationSec}
+            title={t(legacy ? 'apmBucketsLegacy' : 'apmBuckets')}
+          />
+          {counts.some((_, index) => bucketSeconds(index) < windowSec) && (
             <p className="muted">{t('apmPartialBucket')}</p>
           )}
           <details>
@@ -78,10 +80,12 @@ function ApmMetrics({ apm }: { apm: ApmState }) {
                 </tr>
               </thead>
               <tbody>
-                {apm.perMinute.map((value, index) => (
+                {counts.map((value, index) => (
                   <tr key={index}>
                     <td>
-                      {index + 1} min{bucketSeconds(index) < 60 ? ' *' : ''}
+                      {formatDuration(index * windowSec)}–
+                      {formatDuration(index * windowSec + bucketSeconds(index))}
+                      {bucketSeconds(index) < windowSec ? ' *' : ''}
                     </td>
                     <td>{formatDuration(bucketSeconds(index))}</td>
                     <td>{value}</td>

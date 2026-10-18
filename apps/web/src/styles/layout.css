@@ -1462,13 +1462,83 @@ main {
   width: 100%;
   accent-color: var(--accent);
 }
-.apm-chart {
+.apm-trend {
+  margin: 0;
+  min-width: 0;
+}
+.apm-trend figcaption {
+  margin-bottom: 16px;
+}
+.apm-trend-grid {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 8px;
+}
+.apm-y-axis {
   display: flex;
-  gap: 6px;
-  align-items: flex-end;
-  height: 185px;
-  overflow-x: auto;
-  padding: 8px 0;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 184px;
+  text-align: right;
+}
+.apm-y-axis,
+.apm-x-axis {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.apm-plot {
+  display: block;
+  width: 100%;
+  height: 180px;
+  overflow: visible;
+}
+.apm-grid-line {
+  stroke: var(--border);
+  vector-effect: non-scaling-stroke;
+}
+.apm-selection-band {
+  fill: var(--accent);
+  opacity: 0.12;
+  pointer-events: none;
+}
+.apm-trend-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.apm-trend-partial {
+  stroke-dasharray: 5 4;
+}
+.apm-trend-point {
+  outline: none;
+}
+.apm-trend-point rect {
+  fill: transparent;
+}
+.apm-trend-point line {
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.apm-trend-point.is-active line {
+  stroke-width: 8;
+}
+.apm-trend-point:focus-visible rect {
+  stroke: var(--accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.apm-x-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.apm-chart-detail {
+  font-variant-numeric: tabular-nums;
 }
 .apm-history {
   display: grid;
@@ -1478,26 +1548,6 @@ main {
 .apm-history select {
   width: 100%;
   min-width: 0;
-}
-.apm-bar-partial {
-  background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 6px);
-  border: 1px solid var(--accent);
-}
-.apm-bar-wrap {
-  flex: 1;
-  min-width: 22px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: var(--muted);
-  font-size: 12px;
-}
-.apm-bar {
-  width: 100%;
-  min-height: 2px;
-  max-width: 30px;
-  background: var(--accent);
-  border-radius: 4px 4px 0 0;
 }
 @media (min-width: 1600px) {
   .player-card {
