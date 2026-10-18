@@ -17,6 +17,7 @@ describe('configuration patches', () => {
     { hiddenPanels: [] },
     { inputHookEnabled: true },
     { replayEnabled: false },
+    { replayMicrophone: false },
     { replayQuality: 1080, replayFps: 60, replaySaveDir: 'custom-recordings' },
   ])('keeps omitted fields absent when validating %j', (patch) => {
     expect(rpcSchemas['config.update'].parse(patch)).toEqual(patch);
@@ -32,6 +33,7 @@ describe('configuration patches', () => {
       { logDir: null },
       { replayFps: 10 },
       { replayQuality: 1440 },
+      { replayMicrophone: 'false' },
       { panelOrder: ['invalid'] },
       { hiddenPanels: ['invalid'] },
       { hiddenPanels: ['about'] },
@@ -42,6 +44,8 @@ describe('configuration patches', () => {
     expect(configSchema.parse({}).theme).toBe('dark');
     expect(configSchema.parse({}).themeMode).toBe('system');
     expect(configSchema.parse({}).hiddenPanels).toEqual([]);
+    expect(configSchema.parse({ replayAudio: 'default' }).replayMicrophone).toBe(true);
+    expect(configSchema.parse({ replayMicrophone: false }).replayMicrophone).toBe(false);
   });
 
   it('preserves unrelated preferences on disk across patches and a database reopen', async () => {

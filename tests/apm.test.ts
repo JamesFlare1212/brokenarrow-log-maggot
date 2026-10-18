@@ -250,40 +250,19 @@ describe('APM persistence', () => {
       db.updateApmMatch({ ...match(), fid: '123' });
       const history = db.apmHistory();
       expect(history.find((value) => value.captureId === snapshot.captureId)).toMatchObject({
+        status: 'complete',
         perSecond: [2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4],
         totalActions: 9,
         durationSec: 10.5,
         peak: 30,
         currentApm: null,
         fid: '123',
+        partial: true,
         interrupted: true,
+        endedAt: 1010500,
+        focused: false,
       });
       expect(history.find((value) => value.captureId === 'legacy')?.perSecond).toBeUndefined();
-    } finally {
-      db.close();
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
-  it('keeps captures across database restarts and marks unfinished checkpoints as partial', async () => {
-    const directory = await mkdtemp(join(tmpdir(), 'ba-apm-'));
-    let db = new Database(join(directory, 'test.sqlite'));
-    try {
-      db.saveApm(saved());
-      db.close();
-      db = new Database(join(directory, 'test.sqlite'));
-      db.recoverApmCaptures();
-      expect(db.apmHistory()).toEqual([
-        expect.objectContaining({
-          status: 'complete',
-          durationSec: 90,
-          totalActions: 60,
-          partial: true,
-          interrupted: true,
-          endedAt: 1090000,
-          currentApm: null,
-          focused: false,
-        }),
-      ]);
     } finally {
       db.close();
       await rm(directory, { recursive: true, force: true });

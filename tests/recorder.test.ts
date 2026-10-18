@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { configSchema, rpcSchemas, type RecorderBridge, type RecorderConfig } from '@ba/contracts';
+import type { RecorderBridge, RecorderConfig } from '@ba/contracts';
 
 class Track {
   stop = vi.fn();
@@ -228,16 +228,5 @@ describe('recorder microphone capture', () => {
     expect(bridge.failure).toHaveBeenCalledWith('session', 'MediaRecorder failed');
     expect(microphone.getAudioTracks()[0]!.stop).toHaveBeenCalled();
     expect(Context.instances[0]!.close).toHaveBeenCalledOnce();
-  });
-
-  it('defaults old configurations to microphone enabled and validates partial microphone settings', () => {
-    expect(configSchema.parse({ replayAudio: 'default' }).replayMicrophone).toBe(true);
-    expect(configSchema.parse({ replayMicrophone: false }).replayMicrophone).toBe(false);
-    expect(rpcSchemas['config.update'].parse({ replayMicrophone: false })).toEqual({
-      replayMicrophone: false,
-    });
-    expect(rpcSchemas['config.update'].safeParse({ replayMicrophone: 'false' }).success).toBe(
-      false,
-    );
   });
 });

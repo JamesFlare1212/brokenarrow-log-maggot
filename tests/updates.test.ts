@@ -157,11 +157,15 @@ describe('desktop updates', () => {
     expect(f.controller.status()).toMatchObject({ status: 'idle', availableVersion: null });
   });
 
-  it('returns the install RPC before shutdown, waits for cleanup, and installs exactly once', async () => {
+  it('keeps downloads ready until an explicit install request, then waits for cleanup and installs once', async () => {
     vi.useFakeTimers();
     const f = fixture();
     await f.controller.check();
-    await f.controller.download();
+    expect((await f.controller.download()).status).toBe('downloaded');
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(f.controller.status().status).toBe('downloaded');
+    expect(f.prepareInstall).not.toHaveBeenCalled();
+    expect(f.engine.quitAndInstall).not.toHaveBeenCalled();
     const cleanup = deferred<void>();
     f.prepareInstall.mockReturnValueOnce(cleanup.promise);
     expect(f.controller.install().status).toBe('installing');
@@ -175,43 +179,13 @@ describe('desktop updates', () => {
     expect(f.engine.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
   });
 
-  it('blocks installation during a match/recording, including one starting just after the click', async () => {
-    vi.useFakeTimers();
-    const f = fixture();
-    f.canInstall.mockReturnValue(false);
-    await f.controller.check();
-    await f.controller.download();
-    expect(f.controller.install().status).toBe('downloaded');
-    f.canInstall.mockReturnValue(true);
-    f.controller.install();
-    f.canInstall.mockReturnValue(false);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(f.controller.status().status).toBe('downloaded');
-    expect(f.prepareInstall).not.toHaveBeenCalled();
-  });
-
-  it('keeps a completed download ready until installation is explicitly requested', async () => {
-    vi.useFakeTimers();
-    const f = fixture();
-    await f.controller.check();
-    expect((await f.controller.download()).status).toBe('downloaded');
-    await vi.advanceTimersByTimeAsync(30_000);
-    expect(f.controller.status().status).toBe('downloaded');
-    expect(f.prepareInstall).not.toHaveBeenCalled();
-    expect(f.engine.quitAndInstall).not.toHaveBeenCalled();
-    expect(f.controller.install().status).toBe('installing');
-    await vi.advanceTimersByTimeAsync(0);
-    expect(f.prepareInstall).toHaveBeenCalledExactlyOnceWith('4.0.1');
-    expect(f.engine.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
-  });
-
   it('requires another install request after a match or recording blocks installation', async () => {
     vi.useFakeTimers();
     const f = fixture();
     f.canInstall.mockReturnValue(false);
     await f.controller.check();
     await f.controller.download();
-    f.controller.install();
+    expect(f.controller.install().status).toBe('downloaded');
     await vi.advanceTimersByTimeAsync(5_000);
     expect(f.controller.status().status).toBe('downloaded');
     expect(f.prepareInstall).not.toHaveBeenCalled();

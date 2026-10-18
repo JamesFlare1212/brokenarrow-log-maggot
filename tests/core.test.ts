@@ -272,6 +272,47 @@ describe('SQLite merging and account views', () => {
     expect(db.deleteAccount('2')).toEqual({ removedMatches: 0 });
     expect(db.match('123')?.localPlayerId).toBe('1');
   });
+
+  it('keeps account-specific encounter summaries, spectator relations and unmatched legacy history', () => {
+    const db = database();
+    const match: Match = {
+      ...emptyMatch('123'),
+      endedAt: 3000,
+      players: [
+        { ...emptyPlayer('1', 'Account A'), teamId: 0 },
+        { ...emptyPlayer('2', 'Account B'), teamId: 1 },
+        { ...emptyPlayer('3', 'Target'), teamId: 0 },
+        { ...emptyPlayer('4', 'Spectator'), teamId: 100 },
+      ],
+    };
+    db.saveMatch({ ...match, localPlayerId: '1', outcome: 'win' });
+    db.saveMatch({ ...match, localPlayerId: '2', outcome: 'loss' });
+    db.observeAccount('4', 'Spectator');
+    const legacy = db.sql.prepare('INSERT INTO legacy_encounters VALUES(?,?,?,?,?)');
+    legacy.run('duplicate', '3', '123', 3000, JSON.stringify({ fid: '123', at: 3000 }));
+    legacy.run(
+      'unowned',
+      '3',
+      null,
+      2000,
+      JSON.stringify({ id: 'unowned', at: 2000, myTeam: 'Alpha', theirTeam: 'Bravo', won: false }),
+    );
+    db.updateConfig({ multiAccountBond: false });
+    for (const [account, relation, won] of [
+      ['1', 'same', true],
+      ['2', 'opponent', false],
+      ['4', 'spectator', null],
+    ] as const) {
+      db.setState('activeAccountId', account);
+      expect(db.encounters('3')).toEqual([
+        expect.objectContaining({ matchId: '123', relation, won }),
+        expect.objectContaining({ matchId: 'unowned', relation: 'opponent', won: false }),
+      ]);
+    }
+    db.updateConfig({ multiAccountBond: true });
+    expect(db.encounters('3')[0]).toMatchObject({ relation: 'opponent', won: false });
+    expect(db.encounters('999')).toEqual([]);
+  });
 });
 
 describe('GameLogs state machine', () => {
