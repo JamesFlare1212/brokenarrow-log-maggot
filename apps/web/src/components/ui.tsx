@@ -105,6 +105,7 @@ export function Dialog({
   showHeader = true,
   banner,
   onBack,
+  dismissible = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -114,6 +115,7 @@ export function Dialog({
   showHeader?: boolean;
   banner?: ReactNode;
   onBack?: () => void;
+  dismissible?: boolean;
 }) {
   const { t } = useI18n();
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -121,19 +123,19 @@ export function Dialog({
   const dialogTitle = (
     <RadixDialog.Title className={showHeader ? undefined : 'sr-only'}>{title}</RadixDialog.Title>
   );
-  const closeButton = (
+  const closeButton = dismissible ? (
     <RadixDialog.Close asChild>
       <Button aria-label={t('close')} className={showHeader ? undefined : 'dialog-close-button'}>
         <Icon icon={faXmark} size={showHeader ? 18 : 22} />
       </Button>
     </RadixDialog.Close>
-  );
+  ) : null;
   return (
     <TooltipAutoFocusContext value={autoFocus}>
       <RadixDialog.Root
         open={open}
         onOpenChange={(value) => {
-          if (!value) onClose();
+          if (!value && dismissible) onClose();
         }}
       >
         <RadixDialog.Portal>
@@ -141,6 +143,12 @@ export function Dialog({
           <RadixDialog.Content
             className={`dialog ${className}`}
             aria-describedby={undefined}
+            onEscapeKeyDown={(event) => {
+              if (!dismissible) event.preventDefault();
+            }}
+            onPointerDownOutside={(event) => {
+              if (!dismissible) event.preventDefault();
+            }}
             onOpenAutoFocus={() => {
               autoFocus.current = true;
               queueMicrotask(() => {
@@ -292,6 +300,7 @@ export function Toggle({
   id,
   label,
   'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedBy,
   checked,
   disabled,
   labelClickable = true,
@@ -300,6 +309,7 @@ export function Toggle({
   id: string;
   label: string;
   'aria-label'?: string;
+  'aria-describedby'?: string;
   checked: boolean;
   disabled?: boolean;
   labelClickable?: boolean;
@@ -316,6 +326,7 @@ export function Toggle({
         id={id}
         type="checkbox"
         aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
         aria-labelledby={ariaLabel ? undefined : `${id}-label`}
         checked={checked}
         disabled={disabled}

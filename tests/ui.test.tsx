@@ -627,6 +627,113 @@ describe('application updates', () => {
   });
 });
 
+describe('first-launch telemetry consent', () => {
+  it('asks existing opted-in users to confirm the expanded collection notice', async () => {
+    const initial = bootstrapForApp();
+    initial.config.telemetryEnabled = true;
+    initial.config.telemetryConsentConfirmed = true;
+    initial.config.telemetryConsentVersion = 0;
+    const native = nativeFixture(initial);
+    render(<App />, { wrapper: wrapper(native.api) });
+    const dialog = await screen.findByRole('dialog', {
+      name: translate('zh', 'telemetryConsentTitle'),
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: translate('zh', 'telemetryConsentDecline') }),
+    );
+    await waitFor(() =>
+      expect(native.backend.config).toMatchObject({
+        telemetryEnabled: false,
+        telemetryConsentVersion: 3,
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+      ).toBeNull(),
+    );
+  });
+
+  it.each([true, false])(
+    'persists an explicit %s decision and does not prompt again',
+    async (enabled) => {
+      const initial = bootstrapForApp();
+      initial.config.telemetryEnabled = true;
+      initial.config.telemetryConsentConfirmed = false;
+      const native = nativeFixture(initial);
+      const mounted = render(<App />, { wrapper: wrapper(native.api) });
+      const dialog = await screen.findByRole('dialog', {
+        name: translate('zh', 'telemetryConsentTitle'),
+      });
+      expect(within(dialog).getByText(translate('zh', 'telemetryConsentPrompt'))).toBeTruthy();
+      expect(within(dialog).queryByRole('button', { name: translate('zh', 'close') })).toBeNull();
+      await userEvent.setup().keyboard('{Escape}');
+      expect(
+        screen.getByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+      ).toBeTruthy();
+      expect(native.calls.filter((call) => call.method === 'config.update')).toHaveLength(0);
+      fireEvent.click(
+        within(dialog).getByRole('button', {
+          name: translate('zh', enabled ? 'telemetryConsentAccept' : 'telemetryConsentDecline'),
+        }),
+      );
+      await waitFor(() =>
+        expect(native.backend.config).toMatchObject({
+          telemetryEnabled: enabled,
+          telemetryConsentConfirmed: true,
+        }),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+        ).toBeNull(),
+      );
+      mounted.unmount();
+      render(<App />, { wrapper: wrapper(native.api) });
+      await screen.findByText('监听中');
+      expect(
+        screen.queryByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+      ).toBeNull();
+    },
+  );
+
+  it('keeps the consent dialog open after a failed save and allows retrying the same choice', async () => {
+    const initial = bootstrapForApp();
+    initial.config.telemetryEnabled = true;
+    initial.config.telemetryConsentConfirmed = false;
+    let fail = true;
+    const native = nativeFixture(initial, {
+      'config.update': async (patch) => {
+        if (fail) {
+          fail = false;
+          throw new Error('Disk is busy');
+        }
+        const config = configSchema.parse({ ...native.backend.config, ...patch });
+        native.emit({ type: 'config', config, revision: native.backend.revision + 1 });
+        return config;
+      },
+    });
+    render(<App />, { wrapper: wrapper(native.api) });
+    const dialog = within(
+      await screen.findByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+    );
+    fireEvent.click(
+      dialog.getByRole('button', { name: translate('zh', 'telemetryConsentAccept') }),
+    );
+    expect((await dialog.findByRole('alert')).textContent).toContain('Disk is busy');
+    expect(native.backend.config.telemetryConsentConfirmed).toBe(false);
+    fireEvent.click(
+      dialog.getByRole('button', { name: translate('zh', 'telemetryConsentAccept') }),
+    );
+    await waitFor(() => expect(native.backend.config.telemetryConsentConfirmed).toBe(true));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+      ).toBeNull(),
+    );
+  });
+});
+
 describe('settings pages and automatic saving', () => {
   it.each(['#about', '#settings/about', '#settings/updates'])(
     'redirects the legacy %s route to the compact About section in General settings',
@@ -1045,6 +1152,31 @@ describe('settings pages and automatic saving', () => {
     expect(document.querySelector('.app-shell')?.classList.contains('sidebar-collapsed')).toBe(
       false,
     );
+  });
+
+  it('keeps telemetry opt-in and saves keyboard changes without changing other preferences', async () => {
+    history.replaceState(null, '', '#settings/general');
+    const native = nativeFixture(bootstrapForApp());
+    render(<App />, { wrapper: wrapper(native.api) });
+    const page = within(await screen.findByRole('main', { name: '设置' }));
+    const checkbox = page.getByRole('checkbox', {
+      name: translate('zh', 'telemetryEnabled'),
+    }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    expect(checkbox.getAttribute('aria-describedby')).toBe(
+      'telemetry-description telemetry-privacy',
+    );
+    expect(page.getByText(translate('zh', 'telemetryDescription')).textContent).toContain(
+      'posthog.jamesflare.com',
+    );
+    const before = structuredClone(native.backend.config);
+    checkbox.focus();
+    await userEvent.setup().keyboard(' ');
+    await waitFor(() => expect(native.backend.config.telemetryEnabled).toBe(true));
+    expect(native.backend.config).toEqual({ ...before, telemetryEnabled: true });
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(native.backend.config.telemetryEnabled).toBe(false));
+    expect(native.backend.config).toEqual(before);
   });
 
   it('opens a settings tab directly and saves both label and switch activation', async () => {
@@ -1735,7 +1867,7 @@ describe('user interaction regressions', () => {
     expect(native.backend.watcher.listening).toBe(true);
   });
 
-  it('applies saved panel order and keeps deck tools visible while preserving collapsed APM', async () => {
+  it('applies saved panel order and keeps standalone tools visible while preserving overview collapse preferences', async () => {
     const bootstrap = bootstrapForApp();
     bootstrap.config.panelOrder = ['current', 'apm', 'decks'];
     bootstrap.config.inputHookEnabled = true;
@@ -1778,9 +1910,8 @@ describe('user interaction regressions', () => {
     );
     fireEvent.click(within(navigation).getByRole('button', { name: 'APM 统计' }));
     expect(screen.getByRole('heading', { level: 1, name: 'APM 统计' })).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'APM 统计 展开' }).getAttribute('aria-expanded'),
-    ).toBe('false');
+    expect(screen.queryByRole('button', { name: 'APM 统计 展开' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'APM 统计' })).toBeTruthy();
     expect(native.backend.config.collapsedPanels).toEqual(['decks', 'apm']);
     expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'apm']);
   });

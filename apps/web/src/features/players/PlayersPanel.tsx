@@ -5,7 +5,7 @@ import type { PlayerReport, RpcOutputs } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Card, Field, Button, Empty, Loading, Notice } from '../../components/ui';
+import { Field, Button, Empty, Loading, Notice } from '../../components/ui';
 import { ReportView, MaggotView, MaggotProgress } from './Reports';
 import { PlayerActions } from './PlayerActions';
 export function PlayersPanel() {
@@ -16,7 +16,7 @@ export function PlayersPanel() {
   const results = useRequest<RpcOutputs['players.search']>(),
     report = useRequest<PlayerReport>();
   return (
-    <Card title={t('players')} icon={<Icon icon={faMagnifyingGlass} size={19} />}>
+    <section className="players-panel" aria-label={t('players')}>
       <form
         className="search-form"
         aria-busy={results.pending}
@@ -132,6 +132,6 @@ export function PlayersPanel() {
       {selectedId && <MaggotProgress id={selectedId} />}
       {maggot.error && selectedId === maggot.id && <Notice error>{maggot.error}</Notice>}
       {maggot.data && selectedId === maggot.id && <MaggotView report={maggot.data} />}
-    </Card>
+    </section>
   );
 }

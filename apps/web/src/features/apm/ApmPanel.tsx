@@ -20,10 +20,17 @@ function ApmMetrics({ apm }: { apm: ApmState }) {
     bucketSeconds = (index: number) =>
       Math.min(windowSec, Math.max(0, apm.durationSec - index * windowSec));
   return (
-    <>
+    <div className="apm-metrics">
       {apm.status === 'unavailable' && <Notice error>{t('apmUnavailable')}</Notice>}
       {apm.partial && <Notice>{t('apmPartial')}</Notice>}
       {apm.interrupted && <Notice>{t('apmInterrupted')}</Notice>}
+      <div className="actions apm-context">
+        <Badge tone={apm.status === 'active' && apm.focused ? 'success' : 'muted'}>
+          {t(apm.status === 'active' ? (apm.focused ? 'focused' : 'notFocused') : 'apmStopped')}
+        </Badge>
+        {apm.fid && <span>#{apm.fid}</span>}
+        {apm.map && <span>{apm.map}</span>}
+      </div>
       <Stats
         items={[
           { label: t('apmAverage'), value: formatMetric(apm.apm, 1) },
@@ -44,16 +51,6 @@ function ApmMetrics({ apm }: { apm: ApmState }) {
           },
         ]}
       />
-      <div className="actions">
-        <Badge tone={apm.status === 'active' && apm.focused ? 'success' : 'muted'}>
-          {t(apm.status === 'active' ? (apm.focused ? 'focused' : 'notFocused') : 'apmStopped')}
-        </Badge>
-        {apm.fid && <span>#{apm.fid}</span>}
-        {apm.map && <span>{apm.map}</span>}
-      </div>
-      <p className="muted">{t('apmDefinition')}</p>
-      {!legacy && <p className="muted">{t('apmWindowDefinition')}</p>}
-      {legacy && <Notice>{t('apmLegacyData')}</Notice>}
       {!legacy && apm.status === 'active' && apm.durationSec < windowSec && (
         <Notice>{t('apmWarmup')}</Notice>
       )}
@@ -96,11 +93,16 @@ function ApmMetrics({ apm }: { apm: ApmState }) {
           </details>
         </>
       )}
-    </>
+      <div className="apm-notes">
+        <p className="muted">{t('apmDefinition')}</p>
+        {!legacy && <p className="muted">{t('apmWindowDefinition')}</p>}
+        {legacy && <Notice>{t('apmLegacyData')}</Notice>}
+      </div>
+    </div>
   );
 }
 
-export function ApmPanel() {
+export function ApmPanel({ standalone = false }: { standalone?: boolean }) {
   const { state, api, patchConfig, openSettings } = useApp(),
     { t, locale } = useI18n(),
     [history, setHistory] = useState<ApmState[]>([]),
@@ -125,19 +127,8 @@ export function ApmPanel() {
       cancelled = true;
     };
   }, [api, state.apm.captureId, state.apm.status, reload]);
-  return (
-    <Card
-      title={t('apm')}
-      icon={<Icon icon={faWaveSquare} size={19} />}
-      collapsed={collapsed}
-      onToggle={() =>
-        void patchConfig({
-          collapsedPanels: collapsed
-            ? state.config.collapsedPanels.filter((p) => p !== 'apm')
-            : [...state.config.collapsedPanels, 'apm'],
-        })
-      }
-    >
+  const content = (
+    <>
       {historyError && (
         <Notice error>
           {t('apmHistoryError')}{' '}
@@ -184,6 +175,29 @@ export function ApmPanel() {
       ) : (
         <Empty description={t('apmDescription')}>{t('apmWaiting')}</Empty>
       )}
+    </>
+  );
+  if (standalone) {
+    return (
+      <section className="apm-panel" aria-label={t('apm')}>
+        {content}
+      </section>
+    );
+  }
+  return (
+    <Card
+      title={t('apm')}
+      icon={<Icon icon={faWaveSquare} size={19} />}
+      collapsed={collapsed}
+      onToggle={() =>
+        void patchConfig({
+          collapsedPanels: collapsed
+            ? state.config.collapsedPanels.filter((p) => p !== 'apm')
+            : [...state.config.collapsedPanels, 'apm'],
+        })
+      }
+    >
+      {content}
     </Card>
   );
 }

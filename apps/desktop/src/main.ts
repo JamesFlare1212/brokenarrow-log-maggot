@@ -12,6 +12,7 @@ import { ApmController } from './apm';
 import { selectDirectory, detectLogDirectory, openPath } from './directories';
 import { UpdateController } from './updates/controller';
 import { readInstallRecord, writeInstallRecord } from './updates/install-record';
+import { sampleTelemetryRuntime } from './telemetry-runtime';
 // Temporary workaround for BATrace QUIC/HTTP/3 stalls; revisit after Chromium/network fixes.
 // See docs/architecture.md#temporary-quic-workaround for removal criteria.
 app.commandLine.appendSwitch('disable-quic');
@@ -28,6 +29,7 @@ let window: BrowserWindow | null = null,
   replays: ReplayProtocol | null = null,
   updates: UpdateController | null = null,
   quitting = false;
+process.on('uncaughtExceptionMonitor', (error) => service?.reportError('main', error));
 const smoke = process.env.BA_SMOKE === '1';
 const offline = process.env.BA_OFFLINE === '1';
 const allowedDevUrl = process.env.BA_RENDERER_URL || '';
@@ -100,6 +102,16 @@ async function start(): Promise<void> {
   const nativeRecordings = recordings,
     apm = new ApmController();
   const platform: Platform = {
+    telemetry: {
+      enabled:
+        app.isPackaged &&
+        !smoke &&
+        !offline &&
+        !allowedDevUrl &&
+        process.env.BA_DISABLE_TELEMETRY !== '1',
+      distribution: process.env.PORTABLE_EXECUTABLE_FILE ? 'portable' : 'installed',
+      sampleRuntime: () => sampleTelemetryRuntime(window),
+    },
     updates,
     version: app.getVersion(),
     http: {
@@ -165,8 +177,16 @@ async function start(): Promise<void> {
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event) => event.preventDefault());
   window.webContents.on('render-process-gone', (_event, details) => {
+    service?.reportError('renderer_crash', new Error());
     console.error('Renderer stopped:', details.reason);
   });
+  const samplePresence = () => service?.samplePresence();
+  window.on('focus', samplePresence);
+  window.on('blur', samplePresence);
+  window.on('minimize', samplePresence);
+  window.on('restore', samplePresence);
+  window.on('show', samplePresence);
+  window.on('hide', samplePresence);
   window.on('close', (event) => {
     if (!quitting) {
       event.preventDefault();
@@ -245,6 +265,7 @@ void app
   .whenReady()
   .then(start)
   .catch((error) => {
+    service?.reportError('startup', error);
     console.error(errorMessage(error));
     app.exit(1);
   });

@@ -116,6 +116,9 @@ export function seedRealData(db: Database, data: RealData, logDir: string): void
     }
     db.updateConfig({
       ...data.preferences,
+      telemetryEnabled: false,
+      telemetryConsentConfirmed: true,
+      telemetryConsentVersion: 3,
       logDir,
       // An empty decksDir would auto-detect the real game's writable Decks folder.
       decksDir: join(profile, 'Decks'),

@@ -1,0 +1,266 @@
+{
+  "name": "Broken Arrow — Usage & Diagnostics",
+  "description": "Consent-based desktop telemetry. Online means presence in the last five minutes. Validation events are excluded. Installations count first execution.",
+  "insights": [
+    {
+      "name": "Installations: first runs by day",
+      "description": "New local profiles first executed; excludes integration validation. Installer completions without a launch are not observable.",
+      "sql": "SELECT toDate(timestamp) AS day, count(DISTINCT properties.installation_id) AS installations FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'app_installed' AND properties.kind = 'first_run' AND timestamp > now() - INTERVAL 30 DAY GROUP BY day ORDER BY day"
+    },
+    {
+      "name": "Online users: last 5 minutes",
+      "description": "Latest presence identity per installation, then distinct users. Includes app background presence; expires after five minutes.",
+      "sql": "SELECT count(DISTINCT user_id) AS online_users FROM (SELECT argMax(distinct_id, timestamp) AS user_id FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event IN ('app_started', 'app_heartbeat', 'user_identified') AND timestamp > now() - INTERVAL 5 MINUTE GROUP BY properties.installation_id)"
+    },
+    {
+      "name": "User versions: latest recognized account version",
+      "description": "Most recent version for each recognized game account active in the last seven days. Only accounts confirmed by this launch's game logs enter account-version statistics; see installation version share and identity coverage for cached/unidentified clients.",
+      "sql": "SELECT version, count() AS users FROM (SELECT argMax(properties.version, timestamp) AS version FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND properties.identity_source = 'game_account' AND properties.identity_confidence = 'confirmed' AND timestamp > now() - INTERVAL 7 DAY GROUP BY distinct_id) GROUP BY version ORDER BY users DESC"
+    },
+    {
+      "name": "Updates: new versions actually run",
+      "description": "Version transitions observed on a later launch, including manual replacements and downgrades. Does not treat an install click as update success.",
+      "sql": "SELECT properties.previous_version AS from_version, properties.version AS to_version, count(DISTINCT properties.installation_id) AS installations FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'app_updated' AND timestamp > now() - INTERVAL 30 DAY GROUP BY from_version, to_version ORDER BY installations DESC"
+    },
+    {
+      "name": "Feature usage, success, and latency",
+      "description": "Selected user actions; timings in milliseconds. Background polling is excluded.",
+      "sql": "SELECT properties.operation AS operation, count() AS uses, count(DISTINCT distinct_id) AS users, round(100.0 * countIf(properties.result = 'success') / count(), 1) AS success_percent, round(quantile(0.5)(toFloat(properties.duration_ms)), 1) AS p50_ms, round(quantile(0.95)(toFloat(properties.duration_ms)), 1) AS p95_ms FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'operation_completed' AND timestamp > now() - INTERVAL 7 DAY GROUP BY operation ORDER BY uses DESC"
+    },
+    {
+      "name": "Errors: classified samples and affected users",
+      "description": "Classified exceptions and repeated-occurrence summaries, with app code positions and no raw messages. Occurrence totals include aggregated duplicates.",
+      "sql": "SELECT properties.source AS source, properties.operation AS operation, properties.error_type AS error_type, properties.error_code AS error_code, sum(toInt(coalesce(properties.occurrences, 1))) AS occurrences, count(DISTINCT distinct_id) AS affected_users FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event IN ('$exception', 'exception_summary') AND timestamp > now() - INTERVAL 7 DAY GROUP BY source, operation, error_type, error_code ORDER BY occurrences DESC"
+    },
+    {
+      "name": "Performance: startup and renderer long tasks",
+      "description": "UI-ready startup duration percentiles. Renderer long-task values are per-window maxima; counts and blocking totals are available in the separate long-task aggregate view.",
+      "sql": "SELECT properties.metric AS metric, properties.version AS version, count() AS samples, round(quantile(0.5)(toFloat(properties.duration_ms)), 1) AS p50_ms, round(quantile(0.95)(toFloat(properties.duration_ms)), 1) AS p95_ms FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'performance_sample' AND timestamp > now() - INTERVAL 7 DAY GROUP BY metric, version ORDER BY metric, version"
+    },
+    {
+      "name": "Performance: main-process CPU and memory",
+      "description": "Minute heartbeat samples from Electron main process. This does not include total renderer or system resource usage.",
+      "sql": "SELECT properties.version AS version, round(avg(toFloat(properties.cpu_percent)), 1) AS average_cpu_percent, round(quantile(0.95)(toFloat(properties.rss_mb)), 1) AS p95_rss_mb, round(quantile(0.95)(toFloat(properties.heap_used_mb)), 1) AS p95_heap_mb FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'app_heartbeat' AND timestamp > now() - INTERVAL 24 HOUR GROUP BY version ORDER BY version"
+    },
+    {
+      "name": "Update delivery states",
+      "description": "Unique installations reaching updater states; progress-only changes are suppressed.",
+      "sql": "SELECT properties.target_version AS target_version, properties.status AS status, count(DISTINCT properties.installation_id) AS installations FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'update_state_changed' AND timestamp > now() - INTERVAL 30 DAY GROUP BY target_version, status ORDER BY target_version, status"
+    },
+    {
+      "name": "Feature views and recording sessions",
+      "description": "Explicit navigation and APM/recording start/stop events. Passive list polling is excluded.",
+      "sql": "SELECT properties.feature AS feature, properties.action AS action, count() AS uses, count(DISTINCT distinct_id) AS users FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'feature_used' AND timestamp > now() - INTERVAL 7 DAY GROUP BY feature, action ORDER BY uses DESC"
+    },
+    {
+      "name": "Version share: latest active account version",
+      "description": "Latest confirmed version per game account active in the last seven days; each account counts once. Percentages exclude validation, cached, and unidentified clients. See installation-version share and identity coverage for those clients.",
+      "sql": "SELECT version, users, round(100.0 * users / nullIf(sum(users) OVER (), 0), 2) AS share_percent FROM (SELECT version, count() AS users FROM (SELECT argMax(properties.version, timestamp) AS version FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND properties.identity_source = 'game_account' AND properties.identity_confidence = 'confirmed' AND timestamp > now() - INTERVAL 7 DAY GROUP BY distinct_id) GROUP BY version) ORDER BY users DESC, version DESC",
+      "display": "ActionsPie",
+      "chartSettings": {
+        "xAxis": {
+          "column": "version"
+        },
+        "yAxis": [
+          {
+            "column": "users"
+          }
+        ],
+        "showLegend": true,
+        "showValuesOnSeries": true,
+        "pie": {
+          "sliceContent": "values",
+          "valueDisplay": "percentage",
+          "showTotal": true
+        }
+      },
+      "tableSettings": {
+        "columns": [
+          {
+            "column": "version"
+          },
+          {
+            "column": "users"
+          },
+          {
+            "column": "share_percent",
+            "settings": {
+              "formatting": {
+                "style": "number",
+                "suffix": "%",
+                "decimalPlaces": 2
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Foreground and active users: last 5 minutes",
+      "description": "Latest state per installation, then unique identities. App presence, foreground, and active use are counted separately.",
+      "sql": "SELECT count(DISTINCT user_id) AS online_users, count(DISTINCT if(foreground IN ('true', '1'), user_id, NULL)) AS foreground_users, count(DISTINCT if(active IN ('true', '1'), user_id, NULL)) AS active_users FROM (SELECT argMax(distinct_id, timestamp) AS user_id, argMax(properties.foreground, timestamp) AS foreground, argMax(properties.active, timestamp) AS active FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'app_heartbeat' AND timestamp > now() - INTERVAL 5 MINUTE GROUP BY properties.installation_id)"
+    },
+    {
+      "name": "Identity coverage: latest account confidence",
+      "description": "Latest account identification state per recently active installation. Cached identities are distinguished from accounts confirmed by this launch's logs.",
+      "sql": "SELECT identity_confidence, count() AS installations, round(100.0 * count() / sum(count()) OVER (), 1) AS share_percent FROM (SELECT argMax(properties.identity_confidence, timestamp) AS identity_confidence FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND timestamp > now() - INTERVAL 7 DAY GROUP BY properties.installation_id) GROUP BY identity_confidence ORDER BY installations DESC",
+      "display": "ActionsPie",
+      "chartSettings": {
+        "xAxis": {
+          "column": "identity_confidence"
+        },
+        "yAxis": [
+          {
+            "column": "installations"
+          }
+        ],
+        "showLegend": true,
+        "showValuesOnSeries": true,
+        "pie": {
+          "sliceContent": "values",
+          "valueDisplay": "percentage",
+          "showTotal": true
+        }
+      },
+      "tableSettings": {
+        "columns": [
+          {
+            "column": "identity_confidence"
+          },
+          {
+            "column": "installations"
+          },
+          {
+            "column": "share_percent",
+            "settings": {
+              "formatting": {
+                "style": "number",
+                "suffix": "%",
+                "decimalPlaces": 1
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Installation version share: all active installations",
+      "description": "Latest version per installation, including installations without a recognized game account.",
+      "sql": "SELECT version, count() AS installations, round(100.0 * count() / sum(count()) OVER (), 2) AS share_percent FROM (SELECT argMax(properties.version, timestamp) AS version FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND timestamp > now() - INTERVAL 7 DAY GROUP BY properties.installation_id) GROUP BY version ORDER BY installations DESC",
+      "display": "ActionsPie",
+      "chartSettings": {
+        "xAxis": {
+          "column": "version"
+        },
+        "yAxis": [
+          {
+            "column": "installations"
+          }
+        ],
+        "showLegend": true,
+        "showValuesOnSeries": true,
+        "pie": {
+          "sliceContent": "values",
+          "valueDisplay": "percentage",
+          "showTotal": true
+        }
+      },
+      "tableSettings": {
+        "columns": [
+          {
+            "column": "version"
+          },
+          {
+            "column": "installations"
+          },
+          {
+            "column": "share_percent",
+            "settings": {
+              "formatting": {
+                "style": "number",
+                "suffix": "%",
+                "decimalPlaces": 2
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Update attempts: confirmed outcomes",
+      "description": "One outcome per update_attempt_id. Install application failures are distinct from interrupted downloads.",
+      "sql": "SELECT properties.target_version AS target_version, properties.outcome AS outcome, properties.last_stage AS last_stage, count(DISTINCT properties.update_attempt_id) AS attempts FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'update_attempt_result' AND timestamp > now() - INTERVAL 30 DAY GROUP BY target_version, outcome, last_stage ORDER BY target_version, outcome"
+    },
+    {
+      "name": "Process exits: exception and unclean recovery",
+      "description": "An unclean exit may reflect a kill, power loss, or crash; only exception-marked exits are labeled as exceptions.",
+      "sql": "SELECT properties.previous_version AS version, properties.reason AS reason, count(DISTINCT properties.previous_run_id) AS exits FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'previous_run_exit' AND timestamp > now() - INTERVAL 7 DAY GROUP BY version, reason ORDER BY exits DESC"
+    },
+    {
+      "name": "Renderer long tasks: counts and blocking time",
+      "description": "Minute aggregates include all observed tasks, not one selected task. Duration columns are totals or per-window maxima.",
+      "sql": "SELECT properties.version AS version, sum(toFloat(properties.task_count)) AS long_tasks, round(sum(toFloat(properties.blocking_duration_ms)), 1) AS total_blocking_ms, round(max(toFloat(properties.duration_ms)), 1) AS longest_task_ms FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'performance_sample' AND properties.metric = 'renderer_long_tasks' AND timestamp > now() - INTERVAL 7 DAY GROUP BY version ORDER BY long_tasks DESC"
+    },
+    {
+      "name": "Delivery health: dropped events and retries",
+      "description": "Cumulative counters are reduced to maxima per app run before summing. Shutdown summaries include unsent noncritical events; counters measure retry requests, not queued retries.",
+      "sql": "SELECT version, sum(dropped) AS dropped_events, sum(retried) AS retries, sum(persistence_failures) AS storage_failures FROM (SELECT argMax(properties.version, timestamp) AS version, max(toFloat(properties.delivery_dropped_total)) AS dropped, max(toFloat(properties.delivery_retried_total)) AS retried, max(toFloat(properties.persistence_failures_total)) AS persistence_failures FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event IN ('app_heartbeat', 'delivery_summary') AND timestamp > now() - INTERVAL 7 DAY GROUP BY properties.app_session_id) GROUP BY version ORDER BY dropped_events DESC"
+    },
+    {
+      "name": "Daily active accounts",
+      "description": "Accounts performing an explicit feature view or user action, excluding background presence and unrecognized installations.",
+      "sql": "SELECT toDate(timestamp) AS day, count(DISTINCT distinct_id) AS daily_active_accounts FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND properties.identity_source = 'game_account' AND properties.identity_confidence = 'confirmed' AND event IN ('feature_used','operation_completed') AND timestamp > now() - INTERVAL 30 DAY GROUP BY day ORDER BY day"
+    },
+    {
+      "name": "Weekly active accounts",
+      "description": "Unique recognized accounts using a feature during each calendar week.",
+      "sql": "SELECT toStartOfWeek(timestamp) AS week, count(DISTINCT distinct_id) AS weekly_active_accounts FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND properties.identity_source = 'game_account' AND properties.identity_confidence = 'confirmed' AND event IN ('feature_used','operation_completed') AND timestamp > now() - INTERVAL 12 WEEK GROUP BY week ORDER BY week"
+    },
+    {
+      "name": "Return usage: day 1 and day 7",
+      "description": "Return rates for accounts first observed during the last 30 days. Each interval includes only cohorts old enough to have returned.",
+      "sql": "WITH first_seen AS (SELECT distinct_id AS user_id, min(toDate(timestamp)) AS first_day FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND properties.identity_source = 'game_account' AND properties.identity_confidence = 'confirmed' AND event IN ('feature_used','operation_completed') GROUP BY distinct_id), activity AS (SELECT DISTINCT distinct_id AS user_id, toDate(timestamp) AS day FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND properties.identity_source = 'game_account' AND properties.identity_confidence = 'confirmed' AND event IN ('feature_used','operation_completed')) SELECT count(DISTINCT first_seen.user_id) AS accounts, count(DISTINCT if(first_day <= today() - INTERVAL 1 DAY, first_seen.user_id, NULL)) AS day_1_eligible, count(DISTINCT if(day = first_day + INTERVAL 1 DAY, first_seen.user_id, NULL)) AS day_1_returned, count(DISTINCT if(first_day <= today() - INTERVAL 7 DAY, first_seen.user_id, NULL)) AS day_7_eligible, count(DISTINCT if(day = first_day + INTERVAL 7 DAY, first_seen.user_id, NULL)) AS day_7_returned FROM first_seen LEFT JOIN activity ON first_seen.user_id = activity.user_id WHERE first_day > today() - INTERVAL 30 DAY"
+    },
+    {
+      "name": "Release health: error-rate alert",
+      "description": "Flags versions with at least 20 operations and failure rate above 5%. Treat as an operational threshold, not a statistical significance test.",
+      "sql": "SELECT properties.version AS version, count() AS operations, countIf(properties.result = 'failure') AS failures, round(100.0 * failures / count(), 1) AS failure_percent, if(count() >= 20, failure_percent, 0) AS alert_value, if(count() >= 20 AND 100.0 * failures / count() > 5, 'ALERT', 'OK') AS status FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'operation_completed' AND timestamp > now() - INTERVAL 24 HOUR GROUP BY version ORDER BY failure_percent DESC"
+    },
+    {
+      "name": "Renderer CPU and memory",
+      "description": "Aggregate resources of all Electron renderer processes, sampled with presence. CPU is percent of one logical core and can exceed 100%.",
+      "sql": "SELECT properties.version AS version, round(avg(toFloat(properties.renderer_cpu_percent)), 1) AS average_renderer_cpu_percent, round(quantile(0.95)(toFloat(properties.renderer_rss_mb)), 1) AS p95_renderer_rss_mb, round(max(toFloat(properties.renderer_processes)), 0) AS renderer_processes FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND event = 'app_heartbeat' AND timestamp > now() - INTERVAL 24 HOUR GROUP BY version ORDER BY version"
+    },
+    {
+      "name": "Native sessions: active usage",
+      "description": "Distinct UUIDv7 PostHog session IDs associated with explicit feature usage or user actions. Sessions rotate after inactivity, user changes, or 24 hours.",
+      "sql": "SELECT toDate(timestamp) AS day, count(DISTINCT properties.$session_id) AS sessions FROM events WHERE properties.app = 'brokenarrow.desktop' AND coalesce(toString(properties.validation), 'false') NOT IN ('true', '1') AND properties.$session_id IS NOT NULL AND event IN ('feature_used','operation_completed') AND timestamp > now() - INTERVAL 30 DAY GROUP BY day ORDER BY day"
+    }
+  ],
+  "alerts": [
+    {
+      "name": "Broken Arrow release failures above 5%",
+      "insightName": "Release health: error-rate alert",
+      "calculation_interval": "hourly",
+      "condition": {
+        "type": "absolute_value"
+      },
+      "config": {
+        "type": "HogQLAlertConfig",
+        "column": "alert_value",
+        "evaluation": "any_row",
+        "label_column": "version"
+      },
+      "threshold": {
+        "configuration": {
+          "type": "absolute",
+          "bounds": {
+            "upper": 5
+          }
+        }
+      },
+      "enabled": true,
+      "subscribed_users": []
+    }
+  ]
+}

@@ -1,5 +1,10 @@
-import { useEffect, useState } from 'react';
-import { faLayerGroup, faFileLines, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
+import { useEffect, useState, type ReactNode } from 'react';
+import {
+  faLayerGroup,
+  faFileLines,
+  faFolderOpen,
+  faArrowsRotate,
+} from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
 import type { DeckList, DeckFile } from '@ba/contracts';
 import { formatSize } from '@ba/shared';
@@ -13,62 +18,73 @@ function DeckFiles({
   files,
   selected,
   onChange,
+  actions,
 }: {
   id: string;
   title: string;
   files: DeckFile[];
   selected: string[];
   onChange: (names: string[]) => void;
+  actions?: ReactNode;
 }) {
   const { t } = useI18n();
   return (
-    <fieldset className="field deck-fieldset" aria-describedby={`${id}-hint`}>
-      <legend>{title}</legend>
-      <div
-        id={id}
-        className="deck-file-list"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
-            e.preventDefault();
-            onChange(files.map((f) => f.name));
-          }
-        }}
-      >
-        {files.length ? (
-          files.map((f) => (
-            <label className="deck-file" key={f.name}>
-              <input
-                type="checkbox"
-                checked={selected.includes(f.name)}
-                onChange={(e) =>
-                  onChange(
-                    e.target.checked
-                      ? [...selected, f.name]
-                      : selected.filter((name) => name !== f.name),
-                  )
-                }
-              />
-              <Icon icon={faFileLines} size={17} className="muted" aria-hidden="true" />
-              <span>{f.name}</span>
-              <small>{formatSize(f.size)}</small>
-            </label>
-          ))
-        ) : (
-          <Empty>{t('empty')}</Empty>
-        )}
+    <>
+      <div className="deck-list-heading">
+        <h2 id={`${id}-title`}>{title}</h2>
+        {actions}
       </div>
-      <Button
-        onClick={() => onChange(selected.length === files.length ? [] : files.map((f) => f.name))}
-        disabled={!files.length}
+      <fieldset
+        className="field deck-fieldset"
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-hint`}
       >
-        {t(selected.length === files.length && files.length ? 'clearSelection' : 'selectAll')}
-        <small className="muted">
-          {selected.length} / {files.length}
-        </small>
-      </Button>
-      <small id={`${id}-hint`}>{t('deckSelectionHint')}</small>
-    </fieldset>
+        <div
+          id={id}
+          className="deck-file-list"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+              e.preventDefault();
+              onChange(files.map((f) => f.name));
+            }
+          }}
+        >
+          {files.length ? (
+            files.map((f) => (
+              <label className="deck-file" key={f.name}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(f.name)}
+                  onChange={(e) =>
+                    onChange(
+                      e.target.checked
+                        ? [...selected, f.name]
+                        : selected.filter((name) => name !== f.name),
+                    )
+                  }
+                />
+                <Icon icon={faFileLines} size={17} className="muted" aria-hidden="true" />
+                <span>{f.name}</span>
+                <small>{formatSize(f.size)}</small>
+              </label>
+            ))
+          ) : (
+            <Empty>{t('empty')}</Empty>
+          )}
+        </div>
+        <Button
+          onClick={() => onChange(selected.length === files.length ? [] : files.map((f) => f.name))}
+          disabled={!files.length}
+        >
+          {t(selected.length === files.length && files.length ? 'clearSelection' : 'selectAll')}
+          <small className="muted">
+            {selected.length} / {files.length}
+          </small>
+        </Button>
+        <small id={`${id}-hint`}>{t('deckSelectionHint')}</small>
+      </fieldset>
+    </>
   );
 }
 export function DecksPanel() {
@@ -100,13 +116,15 @@ export function DecksPanel() {
     }
   };
   const list = request.data;
+  const refreshButton = (
+    <Button disabled={request.pending || busy} aria-busy={request.pending} onClick={refresh}>
+      <Icon icon={faArrowsRotate} size={15} spin={request.pending} aria-hidden="true" />
+      {t('refresh')}
+    </Button>
+  );
   return (
     <div className="decks-panel">
-      <div className="deck-toolbar">
-        <Button disabled={request.pending || busy} onClick={refresh}>
-          {t('refresh')}
-        </Button>
-      </div>
+      {!list?.found && <div className="deck-toolbar">{refreshButton}</div>}
       {state.deckAlert && (
         <Notice>
           <span>{t('deckSwitch', { name: state.deckAlert.from })}</span>
@@ -137,6 +155,7 @@ export function DecksPanel() {
                 files={list.decks}
                 selected={front}
                 onChange={setFront}
+                actions={refreshButton}
               />
               <small className="path">{list.decksDir}</small>
               <div className="actions">

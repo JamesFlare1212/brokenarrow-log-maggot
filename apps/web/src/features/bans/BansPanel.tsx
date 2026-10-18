@@ -6,7 +6,7 @@ import { formatMetric, formatTime } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Card, Loading, Notice, Empty, Badge, Dialog } from '../../components/ui';
+import { Button, Loading, Notice, Empty, Badge, Dialog } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
 const PAGE_SIZE = 20;
 export function BansPanel() {
@@ -24,7 +24,7 @@ export function BansPanel() {
     void request.load(() => api.invoke('bans.list', { metOnly }), true);
   }, [api, metOnly, state.bansRevision]);
   return (
-    <Card title={t('bans')} showHeader={false}>
+    <section className="bans-panel" aria-label={t('bans')}>
       <div className="bans-toolbar">
         <button
           type="button"
@@ -113,7 +113,7 @@ export function BansPanel() {
         }}
         reserveSpace
       />
-    </Card>
+    </section>
   );
 }
 export function BanAlertDialog({ players }: { players: Ban[] }) {

@@ -1,4 +1,53 @@
 export const messages: Record<string, readonly [string, string, string, string]> = {
+  telemetryConsentTitle: [
+    '是否允许使用情况与诊断统计？',
+    'Allow usage and diagnostics statistics?',
+    '利用状況と診断の統計を許可しますか？',
+    'Разрешить статистику использования и диагностику?',
+  ],
+  telemetryConsentPrompt: [
+    '请阅读下面的采集说明。仅在同意后开始发送统计；关键事件的本地暂存、会话与前台活跃状态、改进的错误和性能诊断需要确认此更新说明。',
+    'Read the collection details below. Nothing is sent before consent. Confirm this updated notice for local buffering of critical events, sessions and foreground activity, and improved error and performance diagnostics.',
+    '以下の収集内容をご確認ください。同意するまで送信しません。重要イベントのローカル保存、セッションと前面での利用状況、改善されたエラー・性能診断について更新内容の確認が必要です。',
+    'Ознакомьтесь с описанием сбора данных. До согласия ничего не отправляется. Подтвердите обновлённое уведомление о локальной очереди важных событий, сеансах, активности на переднем плане и расширенной диагностике.',
+  ],
+  telemetryConsentChangeLater: [
+    '不同意不影响应用功能。之后可在“设置 → 常规”中随时修改。',
+    'Declining does not affect app features. Change your choice at any time in Settings → General.',
+    '同意しなくてもアプリの機能は利用できます。後から「設定 → 一般」でいつでも変更できます。',
+    'Отказ не влияет на функции приложения. Выбор можно изменить в разделе «Настройки → Общие».',
+  ],
+  telemetryConsentAccept: [
+    '同意使用与诊断统计',
+    'Allow usage and diagnostics',
+    '利用状況と診断の統計を許可',
+    'Разрешить статистику и диагностику',
+  ],
+  telemetryConsentDecline: ['不同意', 'Decline', '同意しない', 'Отказаться'],
+  telemetry: [
+    '使用统计与隐私',
+    'Usage statistics and privacy',
+    '利用統計とプライバシー',
+    'Статистика и конфиденциальность',
+  ],
+  telemetryEnabled: [
+    '发送可选使用统计',
+    'Send optional usage statistics',
+    '任意の利用統計を送信',
+    'Отправлять необязательную статистику',
+  ],
+  telemetryDescription: [
+    '同意后向 posthog.jamesflare.com 发送安装与启动、版本与更新结果、每分钟在线心跳与前台活跃状态、功能使用结果和耗时、分类错误，以及主进程和渲染进程的 CPU、内存、界面就绪和卡顿汇总。通过 PostHog 会话标识关联同一账号的一次使用。安装、更新与异常等关键事件可在本机暂存最多 7 天并有限重试；关闭统计会停止发送并清空待发送数据。',
+    'After consent, sends installation/startup, versions and update results, minute presence and foreground activity, feature results/timings, classified errors, main/renderer CPU and memory, UI-ready timings, and long-task summaries to posthog.jamesflare.com. PostHog session IDs link one account’s usage session. Critical installation, update, and error events may be buffered locally for up to 7 days with bounded retries. Turning statistics off stops sending and clears pending data.',
+    '同意後、インストール・起動、バージョンと更新結果、1 分ごとのオンライン・前面利用状態、機能の結果と時間、分類したエラー、メイン・描画プロセスの CPU とメモリ、UI 準備時間と長時間タスクの集計を posthog.jamesflare.com に送信します。PostHog のセッション ID で同じアカウントの利用を関連付けます。重要イベントは最大 7 日間ローカル保存し、回数を制限して再送します。無効化すると送信を停止し、未送信データを削除します。',
+    'После согласия на posthog.jamesflare.com передаются установка и запуск, версии и результаты обновлений, сигналы присутствия и активности раз в минуту, работа функций, категории ошибок, CPU и память основного процесса и процессов интерфейса, время готовности UI и сводки долгих задач. Сеансы связываются идентификаторами PostHog. Важные события могут храниться локально до 7 дней с ограниченными повторами. Отключение прекращает отправку и удаляет очередь.',
+  ],
+  telemetryPrivacy: [
+    '使用日志识别到的本机数字账号的 SHA-256 哈希关联跨次使用；尚未识别账号时使用本地随机安装标识的哈希。这些稳定标识可关联使用记录，不上传原始账号、昵称、其他玩家标识、搜索内容、日志、路径、卡组、录像或按键。错误仅发送类型、代码、来源和应用代码位置，不发送原始消息或完整堆栈。不创建人员档案。服务器接收来源 IP，可能用于地理统计。开发、离线和测试模式不发送。',
+    'A SHA-256 hash of the local numeric account identified in game logs links usage across launches; until an account is known, a hash of a local random installation ID is used. These stable IDs link usage records. Raw accounts, names, other players, searches, logs, paths, decks, recordings, and keystrokes are not sent. Errors include only type, code, source, and app code locations, without raw messages or full stacks. No person profiles are created. The server receives your source IP and may derive geographic statistics. Development, offline, and test modes do not send data.',
+    'ゲームログで識別したローカルの数字アカウントを SHA-256 でハッシュ化し、起動をまたぐ利用記録を関連付けます。未識別時はローカルのランダムなインストール ID のハッシュを使用します。元のアカウント、名前、他のプレイヤー、検索内容、ログ、パス、デッキ、録画、キー入力は送信しません。エラーは種類・コード・発生元・アプリ内のコード位置のみで、元のメッセージや完全なスタックは送信しません。人物プロフィールは作成しません。サーバーは送信元 IP を受信し、地域統計に使用する場合があります。開発・オフライン・テスト時は送信しません。',
+    'Для связи запусков используется SHA-256 хеш числового локального аккаунта из игровых журналов; до его распознавания — хеш случайного локального идентификатора установки. Исходные аккаунты, имена, другие игроки, запросы, журналы, пути, колоды, записи и нажатия клавиш не передаются. Для ошибок передаются только тип, код, источник и позиции кода приложения, без исходных сообщений и полных стеков. Профили пользователей не создаются. Сервер получает исходный IP и может использовать его для географической статистики. В режимах разработки, офлайн и тестирования данные не отправляются.',
+  ],
   paginationRange: [
     '第 {start}–{end} 条，共 {total} 条',
     'Showing {start}–{end} of {total}',
@@ -432,10 +481,10 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Предпросмотр недоступен',
   ],
   'settingsHint.general': [
-    '设置适合你的界面语言。',
-    'Choose your interface language.',
-    '表示言語を選択します。',
-    'Выберите язык интерфейса.',
+    '设置界面语言，管理可选使用统计。',
+    'Choose your interface language and manage optional usage statistics.',
+    '表示言語と任意の利用統計を設定します。',
+    'Выберите язык интерфейса и настройте необязательную статистику.',
   ],
   'settingsHint.appearance': [
     '让工作空间呈现你喜欢的样子。',
@@ -515,10 +564,10 @@ export const messages: Record<string, readonly [string, string, string, string]>
     'Результатов проверки пока нет.',
   ],
   healthRefreshHint: [
-    '每 10 分钟自动检查，业务请求也会更新状态。也可点击底部的「API 健康检查」重试。',
-    'Checked every 10 minutes and updated by live requests. Use API health in the footer to retry.',
-    '10分ごとに確認し、実際のリクエストでも状態を更新します。下部の「API状態」で再確認できます。',
-    'Проверка каждые 10 минут; статус также обновляется по результатам запросов. Для повтора нажмите «Состояние API» внизу.',
+    '每 10 分钟自动检查，业务请求也会更新状态。也可点击顶部 BATrace 状态旁的「API 健康检查」重试。',
+    'Checked every 10 minutes and updated by live requests. Use API health beside the BATrace status in the top bar to retry.',
+    '10分ごとに確認し、実際のリクエストでも状態を更新します。上部のBATrace状態の横にある「API状態」で再確認できます。',
+    'Проверка каждые 10 минут; статус также обновляется по результатам запросов. Для повтора нажмите «Состояние API» рядом со статусом BATrace на верхней панели.',
   ],
   healthPlayerSearch: ['玩家搜索', 'Player search', 'プレイヤー検索', 'Поиск игроков'],
   healthPlayerInfo: ['玩家资料', 'Player details', 'プレイヤー情報', 'Данные игрока'],

@@ -1,6 +1,18 @@
-import type { ApmState, Display, Match, PublicConfig, RecordingState } from '@ba/contracts';
+import type {
+  ApmState,
+  Display,
+  Match,
+  PublicConfig,
+  RecordingState,
+  TelemetryRuntimeSample,
+} from '@ba/contracts';
 import type { HttpPort } from './network/client';
 export interface Platform {
+  telemetry?: {
+    enabled: boolean;
+    distribution: 'installed' | 'portable';
+    sampleRuntime?: () => TelemetryRuntimeSample;
+  };
   updates?: {
     status(): import('@ba/contracts').UpdateState;
     check(): Promise<import('@ba/contracts').UpdateState>;

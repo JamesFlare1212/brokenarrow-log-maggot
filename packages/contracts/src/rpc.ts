@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DIAGNOSTIC_ERROR_TYPES, TELEMETRY_FEATURES, isDiagnosticFilename } from './telemetry';
 import type {
   Account,
   ApmState,
@@ -44,6 +45,9 @@ export function legacyThemeMode(theme: unknown): ThemeMode {
   return ['light', 'cyan', 'orange'].includes(String(theme)) ? 'light' : 'dark';
 }
 export const configSchema = z.object({
+  telemetryEnabled: z.boolean().default(true),
+  telemetryConsentConfirmed: z.boolean().default(false),
+  telemetryConsentVersion: z.number().int().min(0).default(0),
   logDir: z.string().max(4096).default(''),
   decksDir: z.string().max(4096).default(''),
   autoQueryCurrentMatch: z.boolean().default(true),
@@ -97,6 +101,47 @@ const roster = z
   )
   .max(100);
 export const rpcSchemas = {
+  'diagnostics.report': z.discriminatedUnion('type', [
+    z.object({ type: z.literal('feature'), feature: z.enum(TELEMETRY_FEATURES) }).strict(),
+    z
+      .object({
+        type: z.literal('error'),
+        source: z.enum(['renderer', 'renderer_rejection', 'react']),
+        errorType: z.enum(DIAGNOSTIC_ERROR_TYPES),
+        releaseId: z.string().uuid().optional(),
+        frames: z
+          .array(
+            z
+              .object({
+                filename: z.string().refine(isDiagnosticFilename),
+                lineno: z.number().int().positive().max(10000000),
+                colno: z.number().int().positive().max(10000000),
+                chunk_id: z.string().uuid().optional(),
+              })
+              .strict(),
+          )
+          .max(8)
+          .optional(),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('performance'),
+        metric: z.enum(['renderer_startup', 'renderer_long_task']),
+        durationMs: z.number().finite().min(0).max(600000),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('long_tasks'),
+        count: z.number().int().min(1).max(100000),
+        totalMs: z.number().finite().min(0).max(3600000),
+        maxMs: z.number().finite().min(50).max(600000),
+        blockingMs: z.number().finite().min(0).max(3600000),
+        windowMs: z.number().finite().min(1).max(3600000),
+      })
+      .strict(),
+  ]),
   'updates.check': empty,
   'updates.download': empty,
   'updates.install': empty,
@@ -147,6 +192,7 @@ export const rpcSchemas = {
 export type RpcMethod = keyof typeof rpcSchemas;
 export type RpcInputs = { [K in RpcMethod]: z.infer<(typeof rpcSchemas)[K]> };
 export interface RpcOutputs {
+  'diagnostics.report': null;
   'updates.check': import('./updates').UpdateState;
   'updates.download': import('./updates').UpdateState;
   'updates.install': import('./updates').UpdateState;

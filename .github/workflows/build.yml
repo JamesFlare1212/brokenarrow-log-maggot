@@ -55,6 +55,25 @@ jobs:
 
       - name: Build NSIS installer and portable executable
         run: pnpm dist
+        env:
+          POSTHOG_CLI_HOST: https://posthog.jamesflare.com
+          POSTHOG_CLI_PROJECT_ID: '1'
+          POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+
+      - name: Upload release source maps to PostHog
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          POSTHOG_CLI_HOST: https://posthog.jamesflare.com
+          POSTHOG_CLI_PROJECT_ID: '1'
+          POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+        run: |
+          if ($env:POSTHOG_CLI_API_KEY) {
+            pnpm posthog:sourcemaps
+            if ($LASTEXITCODE -ne 0) { throw 'PostHog source map upload failed.' }
+          } else {
+            Write-Output '::warning::PostHog source map upload skipped: POSTHOG_CLI_API_KEY is not configured.'
+          }
 
       - name: Verify update release artifacts
         run: node scripts/verify-update-artifacts.mjs

@@ -87,6 +87,86 @@ afterEach(async () => {
   applications.clear();
 });
 
+describe('application telemetry', () => {
+  it.each([true, false])(
+    'captures startup failures before service start only with saved consent: %s',
+    async (consent) => {
+      const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+      const p = platform(fetchImpl);
+      p.telemetry = { enabled: true, distribution: 'installed' };
+      const app = application(p, [], true);
+      app.db.updateConfig({
+        telemetryEnabled: consent,
+        telemetryConsentConfirmed: true,
+        telemetryConsentVersion: 3,
+      });
+      app.reportError('startup', new TypeError('private startup detail'));
+      const outbox = app.db.state<
+        { payload: { event: string; properties: Record<string, unknown> } }[]
+      >('telemetry:outbox:v1', []);
+      expect(outbox.some((item) => item.payload.event === '$exception')).toBe(consent);
+      if (consent) {
+        expect(
+          outbox.find((item) => item.payload.event === '$exception')?.payload.properties,
+        ).toMatchObject({ source: 'startup', $exception_level: 'fatal' });
+        expect(app.db.state<{ fatal?: boolean }>('telemetry:run:v1', {}).fatal).toBe(true);
+      }
+      expect(JSON.stringify(outbox)).not.toContain('private startup detail');
+    },
+  );
+
+  it.each(['unsupported', 'disabled', 'offline', 'no-network'] as const)(
+    'never sends telemetry in %s mode even with a saved opt-in',
+    async (mode) => {
+      vi.useFakeTimers();
+      const fetchImpl = vi.fn<typeof fetch>();
+      const p = platform(fetchImpl);
+      if (mode !== 'unsupported')
+        p.telemetry = { enabled: mode !== 'disabled', distribution: 'installed' };
+      p.http.offline = mode === 'offline';
+      const app = application(p, [], mode !== 'no-network');
+      try {
+        await app.invoke('config.update', { telemetryEnabled: true });
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(fetchImpl).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it('applies consent immediately and keeps raw RPC inputs and error messages private', async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+    const p = platform(fetchImpl);
+    p.telemetry = { enabled: true, distribution: 'installed' };
+    const app = application(p, [], true);
+    try {
+      await app.invoke('config.update', { telemetryEnabled: true, lang: 'ru' });
+      await expect(
+        app.invoke('replays.play', { name: 'private-player-recording.webm' }),
+      ).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      const bodies = fetchImpl.mock.calls.flatMap(([, init]) =>
+        JSON.parse(String(init?.body)).batch.map((event: unknown) => JSON.stringify(event)),
+      );
+      expect(bodies[0]).toContain('"language":"ru"');
+      expect(bodies[1]).toContain('"operation":"recording_play"');
+      expect(bodies[1]).toContain('"result":"failure"');
+      expect(bodies.join('')).not.toMatch(/private-player|\.webm|in-memory-lifecycle/);
+      await app.invoke('config.update', { telemetryEnabled: false });
+      await expect(
+        app.invoke('replays.play', { name: 'private-player-recording.webm' }),
+      ).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 it('probes health at startup and publishes recovery after ten minutes independently of hourly sync', async () => {
   vi.useFakeTimers();
   let available = false;

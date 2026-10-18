@@ -1,5 +1,6 @@
 import { join, resolve } from 'node:path';
 import { stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import type {
   AppEvent,
@@ -14,7 +15,13 @@ import type {
   RpcOutputs,
   Session,
 } from '@ba/contracts';
-import { rpcSchemas, initialUpdateState, UPDATE_RELEASES_URL } from '@ba/contracts';
+import {
+  rpcSchemas,
+  initialUpdateState,
+  UPDATE_RELEASES_URL,
+  TELEMETRY_CONSENT_VERSION,
+  hasTelemetryConsent,
+} from '@ba/contracts';
 import { array, object, text, number, errorMessage, MAP_NAMES } from '@ba/shared';
 import { Database } from './storage/database';
 import { migrateLegacy } from './storage/migrate';
@@ -28,6 +35,12 @@ import { LogArchive } from './logs/archive';
 import { DeckService } from './decks/service';
 import { ReplayFiles } from './replays/files';
 import type { Platform } from './ports';
+import {
+  TelemetryService,
+  type InstallationState,
+  type TelemetryIdentity,
+  type ErrorSource,
+} from './telemetry';
 type EventInput = AppEvent extends infer E
   ? E extends AppEvent
     ? Omit<E, 'revision'>
@@ -57,6 +70,7 @@ export class Application {
   private restoredSession = '';
   private disposed = false;
   private closing = false;
+  private stopTask: Promise<void> | null = null;
   private tasks = new Set<Promise<unknown>>();
   private lifetime = new AbortController();
   private deckAlert: DeckSwitchAlert | null = null;
@@ -67,16 +81,55 @@ export class Application {
     backupDir: null,
   };
   private handlers: Handlers;
+  private telemetry: TelemetryService;
+  private existingInstallation: boolean;
   private apmTasks = Promise.resolve();
   private lastApmStatus: ApmState['status'] | null = null;
   private apmCheckpointAt = -Infinity;
+  private telemetryPersona = '';
+  private telemetryApmActive = false;
+  private telemetryRecordingActive = false;
   constructor(
     private dir: string,
     private platform: Platform,
     private broadcast: (event: AppEvent) => void,
     private network = true,
   ) {
+    this.existingInstallation = existsSync(join(dir, 'assistant.sqlite'));
     this.db = new Database(join(dir, 'assistant.sqlite'));
+    let identity: TelemetryIdentity | undefined;
+    if (platform.telemetry?.enabled && network && !platform.http.offline) {
+      try {
+        const saved = this.db.state<TelemetryIdentity | null>('telemetryIdentity', null);
+        identity =
+          saved && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(saved.installationId)
+            ? saved
+            : { installationId: randomUUID() };
+        this.db.setState('telemetryIdentity', identity);
+      } catch {
+        /* Optional telemetry identity must not prevent startup. */
+      }
+    }
+    this.telemetry = new TelemetryService({
+      allowed: !!platform.telemetry?.enabled && network && !platform.http.offline,
+      fetch: platform.http.fetch,
+      version: platform.version,
+      distribution: platform.telemetry?.distribution ?? 'installed',
+      identity,
+      persistence: {
+        read: (key) => this.db.state(`telemetry:${key}:v1`, null),
+        write: (key, value) => {
+          if (!this.disposed) this.db.setState(`telemetry:${key}:v1`, value);
+        },
+      },
+      sampleRuntime: platform.telemetry?.sampleRuntime,
+      saveAccountHash: (hash) => {
+        if (identity && !this.closing && !this.disposed) {
+          identity = { ...identity, accountHash: hash };
+          this.db.setState('telemetryIdentity', identity);
+        }
+      },
+    });
     this.db.recoverApmCaptures();
     this.files = new ReplayFiles(this.db, dir);
     const http = {
@@ -103,6 +156,20 @@ export class Application {
     );
     this.archive = new LogArchive(this.db, () => this.event({ type: 'matches' }));
     this.handlers = {
+      'diagnostics.report': (input) => {
+        if (input.type === 'feature') this.telemetry.feature(input.feature);
+        else if (input.type === 'error')
+          this.telemetry.error(
+            input.source,
+            { name: input.errorType },
+            undefined,
+            input.frames,
+            input.releaseId,
+          );
+        else if (input.type === 'long_tasks') this.telemetry.longTasks(input);
+        else this.telemetry.performance(input.metric, input.durationMs);
+        return null;
+      },
       'apm.history': () => this.db.apmHistory(),
       'updates.check': () => platform.updates?.check() ?? initialUpdateState(platform.version),
       'updates.download': () => {
@@ -134,7 +201,17 @@ export class Application {
         )
           throw new Error('Decks directory does not exist');
         const before = this.db.config(),
-          next = this.db.updateConfig(patch);
+          next = this.db.updateConfig({
+            ...patch,
+            ...(typeof patch.telemetryEnabled === 'boolean'
+              ? {
+                  telemetryConsentConfirmed: true,
+                  telemetryConsentVersion: TELEMETRY_CONSENT_VERSION,
+                }
+              : {}),
+          });
+        this.telemetry.configure(next.telemetryEnabled && hasTelemetryConsent(next), next.lang);
+        if (platform.updates) this.telemetry.observeUpdate(platform.updates.status());
         this.event({ type: 'config', config: next });
         if (before.logDir !== next.logDir) {
           await this.queueApm(() => this.finishApm(true));
@@ -326,9 +403,47 @@ export class Application {
       updatedAt: Date.now(),
     };
   }
-  event(event: EventInput): void {
+  event(event: EventInput, cause?: unknown): void {
+    if (!this.disposed && !this.closing) {
+      if (event.type === 'apm') {
+        const active = event.apm.status === 'active';
+        if (active !== this.telemetryApmActive)
+          this.telemetry.feature('apm', active ? 'start' : 'stop');
+        this.telemetryApmActive = active;
+      }
+      if (event.type === 'recording') {
+        const active = event.recording.phase === 'recording';
+        if (active !== this.telemetryRecordingActive)
+          this.telemetry.feature('replays', active ? 'start' : 'stop');
+        this.telemetryRecordingActive = active;
+      }
+      if (event.type === 'updates') this.telemetry.observeUpdate(event.updates);
+      if (event.type === 'error') this.telemetry.error('background', cause ?? new Error());
+      if (event.type === 'watcher' && event.watcher.error)
+        this.telemetry.error('watcher', new Error());
+      if (event.type === 'recording' && event.recording.error)
+        this.telemetry.error('recording', new Error());
+      if (event.type === 'apm' && event.apm.error) this.telemetry.error('apm', new Error());
+    }
     if (!this.disposed && !this.closing)
       this.broadcast({ ...event, revision: ++this.revision } as AppEvent);
+  }
+  reportError(source: ErrorSource, error: unknown): void {
+    try {
+      if (source === 'startup' && !this.disposed && !this.closing) {
+        const config = this.db.config();
+        this.telemetry.configure(
+          config.telemetryEnabled && hasTelemetryConsent(config),
+          config.lang,
+        );
+      }
+      this.telemetry.error(source, error);
+    } catch {
+      // Diagnostic reporting must never replace the original application failure.
+    }
+  }
+  samplePresence(): void {
+    this.telemetry.samplePresence();
   }
   private fire(task: Promise<unknown>): void {
     this.tasks.add(task);
@@ -358,16 +473,63 @@ export class Application {
       handler = this.handlers[method] as (
         input: RpcInputs[K],
       ) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
-    const task = Promise.resolve(handler(parsed));
+    const completed = this.telemetry.beginOperation(method);
+    const task = Promise.resolve().then(() => handler(parsed));
     this.tasks.add(task);
     void task.then(
-      () => this.tasks.delete(task),
-      () => this.tasks.delete(task),
+      (result) => {
+        this.tasks.delete(task);
+        const failedUpdate =
+          method.startsWith('updates.') &&
+          result &&
+          typeof result === 'object' &&
+          'error' in result &&
+          !!result.error;
+        completed(!failedUpdate);
+      },
+      (error) => {
+        this.tasks.delete(task);
+        completed(false, error);
+      },
     );
     return task;
   }
   async start(): Promise<void> {
+    const startedAt = performance.now();
     this.migration = await migrateLegacy(this.db, this.dir);
+    if (this.platform.telemetry?.enabled && this.network && !this.platform.http.offline) {
+      try {
+        const previous = this.db.state<InstallationState | null>('telemetryInstallation', null);
+        const observed: InstallationState =
+          previous?.version === this.platform.version
+            ? previous
+            : {
+                version: this.platform.version,
+                kind: previous
+                  ? 'version_change'
+                  : this.existingInstallation || Object.keys(this.migration.imported).length
+                    ? 'existing_profile'
+                    : 'first_run',
+                ...(previous ? { previousVersion: previous.version } : {}),
+                reported: false,
+              };
+        const installation: InstallationState = {
+          ...observed,
+          eventId: observed.eventId ?? randomUUID(),
+          updateEventId: observed.updateEventId ?? randomUUID(),
+        };
+        this.db.setState('telemetryInstallation', installation);
+        this.telemetry.observeInstallation(installation, () => {
+          if (!this.disposed)
+            this.db.setState('telemetryInstallation', { ...installation, reported: true });
+        });
+      } catch {
+        // Optional telemetry state must not prevent the application from starting.
+      }
+    }
+    const config = this.db.config();
+    this.telemetry.configure(config.telemetryEnabled && hasTelemetryConsent(config), config.lang);
+    if (this.platform.updates) this.telemetry.observeUpdate(this.platform.updates.status());
     for (const row of this.db.sql.prepare('SELECT id,name FROM map_names').all())
       MAP_NAMES[Number(row.id)] = String(row.name);
     this.watcher.start(this.db.config().logDir);
@@ -400,18 +562,19 @@ export class Application {
       this.fire(this.probeHealth());
       this.fire(this.syncBackground());
     }
+    this.telemetry.performance('service_startup', performance.now() - startedAt);
   }
   private scanArchive(dir: string): void {
     this.fire(
       this.archive
         .scan(dir)
-        .catch((error) => this.event({ type: 'error', message: errorMessage(error) })),
+        .catch((error) => this.event({ type: 'error', message: errorMessage(error) }, error)),
     );
   }
   private queueApm(work: () => Promise<void>): Promise<void> {
     const task = this.apmTasks.then(work);
     this.apmTasks = task.catch((error) => {
-      this.event({ type: 'error', message: errorMessage(error) });
+      this.event({ type: 'error', message: errorMessage(error) }, error);
     });
     return this.apmTasks;
   }
@@ -443,6 +606,17 @@ export class Application {
     if (this.disposed || this.closing) return;
     if (event.type === 'session') {
       const session = event.session;
+      if (session.localPlayerId) {
+        this.telemetryPersona = session.localName;
+        this.telemetry.identifyAccount(session.localPlayerId);
+      } else if (
+        session.localName &&
+        this.telemetryPersona &&
+        session.localName !== this.telemetryPersona
+      ) {
+        this.telemetryPersona = session.localName;
+        this.telemetry.identifyAccount(null);
+      }
       if (session.current) {
         const match = session.current;
         void this.queueApm(async () => {
@@ -465,7 +639,7 @@ export class Application {
       if (this.platform.recordings.status().phase !== 'stopping')
         void this.platform.recordings
           .abort()
-          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }));
+          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e));
     }
     if (event.type === 'started' && !event.recovering) {
       const config = this.db.config();
@@ -474,12 +648,12 @@ export class Application {
         this.decks
           .onMatchStart(this.parser.snapshot())
           .then(() => this.event({ type: 'decks', alert: null }))
-          .catch((e) => this.event({ type: 'error', message: errorMessage(e) })),
+          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e)),
       );
       if (config.replayEnabled)
         void this.platform.recordings
           .start(event.match, config)
-          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }));
+          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e));
     }
     if (event.type === 'ended' || event.type === 'metadata') {
       if (event.recovering) this.db.observe(event.match.players, 0);
@@ -489,7 +663,7 @@ export class Application {
         void this.queueApm(() => this.finishApm(false, event.match));
         void this.platform.recordings
           .stop(event.match)
-          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }));
+          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e));
       }
       void this.queueApm(async () => {
         this.platform.apm.updateMatch(event.match);
@@ -525,7 +699,7 @@ export class Application {
       if (this.db.config().replayEnabled && this.platform.recordings.status().phase === 'idle')
         void this.platform.recordings
           .start(session.current, this.db.config())
-          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }));
+          .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e));
     }
     this.fire(
       this.decks
@@ -536,7 +710,7 @@ export class Application {
             this.event({ type: 'decks', alert });
           }
         })
-        .catch((e) => this.event({ type: 'error', message: errorMessage(e) })),
+        .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e)),
     );
     const key =
       session.generation +
@@ -556,7 +730,7 @@ export class Application {
     ) {
       this.autoKey = key;
       void this.query({ context: 'current', requestId: randomUUID() }).catch((e) =>
-        this.event({ type: 'error', message: errorMessage(e) }),
+        this.event({ type: 'error', message: errorMessage(e) }, e),
       );
     }
   }
@@ -658,7 +832,7 @@ export class Application {
         this.event({ type: 'matches' });
       }
     } catch (e) {
-      this.event({ type: 'error', message: errorMessage(e) });
+      this.event({ type: 'error', message: errorMessage(e) }, e);
     } finally {
       this.syncPending = false;
     }
@@ -669,8 +843,15 @@ export class Application {
     return health;
   }
   async stop(): Promise<void> {
-    if (this.disposed || this.closing) return;
+    if (this.stopTask) return this.stopTask;
+    this.stopTask = this.stopInternal();
+    return this.stopTask;
+  }
+  private async stopInternal(): Promise<void> {
+    if (this.disposed) return;
     this.closing = true;
+    await this.telemetry.flush();
+    this.telemetry.close();
     const match = this.parser.snapshot().current;
     for (const timer of this.timers) clearInterval(timer);
     this.timers = [];

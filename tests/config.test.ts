@@ -16,6 +16,10 @@ describe('configuration patches', () => {
     { hiddenPanels: ['players', 'decks'] },
     { hiddenPanels: [] },
     { inputHookEnabled: true },
+    { telemetryEnabled: true },
+    { telemetryEnabled: false },
+    { telemetryConsentConfirmed: false },
+    { telemetryEnabled: true, telemetryConsentConfirmed: true },
     { replayEnabled: false },
     { replayMicrophone: false },
     { replayQuality: 1080, replayFps: 60, replaySaveDir: 'custom-recordings' },
@@ -34,6 +38,8 @@ describe('configuration patches', () => {
       { replayFps: 10 },
       { replayQuality: 1440 },
       { replayMicrophone: 'false' },
+      { telemetryEnabled: 'true' },
+      { telemetryConsentConfirmed: 'true' },
       { panelOrder: ['invalid'] },
       { hiddenPanels: ['invalid'] },
       { hiddenPanels: ['about'] },
@@ -42,6 +48,8 @@ describe('configuration patches', () => {
       expect(rpcSchemas['config.update'].safeParse(patch).success).toBe(false);
     }
     expect(configSchema.parse({}).theme).toBe('dark');
+    expect(configSchema.parse({}).telemetryEnabled).toBe(true);
+    expect(configSchema.parse({}).telemetryConsentConfirmed).toBe(false);
     expect(configSchema.parse({}).themeMode).toBe('system');
     expect(configSchema.parse({}).hiddenPanels).toEqual([]);
     expect(configSchema.parse({ replayAudio: 'default' }).replayMicrophone).toBe(true);
@@ -57,6 +65,8 @@ describe('configuration patches', () => {
       expect(db.config().themeMode).toBe('system');
       expect(db.updateConfig({ lang: 'en' }).themeMode).toBe('system');
       const initial = db.updateConfig({
+        telemetryEnabled: true,
+        telemetryConsentConfirmed: true,
         logDir: 'custom-logs',
         decksDir: 'custom-decks',
         theme: 'forest',

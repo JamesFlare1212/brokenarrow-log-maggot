@@ -281,6 +281,9 @@ export interface MigrationStatus {
   backupDir: string | null;
 }
 export interface PublicConfig {
+  telemetryEnabled: boolean;
+  telemetryConsentConfirmed: boolean;
+  telemetryConsentVersion: number;
   logDir: string;
   decksDir: string;
   autoQueryCurrentMatch: boolean;

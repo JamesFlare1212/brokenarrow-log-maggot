@@ -12,7 +12,6 @@ import {
   faBoxArchive,
   faChevronRight,
   faCrosshairs,
-  faCircleInfo,
   faLayerGroup,
   faTableCellsLarge,
   faBars,
@@ -47,6 +46,8 @@ import { DecksPanel } from '../features/decks/DecksPanel';
 import { ApmPanel } from '../features/apm/ApmPanel';
 import { ReplaysPanel } from '../features/replays/ReplaysPanel';
 import { UpdateButton } from '../features/settings/UpdateButton';
+import { TelemetryConsentDialog } from '../features/settings/TelemetryConsentDialog';
+import { hasTelemetryConsent } from '@ba/contracts';
 const ProfileDialog = lazy(() =>
   import('../features/players/ProfileDialog').then((module) => ({ default: module.ProfileDialog })),
 );
@@ -141,6 +142,23 @@ export function App() {
   const [healthBusy, setHealthBusy] = useState(false),
     [navigationOpen, setNavigationOpen] = useState(false);
   const [visited, setVisited] = useState<Panel[]>([page]);
+  useEffect(() => {
+    if (
+      window.assistant === api &&
+      state.config.telemetryEnabled &&
+      hasTelemetryConsent(state.config)
+    )
+      void api
+        .invoke('diagnostics.report', { type: 'feature', feature: settingsTab ? 'settings' : page })
+        .catch(() => {});
+  }, [
+    api,
+    page,
+    settingsTab,
+    state.config.telemetryEnabled,
+    state.config.telemetryConsentConfirmed,
+    state.config.telemetryConsentVersion,
+  ]);
   const main = useRef<HTMLElement>(null),
     workspaceScroll = useRef<HTMLDivElement>(null),
     scrollPositions = useRef(new Map<string, number>()),
@@ -160,13 +178,13 @@ export function App() {
   }, [page]);
   const components: Record<Panel, ReactNode> = {
     current: <Dashboard />,
-    radar: <SessionPanel />,
+    radar: <SessionPanel standalone />,
     players: <PlayersPanel />,
     archive: <MatchArchive />,
     replays: <ReplaysPanel />,
     decks: <DecksPanel />,
     bans: <BansPanel />,
-    apm: <ApmPanel />,
+    apm: <ApmPanel standalone />,
   };
   const status =
     state.watcher.error ||
@@ -180,7 +198,6 @@ export function App() {
   const isListening = state.watcher.listening && !state.watcher.error;
   const title = t(page === 'current' ? 'commandCenter' : page);
   const account = state.session.localName || t('noAccount');
-  const showHistoricalFooter = ['current', 'radar', 'players'].includes(page);
   const collapsed = settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed;
   return (
     <div
@@ -239,7 +256,25 @@ export function App() {
             <strong>{t(page === 'current' ? 'overview' : page)}</strong>
           </div>
           <div className="topbar-actions">
-            <BatraceStatus health={state.health} />
+            <div className="topbar-health">
+              <BatraceStatus health={state.health} />
+              <Button
+                className="health-button"
+                disabled={healthBusy}
+                aria-busy={healthBusy}
+                aria-label={t('health')}
+                onClick={() => {
+                  setHealthBusy(true);
+                  void api
+                    .invoke('api.health', { force: true })
+                    .then(() => notify(t('success')))
+                    .catch((e) => notify(String(e), true))
+                    .finally(() => setHealthBusy(false));
+                }}
+              >
+                <Icon icon={faWaveSquare} size={16} spin={healthBusy} aria-hidden="true" />
+              </Button>
+            </div>
             <TooltipButton
               className="account-button"
               aria-label={`${t('currentAccount')}: ${account}`}
@@ -291,31 +326,6 @@ export function App() {
               </div>
             ))}
           </main>
-          {showHistoricalFooter && (
-            <footer className="app-footer">
-              <span>
-                <Icon icon={faCircleInfo} size={13} aria-hidden="true" />
-                {t('historical')}
-              </span>
-              <span>
-                <Button
-                  className="health-button"
-                  disabled={healthBusy}
-                  aria-label={t('health')}
-                  onClick={() => {
-                    setHealthBusy(true);
-                    void api
-                      .invoke('api.health', { force: true })
-                      .then(() => notify(t('success')))
-                      .catch((e) => notify(String(e), true))
-                      .finally(() => setHealthBusy(false));
-                  }}
-                >
-                  <Icon icon={faWaveSquare} size={14} spin={healthBusy} />
-                </Button>
-              </span>
-            </footer>
-          )}
         </div>
       </div>
       {navigationOpen && (
@@ -324,6 +334,7 @@ export function App() {
           title={t('workspaceNav')}
           onClose={() => setNavigationOpen(false)}
           className="navigation-dialog"
+          showHeader={false}
         >
           <Brand />
           <Navigation onNavigate={() => setNavigationOpen(false)} />
@@ -351,8 +362,9 @@ export function App() {
           </div>
         }
       >
-        <ModalRouter />
+        {hasTelemetryConsent(state.config) && <ModalRouter />}
       </Suspense>
+      <TelemetryConsentDialog />
       {settings.error && !settingsTab && (
         <div className="settings-save-alert" role="alert">
           <strong>{t('settingsSaveFailed')}</strong>

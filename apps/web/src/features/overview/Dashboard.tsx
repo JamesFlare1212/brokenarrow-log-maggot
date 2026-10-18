@@ -222,7 +222,13 @@ export function Dashboard() {
                   {m.restarted ? t('restarted') : t(m.outcome)}
                 </Badge>
                 <span
-                  className={`recent-elo ${m.eloAfter !== null && m.eloBefore !== null && m.eloAfter >= m.eloBefore ? 'text-success' : ''}`}
+                  className={`recent-elo ${
+                    m.eloAfter !== null && m.eloBefore !== null
+                      ? m.eloAfter >= m.eloBefore
+                        ? 'text-success'
+                        : 'text-danger'
+                      : ''
+                  }`}
                 >
                   {m.eloAfter !== null && m.eloBefore !== null
                     ? `${m.eloAfter - m.eloBefore > 0 ? '+' : ''}${formatMetric(m.eloAfter - m.eloBefore, 0)}`

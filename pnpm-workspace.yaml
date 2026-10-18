@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
 onlyBuiltDependencies:
+  - '@posthog/cli'
   - electron
   - esbuild
   - rolldown

@@ -5,6 +5,7 @@ import '@fortawesome/fontawesome-svg-core/styles.css';
 import type { Bridge } from '@ba/contracts';
 import { App } from './app/App';
 import { AppProvider } from './app/state';
+import { attachRendererDiagnostics, reportRendererError } from './app/diagnostics';
 import './styles/index.css';
 
 fontAwesomeConfig.autoAddCss = false;
@@ -15,7 +16,22 @@ declare global {
 }
 const native = window.assistant,
   fixtures = import.meta.env.DEV && import.meta.env.MODE === 'fixtures';
-const root = createRoot(document.getElementById('root')!);
+if (native) attachRendererDiagnostics(native);
+const root = createRoot(
+  document.getElementById('root')!,
+  native
+    ? {
+        onUncaughtError: (error) => {
+          reportRendererError(native, error, 'react');
+          console.error(error);
+        },
+        onRecoverableError: (error) => {
+          reportRendererError(native, error, 'react');
+          console.error(error);
+        },
+      }
+    : undefined,
+);
 if (!native && !fixtures)
   root.render(
     <div className="startup-error">

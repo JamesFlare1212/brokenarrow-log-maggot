@@ -16,7 +16,7 @@ import { useApp } from '../../app/state';
 import { Card, Button, Empty, Badge } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 import { PlayerActions } from '../players/PlayerActions';
-export function SessionPanel() {
+export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const { state, api, openModal, notify, patchConfig } = useApp(),
     { t } = useI18n();
   const [previous, setPrevious] = useState<Match | null>(null),
@@ -89,42 +89,31 @@ export function SessionPanel() {
     view === 'current' && state.session.phase === 'match' && match?.startedAt && !match.endedAt
       ? Math.max(0, (now - match.startedAt) / 1000)
       : (match?.durationSec ?? null);
-  return (
-    <Card
-      className="session-card"
-      title={view === 'previous' ? t('previous') : t('current')}
-      icon={<Icon icon={faCrosshairs} size={19} />}
-      collapsed={collapsed}
-      onToggle={() =>
-        void patchConfig({
-          collapsedPanels: collapsed
-            ? state.config.collapsedPanels.filter((p) => p !== 'current')
-            : [...state.config.collapsedPanels, 'current'],
-        })
-      }
-      actions={
-        <>
-          <Button
-            className="button-borderless"
-            disabled={!previous || pending}
-            onClick={previousView}
-            aria-pressed={view === 'previous'}
-          >
-            <Icon icon={faClockRotateLeft} size={15} aria-hidden="true" />
-            {view === 'previous' ? t('back') : t('previous')}
-          </Button>
-          <Button
-            variant="primary"
-            disabled={pending || !players.length}
-            aria-busy={pending}
-            onClick={() => void query(view)}
-          >
-            <Icon icon={faArrowsRotate} size={15} spin={pending} aria-hidden="true" />
-            {t('query')}
-          </Button>
-        </>
-      }
-    >
+  const title = view === 'previous' ? t('previous') : t('current');
+  const actions = (
+    <>
+      <Button
+        className="button-borderless"
+        disabled={!previous || pending}
+        onClick={previousView}
+        aria-pressed={view === 'previous'}
+      >
+        <Icon icon={faClockRotateLeft} size={15} aria-hidden="true" />
+        {view === 'previous' ? t('back') : t('previous')}
+      </Button>
+      <Button
+        variant="primary"
+        disabled={pending || !players.length}
+        aria-busy={pending}
+        onClick={() => void query(view)}
+      >
+        <Icon icon={faArrowsRotate} size={15} spin={pending} aria-hidden="true" />
+        {t('query')}
+      </Button>
+    </>
+  );
+  const content = (
+    <>
       <div className="session-banner">
         <div className="session-banner-content">
           <div className="session-kicker">
@@ -179,7 +168,8 @@ export function SessionPanel() {
           <circle cx="176" cy="78" r="18" stroke="currentColor" opacity=".3" />
           <circle cx="176" cy="78" r="6" stroke="currentColor" />
           <circle cx="176" cy="78" r="2" fill="currentColor" />
-          <path d="M67 93 77 103M77 93 67 103M214 39 224 49M224 39 214 49" stroke="currentColor" />
+          <circle cx="72" cy="98" r="3" fill="currentColor" opacity=".55" />
+          <circle cx="219" cy="44" r="3" fill="currentColor" opacity=".55" />
         </svg>
       </div>
       {!players.length ? (
@@ -310,8 +300,36 @@ export function SessionPanel() {
       <div className="session-footnote">
         <span className="status-dot status-success" aria-hidden="true" />
         {state.session.localName ? `${t('account')}: ${state.session.localName}` : t('noAccount')}
-        <span>{t('historical')}</span>
       </div>
+    </>
+  );
+  if (standalone) {
+    return (
+      <section className="session-panel" aria-label={title}>
+        <header className="session-toolbar">
+          <h2>{title}</h2>
+          <div className="actions">{actions}</div>
+        </header>
+        {content}
+      </section>
+    );
+  }
+  return (
+    <Card
+      className="session-card"
+      title={title}
+      icon={<Icon icon={faCrosshairs} size={19} />}
+      collapsed={collapsed}
+      onToggle={() =>
+        void patchConfig({
+          collapsedPanels: collapsed
+            ? state.config.collapsedPanels.filter((p) => p !== 'current')
+            : [...state.config.collapsedPanels, 'current'],
+        })
+      }
+      actions={actions}
+    >
+      {content}
     </Card>
   );
 }

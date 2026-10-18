@@ -603,33 +603,39 @@
 }
 @media (max-width: 720px) {
   .settings-page {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
   .settings-sidebar {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    flex-shrink: 0;
-    gap: 10px;
-    padding: 10px 12px;
-    border-right: 0;
-    border-bottom: 1px solid var(--border-subtle);
+    display: contents;
   }
   .settings-brand {
     padding: 0 8px;
   }
   .settings-sidebar > .sidebar-header {
-    min-height: 0;
+    grid-area: 1 / 1;
+    min-height: 60px;
+    padding: 10px 112px 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface);
   }
   .settings-sidebar > .app-sidebar-footer {
-    padding: 0;
-    grid-column: 2;
-    grid-row: 1;
+    grid-area: 1 / 1;
+    justify-self: end;
+    align-self: center;
+    margin: 0;
+    padding: 10px 12px;
+    z-index: 1;
   }
   .settings-tabs {
-    grid-column: 1 / -1;
+    grid-area: 3 / 1;
+    flex: none;
+    min-width: 0;
     flex-direction: row;
     overflow: auto;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border-subtle);
+    background: var(--surface);
   }
   .settings-page-toolbar {
     gap: 8px;
@@ -643,7 +649,7 @@
     padding: 8px 10px;
   }
   .settings-main {
-    flex: 1;
+    grid-area: 2 / 1;
   }
   .settings-breadcrumb {
     padding: 0;

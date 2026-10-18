@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { TELEMETRY_CONSENT_VERSION } from '@ba/contracts';
 import {
   faArrowUp,
   faArrowDown,
@@ -359,6 +360,27 @@ export function SettingsPage() {
                     <option value="ja">日本語</option>
                     <option value="ru">Русский</option>
                   </select>
+                </section>
+                <section
+                  className="settings-section settings-card"
+                  aria-labelledby="telemetry-heading"
+                >
+                  <h3 id="telemetry-heading">{t('telemetry')}</h3>
+                  <p id="telemetry-description">{t('telemetryDescription')}</p>
+                  <Toggle
+                    id="setting-telemetryEnabled"
+                    label={t('telemetryEnabled')}
+                    aria-describedby="telemetry-description telemetry-privacy"
+                    checked={draft.telemetryEnabled}
+                    onChange={(value) =>
+                      settings.change({
+                        telemetryEnabled: value,
+                        telemetryConsentConfirmed: true,
+                        telemetryConsentVersion: TELEMETRY_CONSENT_VERSION,
+                      })
+                    }
+                  />
+                  <p id="telemetry-privacy">{t('telemetryPrivacy')}</p>
                 </section>
                 <AboutSettings />
               </>
