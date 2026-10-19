@@ -133,6 +133,7 @@ const baseProperties = z.object({
   app: z.literal(TELEMETRY_APP),
   version: versionSchema,
   distribution: z.enum(['installed', 'portable']),
+  // Retain legacy language codes when validating previously queued events.
   language: z.enum(['zh', 'en', 'ja', 'ru']),
   installation_id: hashSchema,
   app_session_id: z.string().uuid(),

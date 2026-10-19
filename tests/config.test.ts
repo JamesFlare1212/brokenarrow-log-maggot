@@ -32,6 +32,8 @@ describe('configuration patches', () => {
     for (const patch of [
       { unknown: true },
       { lang: 'invalid' },
+      { lang: 'ja' },
+      { lang: 'ru' },
       { themeMode: 'forest' },
       { lightTheme: 'light' },
       { darkTheme: 'invalid' },
@@ -80,7 +82,7 @@ describe('configuration patches', () => {
         darkTheme: 'violet',
         sidebarCollapsed: true,
         hiddenPanels: ['players', 'decks'],
-        lang: 'ja',
+        lang: 'zh',
         replayEnabled: true,
         replayDisplayId: 'screen:1',
         replayQuality: 1080,
@@ -137,7 +139,7 @@ describe('configuration patches', () => {
         hiddenPanels: [],
         collapsedPanels: ['decks'],
         theme: 'forest',
-        lang: 'ja',
+        lang: 'zh',
         sidebarCollapsed: true,
       });
       db.updateConfig({ banPollEnabled: false });
@@ -149,6 +151,37 @@ describe('configuration patches', () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it.each(['ja', 'ru'])(
+    'falls back to Chinese for saved %s settings without losing preferences',
+    (lang) => {
+      const db = new Database(':memory:');
+      try {
+        db.sql
+          .prepare('INSERT INTO settings VALUES(?,?)')
+          .run(
+            'public',
+            JSON.stringify({ lang, theme: 'forest', sidebarCollapsed: true, logDir: 'saved-logs' }),
+          );
+        expect(db.config()).toMatchObject({
+          lang: 'zh',
+          theme: 'forest',
+          sidebarCollapsed: true,
+          logDir: 'saved-logs',
+        });
+        db.updateConfig({ banPollEnabled: false });
+        expect(db.config()).toMatchObject({
+          lang: 'zh',
+          theme: 'forest',
+          sidebarCollapsed: true,
+          logDir: 'saved-logs',
+          banPollEnabled: false,
+        });
+      } finally {
+        db.close();
+      }
+    },
+  );
 
   it.each([
     ['light', 'light'],

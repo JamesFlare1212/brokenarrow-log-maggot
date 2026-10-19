@@ -7,6 +7,10 @@ import {
   winnerFromAnalysis,
   determineOutcome,
   matchTitles,
+  matchScoreLabels,
+  withScoreLabelEvidence,
+  SCORE_LABEL_RULE,
+  MAX_SCORE_LABELS,
 } from '@ba/shared';
 import type { Database } from '../storage/database';
 import type { BatraceClient } from '../network/client';
@@ -18,14 +22,35 @@ export class TrackerService {
     private analyzer: Analyzer,
   ) {}
   list(accountId?: string): Match[] {
-    return this.db.matches(accountId).map((match) => this.withTitles(match));
+    return this.db.matches(accountId).map((match) => this.withAwards(match));
   }
-  private withTitles(match: Match, raw?: unknown): Match {
+  private withAwards(match: Match, raw?: unknown, analysis?: unknown): Match {
     const cached =
       raw ?? (match.fid ? this.db.cache(`match:${match.fid}`, true)?.value : undefined);
+    const scores =
+      analysis ?? (match.fid ? this.db.cache(`amatch:${match.fid}`, true)?.value : undefined);
     return {
       ...match,
       titles: cached ? matchTitles(match, cached) : (match.titles ?? matchTitles(match)),
+      scoreLabels:
+        match.endedAt === null
+          ? {}
+          : scores
+            ? matchScoreLabels(match, scores, cached)
+            : match.scoreLabelRule === SCORE_LABEL_RULE
+              ? withScoreLabelEvidence(
+                  match,
+                  Object.fromEntries(
+                    Object.entries(match.scoreLabels ?? {}).map(([id, labels]) => [
+                      id,
+                      labels.slice(0, MAX_SCORE_LABELS),
+                    ]),
+                  ),
+                  undefined,
+                  cached,
+                )
+              : {},
+      scoreLabelRule: SCORE_LABEL_RULE,
     };
   }
   async detail(fid: string, force = false): Promise<Match> {
@@ -36,7 +61,7 @@ export class TrackerService {
     } catch (error) {
       if (!force && previous)
         return {
-          ...this.withTitles(previous),
+          ...this.withAwards(previous),
           warning: error instanceof Error ? error.message : String(error),
         };
       throw error;
@@ -57,17 +82,24 @@ export class TrackerService {
       localId: previous?.localPlayerId ?? this.db.state<string | null>('activeAccountId', null),
       now: result.at,
     });
-    if (match.mode === 'custom' && match.outcome === 'unknown' && result.source !== 'stale') {
+    let analysis: unknown;
+    if (
+      result.source !== 'stale' &&
+      ((match.endedAt !== null && match.durationSec) ||
+        (match.mode === 'custom' && match.outcome === 'unknown'))
+    ) {
       try {
-        const analysis = await this.client.analysisMatch(fid),
-          winner = winnerFromAnalysis(analysis.value),
-          outcome = determineOutcome(match.players, match.localPlayerId, match.mode, winner);
-        match = { ...match, winnerTeamId: outcome.winner, outcome: outcome.outcome };
+        analysis = (await this.client.analysisMatch(fid, force)).value;
+        if (match.mode === 'custom' && match.outcome === 'unknown') {
+          const winner = winnerFromAnalysis(analysis),
+            outcome = determineOutcome(match.players, match.localPlayerId, match.mode, winner);
+          match = { ...match, winnerTeamId: outcome.winner, outcome: outcome.outcome };
+        }
       } catch {
-        /* The detail remains useful when winner evidence is unavailable. */
+        /* Match facts and cached awards remain useful when analysis is unavailable. */
       }
     }
-    match = this.withTitles(match, result.value);
+    match = this.withAwards(match, result.value, analysis);
     if (result.source === 'stale')
       return { ...match, warning: 'Cached match data; BATrace is unavailable' };
     this.db.saveMatch(match);
@@ -102,7 +134,7 @@ export class TrackerService {
         }
       }
     return {
-      matches,
+      matches: matches.map((match) => this.withAwards(match)),
       stale: result.source === 'stale',
     };
   }

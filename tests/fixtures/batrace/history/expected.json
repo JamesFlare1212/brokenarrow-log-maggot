@@ -1,0 +1,958 @@
+{
+  "scope": {
+    "historyMatches": 458,
+    "withoutFid": 329,
+    "withFid": 129,
+    "evaluated": 114,
+    "unavailable": 15,
+    "incomplete": 0,
+    "unknownWinner": 0,
+    "players": 1140
+  },
+  "triggeredTitles": 28,
+  "awardedTitles": 28,
+  "counts": {
+    "carry": {
+      "candidates": 114,
+      "awarded": 108,
+      "matches": 108,
+      "localCandidates": 23,
+      "localAwarded": 23
+    },
+    "blame": {
+      "candidates": 83,
+      "awarded": 80,
+      "matches": 80,
+      "localCandidates": 3,
+      "localAwarded": 3
+    },
+    "deserter": {
+      "candidates": 40,
+      "awarded": 40,
+      "matches": 32,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "tryhard": {
+      "candidates": 14,
+      "awarded": 10,
+      "matches": 10,
+      "localCandidates": 3,
+      "localAwarded": 2
+    },
+    "passenger": {
+      "candidates": 21,
+      "awarded": 21,
+      "matches": 21,
+      "localCandidates": 2,
+      "localAwarded": 2
+    },
+    "lonewolf": {
+      "candidates": 20,
+      "awarded": 18,
+      "matches": 17,
+      "localCandidates": 6,
+      "localAwarded": 6
+    },
+    "reaper": {
+      "candidates": 5,
+      "awarded": 5,
+      "matches": 5,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "untouched": {
+      "candidates": 14,
+      "awarded": 14,
+      "matches": 14,
+      "localCandidates": 2,
+      "localAwarded": 2
+    },
+    "landlord": {
+      "candidates": 4,
+      "awarded": 4,
+      "matches": 4,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "artygod": {
+      "candidates": 1,
+      "awarded": 1,
+      "matches": 1,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "bandit": {
+      "candidates": 11,
+      "awarded": 11,
+      "matches": 11,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "canteen": {
+      "candidates": 18,
+      "awarded": 18,
+      "matches": 18,
+      "localCandidates": 4,
+      "localAwarded": 4
+    },
+    "weightlifter": {
+      "candidates": 8,
+      "awarded": 8,
+      "matches": 8,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "killsteal": {
+      "candidates": 9,
+      "awarded": 9,
+      "matches": 9,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "demolition": {
+      "candidates": 24,
+      "awarded": 23,
+      "matches": 23,
+      "localCandidates": 3,
+      "localAwarded": 3
+    },
+    "courier": {
+      "candidates": 4,
+      "awarded": 3,
+      "matches": 3,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "refund": {
+      "candidates": 18,
+      "awarded": 18,
+      "matches": 18,
+      "localCandidates": 5,
+      "localAwarded": 5
+    },
+    "backstabbed": {
+      "candidates": 6,
+      "awarded": 6,
+      "matches": 6,
+      "localCandidates": 1,
+      "localAwarded": 1
+    },
+    "glutton": {
+      "candidates": 110,
+      "awarded": 99,
+      "matches": 99,
+      "localCandidates": 25,
+      "localAwarded": 22
+    },
+    "atm": {
+      "candidates": 13,
+      "awarded": 13,
+      "matches": 13,
+      "localCandidates": 2,
+      "localAwarded": 2
+    },
+    "scraper": {
+      "candidates": 11,
+      "awarded": 11,
+      "matches": 11,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "boxed": {
+      "candidates": 19,
+      "awarded": 18,
+      "matches": 18,
+      "localCandidates": 2,
+      "localAwarded": 1
+    },
+    "camper": {
+      "candidates": 8,
+      "awarded": 8,
+      "matches": 8,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "convoy": {
+      "candidates": 7,
+      "awarded": 7,
+      "matches": 7,
+      "localCandidates": 0,
+      "localAwarded": 0
+    },
+    "freeloader": {
+      "candidates": 22,
+      "awarded": 22,
+      "matches": 22,
+      "localCandidates": 4,
+      "localAwarded": 4
+    },
+    "spender": {
+      "candidates": 8,
+      "awarded": 8,
+      "matches": 8,
+      "localCandidates": 2,
+      "localAwarded": 2
+    },
+    "traitor": {
+      "candidates": 5,
+      "awarded": 5,
+      "matches": 5,
+      "localCandidates": 1,
+      "localAwarded": 1
+    },
+    "crash": {
+      "candidates": 7,
+      "awarded": 7,
+      "matches": 7,
+      "localCandidates": 1,
+      "localAwarded": 1
+    }
+  },
+  "matches": [
+    {
+      "id": "8105853",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "8688e02f0ce40ce4594e7b91d2c7a216e0835321670ce2ed73b88b3e25df4bf4"
+    },
+    {
+      "id": "8106580",
+      "status": "unavailable"
+    },
+    {
+      "id": "8106652",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "0617cef4cb48c86c67d347f3eab64c9e7297a913dd21cc175bfa7255fa79c6af"
+    },
+    {
+      "id": "8107156",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "b975c4017915533f8da96a09fb5c9385bbdd73ea1fc9a8bb2f2ce5aae864cd0a"
+    },
+    {
+      "id": "8120585",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "228cfec6c74e9cf62cb904ab5d6c7ce514cbe387952fc50b0dde8cf3eb87db2f"
+    },
+    {
+      "id": "8121607",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "aff9f8415c08d0748731081d2c092436ce3285064fa475308ed2e1c6eee64b60"
+    },
+    {
+      "id": "8122535",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "dc0f2e30957fa81503841b7ba93262e0fc36a2f12a08a2b6ab4ed8f76050029f"
+    },
+    {
+      "id": "8139212",
+      "status": "unavailable"
+    },
+    {
+      "id": "8139302",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "d9ac038703a83f443c0b0f253f0fa1998baf239a844709a3eaad1d640c8d45da"
+    },
+    {
+      "id": "8140049",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "b04842516c63028b85dff0f547350efd7c8b76cb6a0f8f2b5e53a81b0415fa26"
+    },
+    {
+      "id": "8140268",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "a65dd483af6c93a1debee117c3ea4b4737ba91c13e83c48a69e809108bf54178"
+    },
+    {
+      "id": "8171947",
+      "status": "unavailable"
+    },
+    {
+      "id": "8172125",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "30ceb3c262885cced35a4a7d1647f4fb8d8aebc80e1ae7d6490fd2608717d231"
+    },
+    {
+      "id": "8172912",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "b2555bd0195b0e67d7a3a8c33c5067db1d4ddb8e1c150e71879b0886866e0733"
+    },
+    {
+      "id": "8196555",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "1438041d547e06ceccbf4113a2b47ff1b1e5eceee940256ccb4c89138644cd8b"
+    },
+    {
+      "id": "8209795",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "a2b1a2c4bcb5fe134f2bebcc5d32d915c896bb56b950600767dd04909f084087"
+    },
+    {
+      "id": "8211224",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "620edeedde690ecc3124df2ee6b327711c3caffb7d9c3e9c0d16457d5e1eecd4"
+    },
+    {
+      "id": "8211871",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "989c8bf6bef39574eb13213f0e4cd95a8ed3d96ae32356d312c5419fc68b6951"
+    },
+    {
+      "id": "8221541",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "d34f6cf000c414900aef3e66c55a642988548f310d70aa4da8009aaa01ee721a"
+    },
+    {
+      "id": "8228439",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "96436426b71291547da46c3258302da5555d80bf0336cbca1d360836b973ae06"
+    },
+    {
+      "id": "8228766",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "99b930b0c8bef37e29dc5c61c0c3bb025ea290aa4b6996d66451092aeb08b0db"
+    },
+    {
+      "id": "8229301",
+      "status": "unavailable"
+    },
+    {
+      "id": "8229405",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "ca822bddadb25fdf10564051dfe9ceed9994fcced1b67bf85703807a8a3516ac"
+    },
+    {
+      "id": "8230213",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "eb85c84f7eefe2a4d699aea707e36167ad147054765ec31c54d90c47c5609c2c"
+    },
+    {
+      "id": "8230787",
+      "status": "unavailable"
+    },
+    {
+      "id": "8230870",
+      "status": "unavailable"
+    },
+    {
+      "id": "8230959",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "540d8fcc3cb653e6019e29b8c945b8ed62b4a5605b939b584187bd5ebbb4df42"
+    },
+    {
+      "id": "8246211",
+      "status": "unavailable"
+    },
+    {
+      "id": "8246287",
+      "status": "unavailable"
+    },
+    {
+      "id": "8246410",
+      "status": "unavailable"
+    },
+    {
+      "id": "8246531",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "cc0431200c004534736a8a6287f0471d2d9104b5e6d1443712885d9dbf76990d"
+    },
+    {
+      "id": "8246897",
+      "status": "unavailable"
+    },
+    {
+      "id": "8247007",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "5c57e40be6d26500df5e889e3db84e775d0cb6cf1d914eef0124dc9410aa6b61"
+    },
+    {
+      "id": "8314023",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "0bb28de0f3ac6e976056777df45a1167254bebe5af4d17a76c584427f23a4c14"
+    },
+    {
+      "id": "8314717",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "acc353df4dadc6b1f18e2ed9a3b83a7a5b25ce413e5572c808cfb1eaac4a6dc6"
+    },
+    {
+      "id": "8315111",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "24467ad91c3615d6d8e18a3245912e78642432664e5f4649fd9b7ba58114ca63"
+    },
+    {
+      "id": "8387028",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "1c1f8cc5fa225ae391eee542035f337f26a19bc6a453feeaa04cd6735309268b"
+    },
+    {
+      "id": "8387391",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "66c6f32bebf28b36a6bc2fbda4c74b09e78a2f2306f2777c7d7031ce7dae331c"
+    },
+    {
+      "id": "8387840",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "27cc0f766f0a78da8c46da87dfc3e603b58d905d58f13dc4762df195afcb4df0"
+    },
+    {
+      "id": "8402619",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "7d78f5e34b96159864762a08df446a8e7c98bbf395fc0c4f6378804cecfc0c1b"
+    },
+    {
+      "id": "8412639",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "c18e31a81ea7b1d211b81d7bf7cab57faab575d8df637337c115d1c26eedd49d"
+    },
+    {
+      "id": "8418787",
+      "status": "unavailable"
+    },
+    {
+      "id": "8418870",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "3687e6676ffe130d90371546f0879ac82a4aa7b6befb1dd9374d8b1a424d03ae"
+    },
+    {
+      "id": "8419732",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "f566ce70bad1240738911bf0692083789d7b005737a178be36ac075690a259a0"
+    },
+    {
+      "id": "8445534",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "4399710608a3462979afcac2f0ca62c21551c11df129ac0cd75ea34decc693c1"
+    },
+    {
+      "id": "8445809",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "57ac9dcf424040bcd8563693f4b812eff0e62bb1fc4b665fc6484f33a2440dd3"
+    },
+    {
+      "id": "8470850",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "ab3fc1bfe563d7166bcc8e747a6e96adbe3cd0095ead4e544dd685fb46be24a2"
+    },
+    {
+      "id": "8471578",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "598d04d57aa25e251f5b98e3b9687997baee5836e3cb8189f71598440bb67e47"
+    },
+    {
+      "id": "8502706",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "c92d6b7cabe0bd40eace395629c273164354c6c3deb1613dcda8b428d5d43ec5"
+    },
+    {
+      "id": "8503778",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "d45dd9068e841524fdfb746925c12abf4870b86d3c7a9ce331e370df412e7d1d"
+    },
+    {
+      "id": "8504389",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "f2b318dcfbad3c67e1745b8cf37578874f595d0aff87f671ce673ec470d6f6fe"
+    },
+    {
+      "id": "8505126",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "69bdeb5401832c21f1887e539966b773c6a47cf7d8251d6f305bd57684f9d517"
+    },
+    {
+      "id": "8505840",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "7c0e6530beead7cd8b15966c341316c8a72fd56250798f797329863ed4f8cd54"
+    },
+    {
+      "id": "8506678",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "5c06f20875cd7dab9b9bc12a4a6eaeb8582bb5c60d46e9afa1c115ad8f96c7c8"
+    },
+    {
+      "id": "8530703",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "f6592ec87332426e45a4a7bfb6be85d08bad925ae6392b06c9bc780982a829aa"
+    },
+    {
+      "id": "8530969",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "964f15d847f1e596f87b99bbeb3c7b3979e731cde4e8bc4d63192bfe488eee52"
+    },
+    {
+      "id": "8531466",
+      "status": "unavailable"
+    },
+    {
+      "id": "8531532",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "588f52c0a9c84861dbe833f513bfe378ed0743e58e765b77ca7cc71d6faf911b"
+    },
+    {
+      "id": "8532008",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "6dff543c6b290632060be7863014aa58309acdfe82d2aa1fddf03589352e7037"
+    },
+    {
+      "id": "8532570",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "56809d4e7cae5f0ae833686da69c25c8da9c3785899fc6c2f1da15e324176d20"
+    },
+    {
+      "id": "8555884",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "da1b72e858633c772c3361c8bf2799e9d25d987ea71528d5119559d18248769f"
+    },
+    {
+      "id": "8556342",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "87a9d4d56122531ed22226de270e14bb8d32686b70464f3d106cfa025dfecaef"
+    },
+    {
+      "id": "8556964",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "81375a8a23cdbb1acfddac3e5ee53c78386524332f0ec98df4c0d10ff77fbfa1"
+    },
+    {
+      "id": "8557527",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "db6289645cb9ccccb0e77f2b30e29f2c88b073cb5962d8f57273261834b71e39"
+    },
+    {
+      "id": "8578656",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "c8a93932d1b0473df046511485d4d224d3b7584abb3457d954c8f943f6e98b69"
+    },
+    {
+      "id": "8578820",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "d839203a647dde240888406c0c2a3ba9f209c672630f96992691904ca7431040"
+    },
+    {
+      "id": "8579513",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "456b205e207e9243df099f2f64bb60d9c02d8b5081d3ee729695727d36c71b1f"
+    },
+    {
+      "id": "8579765",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "848a0385b03a3207df780ae79e38f63fdb0d0356cf8b536f65bb6419e6ac4745"
+    },
+    {
+      "id": "8579881",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "cb252beecd820fa8735ee29f722030db34bcf91c98cd9e9b46d2c0d07b2ecf48"
+    },
+    {
+      "id": "8580242",
+      "status": "unavailable"
+    },
+    {
+      "id": "8580305",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "a65b1c61fe0ac15ba4d5ba7c329c3ea71b0d886c4d70b3184fddecbcf3db52e0"
+    },
+    {
+      "id": "8604860",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "40f46631ea109ee69a1518eff6b4ad6439e0ce734e0e5124efc9f97ca9cdf8ad"
+    },
+    {
+      "id": "8606590",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "51565e8b9fc2c90d5c956c6be926dae7476ea3a2bcd45deaabd7489d8ab45327"
+    },
+    {
+      "id": "8606994",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "870ca03beea04b1868239ded235ba616755ea2a92785207a78338ad88ca4ae5a"
+    },
+    {
+      "id": "8607402",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "602ed7f7c73bddcfd8d4f28ef5acf8a16382b4f0f8b7811298d3bc17a960653e"
+    },
+    {
+      "id": "8608063",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "6de06c72d6f43cb8bfb3d00d8177f9a888761344d701796c41d74a5b6a151bf1"
+    },
+    {
+      "id": "8700620",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "8b4d545b4c2c74b4b6655207cd45bf368db3d1cd2b786869e31ac11f0c850c7a"
+    },
+    {
+      "id": "8718149",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "f9185934e6af01d284a1a84d38bfabf77a0ca7dcf6ec8538870a8d464d006c01"
+    },
+    {
+      "id": "8718476",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "ca6aef225526e94c0cb8cc54882477b35c5d41efd07169591981e7e83272b21e"
+    },
+    {
+      "id": "8949131",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "fc533eefa6d8dc047f981f7559ccf9794d07a3797b0c1acbf3b9cb3aa3a4cedf"
+    },
+    {
+      "id": "8949585",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "997bde6a64e2556179e0f6850338fa57a54967dd343f1569967b1168b791d981"
+    },
+    {
+      "id": "8950202",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "91d1ddc1473d96026879fa0defcfa4cf1f1771048373b19988e55805c5eeda41"
+    },
+    {
+      "id": "8950573",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "8dba606e39d323affb097c3480c32a46af7d8baa7b6141ca56d614db2bfe6a44"
+    },
+    {
+      "id": "8951179",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "6a8e91e1a881243219d7954e6cdb2f54093a309b3820541d96ce7ca3ce216592"
+    },
+    {
+      "id": "8965944",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "af08ce5e46ad8b74c4b689539e10d77fcd95f27be1572f0c4b179c1645ae4543"
+    },
+    {
+      "id": "8966201",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "d0d902ce1c2db52f6945e550a0487a746d01734cd767aa502c7202d7794c7486"
+    },
+    {
+      "id": "8966574",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "8877765bb1edc98c655d0d21a5f8d04396367130c50dfc387dd5df6af3937c01"
+    },
+    {
+      "id": "8967057",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "7a3d23cf834332908aaeec631fa9c0425c537a56a25ab169864d8cf3be9f713c"
+    },
+    {
+      "id": "8967205",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "c8a9aee969d5ee221a91eeea317d97f20230f50cef8237c2253f11a4741b372b"
+    },
+    {
+      "id": "8967630",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "9092ea3f3b6be99581fc1bddb33663116e1309de053f9880e0bd73b723cd57f7"
+    },
+    {
+      "id": "8967977",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "345620ac79e31d68d75b705f768a91a7d7890840594e723e62e4ce476f04ace4"
+    },
+    {
+      "id": "8968356",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "9dfc565f76b1fd41167d29e7a7e3f95e96c04534dae323b9987c182fba1828dd"
+    },
+    {
+      "id": "8980716",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "63032e5feaf47ad9b053bd77718d4a81ce8730c8a48b59e53c5b9a68468f7157"
+    },
+    {
+      "id": "8995991",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "9707189cf7bdf5709504bd1921aaa39562155a074674b6d7e0fd0cabfa39eaba"
+    },
+    {
+      "id": "8996232",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "592bb8508866ced6abd4ccf5de08b9cd8f2929fe8ab8dca9efa9936c594147f7"
+    },
+    {
+      "id": "8996309",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "f9a82ed193542d7966afddca1bd62713c54d1ba16926a36ef69f506d19cf7930"
+    },
+    {
+      "id": "8996581",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "01e01d61172b15b97717a31c3e6a8aefde80d9d112b84cce9734bf7320dc4d14"
+    },
+    {
+      "id": "8996771",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "faf37a670a09ad6ccfd063c6942e9732f433c4a68c0bcbc290dac2ddefc5f65d"
+    },
+    {
+      "id": "8996981",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "17bb98e2b540d8fa67e31b6327ffb632898f0d9bb91b7ec797973f64693d5695"
+    },
+    {
+      "id": "9008853",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "1ec1003a719c4d2d5647babf72b14afe32d2f81bb4a2c230369f52da27824696"
+    },
+    {
+      "id": "9008954",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "2dfb097768113042ddf0b16fffad0fc558014edcd58ff6d2856fcef351b343ee"
+    },
+    {
+      "id": "9009129",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "22c2b36765d949e1563f7cc71d77d56bb3f23f6426d3b3e131f3b75c19ecee09"
+    },
+    {
+      "id": "9066353",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "5a0056ac1bc276880e1de9b987e910a30c691aa68af4662814da5048a975f1d0"
+    },
+    {
+      "id": "9066636",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "17991d810bc9f6f299cbe9b6259bb8af2fcc97c66156fd47cf40d8b8fe5f66f0"
+    },
+    {
+      "id": "9066881",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "83285cf833039d78aae6002cca6380c7fd448e7531488ef1990c1e7b15289c02"
+    },
+    {
+      "id": "9155210",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "27301586e0afc78df927ec83832244b90c039d99ce5eda5eeb01466b4070b2f5"
+    },
+    {
+      "id": "9155464",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "5ea30f0495048de0873fe1452997ad6e6dc8ac5b1f27546cf9224ea174d7bbf4"
+    },
+    {
+      "id": "9188173",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "0ee0f7e6456e92a60128a00514f52ff831e748a88e2007bdc7efc524ec967684"
+    },
+    {
+      "id": "9188417",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "cc83e9a317ac9f31fcd16a9565ed157221b30deba9d8224acddc47ffbb645131"
+    },
+    {
+      "id": "9188574",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "34e5d0d07dcce139829f044667eb6e6b9ab0b158596cdbce914d8ed3917e3e8e"
+    },
+    {
+      "id": "9188772",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "45ebb683861b5ade9cbc734004878ccf08e5a5db5746c3d66d13f4828aa0f286"
+    },
+    {
+      "id": "9202092",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "99463d9dd5692ad2121e57a0dfa4581dd64a5e31dae295a418c7dd3ef66f895f"
+    },
+    {
+      "id": "9202356",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "76dc23ab5d26927ee954abb905e65c0da9f83d96030e1d1e5014a57c276edea4"
+    },
+    {
+      "id": "9202701",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "fb9ec60ccb599a60a6d617bdd08ba46434fa7c8c3dafe77316023fa762be7db3"
+    },
+    {
+      "id": "9202915",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "9b346621fe6cbf7b9ce1e57c18ce5dd265d84fc71ae450b220b19a77da4074aa"
+    },
+    {
+      "id": "9203063",
+      "status": "unavailable"
+    },
+    {
+      "id": "9203121",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "15599efdbea65aa6f48d52e408372bf73932670d4f841d02b446b4d61895007d"
+    },
+    {
+      "id": "9216117",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "c38ee784fd65fdf1211112857927f0f777cb1450c692ab0df9d81e7fae25db2a"
+    },
+    {
+      "id": "9216226",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "93a82bfbe1f5455b2623f2409d30617ba261a72c85bbcb949b03ba44cbda6bc4"
+    },
+    {
+      "id": "9216423",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "255becbb4a7c4ce19ffaee5724b740d57a630e4b573688f8461fea1bea399566"
+    },
+    {
+      "id": "9216737",
+      "status": "unavailable"
+    },
+    {
+      "id": "9216783",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "37a11d58c1bc0a447f0e364c6081f00cc52932e5eb873f904fccb34e21307c85"
+    },
+    {
+      "id": "9227374",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "ddb5fa3ed88772de2eb0eff213c0e880d9dccea728efc58dd9a2f89fe7f884bb"
+    },
+    {
+      "id": "9227506",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "ab31a016ea71f4aca8ec272093a0cb98059591edcf2ec0b7f522db89465a05fd"
+    },
+    {
+      "id": "9227650",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "54d057cfaee633620902346b8a83ff2dc8dbb8354763ef300af5b505691397cb"
+    },
+    {
+      "id": "9255042",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "bfb49d9327a54e8591e89d623f5cab6d6e3d3fbd1ccb10548c45123dd2a299b4"
+    },
+    {
+      "id": "9255392",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "82a6cc838819c9bb60859a502e24df40a9b9d5749cde6961ebda58d7e17868c5"
+    },
+    {
+      "id": "9255627",
+      "status": "evaluated",
+      "winnerTeamId": 1,
+      "awardsSha256": "1fcc3cc19af34122011b9eae30f12b0379263ea8a246f0638dd9369162a42bb6"
+    },
+    {
+      "id": "9256117",
+      "status": "evaluated",
+      "winnerTeamId": 0,
+      "awardsSha256": "d16b3cd017d856479e5a08f128aa0e6fb632fa27f9335cc1e8ceef1fed132dfd"
+    }
+  ]
+}

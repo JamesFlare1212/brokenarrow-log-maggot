@@ -227,7 +227,7 @@ export class BatraceClient {
       },
     });
   }
-  analysisMatch(id: string): Promise<DataResult> {
+  analysisMatch(id: string, force = false): Promise<DataResult> {
     return this.get(
       `/api/analysis/match?matchid=${encodeURIComponent(id)}`,
       `amatch:${id}`,
@@ -240,3 +240,4 @@ export class BatraceClient {
     await Promise.allSettled([...this.pending.values()]);
   }
 }
+      { force },

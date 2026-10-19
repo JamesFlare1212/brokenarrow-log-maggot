@@ -231,7 +231,7 @@ describe('legacy migration integrity', () => {
     expect(status.imported['settings.json']).toBeGreaterThan(0);
     expect(db.config()).toMatchObject({
       theme: 'forest',
-      lang: 'ru',
+      lang: 'zh',
       autoQueryCurrentMatch: false,
       replayAudio: 'off',
       replayQuality: 240,

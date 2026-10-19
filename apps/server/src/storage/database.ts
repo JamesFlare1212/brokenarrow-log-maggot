@@ -153,7 +153,11 @@ export class Database {
   config(): PublicConfig {
     const row = this.prepare('SELECT value FROM settings WHERE key=?').get('public');
     const stored = row ? JSON.parse(String(row.value)) : {};
-    const config = configSchema.parse({ themeMode: legacyThemeMode(stored.theme), ...stored });
+    const config = configSchema.parse({
+      themeMode: legacyThemeMode(stored.theme),
+      ...stored,
+      lang: stored.lang === 'ja' || stored.lang === 'ru' ? 'zh' : stored.lang,
+    });
     config.panelOrder = includeRadar(config.panelOrder);
     return config;
   }

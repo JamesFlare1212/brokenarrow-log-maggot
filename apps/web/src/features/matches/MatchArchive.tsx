@@ -5,12 +5,14 @@ import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, formatDuration, outcomeTone } from '@ba/shared';
 import { useApp } from '../../app/state';
+import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Badge, Field, Loading, Notice, Empty, Menu, Toggle } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
+  const confirm = useConfirmation();
   const { api, state, openModal, notify } = useApp(),
     { t, locale } = useI18n(),
     matches = useRequest<Match[]>(),
@@ -280,8 +282,15 @@ export function MatchArchive() {
                         )}
                         <Button
                           variant="danger"
-                          onClick={() => {
-                            if (window.confirm(t('deleteConfirm')))
+                          onClick={async () => {
+                            if (
+                              await confirm({
+                                title: t('confirmation.deleteMatch'),
+                                description: t('confirmation.deleteHint'),
+                                detail: `${m.map} · #${m.fid || m.id}`,
+                                confirmLabel: t('delete'),
+                              })
+                            )
                               void api
                                 .invoke('matches.delete', { id: m.id })
                                 .then(() => refresh())

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import type { MatchTitleId } from '@ba/contracts';
-import { matchTitles, normalizeMatch } from '@ba/shared';
+import { matchTitles, matchTitleAwards, normalizeMatch } from '@ba/shared';
 import { awardTitles } from '../packages/shared/src/titles/engine';
 import type { RawTitleMatch, RawTitlePlayer, UnitMap } from '../packages/shared/src/titles/types';
 import { parseMatchPage } from '../apps/server/src/network/match-page';
@@ -68,6 +68,7 @@ const cases: Array<[MatchTitleId, Partial<RawTitlePlayer>]> = [
   ['bandit', { SupplyCaptured: 10000 }],
   ['canteen', { SupplyPointsConsumedByAllies: 12000 }],
   ['freeloader', { SupplyPointsConsumedFromAllies: 12000 }],
+  ['glutton', { SupplyPointsConsumed: 20000 }],
   ['courier', { SupplyAirdropped: 11000 }],
   ['refund', { TotalRefundedUnitScore: 9000 }],
   ['spender', { DestructionScore: 100, TotalSpawnedUnitScore: 100000 }],
@@ -82,6 +83,41 @@ const recipients = (awards: ReturnType<typeof awardTitles>, id: MatchTitleId) =>
     .map(([playerId]) => playerId);
 
 describe('single-match titles', () => {
+  it('awards Big Eater for positive supply consumption rather than deployment value, with stable ties', () => {
+    const raw = rawMatch({
+      '1': { TotalSpawnedUnitScore: 1000000, SupplyPointsConsumed: 1 },
+      '2': { SupplyPointsConsumed: 20000 },
+      '6': { SupplyPointsConsumed: 20000 },
+    });
+    const awards = awardTitles(raw);
+    expect(recipients(awards, 'glutton')).toEqual(['2']);
+    expect(awards['2']!.titles.find((title) => title.id === 'glutton')?.params).toEqual({
+      n: 20000,
+    });
+    expect(recipients(awardTitles(rawMatch()), 'glutton')).toEqual([]);
+  });
+
+  it('keeps Big Eater within the active eight-minute pool and the two-title display limit', () => {
+    const raw = rawMatch(
+      {
+        '1': { SupplyPointsConsumed: 30000, Deserter: true },
+        '2': { SupplyPointsConsumed: 20000 },
+      },
+      480,
+    );
+    expect(recipients(awardTitles(raw), 'glutton')).toEqual(['2']);
+    expect(recipients(awardTitles({ ...raw, TotalPlayTimeInSec: 479 }), 'glutton')).toEqual([]);
+    expect(recipients(awardTitles(raw, { excluded: new Set(['glutton']) }), 'glutton')).toEqual([]);
+    const rare = awardTitles(
+      rawMatch({
+        '1': { SupplyPointsConsumed: 30000, SupplyAirdropped: 20000, DestructionScore: 10000 },
+      }),
+      { winnerTeam: 0 },
+    );
+    expect(rare['1']!.candidates).toContain('glutton');
+    expect(rare['1']!.titles).toHaveLength(2);
+    expect(rare['1']!.titles.some((title) => title.id === 'glutton')).toBe(false);
+  });
   it.each(cases)('awards %s to the outstanding eligible player', (id, stats) => {
     const awards = awardTitles(rawMatch({ '1': stats }), { unitMap });
     expect(recipients(awards, id)).toEqual(['1']);
@@ -219,6 +255,17 @@ describe('title data integration', () => {
     readFileSync(new URL('./fixtures/batrace/match-9227650.html', import.meta.url), 'utf8'),
     '9227650',
   );
+  it('uses explicit summary supply consumption and withholds Big Eater when any value is unknown', () => {
+    const match = normalizeMatch(captured, { id: '9227650', localId: '75402' });
+    const awards = matchTitleAwards(match);
+    expect(
+      Object.values(awards).filter((award) => award.candidates.includes('glutton')),
+    ).toHaveLength(1);
+    match.players[0]!.supplyPoints = null;
+    expect(
+      Object.values(matchTitleAwards(match)).some((award) => award.candidates.includes('glutton')),
+    ).toBe(false);
+  });
 
   it('calculates real captured titles and never assigns them to live or ID-only rosters', () => {
     const match = normalizeMatch(captured, { id: '9227650', localId: '75402' });

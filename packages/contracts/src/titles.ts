@@ -19,6 +19,7 @@ export type MatchTitleId =
   | 'bandit'
   | 'canteen'
   | 'freeloader'
+  | 'glutton'
   | 'courier'
   | 'refund'
   | 'spender'

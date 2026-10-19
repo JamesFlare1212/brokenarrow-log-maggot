@@ -61,7 +61,7 @@ export const configSchema = z.object({
   lightTheme: z.enum(COLOR_SCHEMES).optional(),
   darkTheme: z.enum(COLOR_SCHEMES).optional(),
   sidebarCollapsed: z.boolean().default(false),
-  lang: z.enum(['zh', 'en', 'ja', 'ru']).default('zh'),
+  lang: z.enum(['zh', 'en']).default('zh'),
   panelOrder: panelListSchema.default([...PANELS]),
   hiddenPanels: z.array(z.enum(PANELS)).default([]),
   collapsedPanels: panelListSchema.default(['decks']),

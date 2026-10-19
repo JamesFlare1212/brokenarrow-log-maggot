@@ -359,13 +359,11 @@ main {
 .session-roster .team-1 {
   --team-color: var(--info);
 }
-.session-roster .team-title,
-.session-roster .team-rating {
+.session-roster .team-title {
   margin: 0;
   background: color-mix(in srgb, var(--team-color) 8%, var(--surface));
-}
-.session-roster .team-title {
-  padding: 12px 16px 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-subtle);
   border-radius: 10px 10px 0 0;
 }
 .session-roster .team-title h3 {
@@ -375,9 +373,6 @@ main {
   height: 16px;
   width: 4px;
   background: var(--team-color);
-}
-.session-roster .team-rating {
-  padding: 0 16px 12px;
 }
 .session-roster .team-rating strong {
   font-size: 16px;
@@ -401,12 +396,6 @@ main {
 .session-roster .player-main {
   gap: 12px;
   min-height: 48px;
-}
-.session-roster .player-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--team-color) 8%, var(--surface));
 }
 .session-roster .player-identity {
   gap: 2px;
@@ -639,6 +628,8 @@ main {
 }
 .session-banner {
   position: relative;
+  display: flex;
+  align-items: center;
   min-height: 96px;
   padding: 12px 16px;
   overflow: hidden;
@@ -649,6 +640,9 @@ main {
 .session-banner-content {
   position: relative;
   z-index: 1;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
 }
 .session-kicker {
   display: flex;
@@ -710,16 +704,17 @@ main {
   background: var(--surface-subtle);
 }
 .team-title {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 4px;
 }
 .team-title h3 {
   display: flex;
+  min-width: 0;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
   font-size: 13px;
   flex-wrap: wrap;
 }
@@ -740,10 +735,9 @@ main {
 .team-rating {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 0 0 10px;
-  margin-bottom: 3px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 6px;
+  justify-self: end;
+  white-space: nowrap;
   font-size: 11px;
   color: var(--muted);
 }
@@ -751,9 +745,11 @@ main {
   color: var(--text);
   font: 12px var(--font-mono);
 }
-.team-rating small {
-  margin-left: auto;
-  font-size: 10px;
+@media (max-width: 360px) {
+  .team-rating {
+    display: grid;
+    gap: 0;
+  }
 }
 .player-card {
   display: flex;
@@ -768,19 +764,25 @@ main {
   border-bottom: 0;
   padding-bottom: 1px;
 }
-.match-titles {
+.match-titles,
+.match-score-labels {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 4px;
   min-width: 0;
   max-width: 100%;
 }
-.match-titles .match-title-button {
+.match-titles .match-title-button,
+.match-score-labels .match-score-label-button {
   --title-color: var(--info);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(100%, var(--match-award-max-width, 100%));
   min-height: 24px;
   padding: 1px 7px;
   border: 1px solid color-mix(in srgb, var(--title-color) 22%, transparent);
@@ -795,6 +797,22 @@ main {
     background var(--motion-fast),
     border-color var(--motion-fast);
 }
+.match-award-caption {
+  flex: none;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+.match-award-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.match-score-labels .match-score-label-button {
+  --title-color: var(--accent);
+}
 .match-titles .match-title-good {
   --title-color: var(--success);
 }
@@ -802,7 +820,9 @@ main {
   --title-color: var(--danger);
 }
 .match-title-button:hover,
-.match-title-button[aria-expanded='true'] {
+.match-title-button[aria-expanded='true'],
+.match-score-label-button:hover,
+.match-score-label-button[aria-expanded='true'] {
   border-color: color-mix(in srgb, var(--title-color) 48%, transparent);
   background: color-mix(in srgb, var(--title-color) 13%, var(--surface));
 }
@@ -812,7 +832,7 @@ main {
 .match-player-heading {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px 8px;
 }
 .dialog.match-dialog {
@@ -947,8 +967,7 @@ main {
 .match-player-heading .match-player-name {
   font-size: 13px;
   font-weight: 600;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 @media (max-width: 760px) {
   .match-summary {
@@ -1021,11 +1040,27 @@ main {
 .player-heading {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 5px;
   font-size: 13px;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+.player-heading > .player-name-button,
+.match-player-heading > .player-name-button {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+.player-heading:has(.match-titles, .match-score-labels) > .player-name-button,
+.match-player-heading:has(.match-titles, .match-score-labels) > .player-name-button {
+  max-width: var(--match-player-name-max-width, 40%);
+}
+.player-heading > .player-name-button .player-name,
+.match-player-heading > .player-name-button .player-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .player-name-button {
   display: inline-flex;

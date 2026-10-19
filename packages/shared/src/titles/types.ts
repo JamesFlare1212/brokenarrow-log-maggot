@@ -21,6 +21,7 @@ export interface RawTitlePlayer {
   SupplyCapturedByEnemy?: number;
   SupplyCaptured?: number;
   SupplyPointsConsumedByAllies?: number;
+  SupplyPointsConsumed?: number;
   SupplyPointsConsumedFromAllies?: number;
   SupplyAirdropped?: number;
   DestructionFriendlyFireCost?: number;

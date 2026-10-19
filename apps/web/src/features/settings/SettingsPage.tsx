@@ -357,8 +357,6 @@ export function SettingsPage() {
                   >
                     <option value="zh">中文</option>
                     <option value="en">English</option>
-                    <option value="ja">日本語</option>
-                    <option value="ru">Русский</option>
                   </select>
                 </section>
                 <section

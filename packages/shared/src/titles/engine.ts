@@ -27,6 +27,7 @@ export const TITLES: Record<MatchTitle['id'], TitleKind> = {
   courier: 'neutral',
   refund: 'neutral',
   backstabbed: 'neutral',
+  glutton: 'neutral',
   atm: 'bad',
   scraper: 'bad',
   boxed: 'bad',
@@ -65,6 +66,7 @@ export interface TitleMetrics {
   convoy: number;
   bandit: number;
   canteen: number;
+  supplyConsumed: number;
   freeloader: number;
   airdrop: number;
   ffDestroyCost: number;
@@ -112,6 +114,7 @@ const DEFAULT_FREQ: Record<string, number> = {
   tryhard: 0.16,
   passenger: 0.1,
   lonewolf: 0.16,
+  glutton: 1,
 };
 const freqOf = (id: string): number =>
   ((MODEL.titleFreq as Record<string, number>)[id] ?? DEFAULT_FREQ[id] ?? 0.1) / PLAYERS_PER_MATCH;
@@ -332,7 +335,10 @@ export const DEFAULT_T: Record<string, number> = {
   crash: 3000,
   artygod: 0.2,
 };
-const thresholds = (): Record<string, number> => ({ ...DEFAULT_T, ...(MODEL.titles || {}) });
+export const titleThresholds = (): Record<string, number> => ({
+  ...DEFAULT_T,
+  ...(MODEL.titles || {}),
+});
 
 export function titleMetrics(mi: MatchInfo, unitMap?: UnitMap): TitleMetrics[] {
   const um = unitMap || MODEL.units || {};
@@ -415,6 +421,7 @@ export function titleMetrics(mi: MatchInfo, unitMap?: UnitMap): TitleMetrics[] {
       convoy: num(p.SupplyCapturedByEnemy),
       bandit: num(p.SupplyCaptured),
       canteen: num(p.SupplyPointsConsumedByAllies),
+      supplyConsumed: num(p.SupplyPointsConsumed),
       freeloader: num(p.SupplyPointsConsumedFromAllies),
       airdrop: num(p.SupplyAirdropped),
       ffDestroyCost: num(p.DestructionFriendlyFireCost),
@@ -473,7 +480,7 @@ export function awardTitles(
     excluded?: ReadonlySet<MatchTitle['id']>;
   } = {},
 ): Record<string, TitleAward> {
-  const t = { ...thresholds(), ...(opts.thresholds || {}) };
+  const t = { ...titleThresholds(), ...(opts.thresholds || {}) };
   const ms = titleMetrics(mi, opts.unitMap);
   const out: Record<string, TitleAward> = {};
   if (!ms.length || new Set(ms.map((m) => m.id)).size !== ms.length) return out;
@@ -566,6 +573,12 @@ export function awardTitles(
     if (v == null || !Number.isFinite(v)) continue;
     if (s.dir > 0 ? v < th : v > th) continue;
     give(best, s.id, rarityOf(s, v, th), s.params(best));
+  }
+
+  if (!opts.excluded?.has('glutton')) {
+    const top = [...livePool(ms)].sort((a, b) => b.supplyConsumed - a.supplyConsumed)[0];
+    if (top && top.supplyConsumed > 0)
+      give(top, 'glutton', freqOf('glutton'), { n: Math.round(top.supplyConsumed) });
   }
 
   const byPlayer: Record<string, typeof cand> = {};

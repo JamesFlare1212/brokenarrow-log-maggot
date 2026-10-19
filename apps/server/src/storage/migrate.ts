@@ -162,6 +162,7 @@ function importSettings(db: Database, raw: Record<string, unknown>, warnings: st
   };
   const candidate = {
     ...raw,
+    lang: raw.lang === 'ja' || raw.lang === 'ru' ? 'zh' : raw.lang,
     themeMode: raw.themeMode ?? legacyThemeMode(raw.theme),
     replayQuality: normalizeQuality(raw.replayQuality),
     replayFps: normalizeFps(raw.replayFps),

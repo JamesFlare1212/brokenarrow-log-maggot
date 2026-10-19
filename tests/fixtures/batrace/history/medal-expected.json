@@ -1,0 +1,1742 @@
+{
+  "upstream": {
+    "repository": "https://github.com/Zawinzala/Broken-Arrow-Maggot",
+    "revision": "f4e1d5b2cfca6944227381d973b38b4782699533",
+    "file": "index.html",
+    "sha256": "e984d5bd1db24842496d55186e1f79c5787059ec226adcd86a12b9cd6675f4f7"
+  },
+  "scope": {
+    "requested": 114,
+    "compared": 114,
+    "unavailable": 0,
+    "incomplete": 0,
+    "players": 1140
+  },
+  "titles": {
+    "triggeredKinds": 28,
+    "candidates": 624,
+    "awarded": 595,
+    "localCandidates": 89,
+    "localAwarded": 84,
+    "playersWithAwards": 472,
+    "counts": {
+      "carry": {
+        "candidates": 114,
+        "awarded": 108,
+        "matches": 108,
+        "localCandidates": 23,
+        "localAwarded": 23
+      },
+      "blame": {
+        "candidates": 83,
+        "awarded": 80,
+        "matches": 80,
+        "localCandidates": 3,
+        "localAwarded": 3
+      },
+      "deserter": {
+        "candidates": 40,
+        "awarded": 40,
+        "matches": 32,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "tryhard": {
+        "candidates": 14,
+        "awarded": 10,
+        "matches": 10,
+        "localCandidates": 3,
+        "localAwarded": 2
+      },
+      "passenger": {
+        "candidates": 21,
+        "awarded": 21,
+        "matches": 21,
+        "localCandidates": 2,
+        "localAwarded": 2
+      },
+      "lonewolf": {
+        "candidates": 20,
+        "awarded": 18,
+        "matches": 17,
+        "localCandidates": 6,
+        "localAwarded": 6
+      },
+      "reaper": {
+        "candidates": 5,
+        "awarded": 5,
+        "matches": 5,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "untouched": {
+        "candidates": 14,
+        "awarded": 14,
+        "matches": 14,
+        "localCandidates": 2,
+        "localAwarded": 2
+      },
+      "landlord": {
+        "candidates": 4,
+        "awarded": 4,
+        "matches": 4,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "artygod": {
+        "candidates": 1,
+        "awarded": 1,
+        "matches": 1,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "bandit": {
+        "candidates": 11,
+        "awarded": 11,
+        "matches": 11,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "canteen": {
+        "candidates": 18,
+        "awarded": 18,
+        "matches": 18,
+        "localCandidates": 4,
+        "localAwarded": 4
+      },
+      "weightlifter": {
+        "candidates": 8,
+        "awarded": 8,
+        "matches": 8,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "killsteal": {
+        "candidates": 9,
+        "awarded": 9,
+        "matches": 9,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "demolition": {
+        "candidates": 24,
+        "awarded": 23,
+        "matches": 23,
+        "localCandidates": 3,
+        "localAwarded": 3
+      },
+      "courier": {
+        "candidates": 4,
+        "awarded": 3,
+        "matches": 3,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "refund": {
+        "candidates": 18,
+        "awarded": 18,
+        "matches": 18,
+        "localCandidates": 5,
+        "localAwarded": 5
+      },
+      "backstabbed": {
+        "candidates": 6,
+        "awarded": 6,
+        "matches": 6,
+        "localCandidates": 1,
+        "localAwarded": 1
+      },
+      "glutton": {
+        "candidates": 110,
+        "awarded": 99,
+        "matches": 99,
+        "localCandidates": 25,
+        "localAwarded": 22
+      },
+      "atm": {
+        "candidates": 13,
+        "awarded": 13,
+        "matches": 13,
+        "localCandidates": 2,
+        "localAwarded": 2
+      },
+      "scraper": {
+        "candidates": 11,
+        "awarded": 11,
+        "matches": 11,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "boxed": {
+        "candidates": 19,
+        "awarded": 18,
+        "matches": 18,
+        "localCandidates": 2,
+        "localAwarded": 1
+      },
+      "camper": {
+        "candidates": 8,
+        "awarded": 8,
+        "matches": 8,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "convoy": {
+        "candidates": 7,
+        "awarded": 7,
+        "matches": 7,
+        "localCandidates": 0,
+        "localAwarded": 0
+      },
+      "freeloader": {
+        "candidates": 22,
+        "awarded": 22,
+        "matches": 22,
+        "localCandidates": 4,
+        "localAwarded": 4
+      },
+      "spender": {
+        "candidates": 8,
+        "awarded": 8,
+        "matches": 8,
+        "localCandidates": 2,
+        "localAwarded": 2
+      },
+      "traitor": {
+        "candidates": 5,
+        "awarded": 5,
+        "matches": 5,
+        "localCandidates": 1,
+        "localAwarded": 1
+      },
+      "crash": {
+        "candidates": 7,
+        "awarded": 7,
+        "matches": 7,
+        "localCandidates": 1,
+        "localAwarded": 1
+      }
+    }
+  },
+  "medals": {
+    "triggeredKinds": 6,
+    "candidates": 1638,
+    "awarded": 1467,
+    "localCandidates": 233,
+    "localAwarded": 203,
+    "playersWithAwards": 778,
+    "counts": {
+      "destruction": {
+        "candidates": 268,
+        "awarded": 251,
+        "matches": 114,
+        "localCandidates": 55,
+        "localAwarded": 51
+      },
+      "damage": {
+        "candidates": 265,
+        "awarded": 238,
+        "matches": 114,
+        "localCandidates": 55,
+        "localAwarded": 51
+      },
+      "dlRatio": {
+        "candidates": 262,
+        "awarded": 221,
+        "matches": 114,
+        "localCandidates": 38,
+        "localAwarded": 31
+      },
+      "efficiency": {
+        "candidates": 275,
+        "awarded": 244,
+        "matches": 111,
+        "localCandidates": 37,
+        "localAwarded": 28
+      },
+      "objectives": {
+        "candidates": 334,
+        "awarded": 309,
+        "matches": 114,
+        "localCandidates": 15,
+        "localAwarded": 15
+      },
+      "supply": {
+        "candidates": 234,
+        "awarded": 204,
+        "matches": 109,
+        "localCandidates": 33,
+        "localAwarded": 27
+      }
+    }
+  },
+  "scoreLabels": {
+    "rule": "match-maximum-single",
+    "triggeredKinds": 6,
+    "candidates": 681,
+    "awarded": 579,
+    "localCandidates": 105,
+    "localAwarded": 91,
+    "playersWithAwards": 415,
+    "counts": {
+      "destruction": {
+        "candidates": 114,
+        "awarded": 114,
+        "matches": 114,
+        "localCandidates": 25,
+        "localAwarded": 25
+      },
+      "damage": {
+        "candidates": 114,
+        "awarded": 114,
+        "matches": 114,
+        "localCandidates": 29,
+        "localAwarded": 29
+      },
+      "dlRatio": {
+        "candidates": 114,
+        "awarded": 97,
+        "matches": 97,
+        "localCandidates": 18,
+        "localAwarded": 14
+      },
+      "efficiency": {
+        "candidates": 114,
+        "awarded": 73,
+        "matches": 73,
+        "localCandidates": 11,
+        "localAwarded": 6
+      },
+      "objectives": {
+        "candidates": 114,
+        "awarded": 89,
+        "matches": 89,
+        "localCandidates": 4,
+        "localAwarded": 2
+      },
+      "supply": {
+        "candidates": 111,
+        "awarded": 92,
+        "matches": 92,
+        "localCandidates": 18,
+        "localAwarded": 15
+      }
+    }
+  },
+  "overlaps": {
+    "carry": {
+      "destruction": {
+        "candidates": 88,
+        "awarded": 80
+      },
+      "damage": {
+        "candidates": 52,
+        "awarded": 36
+      },
+      "dlRatio": {
+        "candidates": 92,
+        "awarded": 82
+      },
+      "efficiency": {
+        "candidates": 84,
+        "awarded": 65
+      },
+      "objectives": {
+        "candidates": 29,
+        "awarded": 15
+      },
+      "supply": {
+        "candidates": 28,
+        "awarded": 12
+      }
+    },
+    "blame": {
+      "destruction": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "damage": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "dlRatio": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "objectives": {
+        "candidates": 26,
+        "awarded": 25
+      },
+      "supply": {
+        "candidates": 11,
+        "awarded": 11
+      }
+    },
+    "deserter": {
+      "destruction": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "damage": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "dlRatio": {
+        "candidates": 3,
+        "awarded": 2
+      },
+      "efficiency": {
+        "candidates": 1,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 11,
+        "awarded": 11
+      },
+      "supply": {
+        "candidates": 5,
+        "awarded": 4
+      }
+    },
+    "tryhard": {
+      "destruction": {
+        "candidates": 9,
+        "awarded": 7
+      },
+      "damage": {
+        "candidates": 6,
+        "awarded": 4
+      },
+      "dlRatio": {
+        "candidates": 14,
+        "awarded": 10
+      },
+      "efficiency": {
+        "candidates": 13,
+        "awarded": 6
+      },
+      "objectives": {
+        "candidates": 5,
+        "awarded": 1
+      },
+      "supply": {
+        "candidates": 4,
+        "awarded": 2
+      }
+    },
+    "passenger": {
+      "destruction": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "dlRatio": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "supply": {
+        "candidates": 3,
+        "awarded": 3
+      }
+    },
+    "lonewolf": {
+      "destruction": {
+        "candidates": 14,
+        "awarded": 13
+      },
+      "damage": {
+        "candidates": 10,
+        "awarded": 9
+      },
+      "dlRatio": {
+        "candidates": 20,
+        "awarded": 12
+      },
+      "efficiency": {
+        "candidates": 15,
+        "awarded": 9
+      },
+      "objectives": {
+        "candidates": 7,
+        "awarded": 3
+      },
+      "supply": {
+        "candidates": 4,
+        "awarded": 2
+      }
+    },
+    "reaper": {
+      "destruction": {
+        "candidates": 5,
+        "awarded": 5
+      },
+      "damage": {
+        "candidates": 4,
+        "awarded": 4
+      },
+      "dlRatio": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "efficiency": {
+        "candidates": 5,
+        "awarded": 2
+      },
+      "objectives": {
+        "candidates": 4,
+        "awarded": 1
+      },
+      "supply": {
+        "candidates": 1,
+        "awarded": 0
+      }
+    },
+    "untouched": {
+      "destruction": {
+        "candidates": 4,
+        "awarded": 4
+      },
+      "damage": {
+        "candidates": 1,
+        "awarded": 1
+      },
+      "dlRatio": {
+        "candidates": 14,
+        "awarded": 14
+      },
+      "efficiency": {
+        "candidates": 8,
+        "awarded": 7
+      },
+      "objectives": {
+        "candidates": 6,
+        "awarded": 4
+      },
+      "supply": {
+        "candidates": 3,
+        "awarded": 2
+      }
+    },
+    "landlord": {
+      "destruction": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "dlRatio": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 4,
+        "awarded": 4
+      },
+      "supply": {
+        "candidates": 0,
+        "awarded": 0
+      }
+    },
+    "artygod": {
+      "destruction": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "dlRatio": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "supply": {
+        "candidates": 0,
+        "awarded": 0
+      }
+    },
+    "bandit": {
+      "destruction": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "damage": {
+        "candidates": 3,
+        "awarded": 1
+      },
+      "dlRatio": {
+        "candidates": 4,
+        "awarded": 4
+      },
+      "efficiency": {
+        "candidates": 5,
+        "awarded": 3
+      },
+      "objectives": {
+        "candidates": 5,
+        "awarded": 5
+      },
+      "supply": {
+        "candidates": 1,
+        "awarded": 0
+      }
+    },
+    "canteen": {
+      "destruction": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "damage": {
+        "candidates": 5,
+        "awarded": 4
+      },
+      "dlRatio": {
+        "candidates": 4,
+        "awarded": 3
+      },
+      "efficiency": {
+        "candidates": 3,
+        "awarded": 2
+      },
+      "objectives": {
+        "candidates": 6,
+        "awarded": 6
+      },
+      "supply": {
+        "candidates": 18,
+        "awarded": 16
+      }
+    },
+    "weightlifter": {
+      "destruction": {
+        "candidates": 5,
+        "awarded": 5
+      },
+      "damage": {
+        "candidates": 5,
+        "awarded": 5
+      },
+      "dlRatio": {
+        "candidates": 2,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 4,
+        "awarded": 4
+      },
+      "objectives": {
+        "candidates": 3,
+        "awarded": 2
+      },
+      "supply": {
+        "candidates": 1,
+        "awarded": 0
+      }
+    },
+    "killsteal": {
+      "destruction": {
+        "candidates": 7,
+        "awarded": 7
+      },
+      "damage": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "dlRatio": {
+        "candidates": 7,
+        "awarded": 7
+      },
+      "efficiency": {
+        "candidates": 7,
+        "awarded": 7
+      },
+      "objectives": {
+        "candidates": 2,
+        "awarded": 1
+      },
+      "supply": {
+        "candidates": 1,
+        "awarded": 0
+      }
+    },
+    "demolition": {
+      "destruction": {
+        "candidates": 6,
+        "awarded": 6
+      },
+      "damage": {
+        "candidates": 10,
+        "awarded": 10
+      },
+      "dlRatio": {
+        "candidates": 7,
+        "awarded": 7
+      },
+      "efficiency": {
+        "candidates": 4,
+        "awarded": 2
+      },
+      "objectives": {
+        "candidates": 4,
+        "awarded": 3
+      },
+      "supply": {
+        "candidates": 5,
+        "awarded": 5
+      }
+    },
+    "courier": {
+      "destruction": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "dlRatio": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 1,
+        "awarded": 1
+      },
+      "objectives": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "supply": {
+        "candidates": 0,
+        "awarded": 0
+      }
+    },
+    "refund": {
+      "destruction": {
+        "candidates": 8,
+        "awarded": 7
+      },
+      "damage": {
+        "candidates": 7,
+        "awarded": 7
+      },
+      "dlRatio": {
+        "candidates": 9,
+        "awarded": 9
+      },
+      "efficiency": {
+        "candidates": 4,
+        "awarded": 1
+      },
+      "objectives": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "supply": {
+        "candidates": 2,
+        "awarded": 2
+      }
+    },
+    "backstabbed": {
+      "destruction": {
+        "candidates": 3,
+        "awarded": 2
+      },
+      "damage": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "dlRatio": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "efficiency": {
+        "candidates": 1,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 1,
+        "awarded": 0
+      },
+      "supply": {
+        "candidates": 2,
+        "awarded": 2
+      }
+    },
+    "glutton": {
+      "destruction": {
+        "candidates": 41,
+        "awarded": 31
+      },
+      "damage": {
+        "candidates": 36,
+        "awarded": 27
+      },
+      "dlRatio": {
+        "candidates": 46,
+        "awarded": 33
+      },
+      "efficiency": {
+        "candidates": 48,
+        "awarded": 36
+      },
+      "objectives": {
+        "candidates": 32,
+        "awarded": 24
+      },
+      "supply": {
+        "candidates": 31,
+        "awarded": 21
+      }
+    },
+    "atm": {
+      "destruction": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "dlRatio": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 3,
+        "awarded": 3
+      },
+      "supply": {
+        "candidates": 0,
+        "awarded": 0
+      }
+    },
+    "scraper": {
+      "destruction": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "dlRatio": {
+        "candidates": 1,
+        "awarded": 1
+      },
+      "efficiency": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 4,
+        "awarded": 4
+      },
+      "supply": {
+        "candidates": 4,
+        "awarded": 4
+      }
+    },
+    "boxed": {
+      "destruction": {
+        "candidates": 8,
+        "awarded": 7
+      },
+      "damage": {
+        "candidates": 8,
+        "awarded": 5
+      },
+      "dlRatio": {
+        "candidates": 6,
+        "awarded": 4
+      },
+      "efficiency": {
+        "candidates": 7,
+        "awarded": 7
+      },
+      "objectives": {
+        "candidates": 3,
+        "awarded": 2
+      },
+      "supply": {
+        "candidates": 7,
+        "awarded": 4
+      }
+    },
+    "camper": {
+      "destruction": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "dlRatio": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "efficiency": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "supply": {
+        "candidates": 2,
+        "awarded": 2
+      }
+    },
+    "convoy": {
+      "destruction": {
+        "candidates": 1,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "dlRatio": {
+        "candidates": 3,
+        "awarded": 2
+      },
+      "efficiency": {
+        "candidates": 1,
+        "awarded": 1
+      },
+      "objectives": {
+        "candidates": 1,
+        "awarded": 1
+      },
+      "supply": {
+        "candidates": 2,
+        "awarded": 2
+      }
+    },
+    "freeloader": {
+      "destruction": {
+        "candidates": 8,
+        "awarded": 8
+      },
+      "damage": {
+        "candidates": 7,
+        "awarded": 7
+      },
+      "dlRatio": {
+        "candidates": 7,
+        "awarded": 5
+      },
+      "efficiency": {
+        "candidates": 11,
+        "awarded": 11
+      },
+      "objectives": {
+        "candidates": 10,
+        "awarded": 7
+      },
+      "supply": {
+        "candidates": 5,
+        "awarded": 4
+      }
+    },
+    "spender": {
+      "destruction": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "damage": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "dlRatio": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "objectives": {
+        "candidates": 4,
+        "awarded": 4
+      },
+      "supply": {
+        "candidates": 1,
+        "awarded": 1
+      }
+    },
+    "traitor": {
+      "destruction": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "damage": {
+        "candidates": 2,
+        "awarded": 1
+      },
+      "dlRatio": {
+        "candidates": 2,
+        "awarded": 2
+      },
+      "efficiency": {
+        "candidates": 2,
+        "awarded": 1
+      },
+      "objectives": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "supply": {
+        "candidates": 2,
+        "awarded": 0
+      }
+    },
+    "crash": {
+      "destruction": {
+        "candidates": 1,
+        "awarded": 1
+      },
+      "damage": {
+        "candidates": 2,
+        "awarded": 1
+      },
+      "dlRatio": {
+        "candidates": 0,
+        "awarded": 0
+      },
+      "efficiency": {
+        "candidates": 1,
+        "awarded": 1
+      },
+      "objectives": {
+        "candidates": 1,
+        "awarded": 1
+      },
+      "supply": {
+        "candidates": 2,
+        "awarded": 2
+      }
+    }
+  },
+  "matches": [
+    {
+      "id": "8105853",
+      "status": "compared",
+      "awardsSha256": "7378f9f1af947f002c1de73f60e2694abb9ed561476adca6a4b0723d998ba517",
+      "scoreLabelsSha256": "6f352820202d2d92d154f94b3d29786543f2d750aa2ecb79df66ad233ae8bfd4"
+    },
+    {
+      "id": "8106652",
+      "status": "compared",
+      "awardsSha256": "02152c94c1a2f464cb8b3d63a6f6766eee818fbc3d7e6249987128e37e77e2a5",
+      "scoreLabelsSha256": "ea5cfa7ab9f7bb443f7d62e375bbe4248993af2a9305d2b604e30a0f351affe8"
+    },
+    {
+      "id": "8107156",
+      "status": "compared",
+      "awardsSha256": "5583c2660b9e28f8b143ed83ec947b2fc0c92d40b4177ae0177f0e7dee675d1d",
+      "scoreLabelsSha256": "f1671a02c2880b57b94f9aab1108e0c70a9da2ed9074db54e8bccf0d0867efa8"
+    },
+    {
+      "id": "8120585",
+      "status": "compared",
+      "awardsSha256": "288035b8359926fe77d2de7cadffcf795b0f7e67624ebe7eb7368e337d53221e",
+      "scoreLabelsSha256": "9fae30c516227c80c4948eefbe0dc072db0cd2d06d097395461ea3ac7e2fb573"
+    },
+    {
+      "id": "8121607",
+      "status": "compared",
+      "awardsSha256": "e3aff9b33b9fcabf997e4f298b129a6106aa9ea36f9a0f82fbe920baf9250b3b",
+      "scoreLabelsSha256": "91a3306dd976f52d775ceb823723a66ad202cd8f866b16f3304342905658d9ed"
+    },
+    {
+      "id": "8122535",
+      "status": "compared",
+      "awardsSha256": "473ba72608db8fe50c36158470aa45a7bcfc738f17fd0b6532fe3956be1c402a",
+      "scoreLabelsSha256": "494d5acb9e9e8ffc3b75d5afeea75e812844c42a5ec962aced8ed396007ed82d"
+    },
+    {
+      "id": "8139302",
+      "status": "compared",
+      "awardsSha256": "0361002a49bfa7cddbc99496e944ec3413341e795c24aa664cb4923e7a874775",
+      "scoreLabelsSha256": "0fa06adcba4e721e0abbe25633ced40b29dd5eaf60472037a9de755a8749e28f"
+    },
+    {
+      "id": "8140049",
+      "status": "compared",
+      "awardsSha256": "3dce980ab50aea83f69c535c73ca237a3940886c7e21e3ebaa2608248289469b",
+      "scoreLabelsSha256": "ffe314187a48a20d64dcb20c039568391d593e322034fc2965212afcca9506bb"
+    },
+    {
+      "id": "8140268",
+      "status": "compared",
+      "awardsSha256": "0417f68955917a97064306d45dc304e076df4303d3e3af6e21e83b066cf69f0b",
+      "scoreLabelsSha256": "5966d926515eceeb11db98961409257d8c9d9c25e0a4561f907312b1d666bc40"
+    },
+    {
+      "id": "8172125",
+      "status": "compared",
+      "awardsSha256": "b56c94286ee01eac84a7546781704afab47f1af3802e9702ea67e56a8d7b4c4e",
+      "scoreLabelsSha256": "e4f6e60fac9d9e52d740c317e9cc4f370680dd84770870f05ad612d862e82fe6"
+    },
+    {
+      "id": "8172912",
+      "status": "compared",
+      "awardsSha256": "ccc3259dce3b310d6df15271d24b5be6e274399415a1356e2b2295683480816d",
+      "scoreLabelsSha256": "64fea3117bb5d70c517682f476830a405cdf365fbedcd6719028405155d843e7"
+    },
+    {
+      "id": "8196555",
+      "status": "compared",
+      "awardsSha256": "f75c7ba50b1e394933d06ab4049243b9c208ef5c55722d547f38800db11dd4ea",
+      "scoreLabelsSha256": "3d8c25929ef5a8110baddaf80132c7a5a9c8cafd4678a8ce291c86cb9f7c42a5"
+    },
+    {
+      "id": "8209795",
+      "status": "compared",
+      "awardsSha256": "ec2c24837fea468999f9c4f644b163d26f00f9d8042c73393aa90e7ed54d21e2",
+      "scoreLabelsSha256": "ad8a70f099a3b286dc5c53a5e8b9fe4ffe80355d1af020edfb865d96ef35e60a"
+    },
+    {
+      "id": "8211224",
+      "status": "compared",
+      "awardsSha256": "7edb3165cda8c26dc8d4d62e2ada07b66c34116eea78d146bafe2de852bc6e17",
+      "scoreLabelsSha256": "51c16cefdcdb191416e387405e6b3be3acbfeee28bed73687884a206f8e962d8"
+    },
+    {
+      "id": "8211871",
+      "status": "compared",
+      "awardsSha256": "7eee15c990323b2af483600acd17d40d15e27c25fc794c26ecd3d9d0cab09477",
+      "scoreLabelsSha256": "c2bcd2785d05ebafd4098cbea268016de9b18af223c53d97f3eef88d86e82fea"
+    },
+    {
+      "id": "8221541",
+      "status": "compared",
+      "awardsSha256": "4a7bb2ac523c79e54311bf6ef04d2dbc8109e3ef8528df118e45feda1aa1a7f6",
+      "scoreLabelsSha256": "fa1ef1eb245269a24c1f56a9d070978a6ac842419d3ed9980ccbb5a1f2ff2d7a"
+    },
+    {
+      "id": "8228439",
+      "status": "compared",
+      "awardsSha256": "28597acd1f10c7a711e06b7fb10f8fce7fb7c8f489c923bdb1bd2175a6f38d0c",
+      "scoreLabelsSha256": "c30c1eb77ac0194ba92e185bf0096f4a4095e92ec8caf84d90581058df225c6f"
+    },
+    {
+      "id": "8228766",
+      "status": "compared",
+      "awardsSha256": "fe4c7d76be087d098b37a3e26aa56ed3a5a7b08d7a88f151bbdc998ceb3ed909",
+      "scoreLabelsSha256": "efa867223b46d5437e94817c2adf2bf5b3f40c34bd16e0cd5cc5025783bd1474"
+    },
+    {
+      "id": "8229405",
+      "status": "compared",
+      "awardsSha256": "48795baeb1465f90494793cb5b09d77f350debb80639b2605eadcd1aa936910e",
+      "scoreLabelsSha256": "1028b9c4b1b3bf6e5ecf11ba1c19b88f45f637b2e10aed0447e2720dab7215d6"
+    },
+    {
+      "id": "8230213",
+      "status": "compared",
+      "awardsSha256": "6f8a82116e1858f8e5502571f9a2eb0c86a5327dc46bb15381743aac0c48c82a",
+      "scoreLabelsSha256": "26eb1eda9e5392e2d8b0f5e34c6f4915b5875725d29e84019b72526b2f2acfef"
+    },
+    {
+      "id": "8230959",
+      "status": "compared",
+      "awardsSha256": "cb4c89bf4344cbd1c97d991496c48a7f14951e02f7e6b3d743a9f3b9bb3d9985",
+      "scoreLabelsSha256": "932e0009275308f1b26813787f287a0b180cf3c8f01165369f4eb09483c060e7"
+    },
+    {
+      "id": "8246531",
+      "status": "compared",
+      "awardsSha256": "26540ae5ed246a07d8b8924dbef9f0fa4dbc4bb294153cb48cd91da43190b647",
+      "scoreLabelsSha256": "9627b000582ca21ca99776ab40d8c13320418ae9ed46157e4bed501da2bde8d8"
+    },
+    {
+      "id": "8247007",
+      "status": "compared",
+      "awardsSha256": "2801db2f0b55c1139c59ea446b8bcb439e1fd7e63ff0cf75e48ed6df0a727c10",
+      "scoreLabelsSha256": "6a559bb1e5cfc7fa114f6536c5dd53bdbb8df793f857cf177ae9ebdbc2fa5bc4"
+    },
+    {
+      "id": "8314023",
+      "status": "compared",
+      "awardsSha256": "903d0fca07307462e8b04bf39c6f3a3a7b8462e933be278302af6e4e94fe85fc",
+      "scoreLabelsSha256": "bcc6a9d1d10a24145336f3bbb134e4bb13118f4a20401165ae2bd6a341c81aed"
+    },
+    {
+      "id": "8314717",
+      "status": "compared",
+      "awardsSha256": "42f31cd7390de420982e8e0faa3f3812d34400a865ec0b095dc821f74f03beb0",
+      "scoreLabelsSha256": "8c97b79a4e30f30edc36aa96e827c11facfeaa46cdb5d2ce910c2cd1f19a9f82"
+    },
+    {
+      "id": "8315111",
+      "status": "compared",
+      "awardsSha256": "30bb259ee3832c5a1dda0312683951274223aa877441dcdc7628fa1a1a4001bc",
+      "scoreLabelsSha256": "e7e262be2e02493cc0e54e47b0710323afb5a68121abf2cd42d95aad9eb9af21"
+    },
+    {
+      "id": "8387028",
+      "status": "compared",
+      "awardsSha256": "85b47ef1e34670a11ade2213ec66b18e96001a06700d6cf5fbc62ad9781a5676",
+      "scoreLabelsSha256": "a095754244966a29725730878ee672635ad7e77d61e773288f8db8e5e049ecd2"
+    },
+    {
+      "id": "8387391",
+      "status": "compared",
+      "awardsSha256": "cb4bc1eeb509bf255a26d46678074341cd2a67da64843d69a015347b36dd1b46",
+      "scoreLabelsSha256": "be3779b25b7a54e951c9ca8fc08afcd5873bb1394a6e8884842a4242a7e486e4"
+    },
+    {
+      "id": "8387840",
+      "status": "compared",
+      "awardsSha256": "a39d48bb8b3937acb2c76f54f8e36d83e45666b2279d60ef1a5698cc133d1e62",
+      "scoreLabelsSha256": "a7c3fd04c2f7238141649c391392a268ff83cf0ea32ad305b6da2ecf0a458863"
+    },
+    {
+      "id": "8402619",
+      "status": "compared",
+      "awardsSha256": "a7c9fc62dfc425fee29f91ad279606cdbc94dca4b74e3ee6f5f083b4fef1a8d0",
+      "scoreLabelsSha256": "3c356675fc4db508723bfb4ebdca8ba84e1f90c174ab5bca6b532395210e454f"
+    },
+    {
+      "id": "8412639",
+      "status": "compared",
+      "awardsSha256": "3267de0bf24179d5d14e943eb2ba007c612603de169e0969def386968d72af27",
+      "scoreLabelsSha256": "e85d06196f518b1bdf03c72c6927412506411ab234db9ae2ffc16643346688e7"
+    },
+    {
+      "id": "8418870",
+      "status": "compared",
+      "awardsSha256": "a0ba6713be61fd174063dcfc1b592599168ccbb067b4041951c89a1e7774860f",
+      "scoreLabelsSha256": "0a02f94310edeec6f54df56594dc562c830422dd6b42381762b97ae8e82f08e0"
+    },
+    {
+      "id": "8419732",
+      "status": "compared",
+      "awardsSha256": "f4100a618b28a81da4fbb9c27e4b5954f5130de87d3d7db55c9e95ae34cd7baf",
+      "scoreLabelsSha256": "d6c927534088ab9c1b82901a5664368edaf54566b27a2eaa6cb0e71af7c23b1f"
+    },
+    {
+      "id": "8445534",
+      "status": "compared",
+      "awardsSha256": "d35891065882d1e00ac80211bbb2196344ab1078ff75f9e1bcc7567b5d6ccc20",
+      "scoreLabelsSha256": "b68baad057f750ad68577362f96e07c3d51a1f84660ff886eb41cb5eb9834e8e"
+    },
+    {
+      "id": "8445809",
+      "status": "compared",
+      "awardsSha256": "da22e4938d07102041844bb40ed16de09532cbe5cd9a666c461a27a54cca6dfd",
+      "scoreLabelsSha256": "0f9660887e584525fbfa52b4023e159122b8569b6734774bc101629d6f4f917f"
+    },
+    {
+      "id": "8470850",
+      "status": "compared",
+      "awardsSha256": "62dacd4edce474f2890bc6e1fad569b67286a2df2a6a40b05179eb0f5c462a41",
+      "scoreLabelsSha256": "62d29dc5aa2a3c721508bc39250f4ad93edda46bd21102889f6c26aca5315c84"
+    },
+    {
+      "id": "8471578",
+      "status": "compared",
+      "awardsSha256": "18c151e7a348ad1a5fb8e82c067ab30af9cc8d41d04423fffcffbca0e36793f7",
+      "scoreLabelsSha256": "6ed1cf315683468f7f696c4b118a92f376eb27fd086d5bdd6ae1bd67d6e90877"
+    },
+    {
+      "id": "8502706",
+      "status": "compared",
+      "awardsSha256": "b785cb6b61bf46505fac54c048e50ebdea9806f5a2bb86543fe94d97cf93f4f2",
+      "scoreLabelsSha256": "98a24eb8e13435ebfd57b5982285d0487662f257dc80fa82e8ef79e55f64875a"
+    },
+    {
+      "id": "8503778",
+      "status": "compared",
+      "awardsSha256": "e9737bf9532607e8039f3ae9dc8cad6330bf099b3f98dea7354123c95ae3d83a",
+      "scoreLabelsSha256": "e183534cee1698d322c182f82d730b45946c0ff582d24a7ad008558c811edc52"
+    },
+    {
+      "id": "8504389",
+      "status": "compared",
+      "awardsSha256": "09cc852ad4849f4d4d54323ef968bd46f953e23dc8b3b4e6e683b717d1b28f0c",
+      "scoreLabelsSha256": "9c64137041a891d5eaf3bdb6fa124de92043389d5d2fcdbea93b0c684c31519c"
+    },
+    {
+      "id": "8505126",
+      "status": "compared",
+      "awardsSha256": "858f05e42993a495d9cf4a026067636bbecc24dac23401adbc04bd2781d6350e",
+      "scoreLabelsSha256": "0e6a278a2595d4dbd93f06926068006b708d8cbe3a81985e39c6f4e06e1a0fe0"
+    },
+    {
+      "id": "8505840",
+      "status": "compared",
+      "awardsSha256": "19e65b9fb926fd30883a5f9e70640982df395257884347c5f4d74ffb06c58e91",
+      "scoreLabelsSha256": "dc02bdcbb2cb739f844b1d716be5b73612470d95a2f30b2f6ad13ec192232d21"
+    },
+    {
+      "id": "8506678",
+      "status": "compared",
+      "awardsSha256": "ca7f69b1c65cae79e0f979d4b7a3e3c19bbff004a5561c2017826f0c93b95550",
+      "scoreLabelsSha256": "3b5aeb3027538c1bfc1e6b70c6e7153b4a1d861477fd6af78c23ef3951ee3a6b"
+    },
+    {
+      "id": "8530703",
+      "status": "compared",
+      "awardsSha256": "7b74c8cb052908b1797d879c901db3916d4c3175bd61ac4908283da7ed960010",
+      "scoreLabelsSha256": "50c817a39d4a41b3d78f481d3ba0fa270836cd1ed710fcc4d5f44c1e04212c7b"
+    },
+    {
+      "id": "8530969",
+      "status": "compared",
+      "awardsSha256": "8ad6a7e5229ea9824045e991671fa76bb3b8f5ba73f246a1123db254b42e87b3",
+      "scoreLabelsSha256": "920455f38be6a23fa4e886fde6766a14e8fcefbc549ac39cbcff6424626c8d80"
+    },
+    {
+      "id": "8531532",
+      "status": "compared",
+      "awardsSha256": "801c2ebb5fc3f96eeffbef120f2f81e6b31b5a75dce346e87b9b49462a3594a3",
+      "scoreLabelsSha256": "6c6f981fa20940d390e741acf0d571047c2f92a0f9ed61413860ca2b086ec70c"
+    },
+    {
+      "id": "8532008",
+      "status": "compared",
+      "awardsSha256": "f95180ad500803993b49f4fa660e5bf06eeb351cd6011abaeaf70708192eeb0d",
+      "scoreLabelsSha256": "a34c345cded82866cf2cf7148f06aa5f06c05e4183597f98310e5292afe0099e"
+    },
+    {
+      "id": "8532570",
+      "status": "compared",
+      "awardsSha256": "536fd7196201b9e726de73f300c45e331f6ff9baecf3c2e41c824e1073ae8ed5",
+      "scoreLabelsSha256": "58aef587976e56ae27591a408b1b6d3b39b42bc03127dc3ec1a2fd65abe839a8"
+    },
+    {
+      "id": "8555884",
+      "status": "compared",
+      "awardsSha256": "ed75a8d0325491d2182e2b8edea31930a5a0454de2054d26fb1a52aaf616f974",
+      "scoreLabelsSha256": "1fb9e7d967489a3553ece22450b516510155dfa024c2559130eda2b657733eef"
+    },
+    {
+      "id": "8556342",
+      "status": "compared",
+      "awardsSha256": "c7f997b30b67faa9914bb57512a81a537cd3f350d0ec4edd144cf7cba55fe844",
+      "scoreLabelsSha256": "3d11be1eae8958572a96ce59a05edf03d138f5635a723bb001faadc7c22f8360"
+    },
+    {
+      "id": "8556964",
+      "status": "compared",
+      "awardsSha256": "c8aaaae312a3315ed84356585358cbec4ffd44707719389cc4fac6c8cd7a7fcb",
+      "scoreLabelsSha256": "281a011dcb11bf4614cb643659424c3a85e0dbd5eeca59417f415806501a55e3"
+    },
+    {
+      "id": "8557527",
+      "status": "compared",
+      "awardsSha256": "de8b04c9e0c88f7485a3ec7fe93771a1c6d2dc0e440414c1e0f80b4acbfaaa84",
+      "scoreLabelsSha256": "85a324c45766c7be589ab06e4aa37510e9ef2498bbc7f92e48cf46db946408f0"
+    },
+    {
+      "id": "8578656",
+      "status": "compared",
+      "awardsSha256": "322cf551ecb55ba63601a2a833b1a03b6261b7461280e92d738c7abd26e244d4",
+      "scoreLabelsSha256": "fb2b193fdcd222e1c30fba7c53e4cef6ecd593a1fe5d090a5290bb63a40a45a4"
+    },
+    {
+      "id": "8578820",
+      "status": "compared",
+      "awardsSha256": "7fbb5758caae35c7c485dcda0c78ad569badc71d63f594b14486a028a227ef72",
+      "scoreLabelsSha256": "d8b454fc352926033f28081d76f975cbaeaa206e61668dcb581f17f3571cb488"
+    },
+    {
+      "id": "8579513",
+      "status": "compared",
+      "awardsSha256": "6cb661c3abdf0a6460aacb0aee5af75d3ef8c1b310465cc3f2405d06dc38172e",
+      "scoreLabelsSha256": "b2e97608939ca43fead9bbc83eb06383587ebff5ee8ec644398c6173009f4003"
+    },
+    {
+      "id": "8579765",
+      "status": "compared",
+      "awardsSha256": "2ae6544a75b71454178a21b4a80d003f80bec199a94dbdad1147c9ca73be2fb5",
+      "scoreLabelsSha256": "517cb3408a243a381b253659d2753003c4d7ec10a619ea3b1aeb206ae65bb97b"
+    },
+    {
+      "id": "8579881",
+      "status": "compared",
+      "awardsSha256": "001e67cecd5394e7871efea2f37edd32f488b664b189749d37f262ca517174e9",
+      "scoreLabelsSha256": "f07e2041d69c4b5ba1ed42f6fd082f61d6849221fadf319c9d5e56c6573a196c"
+    },
+    {
+      "id": "8580305",
+      "status": "compared",
+      "awardsSha256": "170cbea0e192b24c4e8e72adc7af6a0ba450f8ab705f5ed59ea516d1b0508e65",
+      "scoreLabelsSha256": "2d1472ce08c07bb09ab96be509d54b241e2cb8e57a61b572f2b901e6ec98eede"
+    },
+    {
+      "id": "8604860",
+      "status": "compared",
+      "awardsSha256": "8cc4a31f5afdfaa57e37ad320494845f347d8dfcd2a23c405841759735d90431",
+      "scoreLabelsSha256": "b33c26779077347b3558f042114b8f93e5c03915207588a814dff3d8e9b8858b"
+    },
+    {
+      "id": "8606590",
+      "status": "compared",
+      "awardsSha256": "2dfbf7cf57df9df45bab25fc459673b2fc27da92fda429a0b8f20c85d89aa49a",
+      "scoreLabelsSha256": "56ceb6c368e889dcd989ba871e03aff27f85c02339e47592d4d5b709a624a879"
+    },
+    {
+      "id": "8606994",
+      "status": "compared",
+      "awardsSha256": "3b182a68a9aaff8746a41ccb895e40b634d072efef22758052b6665be9a9d1c5",
+      "scoreLabelsSha256": "9d91b5ad6db447025e1652b6614a150da65a563713bef4299eefb049657b2f03"
+    },
+    {
+      "id": "8607402",
+      "status": "compared",
+      "awardsSha256": "5721a776cc5e1fa678387b75e46fe648703658f1fafb6f8e49dd9ecc123c0373",
+      "scoreLabelsSha256": "5f5c5398c5a5e447a0adab2c796cfb3479b8d072f39664ef543d8218ba83b24a"
+    },
+    {
+      "id": "8608063",
+      "status": "compared",
+      "awardsSha256": "3822a98ce53d8202e2b184f51b0bc393135eb2ce65ce3b58480db2c07416f9c1",
+      "scoreLabelsSha256": "6e625e28451b79dd5e271308e2817a583ac219514e04edd474f490158ba3e77c"
+    },
+    {
+      "id": "8700620",
+      "status": "compared",
+      "awardsSha256": "76da4545aa4d09cdd24bc51e9206185ef77b13584f60a27c14ef66a6368feea5",
+      "scoreLabelsSha256": "7e74ce59cc91ec59f62af3de5c99f2d1709270458f49f7326a3efbd2a3890719"
+    },
+    {
+      "id": "8718149",
+      "status": "compared",
+      "awardsSha256": "cfed0608406692eeb4f094064ac423fd06ab7fbd6ec1ff3baf11c27cbb001314",
+      "scoreLabelsSha256": "b20e4a9a8a44a0b8f6760372ae1d43d85d9b33bc953b9bf9cb54a0fc9f54608e"
+    },
+    {
+      "id": "8718476",
+      "status": "compared",
+      "awardsSha256": "6df0e4be4ae4a543a968670a33abca90a9447d1d48dc5e8c1b4bca13171c13d4",
+      "scoreLabelsSha256": "f6ec9e2a6eecacf6dbdb0ec5188d0ea7d9863ba42fdbd9e900780bbf48e654f8"
+    },
+    {
+      "id": "8949131",
+      "status": "compared",
+      "awardsSha256": "d3c5786b0b62d55ea51ed98bf871d3901b74f339da806a868225dcdabfe29796",
+      "scoreLabelsSha256": "2239bcc3b45ef1dd455a3b7507bb52d4a7a934af5b4ecebd026ba2e7a2e1bb07"
+    },
+    {
+      "id": "8949585",
+      "status": "compared",
+      "awardsSha256": "dfe26574a8e058fa5ddc57b6dfd28c046b966f7a9defef2986de54bf180089f2",
+      "scoreLabelsSha256": "82bf269ee82fb98c40a5fbf04510b8c866d3d899174f1893543e0b2b2f87a1bc"
+    },
+    {
+      "id": "8950202",
+      "status": "compared",
+      "awardsSha256": "6d0500f551d75dbc2eef38dd5e7c46c46aea03463afc5ed198855b01ab5e6e5e",
+      "scoreLabelsSha256": "c31a34005640cfccfed4de6fe221f5501515b4dc067d91958e523d40a14bc518"
+    },
+    {
+      "id": "8950573",
+      "status": "compared",
+      "awardsSha256": "eaa8738fbfd00a60bf8ef1e20a8efbdb591faec6f94cb506e78591435ddaca53",
+      "scoreLabelsSha256": "adb7744223ac945bf43edd02ec9cafcaa8bc5fa2e5ef09dadb09f0eed1ba8965"
+    },
+    {
+      "id": "8951179",
+      "status": "compared",
+      "awardsSha256": "704ce8aec97b2dd1832d4f2e5971a6d74c2a2710b7c26f417b7dde084c42684b",
+      "scoreLabelsSha256": "9a7cc061c491c82da52f4a31baf6d24145a2065499a299788ea1da24e664fd81"
+    },
+    {
+      "id": "8965944",
+      "status": "compared",
+      "awardsSha256": "939b9ef08114e7f27275c005e752c28ebab6bec0d14c8cdb8ac798f919a8f1fa",
+      "scoreLabelsSha256": "a936e8ae0af223f61876d2b71a77c998de91952e1fc8edd4e4965813cee8337e"
+    },
+    {
+      "id": "8966201",
+      "status": "compared",
+      "awardsSha256": "55c86c242d9a4256c40b48fe7d1df345ca62eec3757758d0fc812bc287b827cb",
+      "scoreLabelsSha256": "10f4532fa254a30f43d4437d6cd1c0c44d68942c465b21a51c0f95f3068399b7"
+    },
+    {
+      "id": "8966574",
+      "status": "compared",
+      "awardsSha256": "9a8afb8c2727a9295a658f367eb3a45c3ea1e5ab6ebba1f6400c83ffc421933d",
+      "scoreLabelsSha256": "f1aab76a0b49791ffd481cf1f29b499d9a2e356957a52515db3a577aa84b6510"
+    },
+    {
+      "id": "8967057",
+      "status": "compared",
+      "awardsSha256": "3f719397d2ad470f8e3ca9d05f9119787f7c408997ba25d837ab5784e5c39194",
+      "scoreLabelsSha256": "97d70212a08b0b9aa81f55c2a3d74a8bc73fbb5f432119745479c3a512114845"
+    },
+    {
+      "id": "8967205",
+      "status": "compared",
+      "awardsSha256": "abbadec99706d224be9407a346b13ab32fc0fd8f19859410c8c1615ad089727a",
+      "scoreLabelsSha256": "851ab8d66df91e7b630dd5193550158093d896aa9af961d07670682afe95931b"
+    },
+    {
+      "id": "8967630",
+      "status": "compared",
+      "awardsSha256": "746174a92dde4fe6ef5d18b6b04f12da7908c7c87fa09954d3a0b81e5d56facc",
+      "scoreLabelsSha256": "485c4c1ef2ba7b3c3a8746f0f6b1d65a11006964fe2ea077fc295c82f6e3ba7b"
+    },
+    {
+      "id": "8967977",
+      "status": "compared",
+      "awardsSha256": "7b40483694dcb6ad46f8ee130d9146bb3168569a0d8368239d0d5e29b6574e1d",
+      "scoreLabelsSha256": "55dd7a12664d6d0e7e7a4520266ef14862b057001aec6c738369ecd7eb48414f"
+    },
+    {
+      "id": "8968356",
+      "status": "compared",
+      "awardsSha256": "91900fc39a28bfb80011ba15da10cbfebb72520308787a788d28bdadffb7329d",
+      "scoreLabelsSha256": "d4b30eff7ca8fe3cad16023948a14fb8ff420d86d82bf6945f028f271950f83c"
+    },
+    {
+      "id": "8980716",
+      "status": "compared",
+      "awardsSha256": "537a286454e3e7da0685432a847a9fa60551a08a89138b2a7d61f92bdb322d97",
+      "scoreLabelsSha256": "c02f77cb3680a189921485a74b4c13aa605ed7ffc1f48eb6453e78767a799360"
+    },
+    {
+      "id": "8995991",
+      "status": "compared",
+      "awardsSha256": "227b6689cc4bf7874048fb5d447ce123a9fd1ac7d7885b9ac9a4737c89016df4",
+      "scoreLabelsSha256": "0e0fe2dcf36178d58d43bf43fe792054c118ba5acac7588cc05ff787ea71c214"
+    },
+    {
+      "id": "8996232",
+      "status": "compared",
+      "awardsSha256": "6a67a125259b85a9dfe4f86212a5a54982d7e1f77a755515f0a8d432762de413",
+      "scoreLabelsSha256": "69e19c8ec4c2b3d893ea7cc9245fc55256523848cf041c08a8e78846db142e24"
+    },
+    {
+      "id": "8996309",
+      "status": "compared",
+      "awardsSha256": "ab8584b5e6d5e61ef6def652c443d381b1922e6d81f8bb5d1359b6fd5d3ea98c",
+      "scoreLabelsSha256": "ccd9f11fac04459ef068d211cb18c5eed4fc8e0eb5294c9aac81348578864aba"
+    },
+    {
+      "id": "8996581",
+      "status": "compared",
+      "awardsSha256": "7857c6c87281e62b2dad04c96dce00885ee4ad7d013c5bc564fa4f07d4e66634",
+      "scoreLabelsSha256": "35b25ef1f110f5caaaf4afd69fe622fd7d3ab193f3e2a649abbc5248436ba636"
+    },
+    {
+      "id": "8996771",
+      "status": "compared",
+      "awardsSha256": "e6769ef1e8706f15bbd83fcfbed78ceca42f7864c958237ef277376f81eade02",
+      "scoreLabelsSha256": "ca71823ff3396fa4eedef0e6d986ecb615c2a16d96325f58e6213e151d4b48b1"
+    },
+    {
+      "id": "8996981",
+      "status": "compared",
+      "awardsSha256": "c93ef0366330769fea11e6d394253b874ca4f33e6fc39b1cc2cfe0f782619335",
+      "scoreLabelsSha256": "3846ab9481b71f2e1cb10a7c10ce0fe57d8f56b04b9c06681c088947136c353c"
+    },
+    {
+      "id": "9008853",
+      "status": "compared",
+      "awardsSha256": "9b381a2542927fd5cd6434d58b61a794f8b97816f6542ee66962da01fec8056d",
+      "scoreLabelsSha256": "25e53456ea5d0989990565d9a9a195414f2de8faa7c4abcb4e8d4aeaaaf702fb"
+    },
+    {
+      "id": "9008954",
+      "status": "compared",
+      "awardsSha256": "a9882bce4ab488c83be09afd3eaba03b90034a4d73ad58d1aabb3c6bdaa819f2",
+      "scoreLabelsSha256": "01f9a73dddd9a031d83a4c9302af679fcd6bffe69cdb068929f2a55a8b78405a"
+    },
+    {
+      "id": "9009129",
+      "status": "compared",
+      "awardsSha256": "071ce03512bdd43b18a6e2726e362e12235b80be2fd449cc25674e8705167615",
+      "scoreLabelsSha256": "c9b2d6e4b34595eb76038931c6dedb43f294e3e705ab65ac238456c9b8e49587"
+    },
+    {
+      "id": "9066353",
+      "status": "compared",
+      "awardsSha256": "55b2119095de43d6f50edaf2c31fba8e61b468c11d64fb72c31fc4b5ee6e4a44",
+      "scoreLabelsSha256": "8cc82b4cbcf47b4cbcaf5cfca387251a6afeafa9b2aad1de1af6dff4dd4f4cfc"
+    },
+    {
+      "id": "9066636",
+      "status": "compared",
+      "awardsSha256": "108359eb6152e5ba594a38895279cd94e950e072012851a1f3d73ae3aa09dbb5",
+      "scoreLabelsSha256": "dc42df22108bb9bb2513cad42feec946f629d5ad8e33bdaaf7bd0a81ce8a576b"
+    },
+    {
+      "id": "9066881",
+      "status": "compared",
+      "awardsSha256": "8c4c94ca9090fe804b12cdbaee61a5c00edb22f5afc5d8ba8b5e5377aba34b27",
+      "scoreLabelsSha256": "4f40a5cc0bf28468e92838c54564387eaa2df1508a47bfbe8a5fb0b493bc3eae"
+    },
+    {
+      "id": "9155210",
+      "status": "compared",
+      "awardsSha256": "6f04ca11831a0878d054d0befe9378f7679cf8107147b93a30d43b5851162b86",
+      "scoreLabelsSha256": "bccd5945e43e624870d2a698dfd1d50772b39a8e2bf118adf7998fc24d9af9f9"
+    },
+    {
+      "id": "9155464",
+      "status": "compared",
+      "awardsSha256": "2e3bcadd3e5c17746b95e82cdb40638c90f159829906e8b39df8f985b6f57349",
+      "scoreLabelsSha256": "0e0e41abd2eaba664467546e3a1bff30e6e98b6a76ee66c41daa934021da9088"
+    },
+    {
+      "id": "9188173",
+      "status": "compared",
+      "awardsSha256": "3c20d590b6db75586bbc2ea0c180bcfe18a7a28c9e6c7d3a5da890eb97283d7f",
+      "scoreLabelsSha256": "b6dfda09e18f81511334d82e2d3e45b4c653beea58817d0ec1c4f5cf3518113e"
+    },
+    {
+      "id": "9188417",
+      "status": "compared",
+      "awardsSha256": "b26f8cba570b7e66730195e2638b26566d4c5830b3a7b2b943e8490d8b224aec",
+      "scoreLabelsSha256": "a26a1ad023eb34eca1370d6395bac624f873a6e7e4afe9c2d95fc35e89150cc2"
+    },
+    {
+      "id": "9188574",
+      "status": "compared",
+      "awardsSha256": "42142f1ecae32119dd01ccf36c8f195e98158872b07dfe84acb9fdff69971067",
+      "scoreLabelsSha256": "6360421de59756ef31c43999c11d3ebe214ada29ec47bd64cbed6160e28c2761"
+    },
+    {
+      "id": "9188772",
+      "status": "compared",
+      "awardsSha256": "911b8acb06cc3163324c3a0852103018473a6b82caa023f3540141a0de686879",
+      "scoreLabelsSha256": "45ca85b6b9902fe0ca4279b7d62aafb1c52d02cd61b85ba7fc1392b35f23c407"
+    },
+    {
+      "id": "9202092",
+      "status": "compared",
+      "awardsSha256": "7907c40a822c2bf3fbdc8c6a7e2de3bdd6338775570ee059d352715548424c1c",
+      "scoreLabelsSha256": "36613571ca3c6c25e879d688e7fa0180dd9953347b8431627a7893f6db3ecc4f"
+    },
+    {
+      "id": "9202356",
+      "status": "compared",
+      "awardsSha256": "f276371a87edbdb14bfbdd867dfb6a431a0957255b3c7fddde85b4c10c592754",
+      "scoreLabelsSha256": "6987ff2d85a858afce55b6e005ce7e0bad05dff954c31734f820e2824964482e"
+    },
+    {
+      "id": "9202701",
+      "status": "compared",
+      "awardsSha256": "5a6e8e8d47cf5eb33e204b7af20b5ab988f5959f311e9b30a60b90f5a0fc7ede",
+      "scoreLabelsSha256": "3274fab9773792d59ec7fd4db94bdc5c4f9578dfa404f6974fdbfc0af8f4c573"
+    },
+    {
+      "id": "9202915",
+      "status": "compared",
+      "awardsSha256": "3d2767ba5f3bb10b19850edd6de25c2bf3fb2ffa3e527526e6f18115467ca90e",
+      "scoreLabelsSha256": "6c4539c1f89ea75711b5f0a53e3499345a9d601ddaaa4a20f6f8c62ce6f7f7a5"
+    },
+    {
+      "id": "9203121",
+      "status": "compared",
+      "awardsSha256": "1aeac980ce3b6d2b57f1f95d5bce4652134acdbde6ac4d4455247c90de131cf8",
+      "scoreLabelsSha256": "7020c695ef724e9ff11f4b37373daf023512d7e234b39759b096d41c4cc602ba"
+    },
+    {
+      "id": "9216117",
+      "status": "compared",
+      "awardsSha256": "08355efc2e0c123f72c31ef9508f55f5ca3a513a6e879ed342c20385c32944bb",
+      "scoreLabelsSha256": "ce8e81744158f5fd6918e01d7be5a866e3cd0a32ed998665fa555bc09c7608e6"
+    },
+    {
+      "id": "9216226",
+      "status": "compared",
+      "awardsSha256": "3f7967376146ba7bd2b7c3aa6c6381808d659410c0f10e661d36bd9a0dd8bc80",
+      "scoreLabelsSha256": "4ac1aa214afa51ba03a56d89d61a6829d3bc6fbc421f9079299cc7ee6269e3ac"
+    },
+    {
+      "id": "9216423",
+      "status": "compared",
+      "awardsSha256": "3868fbec5d949d1c6d568af34950f81832546e3c413af7016aaa92ae0cd39e16",
+      "scoreLabelsSha256": "82d2a384014d93b5e4f27f2b0188afbfaa463a2909a9f6b71477c1eb3b7cac25"
+    },
+    {
+      "id": "9216783",
+      "status": "compared",
+      "awardsSha256": "f3eb4c0850184b2df40b4806df950769b7477f8cb28354c99b8e62bd0622fa53",
+      "scoreLabelsSha256": "e51e2a5950ba9170da9a6e5bcbcf649e423560f86bda8aa15fcc1f3e5e388b5a"
+    },
+    {
+      "id": "9227374",
+      "status": "compared",
+      "awardsSha256": "714f67d447da0ee76d3250f78aaab9f65783aa1f48a6fc3fb04c176d1f85c7ae",
+      "scoreLabelsSha256": "5b3d8ce4863d34b011dfa398271a1e617904d148f39fe6728bf69572f870e596"
+    },
+    {
+      "id": "9227506",
+      "status": "compared",
+      "awardsSha256": "0b62b76ce227312c4454a605b3bde8dfb002ee426a5f550da3fdd1d415e9e887",
+      "scoreLabelsSha256": "2d449eda05b04556463ee4e93aa42024a81d4c1feb238bad53427ec77a7c0bbd"
+    },
+    {
+      "id": "9227650",
+      "status": "compared",
+      "awardsSha256": "63c3eaa3cd3726be3b108554e6363127e768be14714350a1baf91732809ec1c7",
+      "scoreLabelsSha256": "e8886f1cbfe5c397e3f5f1a19ef78835de1801f40c3238e8b749ec3aed438cb7"
+    },
+    {
+      "id": "9255042",
+      "status": "compared",
+      "awardsSha256": "2923fc25f0b7369f5840e8094d470ced24a344f19d5bb3b2e4028f582cff7fdc",
+      "scoreLabelsSha256": "a0c6a20de7e14e1f1b5fd7f1e6111c1d53547adb4c9d1b7f3d2c55ab6db8f2f9"
+    },
+    {
+      "id": "9255392",
+      "status": "compared",
+      "awardsSha256": "6e8218fca2c85e6ec2a69115d483cb25c597712a47041a5ba114ac6077001f50",
+      "scoreLabelsSha256": "6eadd89feff6b61511af394adc0e8b15d095607118f3eae5095b1098bcca2b5c"
+    },
+    {
+      "id": "9255627",
+      "status": "compared",
+      "awardsSha256": "55f8f878fdeb7d925be6d1163d81ea0be83030c770af6683d5fdc82e9ed8e4c1",
+      "scoreLabelsSha256": "977ce3173ee97328fa47db8ea8069ed61427c59934142111a1120607b09ced6a"
+    },
+    {
+      "id": "9256117",
+      "status": "compared",
+      "awardsSha256": "73bfaf12050b64d45c0db7e2d607a1b4ac4cd6b7c664c8f01750aad49474614e",
+      "scoreLabelsSha256": "ec7064e4a00b24a5602d566ff93419659a42ffe9db66b3c9d21d56a7f4e9cc42"
+    }
+  ]
+}

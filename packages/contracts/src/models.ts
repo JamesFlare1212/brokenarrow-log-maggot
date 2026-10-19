@@ -3,7 +3,7 @@ export type Metric = number | null;
 export type TeamId = 0 | 1 | 100 | null;
 export type Outcome = 'win' | 'loss' | 'spectator' | 'unknown';
 export type Mode = 'ranked' | 'custom' | 'unknown';
-export type Locale = 'zh' | 'en' | 'ja' | 'ru';
+export type Locale = 'zh' | 'en';
 export type Theme = 'dark' | 'light' | 'cyan' | 'orange' | 'violet' | 'forest' | 'ocean';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type ColorScheme = Exclude<Theme, 'light'>;
@@ -54,6 +54,8 @@ export interface Match {
   updatedAt: number;
   warning?: string;
   titles?: Record<Id, import('./titles').MatchTitle[]>;
+  scoreLabels?: Record<Id, import('./score-labels').MatchScoreLabel[]>;
+  scoreLabelRule?: 'team-maximum' | 'match-maximum-single';
 }
 export interface Session {
   generation: number;

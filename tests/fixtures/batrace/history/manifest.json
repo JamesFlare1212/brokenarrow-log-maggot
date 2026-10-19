@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "capturedAt": 1792397000254,
+  "sha256": "bf51bd27c77ba4a1a82f4e4aee2abdebacf3382d7375457d9848d22570eaa1cf",
+  "responses": 114,
+  "cached": 101,
+  "fetched": 13,
+  "requests": 43,
+  "failures": [
+    {
+      "id": "8106580",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8139212",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8171947",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8229301",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8230787",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8230870",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8246211",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8246287",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8246410",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8246897",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8418787",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8531466",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "8580242",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "9203063",
+      "error": "BATrace returned incomplete match data"
+    },
+    {
+      "id": "9216737",
+      "error": "BATrace returned incomplete match data"
+    }
+  ],
+  "scope": {
+    "historyMatches": 458,
+    "withoutFid": 329,
+    "withFid": 129,
+    "evaluated": 114,
+    "unavailable": 15,
+    "incomplete": 0,
+    "unknownWinner": 0,
+    "players": 1140
+  }
+}

@@ -27,7 +27,7 @@
 
 ## 设置交互
 
-- 未找到目录或请求失败时保留已有路径及未保存的手动输入，并提供重试、先启动游戏和手动选择的提示；四种界面语言均有对应文案。
+- Detection failures preserve the existing path and unsaved manual input, with retry, game startup, and manual selection guidance available in Chinese and English.
 - 检测期间显示进度，禁止重复检测；仍可编辑路径、手动选择目录或返回原页面。
 - 用户编辑或选择路径后，较晚返回的检测结果不会覆盖该操作；离开设置后也不应用旧检测结果。返回前会先保存用户已修改的路径。
 - 成功结果自动保存后生效。手动输入在停止输入 500ms 后保存，失焦或返回时立即提交；目录选择立即保存。保存失败保留修改并提供重试，允许用户主动选择非标准目录。

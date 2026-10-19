@@ -189,7 +189,7 @@ describe('application telemetry', () => {
     p.telemetry = { enabled: true, distribution: 'installed' };
     const app = application(p, [], true);
     try {
-      await app.invoke('config.update', { telemetryEnabled: true, lang: 'ru' });
+      await app.invoke('config.update', { telemetryEnabled: true, lang: 'en' });
       await expect(
         app.invoke('replays.play', { name: 'private-player-recording.webm' }),
       ).rejects.toThrow();
@@ -198,7 +198,7 @@ describe('application telemetry', () => {
       const bodies = fetchImpl.mock.calls.flatMap(([, init]) =>
         JSON.parse(String(init?.body)).batch.map((event: unknown) => JSON.stringify(event)),
       );
-      expect(bodies[0]).toContain('"language":"ru"');
+      expect(bodies[0]).toContain('"language":"en"');
       expect(bodies[1]).toContain('"operation":"recording_play"');
       expect(bodies[1]).toContain('"result":"failure"');
       expect(bodies.join('')).not.toMatch(/private-player|\.webm|in-memory-lifecycle/);

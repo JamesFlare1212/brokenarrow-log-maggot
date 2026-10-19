@@ -3,6 +3,7 @@ export { createBrowserFixtures } from './dev/browser';
 export { Database } from './storage/database';
 export { migrateLegacy } from './storage/migrate';
 export { BatraceClient } from './network/client';
+export { summarizeTitleHistory, compareTitleMedals, MEDAL_SOURCE } from '@ba/shared';
 export { LogParser } from './logs/parser';
 export { LogWatcher } from './logs/watcher';
 export { LogArchive } from './logs/archive';

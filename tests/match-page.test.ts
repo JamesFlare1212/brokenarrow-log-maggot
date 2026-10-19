@@ -111,11 +111,12 @@ describe('BATrace match detail fallback', () => {
     expect(fetchImpl.mock.calls.map(([url]) => String(url))).toEqual([
       `https://bot.batrace.top/api/match?matchid=${id}`,
       `https://dash.batrace.top/match/${id}`,
+      `https://bot.batrace.top/api/analysis/match?matchid=${id}`,
     ]);
     expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(1200);
     expect(db.cache(`match:${id}`, false)?.value).toEqual(capturedData);
     expect((await client.match(id)).source).toBe('cache');
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
   it('shares concurrent refreshes through the API and page', async () => {

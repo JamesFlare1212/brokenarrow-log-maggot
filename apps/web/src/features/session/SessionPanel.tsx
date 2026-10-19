@@ -15,9 +15,9 @@ import { formatDuration, formatMetric, teamLabel, matchTitles } from '@ba/shared
 import { useApp } from '../../app/state';
 import { Card, Button, Empty, Badge } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
-import { MatchTitles } from '../matches/MatchTitles';
+import { MatchAwards } from '../matches/MatchAwards';
 export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
-  const { state, api, openModal, notify, patchConfig } = useApp(),
+  const { state, api, openModal, notify } = useApp(),
     { t } = useI18n();
   const [previous, setPrevious] = useState<Match | null>(null),
     [view, setView] = useState<'current' | 'previous'>('current'),
@@ -39,6 +39,21 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
       )
       .catch((e) => notify(String(e), true));
   }, [api, state.matchesRevision, state.session.current?.fid]);
+  useEffect(() => {
+    if (view !== 'previous' || !previous?.fid) return;
+    let cancelled = false;
+    void api
+      .invoke('matches.detail', { fid: previous.fid, force: false })
+      .then((detail) => {
+        if (!cancelled) setPrevious((current) => (current?.fid === detail.fid ? detail : current));
+      })
+      .catch((error) => {
+        if (!cancelled) notify(String(error), true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, view, previous?.fid]);
   const players: Player[] =
       view === 'previous'
         ? previous?.players || []
@@ -84,8 +99,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
         .finally(() => setPending(false));
     }
   };
-  const rows = state.rosters[view].rows,
-    collapsed = state.config.collapsedPanels.includes('current');
+  const rows = state.rosters[view].rows;
   const localTeam = players.find((p) => p.id === state.session.localPlayerId)?.teamId;
   const rating = (p: Player) =>
     rows[p.id]?.info?.elo ?? match?.players.find((player) => player.id === p.id)?.oldRating ?? null;
@@ -204,6 +218,17 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                         : t('playersCount', { n: list.length })}
                     </small>
                   </h3>
+                  <div className="team-rating">
+                    <span>{t('teamRating')}</span>
+                    <strong>
+                      {list.every((p) => rating(p) !== null)
+                        ? formatMetric(
+                            list.reduce((sum, p) => sum + (rating(p) ?? 0), 0) / list.length,
+                            0,
+                          )
+                        : '—'}
+                    </strong>
+                  </div>
                   <Button
                     aria-label={t('copy') + ' ' + teamLabel(team)}
                     onClick={() =>
@@ -223,22 +248,6 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                     <Icon icon={faCopy} size={14} aria-hidden="true" />
                   </Button>
                 </div>
-                <div className="team-rating">
-                  <span>{t('teamRating')}</span>
-                  <strong>
-                    {list.every((p) => rating(p) !== null)
-                      ? formatMetric(
-                          list.reduce((sum, p) => sum + (rating(p) ?? 0), 0) / list.length,
-                          0,
-                        )
-                      : '—'}
-                  </strong>
-                  {!standalone && (
-                    <small>
-                      {list.length} / {list.length}
-                    </small>
-                  )}
-                </div>
                 {list.map((p) => {
                   const row = rows[p.id],
                     info = row?.info,
@@ -256,9 +265,6 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                       key={p.id}
                     >
                       <div className="player-main">
-                        <span className="player-avatar" aria-hidden="true">
-                          {p.name.slice(0, 1).toUpperCase()}
-                        </span>
                         <div className="player-identity">
                           <div className="player-heading">
                             <TooltipButton
@@ -280,7 +286,15 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                             {p.id === state.session.localPlayerId && (
                               <Badge tone="success">{t('you')}</Badge>
                             )}
-                            <MatchTitles key={`${match?.id}:${p.id}`} titles={titles[p.id] ?? []} />
+                            <MatchAwards
+                              key={`${match?.id}:${p.id}`}
+                              titles={titles[p.id] ?? []}
+                              scoreLabels={
+                                match?.endedAt !== null && match?.endedAt !== undefined
+                                  ? match.scoreLabels?.[p.id]
+                                  : undefined
+                              }
+                            />
                           </div>
                           <div className="player-meta">
                             <small className="player-id muted">#{p.id}</small>
@@ -335,14 +349,6 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
       className="session-card session-roster"
       title={title}
       icon={<Icon icon={faCrosshairs} size={19} />}
-      collapsed={collapsed}
-      onToggle={() =>
-        void patchConfig({
-          collapsedPanels: collapsed
-            ? state.config.collapsedPanels.filter((p) => p !== 'current')
-            : [...state.config.collapsedPanels, 'current'],
-        })
-      }
       actions={actions}
     >
       {content}

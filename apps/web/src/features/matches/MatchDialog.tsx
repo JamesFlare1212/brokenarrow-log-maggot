@@ -17,7 +17,7 @@ import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Dialog, Loading, Notice, Badge } from '../../components/ui';
 import { TooltipButton } from '../../components/Tooltip';
-import { MatchTitles } from './MatchTitles';
+import { MatchAwards } from './MatchAwards';
 export function MatchDialog({ fid }: { fid: string }) {
   const { api, openModal, closeModal, backModal } = useApp(),
     { t, locale } = useI18n(),
@@ -168,9 +168,12 @@ export function MatchDialog({ fid }: { fid: string }) {
                                 >
                                   <span className="player-name">{p.name}</span>
                                 </TooltipButton>
-                                <MatchTitles
+                                <MatchAwards
                                   key={`${match.id}:${p.id}`}
                                   titles={titles[p.id] ?? []}
+                                  scoreLabels={
+                                    match.endedAt !== null ? match.scoreLabels?.[p.id] : undefined
+                                  }
                                 />
                               </div>
                               <small className="player-id muted">#{p.id}</small>

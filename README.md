@@ -15,7 +15,7 @@
 - 卡组备份 / 部署、实时开局自动覆盖唯一的“上一局卡组包”、换号提醒。
 - 本地录像：240–1080p、30–60 fps、3–10 Mbps、系统声音与默认麦克风混音、预览、播放和目录迁移。
 - 可选真实输入 APM、封禁提醒。
-- 跟随系统 / 浅色 / 深色三种主题模式，六组配色，浅深配色分别记忆；四种界面语言。
+- System, light and dark appearance modes, six palette pairs, separate light/dark palettes, and Chinese/English interfaces.
 - 独立设置页面、自动保存、返回原页面，以及可折叠并记住状态的侧栏。
 
 BATrace 是历史数据，可能延迟数天。蛆指数需要最近 12 场有效五人队排位；缺本人、完整 MVP 或足够样本时不生成替代分数。
@@ -106,15 +106,7 @@ APM 和录像默认关闭。APM 仅统计进行中对局、游戏在前台时的
 
 ## English
 
-A local Broken Arrow assistant: match analysis, player history, deck backups, recordings, optional real-input APM, three appearance modes, six palette pairs and four languages. Run `pnpm install` and `pnpm dev`; validate with `pnpm check`. Existing JSON is backed up and imported transactionally into SQLite without changing the original files. Recordings remain local and use range-based playback. BATrace data can be delayed.
-
-## 日本語
-
-Broken Arrow のローカル対局アシスタントです。対局分析、履歴、デッキ、録画、任意の実入力 APM、3 種の外観モード、6 組の配色、4 言語を備えます。`pnpm install` と `pnpm dev` で起動します。旧 JSON はバックアップ後に SQLite へ移行し、元ファイルを残します。
-
-## Русский
-
-Локальный помощник Broken Arrow: анализ матчей, история, колоды, записи, опциональный APM, 3 режима оформления, 6 цветовых пар и 4 языка. Запуск: `pnpm install`, затем `pnpm dev`. Старые JSON сохраняются и импортируются в SQLite транзакцией. Записи остаются локальными.
+A local Broken Arrow assistant: match analysis, player history, deck backups, recordings, optional real-input APM, three appearance modes, six palette pairs and Chinese/English interfaces. Run `pnpm install` and `pnpm dev`; validate with `pnpm check`. Existing JSON is backed up and imported transactionally into SQLite without changing the original files. Recordings remain local and use range-based playback. BATrace data can be delayed.
 
 ## 致谢与参考
 

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "capturedAt": 1792397809388,
+  "sha256": "095e4403e090918b32a50b3d6c66cbcd45b7b67a231e5d50a8a59600f5fdee0b",
+  "titleHistorySha256": "bf51bd27c77ba4a1a82f4e4aee2abdebacf3382d7375457d9848d22570eaa1cf",
+  "upstream": {
+    "repository": "https://github.com/Zawinzala/Broken-Arrow-Maggot",
+    "revision": "f4e1d5b2cfca6944227381d973b38b4782699533",
+    "file": "index.html",
+    "sha256": "e984d5bd1db24842496d55186e1f79c5787059ec226adcd86a12b9cd6675f4f7"
+  },
+  "responses": 114,
+  "requests": 114,
+  "failures": [],
+  "scope": {
+    "requested": 114,
+    "compared": 114,
+    "unavailable": 0,
+    "incomplete": 0,
+    "players": 1140
+  }
+}

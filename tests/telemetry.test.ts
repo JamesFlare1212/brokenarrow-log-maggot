@@ -110,8 +110,8 @@ describe('consented reliable PostHog delivery', () => {
   it('batches allowlisted events with frozen capture metadata and numeric timings', async () => {
     vi.useFakeTimers();
     const { telemetry, fetchImpl, events } = setup();
-    telemetry.configure(true, 'ja');
-    telemetry.configure(true, 'ja');
+    telemetry.configure(true, 'zh');
+    telemetry.configure(true, 'zh');
     telemetry.operation('matches.list', true, 1);
     telemetry.operation('api.health', false, 1);
     telemetry.operation('decks.backup', true, 1200);
@@ -130,7 +130,7 @@ describe('consented reliable PostHog delivery', () => {
     ]);
     expect(events()[1].properties).toMatchObject({
       version: '4.1.8',
-      language: 'ja',
+      language: 'zh',
       distribution: 'portable',
       operation: 'deck_backup',
       duration_ms: 1200,
@@ -253,7 +253,7 @@ describe('consented reliable PostHog delivery', () => {
       identity: { ...identity, accountHash: 'a'.repeat(64) },
       persistence: persistence.persistence,
     });
-    second.telemetry.configure(true, 'ru');
+    second.telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(1000);
     expect(second.events().find((event) => event.uuid === state.eventId)).toEqual(
       saved[0]!.payload,
