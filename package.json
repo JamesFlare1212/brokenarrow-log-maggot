@@ -18,6 +18,7 @@
     "dev": "node scripts/dev.mjs",
     "dev:web": "pnpm --filter @ba/server build && vite --config apps/web/vite.config.ts --mode fixtures",
     "data:import": "pnpm --filter @ba/server build && node scripts/import-real-data.mjs",
+    "data:capture": "pnpm --filter @ba/server build && node scripts/capture-offline-data.mjs",
     "titles:history": "pnpm --filter @ba/server build && node scripts/title-history.mjs",
     "titles:compare": "pnpm --filter @ba/server build && node scripts/compare-title-medals.mjs",
     "start": "electron .",

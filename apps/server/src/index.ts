@@ -3,6 +3,11 @@ export { createBrowserFixtures } from './dev/browser';
 export { Database } from './storage/database';
 export { migrateLegacy } from './storage/migrate';
 export { BatraceClient } from './network/client';
+export {
+  loadOfflineFixtureManifest,
+  readOfflineFixtureRecords,
+  seedOfflineFixtureCaches,
+} from './dev/offline-fixtures';
 export { summarizeTitleHistory, compareTitleMedals, MEDAL_SOURCE } from '@ba/shared';
 export { LogParser } from './logs/parser';
 export { LogWatcher } from './logs/watcher';

@@ -1,11 +1,14 @@
 import { initialApmState } from '@ba/contracts';
 import { resolve } from 'node:path';
-import type { Bootstrap, Match, PlayerReport } from '@ba/contracts';
+import type { Bootstrap, Match, PlayerProfile, PlayerReport } from '@ba/contracts';
 import { configSchema, initialUpdateState } from '@ba/contracts';
 import { loadRealData, seedRealData } from '../../apps/server/src/dev/real-data';
 import { BatraceClient } from '../../apps/server/src/network/client';
 import { Analyzer } from '../../apps/server/src/players/analyzer';
 import { Database } from '../../apps/server/src/storage/database';
+import { TrackerService } from '../../apps/server/src/players/tracker';
+import { seedRecordedMatchCaches } from '../../apps/server/src/dev/match-fixtures';
+import { seedOfflineFixtureCaches } from '../../apps/server/src/dev/offline-fixtures';
 
 // Load the checksum-verified capture once, using only an in-memory database and offline responses.
 const { data } = await loadRealData(resolve('tests/fixtures/real'));
@@ -23,10 +26,27 @@ const captured = await (async () => {
   );
   try {
     seedRealData(db, data, '');
+    await seedRecordedMatchCaches(db, resolve('tests/fixtures/batrace/history'));
+    const originals = db.matches(data.activeAccountId!);
+    await seedOfflineFixtureCaches(db, resolve('tests/fixtures/batrace/offline'), {
+      playerIds: new Set(originals.flatMap((match) => match.players.map((player) => player.id))),
+      matchIds: new Set(originals.flatMap((match) => (match.fid ? [match.fid] : []))),
+    });
+    const analyzer = new Analyzer(client, db);
+    const tracker = new TrackerService(db, client, analyzer);
+    const matches = tracker.list(data.activeAccountId!);
+    const reports: Record<string, PlayerReport> = {};
+    const profiles: Record<string, PlayerProfile> = {};
+    for (const player of matches[0]!.players) {
+      profiles[player.id] = await tracker.profile(player.id);
+      reports[player.id] = await analyzer.report(player.id);
+    }
     return {
-      matches: db.matches(data.activeAccountId!),
+      matches,
       accounts: db.accounts(),
-      report: await new Analyzer(client, db).report(data.activeAccountId!),
+      report: reports[data.activeAccountId!]!,
+      reports,
+      profiles,
     };
   } finally {
     await client.close();
@@ -36,11 +56,13 @@ const captured = await (async () => {
 
 export const capturedMatches = captured.matches;
 export const capturedAccounts = captured.accounts;
+export const capturedReports = captured.reports;
+export const capturedProfiles = captured.profiles;
 const match = capturedMatches[0]!;
 export const capturedPlayers = match.players.map((player) => ({
   id: player.id,
   name: player.name,
-  level: null,
+  level: captured.reports[player.id]?.level ?? null,
   rating: player.newRating,
 }));
 

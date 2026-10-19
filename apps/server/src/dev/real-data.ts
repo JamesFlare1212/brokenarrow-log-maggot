@@ -4,6 +4,8 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import type { Match, PublicConfig } from '@ba/contracts';
 import { Database } from '../storage/database';
+import { seedRecordedMatchCaches } from './match-fixtures';
+import { seedOfflineFixtureCaches } from './offline-fixtures';
 
 export const REAL_DATA_TABLES = [
   'players',
@@ -163,6 +165,8 @@ export async function prepareRealData(
   const db = new Database(join(userDir, 'assistant.sqlite'));
   try {
     seedRealData(db, data, logDir);
+    await seedRecordedMatchCaches(db, resolve(fixtureDirectory, '../batrace/history'));
+    await seedOfflineFixtureCaches(db, resolve(fixtureDirectory, '../batrace/offline'));
   } finally {
     db.close();
   }

@@ -18,7 +18,10 @@ export class Analyzer {
     private db: Database,
   ) {}
   async report(id: string, force = false): Promise<PlayerReport> {
-    const name = this.db.player(id)?.name || id;
+    const recordedInfo = this.client.offline
+      ? object(object(this.db.cache('info:' + id, true)?.value).info)
+      : {};
+    const name = text(recordedInfo.name, this.db.player(id, this.client.offline)?.name || id);
     try {
       const response = await this.client.analysisPlayer(id, force),
         a = object(response.value);
@@ -45,7 +48,7 @@ export class Analyzer {
       const report: PlayerReport = {
         id,
         name,
-        level: null,
+        level: number(recordedInfo.level),
         fallback: false,
         matchCount: number(a.matchCount) ?? points.length,
         sampleCount,
@@ -161,7 +164,8 @@ export class Analyzer {
     try {
       const a = await this.client.analysisPlayer(id);
       calls += a.attempts ?? 0;
-      if (a.source === 'stale') throw new Error('Fresh ranked match data is required');
+      if (a.source === 'stale' && !this.client.offline)
+        throw new Error('Fresh ranked match data is required');
       const points = array(object(object(a.value).trend).points)
         .map(object)
         .filter(

@@ -22,7 +22,20 @@ export class TrackerService {
     private analyzer: Analyzer,
   ) {}
   list(accountId?: string): Match[] {
-    return this.db.matches(accountId).map((match) => this.withAwards(match));
+    const recorded = this.client.offline && this.db.state('offlineBatraceFixture', null);
+    return this.db.matches(accountId).map((match) => {
+      const raw =
+        recorded && match.fid ? this.db.cache(`match:${match.fid}`, true)?.value : undefined;
+      const complete = raw
+        ? normalizeMatch(raw, {
+            id: match.id,
+            previous: match,
+            localId: match.localPlayerId,
+            now: match.updatedAt,
+          })
+        : match;
+      return this.withAwards(complete, raw);
+    });
   }
   private withAwards(match: Match, raw?: unknown, analysis?: unknown): Match {
     const cached =
@@ -139,7 +152,7 @@ export class TrackerService {
     };
   }
   async profile(id: string, force = false): Promise<PlayerProfile> {
-    const local = this.db.player(id),
+    const local = this.db.player(id, this.client.offline),
       snapshot = this.db.snapshot(id),
       profile: PlayerProfile = {
         id,

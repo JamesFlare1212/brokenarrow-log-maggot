@@ -346,11 +346,11 @@ export class Database {
       return { removedMatches };
     });
   }
-  localSearch(query: string): SearchPlayer[] {
+  localSearch(query: string, includeRecorded = false): SearchPlayer[] {
     const q = query.toLocaleLowerCase();
     const rows = this.prepare(
-      'SELECT p.id,p.name,p.last_seen,GROUP_CONCAT(n.name,char(31)) aliases FROM players p LEFT JOIN player_names n ON n.player_id=p.id WHERE p.observed=1 GROUP BY p.id ORDER BY p.last_seen DESC',
-    ).all();
+      'SELECT p.id,p.name,p.last_seen,GROUP_CONCAT(n.name,char(31)) aliases FROM players p LEFT JOIN player_names n ON n.player_id=p.id WHERE p.observed=1 OR ? GROUP BY p.id ORDER BY p.last_seen DESC',
+    ).all(includeRecorded ? 1 : 0);
     return rows
       .filter(
         (r) =>
@@ -361,15 +361,31 @@ export class Database {
             .some((name) => name.toLocaleLowerCase().includes(q)),
       )
       .slice(0, 20)
-      .map((r) => ({ id: String(r.id), name: String(r.name), level: null, rating: null }));
+      .map((r) => {
+        const info = includeRecorded
+          ? object(object(this.cache('info:' + r.id, true)?.value).info)
+          : {};
+        return {
+          id: String(r.id),
+          name: String(r.name),
+          level: number(info.level),
+          rating: number(info.rating),
+        };
+      });
   }
-  player(id: string): {
+  player(
+    id: string,
+    includeRecorded = false,
+  ): {
     name: string;
     firstSeen: number | null;
     lastSeen: number | null;
     names: NameRecord[];
   } | null {
-    const r = this.prepare('SELECT * FROM players WHERE id=? AND observed=1').get(id);
+    const r = this.prepare('SELECT * FROM players WHERE id=? AND (observed=1 OR ?)').get(
+      id,
+      includeRecorded ? 1 : 0,
+    );
     if (!r) return null;
     const names = this.prepare(
       'SELECT * FROM player_names WHERE player_id=? ORDER BY last_seen DESC',

@@ -188,6 +188,8 @@ describe('captured local real data', () => {
     expect(one).not.toBe(two);
     const first = database(join(one, 'assistant.sqlite'));
     const second = database(join(two, 'assistant.sqlite'));
+    expect(first.cache('amatch:9227650', true)).not.toBeNull();
+    expect(first.cache('match:9227650', true)).not.toBeNull();
     const match = first.matches()[0]!;
     first.deleteMatch(match.id);
     expect(second.match(match.id)).not.toBeNull();

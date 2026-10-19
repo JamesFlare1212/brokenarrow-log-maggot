@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 
@@ -13,13 +15,21 @@ export function browserFixtures(): Plugin {
       delete require.cache[require.resolve('../../server/dist/index.cjs')];
       const { createBrowserFixtures } =
         require('../../server/dist/index.cjs') as typeof import('../../server/src');
-      const { version } = require('../../../package.json') as { version: string };
+      const packagePath = fileURLToPath(new URL('../../../package.json', import.meta.url));
+      const version = () =>
+        (JSON.parse(readFileSync(packagePath, 'utf8')) as { version: string }).version;
       fixtures = await createBrowserFixtures(
         fileURLToPath(new URL('../../../tests/fixtures/real', import.meta.url)),
         fileURLToPath(new URL('../../../.test-data/web-dev', import.meta.url)),
         version,
         (event) => server.ws.send('ba:fixture-event', event),
       );
+      server.watcher.add(packagePath);
+      const reloadVersion = (path: string) => {
+        if (resolve(path) === packagePath) server.ws.send({ type: 'full-reload' });
+      };
+      server.watcher.on('change', reloadVersion);
+      server.httpServer?.once('close', () => server.watcher.off('change', reloadVersion));
       server.config.logger.info(`Browser fixture profile: ${fixtures.directory}`);
       server.middlewares.use('/__fixtures/rpc', async (request, response) => {
         response.setHeader('Content-Type', 'application/json; charset=utf-8');

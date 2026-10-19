@@ -56,12 +56,14 @@ function desktopOnly(): never {
 export async function createBrowserFixtures(
   fixtureDirectory: string,
   developmentRoot: string,
-  version: string,
+  version: string | (() => string),
   broadcast: (event: AppEvent) => void,
 ) {
   const directory = await prepareRealData(fixtureDirectory, developmentRoot);
   const platform: Platform = {
-    version,
+    get version() {
+      return typeof version === 'function' ? version() : version;
+    },
     http: {
       offline: true,
       fetch: async () => {

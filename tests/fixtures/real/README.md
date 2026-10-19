@@ -1,5 +1,9 @@
 # 本地真实数据样本
 
+The [complete offline BATrace archive](../batrace/offline/README.md) supplements these logs with recorded match details and analyses plus player information, analysis, and recent games for all fixture players. Both development modes and service-backed UI tests load the same archive. `pnpm data:capture` captures missing endpoints with resumable checkpoints; normal development and test commands remain offline.
+
+Recorded match and analysis caches in the sibling `batrace/history` corpus are also loaded into isolated development and real-data smoke profiles. Their checksums are verified before import. This enables the integrated score labels and titles offline while keeping this snapshot and its original 454-match archive unchanged. See the [score-label integration notes](../../../../docs/title-medal-comparison.md#integrated-score-label-display).
+
 本目录的数据来自用户授权导入的本机 Broken Arrow GameLogs 和应用 SQLite，不是随机生成或演示数据。保留玩家名字、玩家 ID、对局 ID、卡组名及已有真实评分。
 
 - 258 份原始日志，合计 444,014,406 字节，覆盖 2025–2026 年。

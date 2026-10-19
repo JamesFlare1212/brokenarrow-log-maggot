@@ -266,7 +266,10 @@ export class Application {
           this.db.observe(players);
           return { players, source: r.source };
         } catch {
-          return { players: this.db.localSearch(query), source: 'local' as const };
+          return {
+            players: this.db.localSearch(query, this.client.offline),
+            source: 'local' as const,
+          };
         }
       },
       'players.report': ({ id, force }) => this.analyzer.report(id, force),

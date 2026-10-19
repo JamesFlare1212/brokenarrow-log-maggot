@@ -40,6 +40,9 @@ export class BatraceClient {
     private now: () => number = Date.now,
     private wait: (ms: number) => Promise<unknown> = (ms) => sleep(ms),
   ) {}
+  get offline(): boolean {
+    return this.http.offline === true;
+  }
   onResult(listener: (check: ApiHealthCheck) => void): () => void {
     this.resultListeners.add(listener);
     return () => {
@@ -59,7 +62,15 @@ export class BatraceClient {
     this.lifetime.signal.throwIfAborted();
     if (this.http.offline) {
       const hit = this.db.cache(key, true, this.now());
-      if (!hit) throw new Error('Offline real-data mode: no recorded response for this request');
+      if (!hit) {
+        const failure = this.db.state<Record<string, { message: string; status?: number }>>(
+          'recordedBatraceFailures',
+          {},
+        )[key];
+        if (failure)
+          throw Object.assign(new Error(failure.message), { status: failure.status, attempts: 0 });
+        throw new Error('Offline real-data mode: no recorded response for this request');
+      }
       return { value: hit.value, source: 'stale', at: hit.at, attempts: 0 };
     }
     if (!options.force) {
@@ -232,6 +243,7 @@ export class BatraceClient {
       `/api/analysis/match?matchid=${encodeURIComponent(id)}`,
       `amatch:${id}`,
       86400000,
+      { force },
     );
   }
   async close(): Promise<void> {
@@ -240,4 +252,3 @@ export class BatraceClient {
     await Promise.allSettled([...this.pending.values()]);
   }
 }
-      { force },
