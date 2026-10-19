@@ -13,10 +13,16 @@ import {
   faCheck,
   faSpinner,
   faVideo,
+  faDatabase,
+  faArrowsRotate,
+  faMagnifyingGlass,
+  faWaveSquare,
+  faShieldHalved,
 } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
 import type { Account, PublicConfig } from '@ba/contracts';
 import { useApp } from '../../app/state';
+import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { Button, Dialog, Field, Toggle, Notice, Empty } from '../../components/ui';
 import { PageToolbar } from '../../components/PageToolbar';
@@ -30,6 +36,7 @@ import {
 } from '../../components/Sidebar';
 import { AboutSettings } from './AboutSettings';
 import { AppearanceSettings } from './AppearanceSettings';
+import { CacheSettings } from './CacheSettings';
 import { RecordingSettings } from '../replays/RecordingSettings';
 import type { SettingsSaveStatus } from '../../hooks/useSettingsAutosave';
 
@@ -38,19 +45,21 @@ const tabs = [
   { id: 'appearance', label: 'appearance', icon: faPalette },
   { id: 'connection', label: 'gameConnection', icon: faPlug },
   { id: 'automation', label: 'automation', icon: faSliders },
+  { id: 'cache', label: 'cache', icon: faDatabase },
   { id: 'recording', label: 'recordingSettings', icon: faVideo },
   { id: 'navigation', label: 'navigationSettings', icon: faList },
   { id: 'accounts', label: 'accounts', icon: faUsers },
 ] as const;
 const flags = [
-  ['autoQueryCurrentMatch', 'autoQuery'],
-  ['inputHookEnabled', 'inputHook'],
-  ['banPollEnabled', 'banPolling'],
-  ['matchSyncEnabled', 'matchSync'],
-  ['multiAccountBond', 'multiAccount'],
+  ['autoQueryCurrentMatch', 'autoQuery', faMagnifyingGlass],
+  ['inputHookEnabled', 'inputHook', faWaveSquare],
+  ['banPollEnabled', 'banPolling', faShieldHalved],
+  ['matchSyncEnabled', 'matchSync', faArrowsRotate],
+  ['multiAccountBond', 'multiAccount', faUsers],
 ] as const;
 
 export function SettingsPage() {
+  const confirm = useConfirmation();
   const { api, state, settings, settingsTab: tab, openSettings, closeSettings, notify } = useApp(),
     { t } = useI18n(),
     [accounts, setAccounts] = useState<Account[]>([]),
@@ -339,13 +348,12 @@ export function SettingsPage() {
             tabIndex={0}
             className="settings-content"
           >
-            {id !== 'appearance' && id !== 'recording' && (
-              <div className="settings-page-heading">
-                <h2>{t(label)}</h2>
-                <p>{t('settingsHint.' + id)}</p>
-              </div>
-            )}
+            <div className="settings-page-heading">
+              <h2>{t(label)}</h2>
+              <p>{t('settingsHint.' + id)}</p>
+            </div>
             {id === 'appearance' && <AppearanceSettings draft={draft} change={settings.change} />}
+            {id === 'cache' && tab === 'cache' && <CacheSettings />}
             {id === 'general' && (
               <>
                 <section className="settings-section settings-card settings-language-row">
@@ -385,7 +393,7 @@ export function SettingsPage() {
             )}
             {id === 'connection' && (
               <>
-                <section className="settings-section settings-card">
+                <section className="settings-section settings-card settings-directories">
                   <Field id="settings-log" label={t('logDirectory')}>
                     <div className="input-action">
                       <input
@@ -395,11 +403,12 @@ export function SettingsPage() {
                         onBlur={() => void flush()}
                         aria-describedby={logFeedback ? 'settings-log-feedback' : undefined}
                       />
-                      <Button onClick={() => void choose('logs')}>
-                        <Icon icon={faFolderOpen} size={16} />
+                      <Button className="directory-select" onClick={() => void choose('logs')}>
+                        <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                         {t('select')}
                       </Button>
                       <Button
+                        className="directory-detect"
                         disabled={detecting}
                         aria-busy={detecting}
                         onClick={() => void detect()}
@@ -426,19 +435,27 @@ export function SettingsPage() {
                         onBlur={() => void flush()}
                         placeholder={t('defaultDirectory')}
                       />
-                      <Button onClick={() => void choose('decks')}>{t('select')}</Button>
+                      <Button className="directory-select" onClick={() => void choose('decks')}>
+                        <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
+                        {t('select')}
+                      </Button>
                     </div>
                   </Field>
                 </section>
                 <div className="settings-health settings-card">
-                  <div>
-                    <h3>{t('health')}</h3>
-                    <p>{t('healthHint')}</p>
-                    <div
-                      className="settings-health-feedback"
-                      role={healthError ? 'alert' : 'status'}
-                    >
-                      {healthError || (healthPending ? t('loading') : '')}
+                  <div className="settings-health-summary">
+                    <span className="settings-feature-icon" aria-hidden="true">
+                      <Icon icon={faWaveSquare} size={18} />
+                    </span>
+                    <div className="settings-health-copy">
+                      <h3>{t('health')}</h3>
+                      <p>{t('healthHint')}</p>
+                      <div
+                        className="settings-health-feedback"
+                        role={healthError ? 'alert' : 'status'}
+                      >
+                        {healthError || (healthPending ? t('loading') : '')}
+                      </div>
                     </div>
                   </div>
                   <Button
@@ -446,21 +463,26 @@ export function SettingsPage() {
                     aria-busy={healthPending}
                     onClick={() => void checkHealth()}
                   >
+                    <Icon icon={faWaveSquare} size={16} spin={healthPending} aria-hidden="true" />
                     {t('healthCheck')}
                   </Button>
                 </div>
               </>
             )}
             {id === 'automation' && (
-              <section className="settings-section settings-card settings-flags">
-                {flags.map(([key, label]) => (
-                  <Toggle
-                    key={key}
-                    id={'setting-' + key}
-                    label={t(label)}
-                    checked={draft[key]}
-                    onChange={(value) => set(key, value)}
-                  />
+              <section className="settings-automation" aria-label={t('automation')}>
+                {flags.map(([key, label, icon]) => (
+                  <div className="settings-automation-item settings-card" key={key}>
+                    <span className="settings-feature-icon" aria-hidden="true">
+                      <Icon icon={icon} size={18} />
+                    </span>
+                    <Toggle
+                      id={'setting-' + key}
+                      label={t(label)}
+                      checked={draft[key]}
+                      onChange={(value) => set(key, value)}
+                    />
+                  </div>
                 ))}
               </section>
             )}
@@ -541,8 +563,16 @@ export function SettingsPage() {
                         </span>
                         <Button
                           variant="danger"
-                          onClick={() => {
-                            if (!window.confirm(t('deleteConfirm'))) return;
+                          onClick={async () => {
+                            if (
+                              !(await confirm({
+                                title: t('confirmation.deleteAccount'),
+                                description: t('confirmation.deleteAccountHint'),
+                                detail: `${account.name} · #${account.id}`,
+                                confirmLabel: t('delete'),
+                              }))
+                            )
+                              return;
                             void api
                               .invoke('accounts.delete', { id: account.id })
                               .then(() => api.invoke('accounts.list', null))

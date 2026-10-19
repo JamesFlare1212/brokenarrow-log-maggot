@@ -3,6 +3,7 @@ export const SETTINGS_TABS = [
   'appearance',
   'connection',
   'automation',
+  'cache',
   'recording',
   'navigation',
   'accounts',

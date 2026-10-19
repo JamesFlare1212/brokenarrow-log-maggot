@@ -87,6 +87,23 @@ afterEach(async () => {
   applications.clear();
 });
 
+describe('application cache management', () => {
+  it('exposes cache usage and cleanup through validated native RPCs without network requests', async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const app = application(platform(fetchImpl));
+    app.db.saveCache('info:1', { name: 'Old' }, 1, Date.now() - 1000);
+    app.db.saveCache('info:2', { name: 'Fresh' }, 21600000);
+    expect((await app.invoke('cache.stats', null)).api).toMatchObject({ entries: 2, expired: 1 });
+    const expired = await app.invoke('cache.clear', { mode: 'expired' });
+    expect(expired.removed).toBe(1);
+    expect(expired.stats.api).toMatchObject({ entries: 1, expired: 0 });
+    await expect(app.invoke('cache.clear', {})).rejects.toThrow();
+    expect((await app.invoke('cache.clear', { mode: 'all' })).removed).toBe(1);
+    expect((await app.invoke('cache.stats', null)).api.bytes).toBe(0);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
 describe('application telemetry', () => {
   it('counts live match starts while excluding recovered logs, metadata, and repeated room notifications', async () => {
     vi.useFakeTimers();

@@ -32,6 +32,8 @@ import {
   capturedAccounts,
   capturedMatches,
   capturedPlayers,
+  capturedReports,
+  capturedProfiles,
   fixtureBootstrap,
   matchFixture,
   reportFixture,
@@ -81,6 +83,11 @@ function nativeFixture(
   const defaults: Partial<Handlers> = {
     'matches.list': ({ accountId }) =>
       structuredClone(capturedMatches.filter((m) => !accountId || m.localPlayerId === accountId)),
+    'matches.detail': ({ fid }) => {
+      const match = capturedMatches.find((match) => match.fid === fid);
+      if (!match) throw new Error('No recorded match fixture for ' + fid);
+      return structuredClone(match);
+    },
     'accounts.list': () => structuredClone(capturedAccounts),
     'players.search': ({ query }) => ({
       source: 'local',
@@ -91,6 +98,16 @@ function nativeFixture(
         ),
       ),
     }),
+    'players.report': ({ id }) => {
+      const report = capturedReports[id];
+      if (!report) throw new Error('No recorded player report for ' + id);
+      return structuredClone(report);
+    },
+    'players.profile': ({ id }) => {
+      const profile = capturedProfiles[id];
+      if (!profile) throw new Error('No recorded player profile for ' + id);
+      return structuredClone(profile);
+    },
     'bans.list': () => [],
     'apm.history': () => [],
     'decks.list': () => ({
@@ -806,6 +823,106 @@ describe('settings pages and automatic saving', () => {
     return within(await screen.findByRole('main', { name: '设置' }));
   }
 
+  const cacheStats = {
+    api: { entries: 3, expired: 2, bytes: 2048 },
+    snapshots: { entries: 2, expired: 1, bytes: 1024 },
+  };
+
+  it('opens the cache settings route and updates usage after cleaning expired entries', async () => {
+    window.history.replaceState(null, '', '#settings/cache');
+    const clearing = deferred<RpcOutputs['cache.clear']>();
+    const native = nativeFixture(bootstrapForApp(), {
+      'cache.stats': () => cacheStats,
+      'cache.clear': () => clearing.promise,
+    });
+    render(<App />, { wrapper: wrapper(native.api) });
+    const panel = within(await screen.findByRole('tabpanel', { name: '缓存' }));
+    expect(screen.getByRole('tab', { name: '缓存' }).getAttribute('aria-selected')).toBe('true');
+    expect(await panel.findByText('3 KB')).toBeTruthy();
+    expect(panel.getByText('3 条 · 2 条已过期')).toBeTruthy();
+    fireEvent.click(panel.getByRole('button', { name: '清理过期缓存' }));
+    await waitFor(() =>
+      expect(
+        native.calls.filter((call) => call.method === 'cache.clear').map((call) => call.input),
+      ).toEqual([{ mode: 'expired' }]),
+    );
+    expect(panel.getByRole('button', { name: '清空全部缓存' }).hasAttribute('disabled')).toBe(true);
+    expect(panel.getByRole('button', { name: '刷新' }).hasAttribute('disabled')).toBe(true);
+    clearing.resolve({
+      removed: 3,
+      stats: {
+        api: { entries: 1, expired: 0, bytes: 1024 },
+        snapshots: { entries: 1, expired: 0, bytes: 512 },
+      },
+    });
+    expect(await panel.findByText('已清理 3 条缓存。')).toBeTruthy();
+    expect(panel.getByRole('button', { name: '清理过期缓存' }).hasAttribute('disabled')).toBe(true);
+    expect(panel.getByRole('button', { name: '清空全部缓存' }).hasAttribute('disabled')).toBe(
+      false,
+    );
+  });
+
+  it('requires confirmation to clear all cache and keeps cancellation harmless', async () => {
+    const user = userEvent.setup();
+    const native = nativeFixture(bootstrapForApp(), {
+      'cache.stats': () => cacheStats,
+      'cache.clear': () => ({
+        removed: 5,
+        stats: {
+          api: { entries: 0, expired: 0, bytes: 0 },
+          snapshots: { entries: 0, expired: 0, bytes: 0 },
+        },
+      }),
+    });
+    await openSettings(native);
+    expect(native.calls.some((call) => call.method === 'cache.stats')).toBe(false);
+    await user.click(screen.getByRole('tab', { name: '缓存' }));
+    const panel = within(screen.getByRole('tabpanel', { name: '缓存' }));
+    await panel.findByText('3 KB');
+    const clear = panel.getByRole('button', { name: '清空全部缓存' });
+    await user.click(clear);
+    let dialog = within(await screen.findByRole('alertdialog', { name: '清空全部缓存' }));
+    expect(dialog.getByText(translate('zh', 'cachePreserved'))).toBeTruthy();
+    await user.click(dialog.getByRole('button', { name: '取消' }));
+    expect(native.calls.some((call) => call.method === 'cache.clear')).toBe(false);
+    await user.click(clear);
+    dialog = within(await screen.findByRole('alertdialog', { name: '清空全部缓存' }));
+    await user.click(dialog.getByRole('button', { name: '清空全部缓存' }));
+    expect(await panel.findByText('已清理 5 条缓存。')).toBeTruthy();
+    expect(panel.getByRole('button', { name: '清空全部缓存' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      native.calls.filter((call) => call.method === 'cache.clear').map((call) => call.input),
+    ).toEqual([{ mode: 'all' }]);
+  });
+
+  it('allows retry after cache loading or cleanup fails without displaying false success', async () => {
+    let available = false;
+    const native = nativeFixture(bootstrapForApp(), {
+      'cache.stats': () => {
+        if (!available) throw new Error('Cache statistics unavailable');
+        return cacheStats;
+      },
+      'cache.clear': () => {
+        throw new Error('Cache cleanup failed');
+      },
+    });
+    await openSettings(native);
+    fireEvent.click(screen.getByRole('tab', { name: '缓存' }));
+    const panel = within(screen.getByRole('tabpanel', { name: '缓存' }));
+    expect((await panel.findByRole('alert')).textContent).toContain('Cache statistics unavailable');
+    expect(panel.getByRole('button', { name: '清空全部缓存' }).hasAttribute('disabled')).toBe(true);
+    available = true;
+    fireEvent.click(panel.getByRole('button', { name: '刷新' }));
+    await panel.findByText('3 KB');
+    fireEvent.click(panel.getByRole('button', { name: '清理过期缓存' }));
+    expect((await panel.findByRole('alert')).textContent).toContain('Cache cleanup failed');
+    expect(panel.queryByText('已清理 3 条缓存。')).toBeNull();
+    expect(panel.getByText('3 条 · 2 条已过期')).toBeTruthy();
+    expect(panel.getByRole('button', { name: '清理过期缓存' }).hasAttribute('disabled')).toBe(
+      false,
+    );
+  });
+
   it('opens a full page, uses addressable tabs, and returns to the previous page with its input intact', async () => {
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
@@ -827,7 +944,7 @@ describe('settings pages and automatic saving', () => {
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     const page = within(await screen.findByRole('main', { name: '设置' }));
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.getAllByRole('tab')).toHaveLength(7);
+    expect(screen.getAllByRole('tab')).toHaveLength(8);
     expect(page.queryByRole('button', { name: '保存' })).toBeNull();
     expect(page.queryByRole('button', { name: '取消' })).toBeNull();
     expect(location.hash).toBe('#settings/appearance');
@@ -1941,7 +2058,13 @@ describe('user interaction regressions', () => {
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     await screen.findByRole('main', { name: '设置' });
     fireEvent.click(screen.getByRole('tab', { name: '常规' }));
-    fireEvent.change(screen.getByRole('combobox', { name: '语言' }), { target: { value: 'en' } });
+    const language = screen.getByRole('combobox', { name: '语言' });
+    expect(
+      within(language)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value')),
+    ).toEqual(['zh', 'en']);
+    fireEvent.change(language, { target: { value: 'en' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Settings' })).toBeNull());
     await screen.findByText('Listening');
@@ -1989,8 +2112,8 @@ describe('user interaction regressions', () => {
     fireEvent.click(within(navigation).getByRole('button', { name: '卡组工具' }));
     expect(screen.getByRole('heading', { level: 1, name: '卡组工具' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '卡组工具 展开' })).toBeNull();
-    expect(await screen.findByRole('group', { name: '前线卡组' })).toBeTruthy();
-    expect(screen.getByRole('group', { name: '后勤仓库' })).toBeTruthy();
+    expect(await screen.findByRole('group', { name: '当前卡组' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: '备份卡组' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '刷新' }));
     await waitFor(() =>
       expect(native.calls.filter((call) => call.method === 'decks.list')).toHaveLength(2),
@@ -2178,7 +2301,7 @@ describe('user interaction regressions', () => {
     expect(screen.getByRole('button', { name: '刷新粗查' })).toBeTruthy();
   });
 
-  it('shows previous-match titles on radar and hides them when returning to a live match', async () => {
+  it('shows previous-match score labels and titles on radar and hides them when returning to a live match', async () => {
     const bootstrap = bootstrapForApp();
     const previous = matchFixture({
       id: '987654321',
@@ -2187,23 +2310,74 @@ describe('user interaction regressions', () => {
       titles: {
         [localPlayer.id]: [{ id: 'carry', kind: 'good', params: { d: 6000, l: 1000, net: 5000 } }],
       },
+      scoreLabels: {
+        [localPlayer.id]: [
+          { id: 'destruction', score: 100, threshold: 100 },
+          { id: 'damage', score: 98, threshold: 98 },
+          { id: 'efficiency', score: 95, threshold: 95 },
+        ],
+      },
     });
     const native = nativeFixture(bootstrap, {
       'matches.list': () => [previous],
+      'matches.detail': () => previous,
       'session.query': ({ requestId }) => ({ requestId, queried: 0, skipped: 0, cancelled: false }),
     });
     render(<SessionPanel standalone />, { wrapper: wrapper(native.api) });
     const button = await screen.findByRole('button', { name: '上一局' });
     await waitFor(() => expect(button.hasAttribute('disabled')).toBe(false));
     expect(screen.queryByRole('button', { name: '大腿' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '击杀王' })).toBeNull();
     fireEvent.click(button);
+    expect(await screen.findByRole('button', { name: '击杀王' })).toBeTruthy();
+    const playerHeading = screen
+      .getByRole('button', { name: localPlayer.name })
+      .closest('.player-heading')!;
+    expect(playerHeading.querySelector('.match-score-labels')?.parentElement).toBe(playerHeading);
+    expect(document.querySelector('.session-roster .player-avatar')).toBeNull();
     fireEvent.click(await screen.findByRole('button', { name: '大腿' }));
     expect(screen.getByText('赢方净交换最高：摧毁 6000 − 损失 1000 = 5000。')).toBeTruthy();
     const back = screen.getByRole('button', { name: '返回当前局' });
     await waitFor(() => expect(back.hasAttribute('disabled')).toBe(false));
     fireEvent.click(back);
     expect(screen.queryByRole('button', { name: '大腿' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '击杀王' })).toBeNull();
     expect(document.querySelector('button button')).toBeNull();
+  });
+
+  it('requires explicit confirmation before deleting a match and restores focus after cancellation', async () => {
+    const user = userEvent.setup();
+    const match = matchFixture();
+    const remove = vi.fn(() => ({ removed: true }));
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => [match],
+      'matches.delete': remove,
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    const trigger = await screen.findByRole('button', { name: `操作: #${match.fid || match.id}` });
+    const openConfirmation = async () => {
+      await user.click(trigger);
+      await user.click(await screen.findByRole('menuitem', { name: '删除' }));
+      return screen.findByRole('alertdialog', { name: '删除对局记录？' });
+    };
+    let dialog = await openConfirmation();
+    expect(within(dialog).getByText(`${match.map} · #${match.fid || match.id}`)).toBeTruthy();
+    expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: '取消' }));
+    expect(remove).not.toHaveBeenCalled();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(remove).not.toHaveBeenCalled();
+    dialog = await openConfirmation();
+    await user.click(within(dialog).getByRole('button', { name: '取消' }));
+    expect(remove).not.toHaveBeenCalled();
+    dialog = await openConfirmation();
+    await user.click(document.querySelector('.confirmation-overlay')!);
+    expect(screen.getByRole('alertdialog')).toBe(dialog);
+    expect(remove).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: '删除' }));
+    await waitFor(() => expect(remove).toHaveBeenCalledExactlyOnceWith({ id: match.id }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
   });
 
   it('preserves match facts and title evidence in the detail dialog without embedding explanations in the table', async () => {

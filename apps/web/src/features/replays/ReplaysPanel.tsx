@@ -11,10 +11,12 @@ import { TooltipButton } from '../../components/Tooltip';
 import type { Replay } from '@ba/contracts';
 import { formatSize, formatTime, formatDuration } from '@ba/shared';
 import { useApp } from '../../app/state';
+import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Toggle, Notice, Loading, Empty, Badge, Menu } from '../../components/ui';
 export function ReplaysPanel() {
+  const confirm = useConfirmation();
   const { api, state, openModal, patchConfig, notify } = useApp(),
     { t, locale } = useI18n(),
     request = useRequest<Replay[]>();
@@ -119,8 +121,14 @@ export function ReplaysPanel() {
             <Menu>
               <Button
                 variant="danger"
-                onClick={() => {
-                  if (window.confirm(t('cleanAll') + '?'))
+                onClick={async () => {
+                  if (
+                    await confirm({
+                      title: t('cleanAll'),
+                      description: t('confirmation.deleteHint'),
+                      confirmLabel: t('cleanAll'),
+                    })
+                  )
                     void api
                       .invoke('replays.clean', { days: 0 })
                       .then(() => refresh())
@@ -131,8 +139,14 @@ export function ReplaysPanel() {
               </Button>
               <Button
                 variant="danger"
-                onClick={() => {
-                  if (window.confirm(t('clean30') + '?'))
+                onClick={async () => {
+                  if (
+                    await confirm({
+                      title: t('clean30'),
+                      description: t('confirmation.deleteHint'),
+                      confirmLabel: t('clean30'),
+                    })
+                  )
                     void api
                       .invoke('replays.clean', { days: 30 })
                       .then(() => refresh())
@@ -182,8 +196,15 @@ export function ReplaysPanel() {
                   </Button>
                   <Button
                     variant="danger"
-                    onClick={() => {
-                      if (window.confirm(t('deleteConfirm')))
+                    onClick={async () => {
+                      if (
+                        await confirm({
+                          title: t('confirmation.deleteReplay'),
+                          description: t('confirmation.deleteHint'),
+                          detail: `${r.map || r.uploaderName} · ${r.id}`,
+                          confirmLabel: t('delete'),
+                        })
+                      )
                         void api
                           .invoke('replays.delete', { name: r.id })
                           .then(() => refresh())

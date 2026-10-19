@@ -17,7 +17,7 @@ export function AboutSettings() {
         <div className="settings-about-row">
           <div className="settings-about-copy">
             <strong>{t('projectLinks')}</strong>
-            <p>{t('brand')} · by Zola</p>
+            <p>{t('brand')}</p>
           </div>
           <div className="settings-about-links">
             {[

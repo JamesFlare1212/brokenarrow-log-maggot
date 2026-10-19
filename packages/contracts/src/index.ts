@@ -1,5 +1,6 @@
 export * from './models';
 export * from './rpc';
+export * from './cache';
 export * from './updates';
 export * from './batrace';
 export * from './apm';

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useReducer, useState, type ReactN
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../components/Icon';
 import { TooltipButton } from '../components/Tooltip';
+import { ConfirmationProvider } from '../components/Confirmation';
 import type {
   AppEvent,
   Bootstrap,
@@ -313,7 +314,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
   return (
     <Context.Provider value={value}>
       <LocaleContext.Provider value={state.config.lang}>
-        {children}
+        <ConfirmationProvider>{children}</ConfirmationProvider>
         {toast && (
           <div
             className={`toast ${toast.error ? 'toast-error' : ''}`}

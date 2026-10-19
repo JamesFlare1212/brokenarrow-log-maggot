@@ -149,6 +149,8 @@ export const rpcSchemas = {
   'app.bootstrap': empty,
   'apm.history': empty,
   'config.update': configPatchSchema,
+  'cache.stats': empty,
+  'cache.clear': z.object({ mode: z.enum(['expired', 'all']) }).strict(),
   'directory.select': z.object({ kind: z.enum(['logs', 'replays', 'decks']) }),
   'directory.detect': empty,
   'players.search': z.object({ query: z.string().trim().min(1).max(200) }),
@@ -200,6 +202,8 @@ export interface RpcOutputs {
   'app.bootstrap': Bootstrap;
   'apm.history': import('./models').ApmState[];
   'config.update': PublicConfig;
+  'cache.stats': import('./cache').CacheStats;
+  'cache.clear': { removed: number; stats: import('./cache').CacheStats };
   'directory.select': string | null;
   'directory.detect': string;
   'players.search': { players: SearchPlayer[]; source: 'network' | 'cache' | 'local' | 'stale' };

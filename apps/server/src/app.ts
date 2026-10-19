@@ -185,6 +185,8 @@ export class Application {
         return null;
       },
       'app.bootstrap': () => this.snapshot(),
+      'cache.stats': () => this.db.cacheStats(),
+      'cache.clear': ({ mode }) => this.db.clearCache(mode),
       'config.update': async (patch) => {
         if (
           patch.logDir &&

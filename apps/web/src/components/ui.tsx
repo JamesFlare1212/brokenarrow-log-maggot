@@ -354,7 +354,14 @@ export function Menu({ children, label }: { children: ReactNode; label?: string 
         </Button>
       </Dropdown.Trigger>
       <Dropdown.Portal>
-        <Dropdown.Content className="menu-content" align="end" sideOffset={6}>
+        <Dropdown.Content
+          className="menu-content"
+          align="end"
+          sideOffset={6}
+          onCloseAutoFocus={(event) => {
+            if (document.querySelector('[role="alertdialog"]')) event.preventDefault();
+          }}
+        >
           {menuItems(children).map((child, index) => (
             <Dropdown.Item asChild key={index}>
               {child}

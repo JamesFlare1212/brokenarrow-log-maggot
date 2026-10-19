@@ -3,6 +3,9 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type {
   Account,
+  CacheClearMode,
+  CacheStats,
+  CacheUsage,
   ApmState,
   Ban,
   Encounter,
@@ -524,6 +527,43 @@ export class Database {
       });
     }
     return out.sort((a, b) => (b.at || 0) - (a.at || 0));
+  }
+  cacheStats(now = Date.now()): CacheStats {
+    const usage = (row: Record<string, unknown>): CacheUsage => ({
+      entries: Number(row.entries),
+      expired: Number(row.expired),
+      bytes: Number(row.bytes),
+    });
+    return {
+      api: usage(
+        this.prepare(
+          'SELECT COUNT(*) AS entries,COALESCE(SUM(expires_at<=?),0) AS expired,COALESCE(SUM(length(CAST(payload AS BLOB))),0) AS bytes FROM api_cache',
+        ).get(now)!,
+      ),
+      snapshots: usage(
+        this.prepare(
+          "SELECT COUNT(*) AS entries,COALESCE(SUM(at<? OR json_extract(payload,'$.stale')=1),0) AS expired,COALESCE(SUM(length(CAST(payload AS BLOB))),0) AS bytes FROM player_snapshots",
+        ).get(now - 21600000)!,
+      ),
+    };
+  }
+  clearCache(mode: CacheClearMode, now = Date.now()): { removed: number; stats: CacheStats } {
+    return this.transaction(() => {
+      const api =
+        mode === 'all'
+          ? this.prepare('DELETE FROM api_cache').run()
+          : this.prepare('DELETE FROM api_cache WHERE expires_at<=?').run(now);
+      const snapshots =
+        mode === 'all'
+          ? this.prepare('DELETE FROM player_snapshots').run()
+          : this.prepare(
+              "DELETE FROM player_snapshots WHERE at<? OR json_extract(payload,'$.stale')=1",
+            ).run(now - 21600000);
+      return {
+        removed: Number(api.changes) + Number(snapshots.changes),
+        stats: this.cacheStats(now),
+      };
+    });
   }
   cache(
     key: string,

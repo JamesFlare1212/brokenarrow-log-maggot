@@ -10,6 +10,8 @@ const methods = new Set<RpcMethod>([
   'app.bootstrap',
   'apm.history',
   'config.update',
+  'cache.stats',
+  'cache.clear',
   'updates.check',
   'players.search',
   'players.report',

@@ -9,6 +9,7 @@ import { Icon } from '../../components/Icon';
 import type { DeckList, DeckFile } from '@ba/contracts';
 import { formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
+import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Dialog, Field, Notice, Loading, Empty } from '../../components/ui';
@@ -88,6 +89,7 @@ function DeckFiles({
   );
 }
 export function DecksPanel() {
+  const confirm = useConfirmation();
   const { api, state, notify } = useApp(),
     { t } = useI18n(),
     request = useRequest<DeckList>(),
@@ -187,8 +189,15 @@ export function DecksPanel() {
                 <Button
                   variant="danger"
                   disabled={busy || !front.length}
-                  onClick={() => {
-                    if (window.confirm(t('deleteConfirm')))
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: t('confirmation.deleteDecks'),
+                        description: t('confirmation.deleteHint'),
+                        detail: front.join('\n'),
+                        confirmLabel: t('delete'),
+                      })
+                    )
                       void operate(() =>
                         api.invoke('decks.delete', { kind: 'decks', names: front }),
                       );
@@ -211,8 +220,16 @@ export function DecksPanel() {
                 <Button
                   disabled={busy || back.length !== 1}
                   variant="primary"
-                  onClick={() => {
-                    if (window.confirm(t('deploy') + '?'))
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: t('deploy'),
+                        description: t('confirmation.deployHint'),
+                        detail: back[0],
+                        confirmLabel: t('deploy'),
+                        variant: 'primary',
+                      })
+                    )
                       void operate(() => api.invoke('decks.deploy', { name: back[0] || '' }));
                   }}
                 >
@@ -226,8 +243,15 @@ export function DecksPanel() {
                 <Button
                   variant="danger"
                   disabled={busy || !back.length}
-                  onClick={() => {
-                    if (window.confirm(t('deleteConfirm')))
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: t('confirmation.deleteBackups'),
+                        description: t('confirmation.deleteHint'),
+                        detail: back.join('\n'),
+                        confirmLabel: t('delete'),
+                      })
+                    )
                       void operate(() =>
                         api.invoke('decks.delete', { kind: 'backups', names: back }),
                       );
