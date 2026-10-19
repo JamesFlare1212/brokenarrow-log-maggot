@@ -75,6 +75,31 @@
   font-size: 11px;
   font-weight: 400;
 }
+.match-award-tooltip-header {
+  --title-color: var(--info);
+  display: block;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.match-award-tooltip-good {
+  --title-color: var(--success);
+}
+.match-award-tooltip-bad {
+  --title-color: var(--danger);
+}
+.match-award-tooltip-score {
+  --title-color: var(--accent);
+}
+.match-award-tooltip-category {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.match-award-tooltip-name {
+  margin-top: 3px;
+  color: var(--title-color);
+  font-size: 15px;
+}
 .match-title-rule-heading {
   display: block;
   margin-top: 8px;

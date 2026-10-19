@@ -57,9 +57,10 @@ describe('two score labels plus two match titles', () => {
         .getByRole('tooltip', { hidden: true })
         .querySelector('.match-title-detail');
       expect(evidenceElement?.textContent).toBe(expected);
-      expect(screen.getByRole('tooltip', { hidden: true }).textContent).not.toContain(
-        translate('zh', `scoreLabel.${id}`),
-      );
+      expect(
+        screen.getByRole('tooltip', { hidden: true }).querySelector('.match-award-tooltip-name')
+          ?.textContent,
+      ).toBe(translate('zh', `scoreLabel.${id}`));
       expect(evidenceElement?.textContent).not.toMatch(/评分|\/ 100|获奖分数/);
     },
   );
@@ -167,7 +168,7 @@ describe('two score labels plus two match titles', () => {
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
   });
 
-  it('keeps accessible long names on badges and concise tooltips on focus and click', async () => {
+  it('shows full names in tooltips on focus and click while keeping accessible badge names', async () => {
     const user = userEvent.setup();
     const { container } = render(
       <LocaleContext.Provider value="en">
@@ -178,15 +179,17 @@ describe('two score labels plus two match titles', () => {
     );
     await user.tab();
     expect(document.activeElement?.textContent).toBe(translate('en', 'title.refund'));
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).not.toContain(
-      translate('en', 'title.refund'),
-    );
+    expect(
+      screen.getByRole('tooltip', { hidden: true }).querySelector('.match-award-tooltip-name')
+        ?.textContent,
+    ).toBe(translate('en', 'title.refund'));
     await user.keyboard('{Escape}');
     const score = screen.getByRole('button', { name: translate('en', 'scoreLabel.destruction') });
     await user.click(score);
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).not.toContain(
-      translate('en', 'scoreLabel.destruction'),
-    );
+    expect(
+      screen.getByRole('tooltip', { hidden: true }).querySelector('.match-award-tooltip-name')
+        ?.textContent,
+    ).toBe(translate('en', 'scoreLabel.destruction'));
     expect(container.querySelectorAll('.match-award-label')).toHaveLength(4);
     expect(screen.getAllByRole('button')).toHaveLength(4);
   });
@@ -247,8 +250,13 @@ describe('two score labels plus two match titles', () => {
         expect(tooltip.textContent).toContain(translate(locale, `scoreLabel.${id}.metric`));
         expect(tooltip.textContent).not.toContain('该项');
         expect(tooltip.textContent).not.toMatch(/\{\w+\}/);
-        expect(tooltip.textContent).not.toContain(translate(locale, `scoreLabel.${id}`));
-        expect(tooltip.firstElementChild?.textContent).toBe(
+        expect(tooltip.querySelector('.match-award-tooltip-name')?.textContent).toBe(
+          translate(locale, `scoreLabel.${id}`),
+        );
+        expect(
+          tooltip.firstElementChild?.querySelector('.match-award-tooltip-category')?.textContent,
+        ).toBe(translate(locale, 'scoreLabels'));
+        expect(tooltip.querySelector('.match-title-rule-heading')?.textContent).toBe(
           translate(locale, 'title.condition.heading'),
         );
         cleanup();

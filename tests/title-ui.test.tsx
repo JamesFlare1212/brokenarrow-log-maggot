@@ -27,7 +27,7 @@ describe('match title badges', () => {
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     await act(async () => vi.advanceTimersByTime(400));
     const tooltip = screen.getByRole('tooltip', { hidden: true });
-    expect(tooltip.textContent).not.toContain('收割机');
+    expect(tooltip.querySelector('.match-award-tooltip-name')?.textContent).toBe('收割机');
     expect(tooltip.textContent).toContain('全场摧毁占比 ≥ 21.84%。');
     expect(tooltip.textContent).toContain('终局 ≥ 8 分钟');
     expect(tooltip.textContent).toContain('每人最多 2 个');
@@ -120,8 +120,13 @@ describe('match title badges', () => {
       const button = screen.getByRole('button', { name: translate(locale, `title.${id}`) });
       fireEvent.click(button);
       const tooltip = screen.getByRole('tooltip', { hidden: true });
-      expect(tooltip.querySelector('.button-tooltip-label')).toBeNull();
-      expect(tooltip.firstElementChild?.textContent).toBe(
+      expect(tooltip.querySelector('.match-award-tooltip-name')?.textContent).toBe(
+        translate(locale, `title.${id}`),
+      );
+      expect(
+        tooltip.firstElementChild?.querySelector('.match-award-tooltip-category')?.textContent,
+      ).toBe(translate(locale, 'matchTitles'));
+      expect(tooltip.querySelector('.match-title-rule-heading')?.textContent).toBe(
         translate(locale, 'title.condition.heading'),
       );
       expect(tooltip.textContent).not.toMatch(/\{\w+\}/);

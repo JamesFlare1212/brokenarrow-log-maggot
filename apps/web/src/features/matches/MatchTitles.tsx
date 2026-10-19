@@ -35,6 +35,12 @@ export function MatchTitles({
             pinOnClick
             tooltip={
               <>
+                <span className={`match-award-tooltip-header match-award-tooltip-${title.kind}`}>
+                  <span className="match-award-tooltip-category">{t('matchTitles')}</span>
+                  <span className="button-tooltip-label match-award-tooltip-name">
+                    {t(`title.${title.id}`)}
+                  </span>
+                </span>
                 <span className="match-title-rule-heading">{t('title.condition.heading')}</span>
                 <span className="button-tooltip-detail">{t(condition.key, condition.params)}</span>
                 {netTitle && (

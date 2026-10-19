@@ -41,6 +41,12 @@ export function MatchScoreLabels({ labels }: { labels: MatchScoreLabel[] }) {
           pinOnClick
           tooltip={
             <>
+              <span className="match-award-tooltip-header match-award-tooltip-score">
+                <span className="match-award-tooltip-category">{t('scoreLabels')}</span>
+                <span className="button-tooltip-label match-award-tooltip-name">
+                  {t(`scoreLabel.${label.id}`)}
+                </span>
+              </span>
               <span className="match-title-rule-heading">{t('title.condition.heading')}</span>
               <span className="button-tooltip-detail">
                 {t('scoreLabel.condition', { metric: t(`scoreLabel.${label.id}.metric`) })}
