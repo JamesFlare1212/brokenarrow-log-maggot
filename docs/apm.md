@@ -5,6 +5,9 @@ counts once until released. Each mouse button down counts once, including side
 buttons; releases, pointer movement and wheel events do not count. This metric
 does not identify effective game commands, chat, menus or redundant commands.
 
+APM capture is enabled by default and can be disabled in the automation settings.
+Existing saved preferences, including an explicit opt-out, are preserved.
+
 ## Measurement interval
 
 Live battle-loading events trigger capture. The collector starts its monotonic

@@ -51,7 +51,7 @@ export const configSchema = z.object({
   logDir: z.string().max(4096).default(''),
   decksDir: z.string().max(4096).default(''),
   autoQueryCurrentMatch: z.boolean().default(true),
-  inputHookEnabled: z.boolean().default(false),
+  inputHookEnabled: z.boolean().default(true),
   banPollEnabled: z.boolean().default(true),
   matchSyncEnabled: z.boolean().default(true),
   banCardVisible: z.boolean().default(false),

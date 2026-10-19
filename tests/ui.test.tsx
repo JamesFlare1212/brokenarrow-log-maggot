@@ -1770,6 +1770,92 @@ describe('user interaction regressions', () => {
     expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
   });
 
+  it('hides unknown outcomes across filters, resets pagination, and clears an empty filter', async () => {
+    const rows = [
+      ...Array.from({ length: 12 }, (_, index) =>
+        matchFixture({
+          id: String(3000 + index),
+          map: `Known result ${index}`,
+          endedAt: 1_700_000_000_000 + index,
+          outcome: index % 2 === 0 ? 'win' : 'loss',
+          localPlayerId: '1',
+        }),
+      ),
+      ...Array.from({ length: 50 }, (_, index) =>
+        matchFixture({
+          id: String(4000 + index),
+          map: `Unknown result ${index === 0 ? 'A' : index === 1 ? 'B' : index}`,
+          endedAt: 1_700_000_000_200 - index,
+          outcome: 'unknown',
+          localPlayerId: '2',
+        }),
+      ),
+      matchFixture({
+        id: '5000',
+        map: 'Spectator result',
+        endedAt: 1_700_000_000_201,
+        outcome: 'spectator',
+        localPlayerId: '1',
+      }),
+    ];
+    const native = nativeFixture(structuredClone(fixtureBootstrap), {
+      'matches.list': ({ accountId }) =>
+        accountId ? rows.filter((match) => match.localPlayerId === accountId) : rows,
+      'accounts.list': () => [
+        {
+          id: '2',
+          name: 'Unknown account',
+          persona: '2',
+          firstSeen: 0,
+          lastSeen: 0,
+          matchCount: 50,
+        },
+      ],
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    await screen.findByRole('button', { name: 'Unknown result A' });
+    const toggle = screen.getByRole('checkbox', { name: '隐藏未知结果' }) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
+    const table = document.querySelector<HTMLDivElement>('.archive-table')!;
+    table.scrollTop = 900;
+    toggle.focus();
+    await userEvent.setup().keyboard(' ');
+    expect(toggle.checked).toBe(true);
+    expect(table.scrollTop).toBe(0);
+    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
+    expect(screen.getByText('样本数: 13')).toBeTruthy();
+    const pagination = screen.getByRole('navigation', { name: '对局档案分页' });
+    expect(within(pagination).getByText('第 1–13 条，共 13 条')).toBeTruthy();
+    expect(
+      within(pagination).getByRole('button', { name: '上一页' }).hasAttribute('disabled'),
+    ).toBe(true);
+    expect(
+      within(pagination).getByRole('button', { name: '下一页' }).hasAttribute('disabled'),
+    ).toBe(true);
+    expect(
+      within(pagination).getByRole('combobox', { name: '页码' }).hasAttribute('disabled'),
+    ).toBe(true);
+    expect(within(pagination).getByRole('option', { name: '1 / 1' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Unknown result A' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Unknown result B' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Spectator result' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '胜利' }));
+    expect(screen.getByText('样本数: 6')).toBeTruthy();
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '全部结果' }));
+    fireEvent.change(screen.getByLabelText('账号'), { target: { value: '2' } });
+    await screen.findByText('样本数: 0');
+    expect(screen.getByRole('navigation', { name: '对局档案分页' })).toBeTruthy();
+    expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '清除筛选' }));
+    await screen.findByRole('button', { name: 'Unknown result A' });
+    expect(toggle.checked).toBe(false);
+    expect(screen.getByText('样本数: 63')).toBeTruthy();
+    expect((screen.getByLabelText('页码') as HTMLSelectElement).disabled).toBe(false);
+    expect((screen.getByLabelText('账号') as HTMLSelectElement).value).toBe('');
+  });
+
   it('scans local logs before refreshing the archive and exposes a busy state during the scan', async () => {
     const pending = deferred<null>();
     let rows = [matchFixture({ id: '101' })];
@@ -1893,7 +1979,7 @@ describe('user interaction regressions', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '上移 卡组工具' }));
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
-    const navigation = screen.getByRole('navigation');
+    const navigation = screen.getByRole('navigation', { name: '工作空间' });
     expect(
       within(navigation)
         .getAllByRole('button')
@@ -1995,7 +2081,7 @@ describe('user interaction regressions', () => {
     await screen.findByRole('heading', { level: 1, name: '对局档案' });
     const scroll = screen.getByRole('main').parentElement!;
     fireEvent.scroll(scroll, { target: { scrollTop: 180 } });
-    const navigation = screen.getByRole('navigation');
+    const navigation = screen.getByRole('navigation', { name: '工作空间' });
     fireEvent.click(screen.getByRole('button', { name: '失败' }));
     await screen.findByText(
       `样本数: ${capturedMatches.filter((m) => m.outcome === 'loss').length}`,
@@ -2297,6 +2383,94 @@ describe('user interaction regressions', () => {
 });
 
 describe('profile refresh and report scopes', () => {
+  it('shows one profile summary and action set while retaining expandable details and aliases', async () => {
+    const profile: PlayerProfile = {
+      id: localPlayer.id,
+      name: 'Profile player',
+      names: [
+        { name: 'Profile player', firstSeen: 1000, lastSeen: 2000 },
+        { name: 'Previous alias', firstSeen: 500, lastSeen: 900 },
+      ],
+      firstSeen: 500,
+      lastSeen: 2000,
+      encounters: [],
+      banned: null,
+      recentMatches: [matchFixture()],
+      recentError: null,
+      latestElo: 1995,
+      info: {
+        elo: 1995,
+        kd: 1.66,
+        winRate: 50,
+        matchCount: 100,
+        sampleCount: 100,
+        category: null,
+        topUnits: '',
+        updatedAt: 1000,
+        stale: true,
+      },
+    };
+    const native = nativeFixture(bootstrapForApp(), {
+      'players.profile': () => profile,
+      'players.report': () =>
+        reportFixture({ id: localPlayer.id, name: profile.name, elo: 1995, stale: true }),
+    });
+    render(<ProfileDialog id={localPlayer.id} name={profile.name} />, {
+      wrapper: wrapper(native.api),
+    });
+    await screen.findByText('1,995');
+    expect(screen.getAllByText('1,995')).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: '刷新' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: '查蛆指数' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: translate('zh', 'openBatrace') })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: '复制' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: '调查羁绊' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: '相遇记录' })).toBeNull();
+    expect(screen.getAllByText(/缓存数据，可能已过期/)).toHaveLength(1);
+    expect(screen.getByRole('table', { name: '近期对局' })).toBeTruthy();
+    const details = screen.getByText('对局数据明细', { selector: 'summary' }).closest('details')!;
+    expect(details.open).toBe(false);
+    await userEvent
+      .setup()
+      .click(within(details).getByText('对局数据明细', { selector: 'summary' }));
+    expect(details.open).toBe(true);
+    expect(within(details).getByRole('table')).toBeTruthy();
+    const aliases = document.querySelector<HTMLDetailsElement>('.profile-name-history')!;
+    expect(aliases.open).toBe(false);
+    await userEvent.setup().click(within(aliases).getByText('名字历史'));
+    expect(aliases.open).toBe(true);
+    expect(within(aliases).getByText('Previous alias')).toBeTruthy();
+    expect(within(aliases).queryByText('Profile player')).toBeNull();
+  });
+
+  it('keeps the latest profile ELO when the report is unavailable and no cached metrics exist', async () => {
+    const native = nativeFixture(bootstrapForApp(), {
+      'players.profile': () => ({
+        id: localPlayer.id,
+        name: 'Fallback player',
+        names: [],
+        firstSeen: null,
+        lastSeen: null,
+        encounters: [],
+        banned: null,
+        recentMatches: [],
+        recentError: null,
+        latestElo: 1456,
+        info: null,
+      }),
+      'players.report': () => {
+        throw new Error('Report unavailable');
+      },
+    });
+    render(<ProfileDialog id={localPlayer.id} name="Fallback player" />, {
+      wrapper: wrapper(native.api),
+    });
+    await screen.findByText('1,456');
+    expect(screen.getByRole('alert').textContent).toContain('Report unavailable');
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(document.querySelector('.profile-name-history')).toBeNull();
+  });
+
   it('refreshes the profile and full report together and explains metric and sample scopes', async () => {
     const profile: PlayerProfile = {
       id: localPlayer.id,

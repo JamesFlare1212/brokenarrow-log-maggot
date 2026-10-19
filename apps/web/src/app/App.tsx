@@ -295,7 +295,13 @@ export function App() {
             if (!settingsTab) scrollPositions.current.set(page, event.currentTarget.scrollTop);
           }}
         >
-          <main id="main-content" ref={main} tabIndex={-1} aria-labelledby="page-title">
+          <main
+            id="main-content"
+            className={page === 'archive' || page === 'bans' ? 'results-page' : undefined}
+            ref={main}
+            tabIndex={-1}
+            aria-labelledby="page-title"
+          >
             <div className="page-heading">
               <div>
                 <h1 id="page-title">{title}</h1>

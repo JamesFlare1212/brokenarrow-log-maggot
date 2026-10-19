@@ -229,13 +229,23 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                         )
                       : '—'}
                   </strong>
-                  <small>
-                    {list.length} / {list.length}
-                  </small>
+                  {!standalone && (
+                    <small>
+                      {list.length} / {list.length}
+                    </small>
+                  )}
                 </div>
                 {list.map((p) => {
                   const row = rows[p.id],
-                    info = row?.info;
+                    info = row?.info,
+                    analysis =
+                      row?.error ||
+                      (info && (
+                        <>
+                          {t(info.fallback ? 'winRate' : 'recentWinRate')}{' '}
+                          {formatMetric(info.winRate, 0)}% · {t('latestKd')} {formatMetric(info.kd)}
+                        </>
+                      ));
                   return (
                     <div
                       className={`player-card ${p.id === state.session.localPlayerId ? 'is-you' : ''}`}
@@ -249,7 +259,14 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                     >
                       <TooltipButton
                         className="player-main"
-                        tooltip={row?.error || undefined}
+                        tooltip={
+                          <>
+                            <span className="button-tooltip-label">
+                              {p.name} · #{p.id}
+                            </span>
+                            {analysis && <span className="button-tooltip-detail">{analysis}</span>}
+                          </>
+                        }
                         onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}
                       >
                         <span className="player-avatar" aria-hidden="true">
@@ -257,7 +274,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                         </span>
                         <span className="player-identity">
                           <strong>
-                            {p.name}
+                            <span className="player-name">{p.name}</span>
                             {p.id === state.session.localPlayerId && (
                               <Badge tone="success">{t('you')}</Badge>
                             )}
@@ -272,14 +289,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                                 row?.error ? 'player-analysis-error text-danger' : undefined
                               }
                             >
-                              {row?.error ||
-                                (info && (
-                                  <>
-                                    {t(info.fallback ? 'winRate' : 'recentWinRate')}{' '}
-                                    {formatMetric(info.winRate, 0)}% · {t('latestKd')}{' '}
-                                    {formatMetric(info.kd)}
-                                  </>
-                                ))}
+                              {analysis}
                             </span>
                           </small>
                         </span>
@@ -297,10 +307,12 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
           })}
         </div>
       )}
-      <div className="session-footnote">
-        <span className="status-dot status-success" aria-hidden="true" />
-        {state.session.localName ? `${t('account')}: ${state.session.localName}` : t('noAccount')}
-      </div>
+      {standalone && (
+        <div className="session-footnote">
+          <span className="status-dot status-success" aria-hidden="true" />
+          {state.session.localName ? `${t('account')}: ${state.session.localName}` : t('noAccount')}
+        </div>
+      )}
     </>
   );
   if (standalone) {

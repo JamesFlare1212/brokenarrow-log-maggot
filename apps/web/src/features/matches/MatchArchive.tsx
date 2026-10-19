@@ -3,11 +3,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { faBoxArchive, faPlus, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
-import { formatTime, formatDelta, outcomeTone } from '@ba/shared';
+import { formatTime, formatDelta, formatDuration, outcomeTone } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Card, Badge, Field, Loading, Notice, Empty, Menu } from '../../components/ui';
+import { Button, Badge, Field, Loading, Notice, Empty, Menu, Toggle } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
@@ -19,6 +19,7 @@ export function MatchArchive() {
     [fid, setFid] = useState(''),
     [adding, setAdding] = useState(false),
     [scanning, setScanning] = useState(false),
+    [hideUnknown, setHideUnknown] = useState(false),
     [page, setPage] = useState(1),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
   const table = useRef<HTMLDivElement>(null);
@@ -26,14 +27,18 @@ export function MatchArchive() {
     () =>
       [...(matches.data || [])]
         .sort((a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0))
-        .filter((m) => outcome === 'all' || m.outcome === outcome),
-    [matches.data, outcome],
+        .filter(
+          (m) =>
+            (outcome === 'all' || m.outcome === outcome) &&
+            (!hideUnknown || m.outcome !== 'unknown'),
+        ),
+    [matches.data, outcome, hideUnknown],
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages);
   useLayoutEffect(() => {
     if (table.current) table.current.scrollTop = 0;
-  }, [currentPage, account, outcome]);
+  }, [currentPage, account, outcome, hideUnknown]);
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const refresh = () =>
     void matches.load(
@@ -59,7 +64,7 @@ export function MatchArchive() {
       .catch((e) => notify(String(e), true));
   }, [api, state.matchesRevision, account]);
   return (
-    <Card title={t('archive')} showHeader={false}>
+    <section className="archive-panel" aria-label={t('archive')}>
       <div className="archive-toolbar">
         <form
           className="search-form"
@@ -113,30 +118,41 @@ export function MatchArchive() {
         </Field>
       </div>
       <div className="filter-row">
-        <div
-          className="sliding-filter"
-          role="group"
-          aria-label={t('result')}
-          style={
-            {
-              '--segment-count': 3,
-              '--segment-index': ['all', 'win', 'loss'].indexOf(outcome),
-            } as CSSProperties
-          }
-        >
-          {(['all', 'win', 'loss'] as const).map((value) => (
-            <button
-              type="button"
-              key={value}
-              aria-pressed={outcome === value}
-              onClick={() => {
-                setOutcome(value);
-                setPage(1);
-              }}
-            >
-              {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
-            </button>
-          ))}
+        <div className="archive-filters">
+          <div
+            className="sliding-filter"
+            role="group"
+            aria-label={t('result')}
+            style={
+              {
+                '--segment-count': 3,
+                '--segment-index': ['all', 'win', 'loss'].indexOf(outcome),
+              } as CSSProperties
+            }
+          >
+            {(['all', 'win', 'loss'] as const).map((value) => (
+              <button
+                type="button"
+                key={value}
+                aria-pressed={outcome === value}
+                onClick={() => {
+                  setOutcome(value);
+                  setPage(1);
+                }}
+              >
+                {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
+              </button>
+            ))}
+          </div>
+          <Toggle
+            id="archive-hide-unknown"
+            label={t('hideUnknownResults')}
+            checked={hideUnknown}
+            onChange={(value) => {
+              setHideUnknown(value);
+              setPage(1);
+            }}
+          />
         </div>
         <div className="archive-results-actions">
           <small className="muted">
@@ -173,13 +189,23 @@ export function MatchArchive() {
                 <col style={{ width: 84 }} />
                 <col style={{ width: 160 }} />
                 <col style={{ width: 110 }} />
+                <col style={{ width: 100 }} />
                 <col style={{ width: 160 }} />
                 <col />
                 <col style={{ width: 80 }} />
               </colgroup>
               <thead>
                 <tr>
-                  {['result', 'mode', 'map', 'eloDelta', 'time', 'account', 'actions'].map((k) => (
+                  {[
+                    'result',
+                    'mode',
+                    'map',
+                    'eloDelta',
+                    'duration',
+                    'time',
+                    'account',
+                    'actions',
+                  ].map((k) => (
                     <th key={k} className={k === 'eloDelta' ? 'elo-column' : undefined}>
                       {t(k)}
                     </th>
@@ -223,6 +249,7 @@ export function MatchArchive() {
                         )}
                       </span>
                     </td>
+                    <td>{formatDuration(m.durationSec)}</td>
                     <td>{formatTime(m.endedAt ?? m.startedAt, locale)}</td>
                     <td>{m.localPersona || '—'}</td>
                     <td>
@@ -275,11 +302,12 @@ export function MatchArchive() {
               icon={<Icon icon={faBoxArchive} size={26} />}
               description={t('noMatchesHint')}
               action={
-                outcome !== 'all' || account ? (
+                outcome !== 'all' || account || hideUnknown ? (
                   <Button
                     onClick={() => {
                       setOutcome('all');
                       setAccount('');
+                      setHideUnknown(false);
                       setPage(1);
                     }}
                   >
@@ -288,7 +316,7 @@ export function MatchArchive() {
                 ) : undefined
               }
             >
-              {t(outcome !== 'all' || account ? 'noFilteredMatches' : 'empty')}
+              {t(outcome !== 'all' || account || hideUnknown ? 'noFilteredMatches' : 'empty')}
             </Empty>
           )
         )}
@@ -299,8 +327,8 @@ export function MatchArchive() {
         total={filtered.length}
         label={t('archivePagination')}
         onPageChange={setPage}
-        reserveSpace
+        showSinglePage
       />
-    </Card>
+    </section>
   );
 }

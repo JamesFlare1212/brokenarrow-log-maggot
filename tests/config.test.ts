@@ -16,6 +16,7 @@ describe('configuration patches', () => {
     { hiddenPanels: ['players', 'decks'] },
     { hiddenPanels: [] },
     { inputHookEnabled: true },
+    { inputHookEnabled: false },
     { telemetryEnabled: true },
     { telemetryEnabled: false },
     { telemetryConsentConfirmed: false },
@@ -48,6 +49,8 @@ describe('configuration patches', () => {
       expect(rpcSchemas['config.update'].safeParse(patch).success).toBe(false);
     }
     expect(configSchema.parse({}).theme).toBe('dark');
+    expect(configSchema.parse({}).inputHookEnabled).toBe(true);
+    expect(configSchema.parse({ inputHookEnabled: false }).inputHookEnabled).toBe(false);
     expect(configSchema.parse({}).telemetryEnabled).toBe(true);
     expect(configSchema.parse({}).telemetryConsentConfirmed).toBe(false);
     expect(configSchema.parse({}).themeMode).toBe('system');
@@ -62,9 +65,11 @@ describe('configuration patches', () => {
     let db: Database | undefined;
     try {
       db = new Database(file);
+      expect(db.config().inputHookEnabled).toBe(true);
       expect(db.config().themeMode).toBe('system');
       expect(db.updateConfig({ lang: 'en' }).themeMode).toBe('system');
       const initial = db.updateConfig({
+        inputHookEnabled: false,
         telemetryEnabled: true,
         telemetryConsentConfirmed: true,
         logDir: 'custom-logs',

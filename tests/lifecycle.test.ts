@@ -562,12 +562,12 @@ function measuredApm(finalization = Promise.resolve()) {
 }
 
 describe('APM application lifecycle', () => {
-  it('serializes rapid match events and saves the final aggregate with a late FID', async () => {
+  it('captures matches by default and saves the final aggregate with rapid events and a late FID', async () => {
     const p = platform(vi.fn<typeof fetch>());
     p.apm = measuredApm();
     const events: AppEvent[] = [];
     const app = application(p, events);
-    app.db.updateConfig({ inputHookEnabled: true });
+    expect(app.db.config().inputHookEnabled).toBe(true);
     app.parser.feed([
       'Log: Start loading battle... map: Dam, scenario: Test',
       'Log: FID:123',
@@ -636,6 +636,7 @@ describe('APM application lifecycle', () => {
     const p = platform(vi.fn<typeof fetch>());
     p.apm = measuredApm();
     const app = application(p);
+    app.db.updateConfig({ inputHookEnabled: false });
     vi.spyOn(app.watcher, 'status').mockReturnValue({ ...app.watcher.status(), live: true });
     app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
     await app.invoke('config.update', { inputHookEnabled: true });

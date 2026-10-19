@@ -108,6 +108,9 @@
 .workspace-scroll > main {
   flex: 1 0 auto;
 }
+.workspace-scroll > .results-page {
+  flex-basis: 0;
+}
 .topbar {
   justify-content: space-between;
   gap: 16px;
@@ -290,6 +293,26 @@ main {
   max-width: 1440px;
   margin: 0 auto;
 }
+.page-archive,
+.page-bans,
+.page-radar,
+.page-replays {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.page-archive > .archive-panel,
+.page-bans > .bans-panel,
+.page-radar > .session-panel,
+.page-replays > .replays-panel {
+  flex: 1;
+}
+.archive-panel > .results-viewport,
+.bans-panel > .results-viewport {
+  flex: 1 0 144px;
+  height: auto;
+  min-height: 144px;
+}
 .players-panel,
 .bans-panel,
 .session-panel,
@@ -317,13 +340,110 @@ main {
   margin-left: auto;
 }
 .session-panel .session-footnote {
+  margin-top: auto;
   padding-top: 16px;
   border-top: 1px solid var(--border-subtle);
+}
+.session-panel .team-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  align-items: start;
+  gap: 16px;
+}
+.session-panel .team-column {
+  --team-color: var(--accent);
+  padding: 0;
+  border-color: var(--border);
+  background: var(--surface);
+}
+.session-panel .team-1 {
+  --team-color: var(--info);
+}
+.session-panel .team-title,
+.session-panel .team-rating {
+  margin: 0;
+  background: color-mix(in srgb, var(--team-color) 8%, var(--surface));
+}
+.session-panel .team-title {
+  padding: 12px 16px 6px;
+  border-radius: 10px 10px 0 0;
+}
+.session-panel .team-title h3 {
+  font-size: 14px;
+}
+.session-panel .team-indicator {
+  height: 16px;
+  width: 4px;
+  background: var(--team-color);
+}
+.session-panel .team-rating {
+  padding: 0 16px 12px;
+}
+.session-panel .team-rating strong {
+  font-size: 16px;
+}
+.session-panel .player-card {
+  margin: 0 8px;
+  padding: 10px 8px;
+  gap: 8px;
+  border-bottom-color: var(--border-subtle);
+}
+.session-panel .player-card:last-child {
+  padding-bottom: 10px;
+}
+.session-panel .player-card:focus-within {
+  background: var(--surface-hover);
+  border-radius: 6px;
+}
+.session-panel .player-card.is-you {
+  background: var(--accent-soft);
+  border-radius: 6px;
+  box-shadow: inset 3px 0 var(--accent);
+}
+.session-panel .player-main {
+  gap: 12px;
+  min-height: 48px;
+}
+.session-panel .player-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--team-color) 8%, var(--surface));
+}
+.session-panel .player-identity {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 8px;
+}
+.session-panel .player-identity > strong {
+  min-width: 0;
+  flex-wrap: nowrap;
+  font-size: 14px;
+}
+.session-panel .player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-panel .player-identity > small:not(.player-analysis) {
+  font: 11px var(--font-mono);
+  white-space: nowrap;
+}
+.session-panel .player-analysis {
+  grid-column: 1 / -1;
+}
+.session-panel .player-rating {
+  min-width: 56px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-subtle);
+}
+.session-panel .player-rating strong {
+  font-size: 18px;
 }
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
 }
 .metrics-grid {
   display: grid;
@@ -336,7 +456,7 @@ main {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
-  padding: 18px 20px;
+  padding: 12px 16px;
 }
 .metric-label {
   display: flex;
@@ -345,6 +465,7 @@ main {
   gap: 10px;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.4;
 }
 .metric-icon {
   color: var(--muted);
@@ -352,16 +473,18 @@ main {
 }
 .metric-value {
   display: block;
-  margin: 9px 0 4px;
-  font-size: 30px;
+  margin: 4px 0 2px;
+  font-size: 26px;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
 }
 .metric-detail {
+  display: block;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.4;
 }
 .dashboard-grid {
   display: grid;
@@ -373,11 +496,20 @@ main {
   grid-column: span 3;
   min-width: 0;
 }
+.dashboard-grid > .session-card:has(> .card-body) {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
 .dashboard-side {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   min-width: 0;
+  align-self: stretch;
+}
+.dashboard-side > .quick-tools {
+  flex: 1;
 }
 .session-card {
   container-type: inline-size;
@@ -420,8 +552,72 @@ main {
   }
 }
 .session-card .card-body {
-  padding: 18px;
-  gap: 18px;
+  /* Reserve five player rows per team before the roster arrives. */
+  --session-team-min-height: 400px;
+  --session-roster-min-height: var(--session-team-min-height);
+  flex: 1;
+  padding: 14px;
+  gap: 12px;
+}
+.session-card .card-body > :is(.team-grid, .empty) {
+  flex: 1;
+  min-height: var(--session-roster-min-height);
+}
+.session-card .card-body > .empty {
+  justify-content: center;
+}
+.session-card :is(.team-0, .team-1) {
+  min-height: var(--session-team-min-height);
+}
+.session-card .session-banner {
+  min-height: 80px;
+  padding: 8px 12px;
+}
+.session-card .session-banner h3 {
+  margin: 3px 0;
+  font-size: 18px;
+}
+.session-card .team-column {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+}
+.session-card .team-rating {
+  padding-bottom: 6px;
+}
+.session-card .player-card {
+  flex: 1 0 auto;
+  padding: 6px 0;
+}
+.session-card .player-card:last-child {
+  padding-bottom: 6px;
+}
+.session-card .player-main {
+  min-height: 44px;
+  gap: 8px;
+}
+.session-card .player-identity > strong {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.session-card .player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-card .player-identity > small:not(.player-analysis) {
+  display: none;
+}
+.session-card .player-analysis {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.session-card .player-analysis > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.session-card .player-analysis-error {
+  display: block;
 }
 .session-banner {
   position: relative;
@@ -1024,6 +1220,123 @@ main {
   gap: 16px;
   min-width: 0;
 }
+.dialog.profile-dialog {
+  width: min(1040px, calc(100vw - 48px));
+  height: auto;
+}
+.profile-dialog .dialog-header {
+  padding: 16px 20px;
+}
+.profile-dialog .dialog-body {
+  padding: 0 20px 20px;
+  gap: 20px;
+}
+.profile-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+.profile-toolbar .button:not(.button-primary) {
+  border-color: transparent;
+  background: transparent;
+}
+.profile-toolbar .button:not(.button-primary):hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.profile-dialog .report-embedded {
+  border: 0;
+  padding: 0;
+  gap: 16px;
+}
+.profile-dialog .stats {
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+}
+.profile-dialog .stat {
+  padding: 6px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.profile-dialog .stat strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.profile-dialog .profile-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.profile-dialog .profile-columns:empty {
+  display: none;
+}
+.profile-dialog .profile-columns > section {
+  gap: 12px;
+}
+.profile-dialog .table-wrap {
+  max-height: none;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 0;
+}
+.profile-dialog table {
+  min-width: 560px;
+}
+.profile-dialog th,
+.profile-dialog td {
+  padding: 10px 12px;
+}
+.profile-dialog .profile-report-details table {
+  min-width: 920px;
+}
+.profile-encounter-summary .stat strong {
+  font-size: 18px;
+}
+.profile-report-details,
+.profile-name-history {
+  border-top: 1px solid var(--border-subtle);
+}
+.profile-dialog summary {
+  padding: 12px 0;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.profile-dialog summary:is(:hover, :focus-visible) {
+  color: var(--text);
+}
+.profile-alias {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 12px 4px 0;
+}
+.profile-alias small {
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .dialog.profile-dialog {
+    width: calc(100vw - 24px);
+  }
+  .profile-dialog .dialog-header {
+    padding: 12px 16px;
+  }
+  .profile-dialog .dialog-body {
+    padding: 0 16px 16px;
+  }
+  .profile-dialog .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .deck-columns > section {
   padding: 20px;
   border: 1px solid var(--border);
@@ -1109,6 +1422,16 @@ main {
   color: var(--muted);
   flex: none;
 }
+.archive-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+.archive-panel > .filter-row,
+.archive-panel > .pagination {
+  border-top: 0;
+}
 .archive-toolbar {
   display: flex;
   align-items: flex-end;
@@ -1153,10 +1476,10 @@ main {
 }
 .archive-table table {
   table-layout: fixed;
-  min-width: 820px;
+  min-width: 920px;
 }
 .archive-table td:nth-child(3),
-.archive-table td:nth-child(6) {
+.archive-table td:nth-child(7) {
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -1171,6 +1494,17 @@ main {
   flex-wrap: wrap;
   padding-top: 8px;
   border-top: 1px solid var(--border-subtle);
+}
+.archive-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+.archive-filters > .toggle {
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .archive-results-actions,
 .bans-toolbar {
@@ -1363,21 +1697,39 @@ main {
 .replay-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
-  gap: 10px;
+  column-gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .replay-row {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-subtle);
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
-.replay-row > .button {
-  width: 36px;
+.replay-play {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
   padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  transition: background var(--motion-fast);
+}
+.replay-play:hover,
+.replay-play:focus-visible {
+  background: var(--surface-hover);
+}
+.replay-play:active {
+  background: var(--accent-soft);
 }
 .replay-thumbnail {
   display: flex;
@@ -1385,22 +1737,30 @@ main {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 100%;
   height: 64px;
   padding: 6px;
   color: var(--muted);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  background: radial-gradient(ellipse at center, var(--surface-alt), var(--bg));
+  border-radius: 6px;
+  background: var(--surface-alt);
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast);
 }
-.replay-thumbnail:hover {
-  color: var(--text);
-  border-color: var(--accent);
-  background: var(--surface-hover);
+.replay-play:is(:hover, :focus-visible) .replay-thumbnail {
+  color: var(--on-accent);
+  background: var(--accent);
 }
-.replay-thumbnail .badge {
-  background: var(--surface);
+.replay-thumbnail > svg {
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.replay-play:active .replay-thumbnail > svg {
+  transform: scale(0.9);
+}
+.replay-duration {
   font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 .replay-description {
   min-width: 0;
@@ -1421,18 +1781,67 @@ main {
   margin-top: 4px;
 }
 .replays-panel {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
+}
+.replay-library {
+  display: grid;
+  gap: 12px;
+}
+.replay-library .section-heading h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.replay-library .section-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.replays-panel .button {
+  border-color: transparent;
+  background: transparent;
+}
+.replays-panel .button:is(:hover, :focus-visible, [data-state='open']):not(:disabled) {
+  border-color: transparent;
+  background: var(--surface-hover);
+}
+.replay-library [data-menu-trigger] {
+  width: 40px;
+  padding: 8px;
+  color: var(--muted);
+}
+.replay-library [data-menu-trigger]:is(:hover, :focus-visible, [data-state='open']) {
+  color: var(--text);
+}
+.replay-directory {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 16px;
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.replay-directory input {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 8px 0;
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
 }
 .recording-controls {
   display: flex;
   gap: 20px;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-subtle);
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border-subtle);
   flex-wrap: wrap;
 }
 .recording-controls .toggle {
@@ -1468,7 +1877,6 @@ main {
   border-radius: 9px;
   aspect-ratio: 16 / 9;
   background: var(--surface-subtle);
-  border: 1px solid var(--border);
 }
 .recording-preview img {
   position: absolute;
@@ -1709,12 +2117,6 @@ main {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .metric-card {
-    padding: 16px;
-  }
-  .metric-value {
-    font-size: 28px;
-  }
   .recording-widget .recording-illustration {
     height: 90px;
   }
@@ -1815,13 +2217,13 @@ main {
     gap: 12px;
   }
   .metric-card {
-    padding: 16px;
+    padding: 12px;
   }
   .metric-label {
     font-size: 12px;
   }
   .metric-value {
-    font-size: 28px;
+    font-size: 24px;
   }
   .metric-detail {
     font-size: 11px;
@@ -1837,6 +2239,7 @@ main {
     grid-template-columns: 1fr;
   }
   .session-card .card-body {
+    --session-roster-min-height: calc(2 * var(--session-team-min-height) + 14px);
     padding: 14px;
   }
   .match-meta {
