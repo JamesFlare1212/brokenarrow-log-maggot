@@ -158,7 +158,7 @@ export function ReplaysPanel() {
                       openModal({ type: 'replay', id: r.id, title: r.map || r.uploaderName })
                     }
                   >
-                    <Icon icon={faVideo} size={36} aria-hidden="true" />
+                    <Icon icon={faPlay} size={18} aria-hidden="true" />
                     <Badge>{formatDuration(r.durationSec)}</Badge>
                   </TooltipButton>
                   <div className="replay-description">
@@ -170,14 +170,6 @@ export function ReplaysPanel() {
                       {r.uploaderName} · {formatTime(r.createdAt, locale)} · {formatSize(r.size)}
                     </small>
                   </div>
-                  <Button
-                    onClick={() =>
-                      openModal({ type: 'replay', id: r.id, title: r.map || r.uploaderName })
-                    }
-                  >
-                    <Icon icon={faPlay} size={15} aria-hidden="true" />
-                    {t('play')}
-                  </Button>
                   <Menu label={`${t('actions')}: ${r.map || r.id}`}>
                     {r.fid && (
                       <Button onClick={() => openModal({ type: 'match', fid: r.fid || '' })}>
