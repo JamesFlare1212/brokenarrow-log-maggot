@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   faArrowsRotate,
   faLocationDot,
@@ -11,11 +11,11 @@ import {
 import { Icon } from '../../components/Icon';
 import { TooltipButton } from '../../components/Tooltip';
 import type { Match, Player } from '@ba/contracts';
-import { formatDuration, formatMetric, teamLabel } from '@ba/shared';
+import { formatDuration, formatMetric, teamLabel, matchTitles } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { Card, Button, Empty, Badge } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
-import { PlayerActions } from '../players/PlayerActions';
+import { MatchTitles } from '../matches/MatchTitles';
 export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const { state, api, openModal, notify, patchConfig } = useApp(),
     { t } = useI18n();
@@ -44,6 +44,10 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
         ? previous?.players || []
         : (state.session.current?.players ?? state.session.lobbyPlayers),
     match = view === 'previous' ? previous : state.session.current;
+  const titles = useMemo(
+    () => (match?.endedAt ? (match.titles ?? matchTitles(match)) : {}),
+    [match],
+  );
   const query = async (context: 'current' | 'previous') => {
     if (pending) return;
     setPending(true);
@@ -250,55 +254,55 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                     <div
                       className={`player-card ${p.id === state.session.localPlayerId ? 'is-you' : ''}`}
                       key={p.id}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        e.currentTarget
-                          .querySelector<HTMLButtonElement>('[data-menu-trigger]')
-                          ?.click();
-                      }}
                     >
-                      <TooltipButton
-                        className="player-main"
-                        tooltip={
-                          <>
-                            <span className="button-tooltip-label">
-                              {p.name} · #{p.id}
-                            </span>
-                            {analysis && <span className="button-tooltip-detail">{analysis}</span>}
-                          </>
-                        }
-                        onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}
-                      >
+                      <div className="player-main">
                         <span className="player-avatar" aria-hidden="true">
                           {p.name.slice(0, 1).toUpperCase()}
                         </span>
-                        <span className="player-identity">
-                          <strong>
-                            <span className="player-name">{p.name}</span>
+                        <div className="player-identity">
+                          <div className="player-heading">
+                            <TooltipButton
+                              className="player-name-button"
+                              tooltip={
+                                <>
+                                  <span className="button-tooltip-label">
+                                    {p.name} · #{p.id}
+                                  </span>
+                                  {analysis && (
+                                    <span className="button-tooltip-detail">{analysis}</span>
+                                  )}
+                                </>
+                              }
+                              onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}
+                            >
+                              <span className="player-name">{p.name}</span>
+                            </TooltipButton>
                             {p.id === state.session.localPlayerId && (
                               <Badge tone="success">{t('you')}</Badge>
                             )}
-                          </strong>
-                          <small className="muted">#{p.id}</small>
-                          <small className="player-analysis muted">
-                            <span className="player-analysis-placeholder" aria-hidden="true">
-                              {t('recentWinRate')} 100% · {t('latestKd')} 999.99
-                            </span>
-                            <span
-                              className={
-                                row?.error ? 'player-analysis-error text-danger' : undefined
-                              }
-                            >
-                              {analysis}
-                            </span>
-                          </small>
-                        </span>
-                        <span className="player-rating">
-                          <strong>{formatMetric(rating(p), 0)}</strong>
-                          <small>ELO</small>
-                        </span>
-                      </TooltipButton>
-                      <PlayerActions player={p} info={info} />
+                            <MatchTitles key={`${match?.id}:${p.id}`} titles={titles[p.id] ?? []} />
+                          </div>
+                          <div className="player-meta">
+                            <small className="player-id muted">#{p.id}</small>
+                            <small className="player-analysis muted">
+                              <span className="player-analysis-placeholder" aria-hidden="true">
+                                {t('recentWinRate')} 100% · {t('latestKd')} 999.99
+                              </span>
+                              <span
+                                className={
+                                  row?.error ? 'player-analysis-error text-danger' : undefined
+                                }
+                              >
+                                {analysis}
+                              </span>
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="player-rating">
+                        <strong>{formatMetric(rating(p), 0)}</strong>
+                        <small>ELO</small>
+                      </span>
                     </div>
                   );
                 })}
@@ -317,7 +321,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   );
   if (standalone) {
     return (
-      <section className="session-panel" aria-label={title}>
+      <section className="session-panel session-roster" aria-label={title}>
         <header className="session-toolbar">
           <h2>{title}</h2>
           <div className="actions">{actions}</div>
@@ -328,7 +332,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   }
   return (
     <Card
-      className="session-card"
+      className="session-card session-roster"
       title={title}
       icon={<Icon icon={faCrosshairs} size={19} />}
       collapsed={collapsed}

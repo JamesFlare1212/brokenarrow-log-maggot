@@ -23,6 +23,7 @@
   --radius: 14px;
   --focus: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   --surface-hover: color-mix(in srgb, var(--surface-alt) 80%, var(--text) 4%);
+  --row-hover-bg: color-mix(in srgb, var(--accent) 18%, var(--surface));
   --surface-subtle: color-mix(in srgb, var(--bg) 48%, var(--surface));
   --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--surface));
   --accent-border: color-mix(in srgb, var(--accent) 32%, var(--border));

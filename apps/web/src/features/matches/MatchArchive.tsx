@@ -225,6 +225,7 @@ export function MatchArchive() {
                     </td>
                     <td>
                       <Button
+                        className="archive-open-match"
                         onClick={() =>
                           m.fid ? openModal({ type: 'match', fid: m.fid }) : notify(t('offline'))
                         }

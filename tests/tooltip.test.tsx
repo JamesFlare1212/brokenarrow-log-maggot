@@ -11,6 +11,52 @@ afterEach(() => {
 });
 
 describe('button tooltips', () => {
+  it('pins explanations through pointer movement and closes on a second click, outside press or Escape', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <TooltipButton pinOnClick tooltip="Match evidence">
+        Carry
+      </TooltipButton>,
+    );
+    const button = screen.getByRole('button', { name: 'Carry' });
+    await user.click(button);
+    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(container.contains(tooltip)).toBe(false);
+    fireEvent.pointerLeave(button);
+    fireEvent.pointerDown(tooltip);
+    expect(screen.getByRole('tooltip', { hidden: true })).toBe(tooltip);
+    await user.click(button);
+    expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    await user.click(button);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
+    await user.click(button);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
+  });
+
+  it('opens pinned evidence with the keyboard and dismisses it as focus moves on', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <TooltipButton pinOnClick tooltip="Match evidence">
+          Carry
+        </TooltipButton>
+        <button>Next</button>
+      </>,
+    );
+    await user.tab();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('button', { name: 'Carry' }).getAttribute('aria-expanded')).toBe(
+      'true',
+    );
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
+  });
+
   it('gives icon controls consistent hints without changing their classes or click behavior', async () => {
     const select = vi.fn();
     const user = userEvent.setup();

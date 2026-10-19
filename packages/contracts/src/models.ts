@@ -53,6 +53,7 @@ export interface Match {
   source: 'log' | 'api' | 'legacy';
   updatedAt: number;
   warning?: string;
+  titles?: Record<Id, import('./titles').MatchTitle[]>;
 }
 export interface Session {
   generation: number;

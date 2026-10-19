@@ -6,6 +6,7 @@ import {
   normalizeMatch,
   winnerFromAnalysis,
   determineOutcome,
+  matchTitles,
 } from '@ba/shared';
 import type { Database } from '../storage/database';
 import type { BatraceClient } from '../network/client';
@@ -16,6 +17,17 @@ export class TrackerService {
     private client: BatraceClient,
     private analyzer: Analyzer,
   ) {}
+  list(accountId?: string): Match[] {
+    return this.db.matches(accountId).map((match) => this.withTitles(match));
+  }
+  private withTitles(match: Match, raw?: unknown): Match {
+    const cached =
+      raw ?? (match.fid ? this.db.cache(`match:${match.fid}`, true)?.value : undefined);
+    return {
+      ...match,
+      titles: cached ? matchTitles(match, cached) : (match.titles ?? matchTitles(match)),
+    };
+  }
   async detail(fid: string, force = false): Promise<Match> {
     const previous = this.db.match(fid);
     let result;
@@ -23,7 +35,10 @@ export class TrackerService {
       result = await this.client.match(fid, force);
     } catch (error) {
       if (!force && previous)
-        return { ...previous, warning: error instanceof Error ? error.message : String(error) };
+        return {
+          ...this.withTitles(previous),
+          warning: error instanceof Error ? error.message : String(error),
+        };
       throw error;
     }
     const raw = object(result.value),
@@ -52,6 +67,7 @@ export class TrackerService {
         /* The detail remains useful when winner evidence is unavailable. */
       }
     }
+    match = this.withTitles(match, result.value);
     if (result.source === 'stale')
       return { ...match, warning: 'Cached match data; BATrace is unavailable' };
     this.db.saveMatch(match);

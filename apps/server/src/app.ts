@@ -276,7 +276,7 @@ export class Application {
         ),
       'players.profile': ({ id, force }) => this.tracker.profile(id, force),
       'session.query': (input) => this.query(input),
-      'matches.list': ({ accountId }) => this.db.matches(accountId),
+      'matches.list': ({ accountId }) => this.tracker.list(accountId),
       'matches.scan': async () => {
         await this.archive.scan(this.db.config().logDir);
         return null;

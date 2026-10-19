@@ -1,6 +1,6 @@
 {
   "name": "broken-arrow-log-assistant",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "private": true,
   "type": "module",
   "description": "Broken Arrow Log Assistant — local match analysis, decks and recordings",
@@ -74,6 +74,7 @@
       "apps/desktop/dist/**",
       "apps/web/dist/**",
       "package.json",
+      "THIRD_PARTY_NOTICES.txt",
       "build/icon.png"
     ],
     "win": {

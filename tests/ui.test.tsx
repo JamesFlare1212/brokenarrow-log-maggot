@@ -25,7 +25,7 @@ import type {
 } from '@ba/contracts';
 import { configSchema, initialApmState } from '@ba/contracts';
 import { ApmPanel } from '../apps/web/src/features/apm/ApmPanel';
-import { formatMetric, summarizeMaggot } from '@ba/shared';
+import { formatMetric, formatDuration, formatTime, matchTitles, summarizeMaggot } from '@ba/shared';
 import { App } from '../apps/web/src/app/App';
 import { AppProvider, useApp } from '../apps/web/src/app/state';
 import {
@@ -50,6 +50,7 @@ import { UpdatePanel } from '../apps/web/src/features/settings/UpdatePanel';
 import { UpdateButton } from '../apps/web/src/features/settings/UpdateButton';
 import { MatchArchive } from '../apps/web/src/features/matches/MatchArchive';
 import { BansPanel } from '../apps/web/src/features/bans/BansPanel';
+import { MatchDialog } from '../apps/web/src/features/matches/MatchDialog';
 
 type Handler<K extends RpcMethod> = (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
 type Handlers = { [K in RpcMethod]: Handler<K> };
@@ -2175,6 +2176,63 @@ describe('user interaction regressions', () => {
     render(<App />, { wrapper: wrapper(native.api) });
     expect(await screen.findByRole('heading', { level: 1, name: '蛐雷达' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '刷新粗查' })).toBeTruthy();
+  });
+
+  it('shows previous-match titles on radar and hides them when returning to a live match', async () => {
+    const bootstrap = bootstrapForApp();
+    const previous = matchFixture({
+      id: '987654321',
+      fid: '987654321',
+      endedAt: 1000,
+      titles: {
+        [localPlayer.id]: [{ id: 'carry', kind: 'good', params: { d: 6000, l: 1000, net: 5000 } }],
+      },
+    });
+    const native = nativeFixture(bootstrap, {
+      'matches.list': () => [previous],
+      'session.query': ({ requestId }) => ({ requestId, queried: 0, skipped: 0, cancelled: false }),
+    });
+    render(<SessionPanel standalone />, { wrapper: wrapper(native.api) });
+    const button = await screen.findByRole('button', { name: '上一局' });
+    await waitFor(() => expect(button.hasAttribute('disabled')).toBe(false));
+    expect(screen.queryByRole('button', { name: '大腿' })).toBeNull();
+    fireEvent.click(button);
+    fireEvent.click(await screen.findByRole('button', { name: '大腿' }));
+    expect(screen.getByText('赢方净交换最高：摧毁 6000 − 损失 1000 = 5000。')).toBeTruthy();
+    const back = screen.getByRole('button', { name: '返回当前局' });
+    await waitFor(() => expect(back.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(back);
+    expect(screen.queryByRole('button', { name: '大腿' })).toBeNull();
+    expect(document.querySelector('button button')).toBeNull();
+  });
+
+  it('preserves match facts and title evidence in the detail dialog without embedding explanations in the table', async () => {
+    const match = matchFixture();
+    match.titles = matchTitles(match);
+    const native = nativeFixture(bootstrapForApp(), { 'matches.detail': () => match });
+    render(<MatchDialog fid={match.fid!} />, { wrapper: wrapper(native.api) });
+    const map = await screen.findByRole('heading', { name: match.map });
+    const dialog = map.closest('[role="dialog"]') as HTMLElement;
+    const summary = dialog.querySelector('.match-summary') as HTMLElement;
+    expect(within(summary).getByText(match.localPersona)).toBeTruthy();
+    expect(within(summary).getByText(formatDuration(match.durationSec))).toBeTruthy();
+    expect(within(summary).getByText(formatTime(match.endedAt, 'zh'))).toBeTruthy();
+    expect(dialog.querySelectorAll('tbody tr')).toHaveLength(match.players.length);
+    const [playerId, titles] = Object.entries(match.titles).find(([, list]) => list.length > 0)!;
+    const player = match.players.find((p) => p.id === playerId)!;
+    const name = within(dialog).getByRole('button', { name: player.name });
+    const heading = name.closest('.match-player-heading') as HTMLElement;
+    const title = within(heading).getByRole('button', {
+      name: translate('zh', `title.${titles[0]!.id}`),
+    });
+    fireEvent.click(title);
+    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    expect(tooltip.textContent).not.toMatch(/\{\w+\}/);
+    expect(dialog.contains(tooltip)).toBe(false);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
+    expect(screen.getByRole('dialog')).toBe(dialog);
+    expect(document.querySelector('button button')).toBeNull();
   });
 
   it('summarizes eligible completed matches for the current account', async () => {

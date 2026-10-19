@@ -1,6 +1,7 @@
 import type { Match, MatchPlayer, MaggotReport, MaggotRow, Mode, Outcome } from '@ba/contracts';
 import { array, object, number, text, team, timestamp, boolean } from './values';
 import { mergePlayers } from './merge';
+import { matchTitles } from './titles';
 export const MAP_NAMES: Record<number, string> = {
   3: 'Baltiisk',
   4: 'Coast',
@@ -201,7 +202,7 @@ export function normalizeMatch(
           : boolean(p.localWon) === false
             ? 'loss'
             : base.outcome;
-  return {
+  const match: Match = {
     ...base,
     id: options.id,
     fid: /^\d+$/.test(options.id) ? options.id : base.fid,
@@ -229,6 +230,8 @@ export function normalizeMatch(
     source: legacy ? 'legacy' : 'api',
     updatedAt: options.now ?? Date.now(),
   };
+  if (!legacy && typeof p.Data === 'object') match.titles = matchTitles(match, p);
+  return match;
 }
 export function winnerFromAnalysis(value: unknown): 0 | 1 | null {
   const raw = object(value),

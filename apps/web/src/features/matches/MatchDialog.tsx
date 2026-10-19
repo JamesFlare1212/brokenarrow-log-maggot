@@ -1,5 +1,5 @@
 import { BATRACE_ORIGIN } from '@ba/contracts';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
 import type { Match, Replay } from '@ba/contracts';
@@ -10,11 +10,14 @@ import {
   formatTime,
   teamLabel,
   outcomeTone,
+  matchTitles,
 } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Dialog, Loading, Notice, Stats, Badge } from '../../components/ui';
+import { Button, Dialog, Loading, Notice, Badge } from '../../components/ui';
+import { TooltipButton } from '../../components/Tooltip';
+import { MatchTitles } from './MatchTitles';
 export function MatchDialog({ fid }: { fid: string }) {
   const { api, openModal, closeModal, backModal } = useApp(),
     { t, locale } = useI18n(),
@@ -26,30 +29,31 @@ export function MatchDialog({ fid }: { fid: string }) {
       .invoke('replays.list', null)
       .then((list) => setReplays(list.filter((r) => r.fid === fid)));
   }, [api, fid]);
-  const match = request.data,
-    columns = [
-      'player',
-      'ELO',
-      'destruction',
-      'losses',
-      'objectives',
-      'kills',
-      'damage',
-      'received',
-      'D/L',
-      'supply',
-      'experience',
-      'medals',
-    ];
+  const match = request.data;
+  const titles = useMemo(() => (match ? (match.titles ?? matchTitles(match)) : {}), [match]);
+  const columns = [
+    'player',
+    'ELO',
+    'destruction',
+    'losses',
+    'objectives',
+    'kills',
+    'damage',
+    'received',
+    'D/L',
+    'supply',
+    'experience',
+    'medals',
+  ];
   return (
     <Dialog
       open
       onClose={closeModal}
       onBack={backModal}
       title={`${t('matchDetail')} · #${fid}`}
-      className="dialog-wide"
+      className="dialog-wide match-dialog"
     >
-      <div className="actions">
+      <div className="actions match-dialog-actions">
         <Button
           disabled={request.pending}
           aria-busy={request.pending}
@@ -81,40 +85,70 @@ export function MatchDialog({ fid }: { fid: string }) {
       {match && (
         <>
           {match.warning && <Notice>{match.warning}</Notice>}
-          <Stats
-            items={[
-              { label: t('map'), value: match.map || '—' },
-              {
-                label: t('result'),
-                value: <Badge tone={outcomeTone(match.outcome)}>{t(match.outcome)}</Badge>,
-              },
-              { label: t('mode'), value: t(match.mode) },
-              { label: t('duration'), value: formatDuration(match.durationSec) },
-              {
-                label: t('eloDelta'),
-                value: formatDelta(
-                  match.eloAfter !== null && match.eloBefore !== null
-                    ? match.eloAfter - match.eloBefore
-                    : null,
-                ),
-              },
-              { label: t('account'), value: match.localPersona || '—' },
-              { label: t('time'), value: formatTime(match.endedAt, locale) },
-            ]}
-          />
+          <div className="match-overview">
+            <div className="match-overview-heading">
+              <div className="match-map">
+                <span className="muted">{t('map')}</span>
+                <h3>{match.map || '—'}</h3>
+              </div>
+              <div className="match-overview-badges">
+                <Badge tone={outcomeTone(match.outcome)}>{t(match.outcome)}</Badge>
+                <Badge>{t(match.mode)}</Badge>
+              </div>
+            </div>
+            <dl className="match-summary">
+              <div>
+                <dt>{t('duration')}</dt>
+                <dd>{formatDuration(match.durationSec)}</dd>
+              </div>
+              <div>
+                <dt>{t('eloDelta')}</dt>
+                <dd>
+                  {formatDelta(
+                    match.eloAfter !== null && match.eloBefore !== null
+                      ? match.eloAfter - match.eloBefore
+                      : null,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>{t('account')}</dt>
+                <dd>{match.localPersona || '—'}</dd>
+              </div>
+              <div>
+                <dt>{t('time')}</dt>
+                <dd>{formatTime(match.endedAt, locale)}</dd>
+              </div>
+            </dl>
+          </div>
           {[match.winnerTeamId === 1 ? 1 : 0, match.winnerTeamId === 1 ? 0 : 1, 100, null].map(
             (team) => {
               const players = match.players.filter((p) => p.teamId === team);
               if (!players.length) return null;
               return (
-                <section key={String(team)}>
-                  <h3>{teamLabel(team as 0 | 1 | 100 | null)}</h3>
-                  <div className="table-wrap">
+                <section className={`match-team match-team-${team}`} key={String(team)}>
+                  <div className="match-team-heading">
+                    <h3>{teamLabel(team as 0 | 1 | 100 | null)}</h3>
+                    <span className="muted">{t('playersCount', { n: players.length })}</span>
+                  </div>
+                  <div className="table-wrap match-team-table">
                     <table>
+                      <caption className="sr-only">{teamLabel(team as 0 | 1 | 100 | null)}</caption>
+                      <colgroup>
+                        <col className="match-player-column" />
+                        <col className="match-rating-column" />
+                        {columns.slice(2).map((column) => (
+                          <col key={column} />
+                        ))}
+                      </colgroup>
                       <thead>
                         <tr>
                           {columns.map((k) => (
-                            <th key={k} className={k === 'ELO' ? 'elo-column' : undefined}>
+                            <th
+                              scope="col"
+                              key={k}
+                              className={k === 'ELO' ? 'elo-column' : undefined}
+                            >
                               {t(k)}
                             </th>
                           ))}
@@ -123,19 +157,27 @@ export function MatchDialog({ fid }: { fid: string }) {
                       <tbody>
                         {players.map((p) => (
                           <tr key={p.id}>
-                            <td>
-                              <Button
-                                onClick={() =>
-                                  openModal({ type: 'profile', id: p.id, name: p.name })
-                                }
-                              >
-                                {p.name}
-                              </Button>
-                              <small className="muted">#{p.id}</small>
+                            <td className="match-player-cell">
+                              <div className="match-player-heading">
+                                <TooltipButton
+                                  className="player-name-button match-player-name"
+                                  tooltip={`${p.name} · #${p.id}`}
+                                  onClick={() =>
+                                    openModal({ type: 'profile', id: p.id, name: p.name })
+                                  }
+                                >
+                                  <span className="player-name">{p.name}</span>
+                                </TooltipButton>
+                                <MatchTitles
+                                  key={`${match.id}:${p.id}`}
+                                  titles={titles[p.id] ?? []}
+                                />
+                              </div>
+                              <small className="player-id muted">#{p.id}</small>
                             </td>
                             <td className="elo-column">
                               {formatMetric(p.newRating)}{' '}
-                              <small>
+                              <small className="muted">
                                 (
                                 {formatDelta(
                                   p.newRating !== null && p.oldRating !== null
