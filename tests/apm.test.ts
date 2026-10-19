@@ -356,7 +356,8 @@ describe.skipIf(process.platform !== 'win32')('Windows input collector', () => {
     const child = spawn(
       'powershell.exe',
       ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', script],
-      { windowsHide: true },
+      // A cold .NET compiler can start slowly on hosted Windows runners.
+      { windowsHide: true, timeout: 60_000 },
     );
     let output = '',
       errors = '';
@@ -366,15 +367,19 @@ describe.skipIf(process.platform !== 'win32')('Windows input collector', () => {
     child.stderr.on('data', (data) => {
       errors += data;
     });
-    child.stdin.end(Buffer.from(source).toString('base64') + '\n');
-    const code = await new Promise((resolve, reject) => {
-      child.once('close', resolve);
-      child.once('error', reject);
-    });
-    expect(errors).toBe('');
-    expect(code).toBe(0);
-    expect(output).toContain('POLICY_OK');
-  }, 15000);
+    try {
+      child.stdin.end(Buffer.from(source).toString('base64') + '\n');
+      const code = await new Promise((resolve, reject) => {
+        child.once('close', resolve);
+        child.once('error', reject);
+      });
+      expect(errors).toBe('');
+      expect(code).toBe(0);
+      expect(output).toContain('POLICY_OK');
+    } finally {
+      if (child.exitCode === null) child.kill();
+    }
+  }, 75000);
   it('registers Raw Input and the foreground hook, then flushes before stopping', async () => {
     const collector = new WindowsInputCollector();
     let resolveReady!: () => void, rejectReady!: (error: Error) => void;
