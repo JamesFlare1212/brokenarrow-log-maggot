@@ -922,20 +922,22 @@ main {
   font-size: 12px;
 }
 .match-team-table {
+  --match-player-column-width: 360px;
+  --match-player-name-max-width: 55%;
   max-height: none;
 }
 .match-team-table table {
   min-width: 1120px;
 }
 .match-team-table .match-player-column {
-  width: 260px;
+  width: var(--match-player-column-width);
 }
 .match-team-table .match-rating-column {
-  width: 112px;
+  width: 104px;
 }
 .match-team-table th,
 .match-team-table td {
-  padding: 10px 12px;
+  padding: 10px 8px;
   text-align: right;
   border-bottom-color: var(--border-subtle);
 }
@@ -947,8 +949,10 @@ main {
   position: sticky;
   left: 0;
   z-index: 1;
-  min-width: 260px;
-  max-width: 260px;
+  width: var(--match-player-column-width);
+  min-width: var(--match-player-column-width);
+  max-width: var(--match-player-column-width);
+  padding-inline: 12px;
   text-align: left;
   background: var(--surface);
   box-shadow: 1px 0 var(--border-subtle);
@@ -990,13 +994,8 @@ main {
   .match-summary {
     column-gap: 12px;
   }
-  .match-team-table .match-player-column {
-    width: 210px;
-  }
-  .match-team-table th:first-child,
-  .match-team-table td:first-child {
-    min-width: 210px;
-    max-width: 210px;
+  .match-team-table {
+    --match-player-column-width: 210px;
   }
 }
 .player-main {

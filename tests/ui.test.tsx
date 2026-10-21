@@ -2114,7 +2114,9 @@ describe('user interaction regressions', () => {
     expect(screen.queryByRole('button', { name: '卡组工具 展开' })).toBeNull();
     expect(await screen.findByRole('group', { name: '当前卡组' })).toBeTruthy();
     expect(screen.getByRole('group', { name: '备份卡组' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    expect(screen.getAllByRole('button', { name: '刷新' })).toHaveLength(2);
+    const backups = screen.getByRole('heading', { name: '备份卡组' }).closest('section')!;
+    fireEvent.click(within(backups).getByRole('button', { name: '刷新' }));
     await waitFor(() =>
       expect(native.calls.filter((call) => call.method === 'decks.list')).toHaveLength(2),
     );

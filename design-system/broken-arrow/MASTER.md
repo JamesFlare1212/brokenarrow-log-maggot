@@ -197,6 +197,8 @@ Keep historical BATrace information distinct from live room data. Missing statis
 
 ## Responsive behavior and accessibility
 
+Match detail tables reserve a 360px sticky player column on desktop and 210px at viewport widths of 600px or less. Player names may use up to 55% of the identity row when awards are present; the remaining space holds the inline award groups. Use 8px horizontal padding for numeric cells and a 104px ELO column to give the player column more room without hiding statistics. The player column retains 12px horizontal padding. Both teams share the same column geometry, and narrow viewports scroll the statistics horizontally while keeping the player identity pinned.
+
 - At 1180px and below, place overview tools below the roster, with the recording and shortcut cards side by side where space permits.
 - At 800px and below, workspace navigation uses an accessible dialog rather than the desktop sidebar.
 - At 720px and below, settings categories form a horizontally scrollable row, with Back above it. Hide the desktop collapse control in this layout.

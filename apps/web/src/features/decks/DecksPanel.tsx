@@ -214,6 +214,7 @@ export function DecksPanel() {
                 files={list.backups}
                 selected={back}
                 onChange={setBack}
+                actions={refreshButton}
               />
               <small className="path">{list.backupsDir}</small>
               <div className="actions">
