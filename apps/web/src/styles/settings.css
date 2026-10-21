@@ -736,7 +736,7 @@
   .settings-sidebar > .sidebar-header {
     grid-area: 1 / 1;
     min-height: 60px;
-    padding: 10px 112px 10px 12px;
+    padding: 10px 162px 10px 12px;
     border-bottom: 1px solid var(--border-subtle);
     background: var(--surface);
   }

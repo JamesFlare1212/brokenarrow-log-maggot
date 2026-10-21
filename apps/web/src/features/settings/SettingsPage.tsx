@@ -38,6 +38,7 @@ import {
 import { AboutSettings } from './AboutSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 import { CacheSettings } from './CacheSettings';
+import { UpdateButton } from './UpdateButton';
 import { RecordingSettings } from '../replays/RecordingSettings';
 import type { SettingsSaveStatus } from '../../hooks/useSettingsAutosave';
 
@@ -301,6 +302,7 @@ export function SettingsPage() {
             aria-label={t('settingsBack')}
             title={t('settingsBack')}
           />
+          <UpdateButton />
         </SidebarFooter>
       </Sidebar>
       <main
