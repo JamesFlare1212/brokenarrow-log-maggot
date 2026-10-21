@@ -98,7 +98,9 @@ NSIS 安装版支持应用内下载、校验、差分下载和重启安装。便
 
 ## 请求与数据
 
-BATrace 请求统一排队，默认间隔至少 1200ms；缓存命中不发送请求，手动刷新绕过缓存。
+Independent BATrace requests run concurrently without a fixed request interval. Room player queries return each player's result as soon as it is ready. Requests for the same cache key and refresh mode share one in-flight request. Failed requests retain retry backoff and honor `Retry-After`. Cache hits do not send requests; manual refresh bypasses the cache.
+
+Service defaults live in [`app.config.json`](app.config.json), including a random `0–300ms` offset before each network attempt, request timeouts and retries, cache freshness and capacity, background intervals, and room query limits. See [project configuration](docs/project-configuration.md) for units and rebuild requirements.
 
 Temporary workaround: the desktop app disables Chromium QUIC/HTTP/3 to avoid observed BATrace stalls. See [scope and removal criteria](docs/architecture.md#temporary-quic-workaround).
 

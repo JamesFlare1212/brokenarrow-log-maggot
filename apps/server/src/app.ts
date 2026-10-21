@@ -34,6 +34,7 @@ import { LogWatcher } from './logs/watcher';
 import { LogArchive } from './logs/archive';
 import { DeckService } from './decks/service';
 import { ReplayFiles } from './replays/files';
+import { projectConfig } from './config';
 import type { Platform } from './ports';
 import {
   TelemetryService,
@@ -253,7 +254,7 @@ export class Application {
           const r = await this.client.get(
             `/api/players/search?q=${encodeURIComponent(query)}&limit=20`,
             `search:${query}:20`,
-            600000,
+            projectConfig.cache.ttlMs.search,
             { allowStale: true },
           );
           const players = array(object(r.value).players)
@@ -539,20 +540,22 @@ export class Application {
       MAP_NAMES[Number(row.id)] = String(row.name);
     this.watcher.start(this.db.config().logDir);
     this.scanArchive(this.db.config().logDir);
-    this.timers.push(setInterval(() => this.scanArchive(this.db.config().logDir), 30000));
+    this.timers.push(
+      setInterval(
+        () => this.scanArchive(this.db.config().logDir),
+        projectConfig.background.archiveScanIntervalMs,
+      ),
+    );
     this.timers.push(
       setInterval(() => {
         if (!this.network) return;
         this.fire(this.syncBackground());
-      }, 3600000),
+      }, projectConfig.background.syncIntervalMs),
     );
     this.timers.push(
-      setInterval(
-        () => {
-          if (this.network) this.fire(this.probeHealth());
-        },
-        10 * 60 * 1000,
-      ),
+      setInterval(() => {
+        if (this.network) this.fire(this.probeHealth());
+      }, projectConfig.background.healthProbeIntervalMs),
     );
     this.timers.push(
       setInterval(() => {
@@ -754,42 +757,40 @@ export class Application {
           p.teamId !== 100 &&
           !/\[Bot\]|^(AI|BOT)[_-]?\d*$/i.test(p.name),
       )
-      .slice(0, 20);
+      .slice(0, projectConfig.queries.maxRoomPlayers);
     const me = players.find((p) => p.id === session.localPlayerId);
     unique.sort((a, b) => Number(b.teamId !== me?.teamId) - Number(a.teamId !== me?.teamId));
     this.queryIds.set(input.context, input.requestId);
     let queried = 0,
       cancelled = false;
-    for (const player of unique) {
-      if (
-        this.queryIds.get(input.context) !== input.requestId ||
-        (input.context === 'current' && this.parser.snapshot().generation !== session.generation)
-      ) {
-        cancelled = true;
-        break;
-      }
-      let info = null,
-        error: string | null = null;
-      try {
-        info = this.analyzer.mini(await this.analyzer.report(player.id));
-        queried++;
-      } catch (e) {
-        error = errorMessage(e);
-      }
-      if (this.queryIds.get(input.context) !== input.requestId) {
-        cancelled = true;
-        break;
-      }
-      this.event({
-        type: 'roster',
-        requestId: input.requestId,
-        context: input.context,
-        generation: session.generation,
-        player,
-        info,
-        error,
-      });
-    }
+    const active = () =>
+      this.queryIds.get(input.context) === input.requestId &&
+      (input.context !== 'current' || this.parser.snapshot().generation === session.generation);
+    await Promise.all(
+      unique.map(async (player) => {
+        let info = null,
+          error: string | null = null;
+        try {
+          info = this.analyzer.mini(await this.analyzer.report(player.id));
+        } catch (e) {
+          error = errorMessage(e);
+        }
+        if (!active()) {
+          cancelled = true;
+          return;
+        }
+        if (info) queried++;
+        this.event({
+          type: 'roster',
+          requestId: input.requestId,
+          context: input.context,
+          generation: session.generation,
+          player,
+          info,
+          error,
+        });
+      }),
+    );
     return {
       requestId: input.requestId,
       queried,
@@ -803,7 +804,7 @@ export class Application {
       const result = await this.client.get(
           '/api/leaderboard/ban?limit=500&offset=0',
           'ban:500:0',
-          3600000,
+          projectConfig.cache.ttlMs.bans,
           { force: true },
         ),
         now = Date.now(),

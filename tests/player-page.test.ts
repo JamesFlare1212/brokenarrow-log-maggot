@@ -34,11 +34,11 @@ function setup(http: HttpPort) {
       },
     },
     '4.0.0',
-    1200,
     () => now,
     async (ms) => {
       now += ms;
     },
+    () => 0,
   );
   resources.push({ db, client });
   return { db, client, times, now };
@@ -167,7 +167,7 @@ describe('BATrace player info fallback', () => {
       'https://bot.batrace.top/api/players/info?stbid=8863',
       'https://dash.batrace.top/player/8863',
     ]);
-    expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(1200);
+    expect(times[1]! - times[0]!).toBe(0);
     expect(results[0]).toMatchObject({ value: capturedData, source: 'network', attempts: 2 });
     expect(results[1]).toEqual(results[0]);
     expect((await client.playerInfo('8863')).source).toBe('cache');

@@ -4,6 +4,7 @@ import { Database } from '../apps/server/src/storage/database';
 import { BatraceClient, type HttpPort } from '../apps/server/src/network/client';
 import { StatusService } from '../apps/server/src/network/status';
 import { parseMatchPage } from '../apps/server/src/network/match-page';
+import { projectConfig, type NetworkConfig } from '../apps/server/src/config';
 
 const capturedMatchHtml = readFileSync(
   new URL('./fixtures/batrace/match-9227650.html', import.meta.url),
@@ -13,7 +14,7 @@ const capturedMatch = parseMatchPage(capturedMatchHtml, '9227650');
 
 const databases = new Set<Database>();
 const clients = new Set<BatraceClient>();
-function setup(http: HttpPort, interval = 1_200) {
+function setup(http: HttpPort, settings: NetworkConfig = projectConfig.network, random = () => 0) {
   const db = new Database(':memory:');
   databases.add(db);
   const clock = { now: Date.now() };
@@ -22,12 +23,13 @@ function setup(http: HttpPort, interval = 1_200) {
     db,
     http,
     '4.0.0',
-    interval,
     () => clock.now,
     async (ms) => {
       waits.push(ms);
       clock.now += ms;
     },
+    random,
+    settings,
   );
   clients.add(client);
   return { db, client, clock, waits };
@@ -40,7 +42,137 @@ afterEach(async () => {
 });
 
 describe('BATrace scheduling and cache boundaries', () => {
-  it('allows more than 400 requests while preserving the global request interval', async () => {
+  it.each([
+    { random: 0, offset: 0 },
+    { random: 0.5, offset: 150 },
+    { random: 0.999999, offset: 300 },
+  ])(
+    'uses an integer millisecond offset of $offset for random $random',
+    async ({ random, offset }) => {
+      const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
+      const { client, waits } = setup(
+        { fetch: fetchImpl },
+        { ...projectConfig.network, requestOffsetMs: 300 },
+        () => random,
+      );
+      await client.get('/api/offset', 'offset', 60000);
+      expect(waits).toEqual(offset ? [offset] : []);
+      await client.get('/api/offset', 'offset', 60000);
+      expect(waits).toEqual(offset ? [offset] : []);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('draws new offsets for retries and uses configured attempts, timeout, and backoff', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('Unavailable', { status: 503 }));
+    const random = vi.fn().mockReturnValueOnce(0.25).mockReturnValueOnce(0.75);
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    const { client, waits } = setup(
+      { fetch: fetchImpl },
+      {
+        requestOffsetMs: 100,
+        maxAttempts: 2,
+        requestTimeoutMs: 321,
+        retryDelayMs: 5,
+      },
+      random,
+    );
+    await expect(client.get('/api/retry-offset', 'retry-offset', 60000)).rejects.toThrow('503');
+    expect(waits).toEqual([25, 5, 75]);
+    expect(random).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(timeout.mock.calls).toEqual([[321], [321]]);
+  });
+
+  it('shares the offset delay before fetching duplicate requests', async () => {
+    const db = new Database(':memory:');
+    databases.add(db);
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
+    const random = vi.fn(() => 0.5);
+    const wait = vi.fn(() => waiting);
+    const client = new BatraceClient(db, { fetch: fetchImpl }, '4.0.0', undefined, wait, random, {
+      ...projectConfig.network,
+      requestOffsetMs: 300,
+    });
+    clients.add(client);
+    const first = client.get('/api/shared-offset', 'shared-offset', 60000);
+    const second = client.get('/api/shared-offset', 'shared-offset', 60000);
+    try {
+      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(wait).toHaveBeenCalledTimes(1);
+      expect(random).toHaveBeenCalledTimes(1);
+    } finally {
+      release();
+    }
+    expect(await first).toEqual(await second);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['request', 'close'])(
+    'cancels the offset on %s without sending a request',
+    async (mode) => {
+      const db = new Database(':memory:');
+      databases.add(db);
+      const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
+      const client = new BatraceClient(
+        db,
+        { fetch: fetchImpl },
+        '4.0.0',
+        undefined,
+        undefined,
+        () => 0.5,
+        {
+          ...projectConfig.network,
+          requestOffsetMs: 60000,
+        },
+      );
+      clients.add(client);
+      const controller = new AbortController();
+      const request = client.get('/api/cancel-offset', 'cancel-offset', 60000, {
+        signal: controller.signal,
+      });
+      const rejected = expect(request).rejects.toThrow();
+      if (mode === 'close') await client.close();
+      else controller.abort();
+      await rejected;
+      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(db.cache('cancel-offset', true)).toBeNull();
+    },
+  );
+
+  it('finishes an independent request while another response body is still pending', async () => {
+    let release!: (body: string) => void;
+    const slowBody = new Promise<string>((resolve) => {
+      release = resolve;
+    });
+    const fetchImpl = vi.fn<typeof fetch>(async (url) => {
+      if (String(url).endsWith('/slow')) {
+        const response = Response.json({ slow: true });
+        vi.spyOn(response, 'text').mockImplementation(() => slowBody);
+        return response;
+      }
+      return Response.json({ fast: true });
+    });
+    const { client } = setup({ fetch: fetchImpl });
+    const slow = client.get('/api/slow', 'slow', 60000);
+    let fastResult: unknown;
+    const fast = client.get('/api/fast', 'fast', 60000).then((result) => {
+      fastResult = result;
+    });
+    try {
+      await vi.waitFor(() => expect(fastResult).toMatchObject({ value: { fast: true } }));
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      release('{"slow":true}');
+      await Promise.all([slow, fast]);
+    }
+  });
+
+  it('allows more than 400 requests without a fixed delay between successful requests', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ ok: true }));
     const { client, waits } = setup({ fetch: fetchImpl });
     const results = await Promise.all(
@@ -48,8 +180,7 @@ describe('BATrace scheduling and cache boundaries', () => {
     );
     expect(results).toHaveLength(405);
     expect(fetchImpl).toHaveBeenCalledTimes(405);
-    expect(waits).toHaveLength(404);
-    expect(waits.every((ms) => ms >= 1_200)).toBe(true);
+    expect(waits).toEqual([]);
   });
 
   it('shares an in-flight request for the same cache key', async () => {
@@ -75,31 +206,41 @@ describe('BATrace scheduling and cache boundaries', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
-  it('counts each retry and honors both the global interval and Retry-After', async () => {
-    const attemptTimes: number[] = [];
-    let state!: ReturnType<typeof setup>;
-    const fetchImpl = vi.fn<typeof fetch>(async () => {
-      attemptTimes.push(state.clock.now);
-      return attemptTimes.length < 3
-        ? new Response('temporarily unavailable', { status: 503, headers: { 'Retry-After': '2' } })
-        : Response.json({ ok: true });
-    });
-    state = setup({ fetch: fetchImpl });
-    const changed = vi.fn();
-    const statuses = new StatusService(state.db, state.client, true, changed);
-    const result = await state.client.get('/api/retry', 'retry', 60_000);
-    expect(result.source).toBe('network');
-    expect(fetchImpl).toHaveBeenCalledTimes(3);
-    expect(result.attempts).toBe(3);
-    expect(statuses.health().state).toBe('ok');
-    expect(changed).toHaveBeenCalledTimes(1);
-    expect(attemptTimes[1]! - attemptTimes[0]!).toBeGreaterThanOrEqual(2_000);
-    expect(attemptTimes[2]! - attemptTimes[1]!).toBeGreaterThanOrEqual(2_000);
-    for (const [url, init] of fetchImpl.mock.calls) {
-      expect(url).toBe('https://bot.batrace.top/api/retry');
-      expect(new Headers(init?.headers).get('X-Client')).toBe('brokenarrow-log-maggot');
-    }
-  });
+  it.each([
+    { status: 503, retryAfter: '2', delay: 2000 },
+    { status: 429, retryAfter: '2', delay: 2000 },
+    { status: 503, retryAfter: null, delay: 1200 },
+  ])(
+    'counts retries and backs off for HTTP $status with Retry-After $retryAfter',
+    async ({ status, retryAfter, delay }) => {
+      const attemptTimes: number[] = [];
+      let state!: ReturnType<typeof setup>;
+      const fetchImpl = vi.fn<typeof fetch>(async () => {
+        attemptTimes.push(state.clock.now);
+        return attemptTimes.length < 3
+          ? new Response('temporarily unavailable', {
+              status,
+              headers: retryAfter ? { 'Retry-After': retryAfter } : {},
+            })
+          : Response.json({ ok: true });
+      });
+      state = setup({ fetch: fetchImpl });
+      const changed = vi.fn();
+      const statuses = new StatusService(state.db, state.client, true, changed);
+      const result = await state.client.get('/api/retry', 'retry', 60_000);
+      expect(result.source).toBe('network');
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+      expect(result.attempts).toBe(3);
+      expect(statuses.health().state).toBe('ok');
+      expect(changed).toHaveBeenCalledTimes(1);
+      expect(attemptTimes[1]! - attemptTimes[0]!).toBe(delay);
+      expect(attemptTimes[2]! - attemptTimes[1]!).toBe(delay);
+      for (const [url, init] of fetchImpl.mock.calls) {
+        expect(url).toBe('https://bot.batrace.top/api/retry');
+        expect(new Headers(init?.headers).get('X-Client')).toBe('brokenarrow-log-maggot');
+      }
+    },
+  );
 
   it('uses a fresh cache without a request, and force replaces it from the network', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ version: 'new' }));

@@ -95,7 +95,7 @@ function cachedAnalyzer(db: Database): Analyzer {
   const unexpectedFetch = vi.fn<typeof fetch>(async () => {
     throw new Error('This fixture should be served from the SQLite cache');
   });
-  return new Analyzer(new BatraceClient(db, { fetch: unexpectedFetch }, '4.0.0', 0), db);
+  return new Analyzer(new BatraceClient(db, { fetch: unexpectedFetch }, '4.0.0'), db);
 }
 
 describe('canonical BATrace match data', () => {
@@ -529,7 +529,7 @@ describe('player reports and Maggot Index', () => {
   it('rejects an empty match response without creating a phantom archive row', async () => {
     const db = database();
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ matchInfo: null }));
-    const client = new BatraceClient(db, { fetch: fetchImpl }, '4.0.0', 0);
+    const client = new BatraceClient(db, { fetch: fetchImpl }, '4.0.0');
     const tracker = new TrackerService(db, client, new Analyzer(client, db));
     await expect(tracker.detail('404', true)).rejects.toThrow(/not found|incomplete/i);
     expect(db.match('404')).toBeNull();

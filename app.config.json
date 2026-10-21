@@ -1,0 +1,28 @@
+{
+  "network": {
+    "requestOffsetMs": 300,
+    "requestTimeoutMs": 15000,
+    "maxAttempts": 3,
+    "retryDelayMs": 1200
+  },
+  "cache": {
+    "ttlMs": {
+      "player": 21600000,
+      "playerMatches": 1800000,
+      "match": 86400000,
+      "search": 600000,
+      "bans": 3600000,
+      "units": 604800000
+    },
+    "maxApiEntries": 2000,
+    "maxPlayerSnapshots": 5000
+  },
+  "background": {
+    "archiveScanIntervalMs": 30000,
+    "syncIntervalMs": 3600000,
+    "healthProbeIntervalMs": 600000
+  },
+  "queries": {
+    "maxRoomPlayers": 20
+  }
+}

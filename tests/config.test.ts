@@ -4,6 +4,35 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { configSchema, rpcSchemas, type PublicConfig } from '@ba/contracts';
 import { Database } from '../apps/server/src/storage/database';
+import { projectConfig, projectConfigSchema } from '../apps/server/src/config';
+
+describe('project configuration', () => {
+  it('accepts zero offset and retry delay while keeping positive timeouts and intervals', () => {
+    const config = structuredClone(projectConfig);
+    config.network.requestOffsetMs = 0;
+    config.network.retryDelayMs = 0;
+    expect(projectConfigSchema.parse(config)).toEqual(config);
+  });
+
+  it.each([
+    ['network', 'requestOffsetMs', -1],
+    ['network', 'requestOffsetMs', 0.5],
+    ['network', 'requestOffsetMs', '300'],
+    ['network', 'requestOffsetMs', 2147483648],
+    ['network', 'requestTimeoutMs', 0],
+    ['network', 'maxAttempts', 0],
+    ['network', 'retryDelayMs', -1],
+    ['cache', 'maxApiEntries', 0],
+    ['cache', 'maxPlayerSnapshots', 0],
+    ['background', 'syncIntervalMs', 0],
+    ['queries', 'maxRoomPlayers', 101],
+    ['network', 'unknownSetting', 1],
+  ])('rejects invalid %s.%s = %j', (section, key, value) => {
+    const config = structuredClone(projectConfig) as Record<string, Record<string, unknown>>;
+    config[section]![key] = value;
+    expect(projectConfigSchema.safeParse(config).success).toBe(false);
+  });
+});
 
 describe('configuration patches', () => {
   it.each<Partial<PublicConfig>>([

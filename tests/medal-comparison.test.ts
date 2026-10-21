@@ -170,7 +170,7 @@ describe('upstream six-dimension medal comparison', () => {
         });
       });
       const db = new Database(':memory:');
-      const client = new BatraceClient(db, { fetch: fetchImpl }, '4.3.0', 0);
+      const client = new BatraceClient(db, { fetch: fetchImpl }, '4.3.0');
       try {
         expect(await client.analysisMatch(response.id)).toMatchObject({
           source: 'network',

@@ -10,6 +10,17 @@ import { initialApmState } from '@ba/contracts';
 import { ApmController } from '../apps/desktop/src/apm';
 import type { InputFrame } from '../apps/desktop/src/apm/windows-input';
 
+vi.mock('../apps/server/src/config', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../apps/server/src/config')>();
+  return {
+    ...original,
+    projectConfig: {
+      ...original.projectConfig,
+      network: { ...original.projectConfig.network, requestOffsetMs: 0 },
+    },
+  };
+});
+
 // Application keeps its real repositories and SQL behavior; only the DB location changes.
 vi.mock('../apps/server/src/storage/database', async (importOriginal) => {
   const original = await importOriginal<typeof import('../apps/server/src/storage/database')>();
@@ -85,6 +96,134 @@ function application(value: Platform, events: AppEvent[] = [], network = false) 
 afterEach(async () => {
   await Promise.all([...applications].map((app) => app.stop()));
   applications.clear();
+});
+
+describe('concurrent room queries', () => {
+  const players = [
+    { id: '1', name: 'First player', teamId: 0 as const },
+    { id: '2', name: 'Second player', teamId: 1 as const },
+    { id: '3', name: 'Cached player', teamId: 1 as const },
+  ];
+  const analysis = { matchCount: 1, trend: { points: [] } };
+
+  it('starts independent lookups together and publishes cached and faster players first', async () => {
+    const first = deferred<Response>(),
+      second = deferred<Response>();
+    const fetchImpl = vi.fn<typeof fetch>((url) =>
+      String(url).includes('stbid=1') ? first.promise : second.promise,
+    );
+    const events: AppEvent[] = [];
+    const app = application(platform(fetchImpl), events);
+    app.db.saveCache('analysis:3', analysis, 21600000);
+    const request = app.invoke('session.query', {
+      context: 'previous',
+      requestId: randomUUID(),
+      players: [...players, players[1]!, { id: '4', name: '[Bot]', teamId: 0 }],
+    });
+    const roster = () => events.filter((event) => event.type === 'roster');
+    try {
+      await vi.waitFor(() => {
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+        expect(roster().map((event) => event.player.id)).toEqual(['3']);
+      });
+      second.resolve(Response.json(analysis));
+      await vi.waitFor(() => expect(roster().map((event) => event.player.id)).toEqual(['3', '2']));
+      first.resolve(Response.json(analysis));
+      expect(await request).toMatchObject({ queried: 3, skipped: 2, cancelled: false });
+      expect(roster().map((event) => event.player.id)).toEqual(['3', '2', '1']);
+    } finally {
+      first.resolve(Response.json(analysis));
+      second.resolve(Response.json(analysis));
+      await request;
+    }
+  });
+
+  it('publishes one player failure without blocking another pending player', async () => {
+    const pending = deferred<Response>();
+    const fetchImpl = vi.fn<typeof fetch>(async (url) =>
+      String(url).includes('stbid=2')
+        ? pending.promise
+        : new Response('Forbidden', { status: 403 }),
+    );
+    const events: AppEvent[] = [];
+    const app = application(platform(fetchImpl), events);
+    const request = app.invoke('session.query', {
+      context: 'previous',
+      requestId: randomUUID(),
+      players: players.slice(0, 2),
+    });
+    try {
+      await vi.waitFor(() =>
+        expect(events.find((event) => event.type === 'roster')).toMatchObject({
+          player: { id: '1' },
+          info: null,
+          error: expect.stringContaining('403'),
+        }),
+      );
+      pending.resolve(Response.json(analysis));
+      expect(await request).toMatchObject({ queried: 1, cancelled: false });
+      expect(events.filter((event) => event.type === 'roster')).toHaveLength(2);
+    } finally {
+      pending.resolve(Response.json(analysis));
+      await request;
+    }
+  });
+
+  it('shares pending lookups with a replacement query and suppresses the old results', async () => {
+    const pending = deferred<Response>();
+    const fetchImpl = vi.fn<typeof fetch>(async () => (await pending.promise).clone());
+    const events: AppEvent[] = [];
+    const app = application(platform(fetchImpl), events);
+    const oldId = randomUUID(),
+      nextId = randomUUID();
+    const previous = app.invoke('session.query', {
+      context: 'previous',
+      requestId: oldId,
+      players: players.slice(0, 2),
+    });
+    try {
+      await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      const next = app.invoke('session.query', {
+        context: 'previous',
+        requestId: nextId,
+        players: players.slice(0, 2),
+      });
+      pending.resolve(Response.json(analysis));
+      const results = await Promise.all([previous, next]);
+      expect(results[0]).toMatchObject({ queried: 0, cancelled: true });
+      expect(results[1]).toMatchObject({ queried: 2, cancelled: false });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+      const roster = events.filter((event) => event.type === 'roster');
+      expect(roster).toHaveLength(2);
+      expect(roster.every((event) => event.requestId === nextId)).toBe(true);
+    } finally {
+      pending.resolve(Response.json(analysis));
+      await previous;
+    }
+  });
+
+  it('suppresses concurrent current-room results after the session generation changes', async () => {
+    const pending = deferred<Response>();
+    const fetchImpl = vi.fn<typeof fetch>(async () => (await pending.promise).clone());
+    const events: AppEvent[] = [];
+    const app = application(platform(fetchImpl), events);
+    app.parser.feed([
+      'Log: Start loading battle... map: Dam, scenario: Test',
+      'Log: Room: (GameRoom|123), Client: (First player|1)',
+      'Log: Room: (GameRoom|123), Client: (Second player|2)',
+    ]);
+    const request = app.invoke('session.query', { context: 'current', requestId: randomUUID() });
+    try {
+      await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      app.parser.reset();
+      pending.resolve(Response.json(analysis));
+      expect(await request).toMatchObject({ queried: 0, cancelled: true });
+      expect(events.filter((event) => event.type === 'roster')).toEqual([]);
+    } finally {
+      pending.resolve(Response.json(analysis));
+      await request;
+    }
+  });
 });
 
 describe('application cache management', () => {

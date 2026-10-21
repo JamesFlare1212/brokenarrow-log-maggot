@@ -18,7 +18,7 @@
 | API / 日志规则重复漂移         | shared 规范模型、来源优先级合并                  |
 | 恢复日志降级 API 数据          | 保留丰富名单、指标和采集时间                     |
 | 多账号删除和视角错误           | match_views、参与关系保护、事务重选              |
-| 并发请求、重试绕限流           | 请求和重试统一排队，保持请求间隔                 |
+| Request scheduling and retries | Concurrent requests; retries honor `Retry-After` |
 | 刷新命中旧缓存 / 假成功        | force 绕缓存，失败明确                           |
 | NoCount / 旧 UA / 旁路残留     | 删除旧命名，忽略 UA，共享验证会话                |
 | 缺本人仍给 rank5               | 跳过缺本人 / 不完整队伍，不伪造参考排名          |

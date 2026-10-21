@@ -34,11 +34,11 @@ function setup(http: HttpPort) {
       },
     },
     '4.0.0',
-    1200,
     () => now,
     async (ms) => {
       now += ms;
     },
+    () => 0,
   );
   resources.push({ db, client });
   return { db, client, times, now };
@@ -113,7 +113,7 @@ describe('BATrace match detail fallback', () => {
       `https://dash.batrace.top/match/${id}`,
       `https://bot.batrace.top/api/analysis/match?matchid=${id}`,
     ]);
-    expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(1200);
+    expect(times[1]! - times[0]!).toBe(0);
     expect(db.cache(`match:${id}`, false)?.value).toEqual(capturedData);
     expect((await client.match(id)).source).toBe('cache');
     expect(fetchImpl).toHaveBeenCalledTimes(3);
@@ -226,8 +226,7 @@ describe('BATrace match detail health', () => {
       rayId: 'match-health-ray',
       fallback: { path: pagePath, ok: true, status: 200 },
     });
-    for (let i = 1; i < times.length; i++)
-      expect(times[i]! - times[i - 1]!).toBeGreaterThanOrEqual(1200);
+    for (let i = 1; i < times.length; i++) expect(times[i]! - times[i - 1]!).toBe(0);
     mode = 'down';
     const down = await statuses.probe();
     expect(down.state).toBe('down');

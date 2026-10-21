@@ -6,6 +6,7 @@ import type { Database } from '../storage/database';
 import { parsePlayerPage, validatePlayerInfo } from './player-page';
 import { parseMatchPage, validateMatchInfo } from './match-page';
 import { failedHealthCheck } from './health';
+import { projectConfig, type NetworkConfig } from '../config';
 interface RequestOptions {
   force?: boolean;
   allowStale?: boolean;
@@ -27,8 +28,6 @@ export interface HttpPort {
   offline?: boolean;
 }
 export class BatraceClient {
-  private queue: Promise<unknown> = Promise.resolve();
-  private lastAttempt = 0;
   private pending = new Map<string, Promise<DataResult>>();
   private lifetime = new AbortController();
   private resultListeners = new Set<(check: ApiHealthCheck) => void>();
@@ -36,9 +35,11 @@ export class BatraceClient {
     private db: Database,
     private http: HttpPort,
     private version: string,
-    private interval = 1200,
     private now: () => number = Date.now,
-    private wait: (ms: number) => Promise<unknown> = (ms) => sleep(ms),
+    private wait: (ms: number, signal?: AbortSignal) => Promise<unknown> = (ms, signal) =>
+      sleep(ms, undefined, { signal }),
+    private random: () => number = Math.random,
+    private settings: NetworkConfig = projectConfig.network,
   ) {}
   get offline(): boolean {
     return this.http.offline === true;
@@ -95,17 +96,18 @@ export class BatraceClient {
     let last: unknown;
     let attempts = 0;
     let startedAt: number | undefined;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const signal = AbortSignal.any([
+      this.lifetime.signal,
+      ...(options.signal ? [options.signal] : []),
+    ]);
+    for (let attempt = 0; attempt < this.settings.maxAttempts; attempt++) {
       try {
-        this.lifetime.signal.throwIfAborted();
-        options.signal?.throwIfAborted();
+        signal.throwIfAborted();
+        const offset = Math.floor(this.random() * (this.settings.requestOffsetMs + 1));
+        if (offset) await this.wait(offset, signal);
+        signal.throwIfAborted();
         const run = async () => {
-          const delay = Math.max(0, this.interval - (this.now() - this.lastAttempt));
-          if (delay) await this.wait(delay);
-          this.lifetime.signal.throwIfAborted();
-          options.signal?.throwIfAborted();
           if (!options.health) attempts++;
-          this.lastAttempt = this.now();
           startedAt ??= this.now();
           const headers = object(this.db.state<unknown>('privateHeaders', {}));
           const safeHeaders = new Headers(
@@ -122,7 +124,7 @@ export class BatraceClient {
             headers: safeHeaders,
             signal: AbortSignal.any([
               this.lifetime.signal,
-              AbortSignal.timeout(15000),
+              AbortSignal.timeout(this.settings.requestTimeoutMs),
               ...(options.signal ? [options.signal] : []),
             ]),
           });
@@ -161,9 +163,7 @@ export class BatraceClient {
             );
           }
         };
-        const scheduled = this.queue.then(run, run);
-        this.queue = scheduled.catch(() => {});
-        const result = await scheduled;
+        const result = await run();
         this.lifetime.signal.throwIfAborted();
         options.signal?.throwIfAborted();
         const at = this.now();
@@ -175,7 +175,8 @@ export class BatraceClient {
         if (this.lifetime.signal.aborted || options.signal?.aborted) throw error;
         const e = object(error);
         if (e.invalidResponse || e.status === 404 || e.status === 401 || e.status === 403) break;
-        if (attempt < 2) await this.wait(Math.max(this.interval, Number(e.retryAfter) || 0));
+        if (attempt + 1 < this.settings.maxAttempts)
+          await this.wait(Math.max(this.settings.retryDelayMs, Number(e.retryAfter) || 0), signal);
       }
     }
     if (startedAt !== undefined)
@@ -203,46 +204,56 @@ export class BatraceClient {
     return this.get(
       `/api/analysis/player?stbid=${encodeURIComponent(id)}`,
       `analysis:${id}`,
-      21600000,
+      projectConfig.cache.ttlMs.player,
       { force, allowStale: !force },
     );
   }
   playerInfo(id: string, force = false): Promise<DataResult> {
-    return this.get(`/api/players/info?stbid=${encodeURIComponent(id)}`, `info:${id}`, 21600000, {
-      force,
-      allowStale: !force,
-      parse: (raw) => validatePlayerInfo(JSON.parse(raw), id),
-      fallback: {
-        path: `/player/${encodeURIComponent(id)}`,
-        parse: (raw) => parsePlayerPage(raw, id),
+    return this.get(
+      `/api/players/info?stbid=${encodeURIComponent(id)}`,
+      `info:${id}`,
+      projectConfig.cache.ttlMs.player,
+      {
+        force,
+        allowStale: !force,
+        parse: (raw) => validatePlayerInfo(JSON.parse(raw), id),
+        fallback: {
+          path: `/player/${encodeURIComponent(id)}`,
+          parse: (raw) => parsePlayerPage(raw, id),
+        },
       },
-    });
+    );
   }
   playerMatches(id: string, force = false): Promise<DataResult> {
     return this.get(
       `/api/players/matches?stbid=${encodeURIComponent(id)}&limit=10`,
       `myMatches:${id}:10`,
-      1800000,
+      projectConfig.cache.ttlMs.playerMatches,
       { force, allowStale: !force },
     );
   }
   match(id: string, force = false): Promise<DataResult> {
-    return this.get(`/api/match?matchid=${encodeURIComponent(id)}`, `match:${id}`, 86400000, {
-      force,
-      allowStale: !force,
-      parse: (raw) => validateMatchInfo(JSON.parse(raw)),
-      invalidMessage: 'BATrace returned incomplete match data',
-      fallback: {
-        path: `/match/${encodeURIComponent(id)}`,
-        parse: (raw) => parseMatchPage(raw, id),
+    return this.get(
+      `/api/match?matchid=${encodeURIComponent(id)}`,
+      `match:${id}`,
+      projectConfig.cache.ttlMs.match,
+      {
+        force,
+        allowStale: !force,
+        parse: (raw) => validateMatchInfo(JSON.parse(raw)),
+        invalidMessage: 'BATrace returned incomplete match data',
+        fallback: {
+          path: `/match/${encodeURIComponent(id)}`,
+          parse: (raw) => parseMatchPage(raw, id),
+        },
       },
-    });
+    );
   }
   analysisMatch(id: string, force = false): Promise<DataResult> {
     return this.get(
       `/api/analysis/match?matchid=${encodeURIComponent(id)}`,
       `amatch:${id}`,
-      86400000,
+      projectConfig.cache.ttlMs.match,
       { force },
     );
   }

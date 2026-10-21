@@ -25,7 +25,7 @@ pnpm titles:history --capture
 pnpm titles:history --capture --user-data "C:/path/to/app-data" --out "tests/fixtures/batrace/history"
 ```
 
-Capture uses the production client's request spacing, retries, validation, client identification headers, and dashboard fallback. It writes only the selected output directory and an in-memory test database. Review changes to all three corpus files and update the frequency report before committing a refreshed baseline. Run `pnpm check`, `pnpm format:check`, `pnpm smoke`, and `pnpm smoke:real` after refreshing it.
+Capture uses the production client's retry backoff, validation, client identification headers, and dashboard fallback. It writes only the selected output directory and an in-memory test database. Review changes to all three corpus files and update the frequency report before committing a refreshed baseline. Run `pnpm check`, `pnpm format:check`, `pnpm smoke`, and `pnpm smoke:real` after refreshing it.
 
 ## Upstream medal comparison
 

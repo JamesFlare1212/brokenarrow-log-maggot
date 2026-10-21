@@ -17,6 +17,7 @@ import type {
 } from '@ba/contracts';
 import { configSchema, legacyThemeMode, PANELS } from '@ba/contracts';
 import { object, text, number, mergeMatch, determineOutcome } from '@ba/shared';
+import { projectConfig } from '../config';
 
 function includeRadar(order: PublicConfig['panelOrder']): PublicConfig['panelOrder'] {
   if (order.includes('radar')) return order;
@@ -410,7 +411,10 @@ export class Database {
     const r = this.prepare('SELECT payload FROM player_snapshots WHERE player_id=?').get(id);
     if (!r) return null;
     const value = JSON.parse(String(r.payload)) as MiniInfo;
-    return { ...value, stale: value.stale || Date.now() - value.updatedAt > 21600000 };
+    return {
+      ...value,
+      stale: value.stale || Date.now() - value.updatedAt > projectConfig.cache.ttlMs.player,
+    };
   }
   saveSnapshot(id: string, value: MiniInfo, trim = true): void {
     if (value.stale) return;
@@ -420,8 +424,8 @@ export class Database {
     ).run(id, value.updatedAt, JSON.stringify(value));
     if (trim)
       this.prepare(
-        'DELETE FROM player_snapshots WHERE player_id IN (SELECT player_id FROM player_snapshots ORDER BY at DESC LIMIT -1 OFFSET 5000)',
-      ).run();
+        'DELETE FROM player_snapshots WHERE player_id IN (SELECT player_id FROM player_snapshots ORDER BY at DESC LIMIT -1 OFFSET ?)',
+      ).run(projectConfig.cache.maxPlayerSnapshots);
   }
   bans(metOnly = false): Ban[] {
     return this.prepare(
@@ -543,7 +547,7 @@ export class Database {
       snapshots: usage(
         this.prepare(
           "SELECT COUNT(*) AS entries,COALESCE(SUM(at<? OR json_extract(payload,'$.stale')=1),0) AS expired,COALESCE(SUM(length(CAST(payload AS BLOB))),0) AS bytes FROM player_snapshots",
-        ).get(now - 21600000)!,
+        ).get(now - projectConfig.cache.ttlMs.player)!,
       ),
     };
   }
@@ -558,7 +562,7 @@ export class Database {
           ? this.prepare('DELETE FROM player_snapshots').run()
           : this.prepare(
               "DELETE FROM player_snapshots WHERE at<? OR json_extract(payload,'$.stale')=1",
-            ).run(now - 21600000);
+            ).run(now - projectConfig.cache.ttlMs.player);
       return {
         removed: Number(api.changes) + Number(snapshots.changes),
         stats: this.cacheStats(now),
@@ -583,7 +587,7 @@ export class Database {
     ).run(key, at, at + ttl, JSON.stringify(value));
     if (trim)
       this.prepare(
-        'DELETE FROM api_cache WHERE key IN (SELECT key FROM api_cache ORDER BY at DESC LIMIT -1 OFFSET 2000)',
-      ).run();
+        'DELETE FROM api_cache WHERE key IN (SELECT key FROM api_cache ORDER BY at DESC LIMIT -1 OFFSET ?)',
+      ).run(projectConfig.cache.maxApiEntries);
   }
 }

@@ -117,7 +117,7 @@ describe('captured historical BATrace title coverage', () => {
         });
       });
       const db = new Database(':memory:');
-      const client = new BatraceClient(db, { fetch: fetchImpl }, '4.3.0', 0);
+      const client = new BatraceClient(db, { fetch: fetchImpl }, '4.3.0');
       try {
         const response = fixture.responses.find((response) => response.id === id);
         if (response) {

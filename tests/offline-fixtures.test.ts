@@ -325,7 +325,7 @@ describe('complete recorded BATrace development archive', () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => {
       throw new Error('Network unavailable');
     });
-    const online = new BatraceClient(onlineDb, { fetch }, '4.3.0', 0);
+    const online = new BatraceClient(onlineDb, { fetch }, '4.3.0');
     try {
       onlineDb.saveCache(
         'analysis:' + activeAccountId,

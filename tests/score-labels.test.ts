@@ -224,7 +224,7 @@ describe('completed-match score labels', () => {
     const fetch = vi.fn<typeof globalThis.fetch>(
       async () => new Response('Forbidden', { status: 403 }),
     );
-    const client = new BatraceClient(db, { fetch }, '4.3.0', 0);
+    const client = new BatraceClient(db, { fetch }, '4.3.0');
     try {
       db.saveMatch(completed());
       db.saveCache('match:' + id, raw, 86400000);
@@ -245,7 +245,7 @@ describe('completed-match score labels', () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async (url) =>
       Response.json(String(url).includes('/api/analysis/') ? analysis : raw),
     );
-    const client = new BatraceClient(db, { fetch }, '4.3.0', 0);
+    const client = new BatraceClient(db, { fetch }, '4.3.0');
     try {
       db.saveMatch(completed());
       db.saveCache('match:' + id, raw, 86400000);
@@ -269,7 +269,7 @@ describe('completed-match score labels', () => {
     const liveRaw = structuredClone(raw) as { matchInfo: Record<string, unknown> };
     delete liveRaw.matchInfo.EndTime;
     const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json(liveRaw));
-    const client = new BatraceClient(db, { fetch }, '4.3.0', 0);
+    const client = new BatraceClient(db, { fetch }, '4.3.0');
     try {
       const result = await new TrackerService(db, client, new Analyzer(client, db)).detail(id);
       expect(result.endedAt).toBeNull();

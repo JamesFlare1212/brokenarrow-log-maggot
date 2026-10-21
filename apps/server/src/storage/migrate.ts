@@ -18,6 +18,7 @@ import {
   team,
 } from '@ba/shared';
 import { Database } from './database';
+import { projectConfig } from '../config';
 
 const FILES = [
   'settings.json',
@@ -55,11 +56,12 @@ function hash(bytes: Buffer | string): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 function cacheTtl(key: string): number {
-  if (key.startsWith('search:')) return 600000;
-  if (key.startsWith('myMatches:')) return 1800000;
-  if (key.startsWith('ban:')) return 3600000;
-  if (key.startsWith('match:') || key.startsWith('amatch:')) return 86400000;
-  return key === 'units' ? 604800000 : 21600000;
+  const ttl = projectConfig.cache.ttlMs;
+  if (key.startsWith('search:')) return ttl.search;
+  if (key.startsWith('myMatches:')) return ttl.playerMatches;
+  if (key.startsWith('ban:')) return ttl.bans;
+  if (key.startsWith('match:') || key.startsWith('amatch:')) return ttl.match;
+  return key === 'units' ? ttl.units : ttl.player;
 }
 function matchShape(value: unknown): boolean {
   return (
