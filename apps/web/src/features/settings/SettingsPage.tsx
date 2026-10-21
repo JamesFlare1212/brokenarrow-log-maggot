@@ -20,6 +20,7 @@ import {
   faShieldHalved,
 } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
+import { BrandLogo } from '../../components/BrandLogo';
 import type { Account, PublicConfig } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
@@ -242,7 +243,7 @@ export function SettingsPage() {
           controls="settings-sidebar"
           onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
         >
-          <SidebarHeading className="settings-brand" icon={<Icon icon={faSliders} size={22} />}>
+          <SidebarHeading className="settings-brand" icon={<BrandLogo />}>
             <h1 id="settings-title">{t('settings')}</h1>
           </SidebarHeading>
         </SidebarHeader>

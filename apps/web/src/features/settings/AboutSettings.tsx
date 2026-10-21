@@ -1,5 +1,6 @@
 import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../../components/Icon';
+import { BrandLogo } from '../../components/BrandLogo';
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
@@ -16,7 +17,10 @@ export function AboutSettings() {
         <UpdatePanel />
         <div className="settings-about-row">
           <div className="settings-about-copy">
-            <strong>{t('projectLinks')}</strong>
+            <div className="settings-about-title">
+              <BrandLogo size={32} />
+              <strong>{t('projectLinks')}</strong>
+            </div>
             <p>{t('brand')}</p>
           </div>
           <div className="settings-about-links">

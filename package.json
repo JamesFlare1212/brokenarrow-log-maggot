@@ -25,14 +25,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "pnpm --filter @ba/web build && pnpm --filter @ba/server build && pnpm --filter @ba/desktop build && node scripts/posthog-sourcemaps.mjs",
+    "build": "node scripts/prepare-icon.mjs && pnpm --filter @ba/web build && pnpm --filter @ba/server build && pnpm --filter @ba/desktop build && node scripts/posthog-sourcemaps.mjs",
     "posthog:sourcemaps": "node scripts/posthog-sourcemaps.mjs --upload",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "smoke": "pnpm build && node scripts/smoke.mjs",
     "smoke:real": "pnpm build && node scripts/smoke.mjs --real",
     "smoke:packaged": "node scripts/smoke.mjs \"dist/win-unpacked/断箭蛐工具.exe\"",
-    "dist": "pnpm build && node scripts/prepare-icon.mjs && electron-builder --win --publish never",
-    "pack:desktop": "pnpm build && node scripts/prepare-icon.mjs && electron-builder --dir --publish never"
+    "dist": "pnpm build && electron-builder --win --publish never",
+    "pack:desktop": "pnpm build && electron-builder --dir --publish never"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-svg-core": "7.3.1",

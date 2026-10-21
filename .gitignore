@@ -21,7 +21,7 @@ coverage/
 # 游戏日志样本
 /Gamelog__*.log
 
-# 打包图标（由 logo.png 自动生成）
+# Packaged icon generated from apps/web/public/logo.png
 build/icon.png
 
 # 系统/编辑器

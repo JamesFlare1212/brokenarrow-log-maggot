@@ -50,6 +50,12 @@
 .sidebar-heading-label {
   min-width: 0;
 }
+.brand-logo {
+  display: block;
+  flex: none;
+  border-radius: 20%;
+  object-fit: contain;
+}
 .sidebar-heading-label > :is(h1, strong) {
   display: block;
   font-size: 17px;

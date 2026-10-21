@@ -8,6 +8,12 @@ Use a calm graphite workspace, subtle surface separation and restrained borders.
 
 The settings reference is the T3 Code layout supplied for this project: a category sidebar, a dedicated content area, three appearance-mode previews and separate palette pairs. Keep the application's match data and workflows central to the design.
 
+## Brand identity
+
+The public asset `apps/web/public/logo.png` is the single source for the approved graphite and amber broken-arrow mark with open radar arcs on white. Use `BrandLogo` for workspace, mobile navigation, Settings and About branding. Keep the approved colors and white background in every appearance palette; do not recolor the mark with UI accent tokens. Render it at 28px in sidebar headings and 32px in About, with explicit dimensions, subtly rounded corners and decorative image semantics beside visible text. Collapsed sidebars retain their existing icon-rail behavior.
+
+Both HTML entry points use the same source as their favicon. Every root build runs `scripts/prepare-icon.mjs` to refresh `build/icon.png` from this source before desktop development, smoke tests or packaging. The Electron window, installer and portable executable use the generated icon. Do not retain an alternative avatar or use a generic crosshair as the application logo. Functional crosshair icons in match tools retain their existing meaning.
+
 ## Implementation sources
 
 | Concern                                   | Source                                                                                                                                                           |
@@ -33,7 +39,7 @@ The sidebar provides overview, 蛐雷达 (player radar), player search, APM, arc
 - Optional APM follows the user's configuration. The full ban list belongs only on the dedicated bans page, even when an older configuration has `banCardVisible` enabled. Do not expose an overview ban-panel toggle.
 - Visited screens retain local state and scroll position. Hash routes support direct links and browser history.
 - Workspace and Settings use the shared `Sidebar`, `SidebarHeading`, `SidebarNavigation`, `SidebarItem` and `SidebarFooter` components from `components/Sidebar.tsx`, styled by `styles/sidebar.css`. Both sidebars use a 224px expanded width and a 76px icon rail, with shared tokens and the persisted `sidebarCollapsed` preference. Keep accessible names and hover titles for icon-only entries.
-- Use Settings' compact layout throughout: 42px navigation rows, 5px gaps, neutral selected backgrounds and accent-colored selected icons. Navigation and footer labels are 14px bold (700); heading labels are 17px bold. Both sides share padding, heading spacing and footer placement. Headings use 8px vertical and 12px horizontal padding with content-driven height. The workspace uses a plain brand icon and title without the former boxed logo, English subtitle or section label.
+- Use Settings' compact layout throughout: 42px navigation rows, 5px gaps, neutral selected backgrounds and accent-colored selected icons. Navigation and footer labels are 14px bold (700); heading labels are 17px bold. Both sides share padding, heading spacing and footer placement. Headings use 8px vertical and 12px horizontal padding with content-driven height. The workspace uses the approved brand mark and title without an additional icon container, English subtitle or section label.
 - Preserve workspace navigation landmarks and Settings tab semantics, roving focus and arrow/Home/End shortcuts. On small screens, workspace navigation opens in its existing dialog while Settings tabs form a horizontal scrollable row.
 
 ## Header and page hierarchy

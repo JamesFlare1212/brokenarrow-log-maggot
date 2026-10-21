@@ -11,7 +11,6 @@ import {
   faWaveSquare,
   faBoxArchive,
   faChevronRight,
-  faCrosshairs,
   faLayerGroup,
   faTableCellsLarge,
   faBars,
@@ -22,6 +21,7 @@ import {
   faVideo,
 } from '@fortawesome/free-solid-svg-icons';
 import { Icon } from '../components/Icon';
+import { BrandLogo } from '../components/BrandLogo';
 import { TooltipButton } from '../components/Tooltip';
 import type { Panel } from '@ba/contracts';
 import { useApp } from './state';
@@ -82,7 +82,7 @@ const icons: Record<Panel, ReactNode> = {
 function Brand() {
   const { t } = useI18n();
   return (
-    <SidebarHeading className="brand" icon={<Icon icon={faCrosshairs} size={22} />}>
+    <SidebarHeading className="brand" icon={<BrandLogo />}>
       <strong>{t('brand')}</strong>
     </SidebarHeading>
   );

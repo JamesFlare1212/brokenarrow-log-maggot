@@ -1,5 +1,7 @@
 # 断箭蛐工具 · v4
 
+<img src="apps/web/public/logo.png" width="80" height="80" alt="Broken Arrow Log Assistant logo" />
+
 本地 Broken Arrow 对局助手，使用 React + Vite + Electron + Node.js + TypeScript + SQLite，以及 pnpm。
 
 [视觉规范](design-system/broken-arrow/MASTER.md) · [架构](docs/architecture.md) · [数据迁移](docs/migration.md) · [审查问题处理](docs/audit-resolution.md)
