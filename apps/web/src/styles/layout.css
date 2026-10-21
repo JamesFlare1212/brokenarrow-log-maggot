@@ -422,6 +422,7 @@ main {
   font-size: 18px;
 }
 .dashboard {
+  container: dashboard / inline-size;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -497,6 +498,19 @@ main {
 .dashboard-side > .quick-tools > .card-body,
 .dashboard-side > .quick-tools .quick-tool {
   flex: 1;
+}
+/* Keep both 380px teams side by side when the tools move into the fourth column. */
+@container dashboard (max-width: 1080px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-grid > .session-card {
+    grid-column: auto;
+  }
+  .dashboard-side {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .session-card {
   container-type: inline-size;
@@ -2427,16 +2441,6 @@ main {
 @media (max-width: 1180px) {
   main {
     padding-inline: 24px;
-  }
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-  .dashboard-grid > .session-card {
-    grid-column: auto;
-  }
-  .dashboard-side {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .recording-widget .recording-illustration {
     height: 90px;
