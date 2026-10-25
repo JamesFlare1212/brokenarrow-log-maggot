@@ -1,0 +1,60 @@
+@import '../styles/index.css';
+
+:host {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  background: transparent;
+  pointer-events: none;
+}
+:host::backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+.development-tools-theme {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--foreground);
+  pointer-events: none;
+}
+.development-tools {
+  position: fixed;
+  width: max-content;
+  pointer-events: auto;
+}
+.development-tools-launcher {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+}
+.development-tools-handle {
+  touch-action: none;
+  cursor: grab;
+}
+.development-tools-handle:active {
+  cursor: grabbing;
+}
+.development-tools-panel {
+  display: flex;
+  max-height: calc(100dvh - 5rem);
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.development-tools-panel [data-slot='field-label'] > svg {
+  width: 1rem;
+  height: 1rem;
+}

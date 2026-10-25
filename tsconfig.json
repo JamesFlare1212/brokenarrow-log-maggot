@@ -16,6 +16,7 @@
     "noEmit": true,
     "types": ["node", "vite/client"],
     "paths": {
+      "@/*": ["./apps/web/src/*"],
       "@ba/contracts": ["./packages/contracts/src/index.ts"],
       "@ba/shared": ["./packages/shared/src/index.ts"],
       "@ba/server": ["./apps/server/src/index.ts"]

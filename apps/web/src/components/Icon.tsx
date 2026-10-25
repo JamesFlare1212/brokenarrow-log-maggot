@@ -1,13 +1,17 @@
-import { FontAwesomeIcon, type FontAwesomeIconProps } from '@fortawesome/react-fontawesome';
+import type { LucideIcon, LucideProps } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-type IconProps = Omit<FontAwesomeIconProps, 'size'> & { size?: number };
-
-export function Icon({ size = 16, style, ...props }: IconProps) {
+export function Icon({
+  icon: Component,
+  spin,
+  className,
+  ...props
+}: LucideProps & { icon: LucideIcon; spin?: boolean }) {
   return (
-    <FontAwesomeIcon
-      aria-hidden="true"
+    <Component
+      data-icon="inline-start"
+      className={cn(spin && 'animate-spin', className)}
       {...props}
-      style={{ fontSize: size, '--fa-width': '1em', ...style }}
     />
   );
 }

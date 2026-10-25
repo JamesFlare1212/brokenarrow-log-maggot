@@ -39,7 +39,7 @@ export function TelemetryConsentDialog() {
         <Button disabled={saving} onClick={() => void choose(false)}>
           {t('telemetryConsentDecline')}
         </Button>
-        <Button variant="primary" disabled={saving} onClick={() => void choose(true)}>
+        <Button variant="default" disabled={saving} onClick={() => void choose(true)}>
           {t('telemetryConsentAccept')}
         </Button>
       </div>

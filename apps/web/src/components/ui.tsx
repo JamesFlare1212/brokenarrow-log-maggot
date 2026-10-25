@@ -1,5 +1,3 @@
-import * as RadixDialog from '@radix-ui/react-dialog';
-import * as Dropdown from '@radix-ui/react-dropdown-menu';
 import {
   Children,
   Fragment,
@@ -7,35 +5,65 @@ import {
   isValidElement,
   useId,
   useRef,
+  type ComponentProps,
   type ReactElement,
+  type ReactNode,
 } from 'react';
-import {
-  faXmark,
-  faChevronDown,
-  faChevronUp,
-  faSpinner,
-  faEllipsis,
-} from '@fortawesome/free-solid-svg-icons';
-import { Icon } from './Icon';
-import type { ComponentPropsWithRef, ReactNode } from 'react';
+import { ArrowLeft, ChevronDown, ChevronUp, Ellipsis, Info, TriangleAlert, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useI18n } from '../hooks/useI18n';
 import { TooltipAutoFocusContext, TooltipButton } from './Tooltip';
-const dialogOpeners = new WeakMap<Document, HTMLElement>();
-export function Button({
-  variant = 'ghost',
-  className = '',
-  children,
-  ...props
-}: ComponentPropsWithRef<'button'> & {
-  variant?: 'primary' | 'danger' | 'ghost';
-  tooltip?: ReactNode;
-}) {
-  return (
-    <TooltipButton {...props} className={`button button-${variant} ${className}`}>
-      {children}
-    </TooltipButton>
-  );
+import { Button as PrimitiveButton } from './ui/button';
+import {
+  Card as PrimitiveCard,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from './ui/card';
+import { Separator } from './ui/separator';
+import {
+  Dialog as PrimitiveDialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import {
+  Empty as PrimitiveEmpty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from './ui/empty';
+import {
+  Field as PrimitiveField,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from './ui/field';
+import { Badge as PrimitiveBadge } from './ui/badge';
+import { Alert, AlertDescription } from './ui/alert';
+import { Switch } from './ui/switch';
+import { Spinner } from './ui/spinner';
+import { Skeleton } from './ui/skeleton';
+import { Collapsible, CollapsibleContent } from './ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+
+export function Button({ variant = 'outline', ...props }: ComponentProps<typeof TooltipButton>) {
+  return <TooltipButton variant={variant} {...props} />;
 }
+
 export function Card({
   title,
   icon,
@@ -43,8 +71,11 @@ export function Card({
   children,
   collapsed = false,
   onToggle,
-  className = '',
+  className,
   showHeader = true,
+  description,
+  footer,
+  contentClassName,
 }: {
   title: string;
   icon?: ReactNode;
@@ -54,54 +85,61 @@ export function Card({
   onToggle?: () => void;
   className?: string;
   showHeader?: boolean;
+  description?: ReactNode;
+  footer?: ReactNode;
+  contentClassName?: string;
 }) {
   const { t } = useI18n();
   const contentId = useId();
   return (
-    <section className={`card ${className}`} aria-label={showHeader ? undefined : title}>
-      {showHeader && (
-        <div className="card-header">
-          <h2>
-            {icon && (
-              <span className="card-icon" aria-hidden="true">
+    <PrimitiveCard className={cn('panel-card', className)} aria-label={title}>
+      <Collapsible open={!collapsed} className="flex flex-col gap-4">
+        {showHeader && (
+          <CardHeader className="panel-card-header">
+            <div className="min-w-0 flex-1">
+              <CardTitle role="heading" aria-level={2} className="flex min-w-0 items-center gap-2">
                 {icon}
-              </span>
-            )}
-            {title}
-          </h2>
-          <div className="actions">
-            {actions}
-            {onToggle && (
-              <Button
-                onClick={onToggle}
-                aria-label={title + ' ' + t(collapsed ? 'expand' : 'collapse')}
-                aria-expanded={!collapsed}
-                aria-controls={contentId}
-              >
-                {collapsed ? (
-                  <Icon icon={faChevronDown} size={16} />
-                ) : (
-                  <Icon icon={faChevronUp} size={16} />
+                {title}
+              </CardTitle>
+              {description && <CardDescription className="mt-1">{description}</CardDescription>}
+            </div>
+            {(actions || onToggle) && (
+              <CardAction className="panel-card-actions">
+                {actions}
+                {onToggle && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onToggle}
+                    aria-label={title + ' ' + t(collapsed ? 'expand' : 'collapse')}
+                    aria-expanded={!collapsed}
+                    aria-controls={contentId}
+                  >
+                    {collapsed ? <ChevronDown /> : <ChevronUp />}
+                  </Button>
                 )}
-              </Button>
+              </CardAction>
             )}
-          </div>
-        </div>
-      )}
-      {!collapsed && (
-        <div className="card-body" id={contentId}>
-          {children}
-        </div>
-      )}
-    </section>
+          </CardHeader>
+        )}
+        <CollapsibleContent id={contentId}>
+          <CardContent className={cn('flex min-w-0 flex-col gap-4', contentClassName)}>
+            {children}
+          </CardContent>
+          {footer && <CardFooter>{footer}</CardFooter>}
+        </CollapsibleContent>
+      </Collapsible>
+    </PrimitiveCard>
   );
 }
+
+const dialogOpeners = new WeakMap<Document, HTMLElement>();
 export function Dialog({
   open,
   onClose,
   title,
   children,
-  className = '',
+  className,
   showHeader = true,
   banner,
   onBack,
@@ -120,129 +158,143 @@ export function Dialog({
   const { t } = useI18n();
   const returnFocus = useRef<HTMLElement | null>(null);
   const autoFocus = useRef(false);
-  const dialogTitle = (
-    <RadixDialog.Title className={showHeader ? undefined : 'sr-only'}>{title}</RadixDialog.Title>
-  );
-  const closeButton = dismissible ? (
-    <RadixDialog.Close asChild>
-      <Button aria-label={t('close')} className={showHeader ? undefined : 'dialog-close-button'}>
-        <Icon icon={faXmark} size={showHeader ? 18 : 22} />
-      </Button>
-    </RadixDialog.Close>
-  ) : null;
   return (
     <TooltipAutoFocusContext value={autoFocus}>
-      <RadixDialog.Root
+      <PrimitiveDialog
         open={open}
         onOpenChange={(value) => {
           if (!value && dismissible) onClose();
         }}
       >
-        <RadixDialog.Portal>
-          <RadixDialog.Overlay className="dialog-overlay" />
-          <RadixDialog.Content
-            className={`dialog ${className}`}
-            aria-describedby={undefined}
-            onEscapeKeyDown={(event) => {
-              if (!dismissible) event.preventDefault();
-            }}
-            onPointerDownOutside={(event) => {
-              if (!dismissible) event.preventDefault();
-            }}
-            onOpenAutoFocus={() => {
-              autoFocus.current = true;
-              queueMicrotask(() => {
-                autoFocus.current = false;
-              });
-              returnFocus.current =
-                document.activeElement instanceof HTMLElement ? document.activeElement : null;
-              const active = returnFocus.current;
-              if (active && active !== document.body && !active.closest('[role="dialog"]')) {
-                const menu = active.closest('[role="menu"]');
-                const triggerId = menu?.getAttribute('aria-labelledby');
-                dialogOpeners.set(
-                  document,
-                  (triggerId ? document.getElementById(triggerId) : null) ?? active,
-                );
-              }
-            }}
-            onCloseAutoFocus={(event) => {
-              event.preventDefault();
-              queueMicrotask(() => {
-                if (document.querySelector('[role="dialog"]')) return;
-                const opener = dialogOpeners.get(document);
-                const target = opener?.isConnected
-                  ? opener
-                  : returnFocus.current?.isConnected
-                    ? returnFocus.current
-                    : document.getElementById('main-content');
-                target?.focus({ preventScroll: true });
-                dialogOpeners.delete(document);
-              });
-            }}
-          >
-            {!showHeader && banner ? (
-              <>
-                {dialogTitle}
-                <div className="dialog-banner">
-                  {banner}
-                  {closeButton}
-                </div>
-              </>
-            ) : (
-              <div className={showHeader ? 'dialog-header' : 'dialog-headerless-controls'}>
-                {onBack && <Button onClick={onBack}>{t('dialogBack')}</Button>}
-                {dialogTitle}
-                {closeButton}
-              </div>
+        <DialogContent
+          className={cn(
+            'app-dialog flex max-h-[calc(100svh-3rem)] flex-col gap-0 overflow-hidden p-0',
+            className,
+          )}
+          showCloseButton={false}
+          aria-describedby={undefined}
+          onEscapeKeyDown={(event) => {
+            if (!dismissible) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (!dismissible) event.preventDefault();
+          }}
+          onOpenAutoFocus={() => {
+            autoFocus.current = true;
+            queueMicrotask(() => {
+              autoFocus.current = false;
+            });
+            returnFocus.current =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            const active = returnFocus.current;
+            if (active && active !== document.body && !active.closest('[role="dialog"]')) {
+              const triggerId = active.closest('[role="menu"]')?.getAttribute('aria-labelledby');
+              dialogOpeners.set(
+                document,
+                (triggerId ? document.getElementById(triggerId) : null) ?? active,
+              );
+            }
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            queueMicrotask(() => {
+              if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+              const opener = dialogOpeners.get(document);
+              const target = opener?.isConnected
+                ? opener
+                : returnFocus.current?.isConnected
+                  ? returnFocus.current
+                  : document.getElementById('main-content');
+              target?.focus({ preventScroll: true });
+              dialogOpeners.delete(document);
+            });
+          }}
+        >
+          <DialogHeader className="flex-row items-center gap-3 p-5">
+            {onBack && (
+              <Button variant="ghost" size="icon" aria-label={t('dialogBack')} onClick={onBack}>
+                <ArrowLeft />
+              </Button>
             )}
-            <div className="dialog-body">{children}</div>
-          </RadixDialog.Content>
-        </RadixDialog.Portal>
-      </RadixDialog.Root>
+            <DialogTitle className={cn('min-w-0 flex-1', !showHeader && 'sr-only')}>
+              {title}
+            </DialogTitle>
+            {dismissible && (
+              <DialogClose asChild>
+                <PrimitiveButton
+                  variant="ghost"
+                  size="icon"
+                  className="ml-auto"
+                  aria-label={t('close')}
+                >
+                  <X />
+                </PrimitiveButton>
+              </DialogClose>
+            )}
+          </DialogHeader>
+          <Separator />
+          {banner}
+          <div className="dialog-body flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
+            {children}
+          </div>
+        </DialogContent>
+      </PrimitiveDialog>
     </TooltipAutoFocusContext>
   );
 }
+
 export function Empty({
   children,
   icon,
+  iconSize = 'default',
   description,
   action,
 }: {
   children: ReactNode;
   icon?: ReactNode;
+  iconSize?: 'default' | 'lg';
   description?: string;
   action?: ReactNode;
 }) {
   return (
-    <div className="empty">
-      {icon && (
-        <span className="empty-icon" aria-hidden="true">
-          {icon}
-        </span>
-      )}
-      <strong>{children}</strong>
-      {description && <p>{description}</p>}
-      {action}
-    </div>
+    <PrimitiveEmpty>
+      <EmptyHeader>
+        {icon && (
+          <EmptyMedia variant="icon" size={iconSize}>
+            {icon}
+          </EmptyMedia>
+        )}
+        <EmptyTitle>{children}</EmptyTitle>
+        {description && <EmptyDescription>{description}</EmptyDescription>}
+      </EmptyHeader>
+      {action && <EmptyContent>{action}</EmptyContent>}
+    </PrimitiveEmpty>
   );
 }
+
 export function Loading() {
   const { t } = useI18n();
   return (
-    <div className="loading" role="status">
-      <Icon icon={faSpinner} spin size={18} aria-hidden="true" />
-      {t('loading')}
+    <div className="flex flex-col gap-4 py-4" role="status">
+      <span className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Spinner />
+        {t('loading')}
+      </span>
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-8 w-2/3" />
     </div>
   );
 }
+
 export function Notice({ error, children }: { error?: boolean; children: ReactNode }) {
   return (
-    <div className={`notice ${error ? 'notice-error' : ''}`} role={error ? 'alert' : undefined}>
-      {children}
-    </div>
+    <Alert variant={error ? 'destructive' : 'default'} role={error ? 'alert' : 'status'}>
+      {error ? <TriangleAlert /> : <Info />}
+      <AlertDescription className="flex flex-wrap items-center gap-2">{children}</AlertDescription>
+    </Alert>
   );
 }
+
 export function Badge({
   tone = 'muted',
   children,
@@ -250,30 +302,49 @@ export function Badge({
   tone?: 'muted' | 'success' | 'danger' | 'info' | 'warning';
   children: ReactNode;
 }) {
-  return <span className={`badge badge-${tone}`}>{children}</span>;
+  const variants = {
+    muted: 'secondary',
+    success: 'success',
+    danger: 'destructive',
+    info: 'info',
+    warning: 'warning',
+  } as const;
+  return <PrimitiveBadge variant={variants[tone]}>{children}</PrimitiveBadge>;
 }
+
 export function Stats({ items }: { items: Array<{ label: string; value: ReactNode }> }) {
   return (
-    <div className="stats">
+    <dl className="stats" data-count={items.length}>
       {items.map((item, index) => (
-        <div className="stat" key={index}>
-          <strong>{item.value}</strong>
-          <span>{item.label}</span>
-        </div>
+        <PrimitiveCard size="sm" key={index}>
+          <CardHeader>
+            <CardDescription>
+              <dt>{item.label}</dt>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dd className="text-2xl font-semibold tracking-tight tabular-nums">{item.value}</dd>
+          </CardContent>
+        </PrimitiveCard>
       ))}
-    </div>
+    </dl>
   );
 }
+
 export function Field({
   id,
   label,
   children,
   hint,
+  labelHidden = false,
+  orientation = 'vertical',
 }: {
   id: string;
   label: string;
   children: ReactNode;
   hint?: string;
+  labelHidden?: boolean;
+  orientation?: 'horizontal' | 'vertical';
 }) {
   const hintId = `${id}-hint`;
   const describe = (nodes: ReactNode): ReactNode =>
@@ -289,21 +360,27 @@ export function Field({
         : node;
     });
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      {hint ? describe(children) : children}
-      {hint && <small id={hintId}>{hint}</small>}
-    </div>
+    <FieldGroup>
+      <PrimitiveField orientation={orientation}>
+        <FieldLabel htmlFor={id} className={cn(labelHidden && 'sr-only')}>
+          {label}
+        </FieldLabel>
+        {hint ? describe(children) : children}
+        {hint && <FieldDescription id={hintId}>{hint}</FieldDescription>}
+      </PrimitiveField>
+    </FieldGroup>
   );
 }
+
 export function Toggle({
   id,
   label,
   'aria-label': ariaLabel,
-  'aria-describedby': ariaDescribedBy,
+  'aria-describedby': describedBy,
   checked,
   disabled,
   labelClickable = true,
+  labelHidden = false,
   onChange,
 }: {
   id: string;
@@ -313,62 +390,70 @@ export function Toggle({
   checked: boolean;
   disabled?: boolean;
   labelClickable?: boolean;
+  labelHidden?: boolean;
   onChange: (value: boolean) => void;
 }) {
-  const Container = labelClickable ? 'label' : 'div';
   return (
-    <Container
-      className={`toggle${labelClickable ? '' : ' toggle-control-only'}`}
-      htmlFor={labelClickable ? id : undefined}
-    >
-      <span id={`${id}-label`}>{label}</span>
-      <input
-        id={id}
-        type="checkbox"
-        aria-label={ariaLabel}
-        aria-describedby={ariaDescribedBy}
-        aria-labelledby={ariaLabel ? undefined : `${id}-label`}
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span className="toggle-track" aria-hidden="true" />
-    </Container>
+    <FieldGroup>
+      <PrimitiveField orientation="horizontal" data-disabled={disabled || undefined}>
+        <FieldContent className={cn('min-w-0', labelHidden && 'sr-only')}>
+          {labelClickable ? (
+            <FieldLabel id={`${id}-label`} htmlFor={id}>
+              {label}
+            </FieldLabel>
+          ) : (
+            <span id={`${id}-label`}>{label}</span>
+          )}
+        </FieldContent>
+        <Switch
+          id={id}
+          checked={checked}
+          disabled={disabled}
+          onCheckedChange={onChange}
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabel ? undefined : `${id}-label`}
+          aria-describedby={describedBy}
+        />
+      </PrimitiveField>
+    </FieldGroup>
   );
 }
-function menuItems(children: ReactNode): ReactElement[] {
+
+function menuItems(children: ReactNode): ReactElement<ComponentProps<typeof Button>>[] {
   return Children.toArray(children).flatMap((child) => {
-    if (!isValidElement(child)) return [];
-    return child.type === Fragment
-      ? menuItems((child.props as { children: ReactNode }).children)
-      : [child];
+    if (!isValidElement<ComponentProps<typeof Button>>(child)) return [];
+    return child.type === Fragment ? menuItems(child.props.children) : [child];
   });
 }
+
 export function Menu({ children, label }: { children: ReactNode; label?: string }) {
   const { t } = useI18n();
   return (
-    <Dropdown.Root>
-      <Dropdown.Trigger asChild>
-        <Button data-menu-trigger aria-label={label || t('actions')}>
-          <Icon icon={faEllipsis} size={18} />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button data-menu-trigger variant="ghost" size="icon" aria-label={label || t('actions')}>
+          <Ellipsis />
         </Button>
-      </Dropdown.Trigger>
-      <Dropdown.Portal>
-        <Dropdown.Content
-          className="menu-content"
-          align="end"
-          sideOffset={6}
-          onCloseAutoFocus={(event) => {
-            if (document.querySelector('[role="alertdialog"]')) event.preventDefault();
-          }}
-        >
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        onCloseAutoFocus={(event) => {
+          if (document.querySelector('[role="alertdialog"]')) event.preventDefault();
+        }}
+      >
+        <DropdownMenuGroup>
           {menuItems(children).map((child, index) => (
-            <Dropdown.Item asChild key={index}>
-              {child}
-            </Dropdown.Item>
+            <DropdownMenuItem
+              key={index}
+              disabled={child.props.disabled}
+              variant={child.props.variant === 'destructive' ? 'destructive' : 'default'}
+              onClick={child.props.onClick as ComponentProps<typeof DropdownMenuItem>['onClick']}
+            >
+              {child.props.children}
+            </DropdownMenuItem>
           ))}
-        </Dropdown.Content>
-      </Dropdown.Portal>
-    </Dropdown.Root>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

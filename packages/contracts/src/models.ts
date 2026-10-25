@@ -176,6 +176,7 @@ export interface Ban {
   firstSeenAt: number;
   lastSeenAt: number;
   encountered: boolean;
+  lastEncounterAt?: number | null;
 }
 export interface PlayerProfile {
   id: Id;

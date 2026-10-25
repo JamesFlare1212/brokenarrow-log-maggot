@@ -1,205 +1,159 @@
-import * as Popper from '@radix-ui/react-popper';
 import {
-  cloneElement,
   createContext,
-  useCallback,
   useContext,
-  useEffect,
   useId,
-  useRef,
   useState,
+  type ComponentProps,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
 } from 'react';
-import { createPortal } from 'react-dom';
-import type { ComponentPropsWithRef, ReactElement, ReactNode, RefObject } from 'react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
+import {
+  Tooltip as PrimitiveTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 export const TooltipAutoFocusContext = createContext<RefObject<boolean> | null>(null);
 
-export function TooltipButton({
-  title,
-  tooltip,
-  tooltipSide = 'top',
-  pinOnClick = false,
-  ...props
-}: ComponentPropsWithRef<'button'> & {
-  tooltip?: ReactNode;
-  tooltipSide?: 'top' | 'right';
-  pinOnClick?: boolean;
+export function Tooltip({
+  children,
+  content,
+  side = 'top',
+}: {
+  children: ReactElement;
+  content: ReactNode;
+  side?: 'top' | 'bottom' | 'left' | 'right';
 }) {
-  const content = tooltip === undefined ? (title ?? props['aria-label']) : tooltip;
-  const button = <button type="button" {...props} />;
-  return content ? (
-    <Tooltip content={content} side={tooltipSide} pinOnClick={pinOnClick}>
-      {button}
-    </Tooltip>
-  ) : (
-    button
+  return (
+    <TooltipProvider delayDuration={400}>
+      <PrimitiveTooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent side={side}>{content}</TooltipContent>
+      </PrimitiveTooltip>
+    </TooltipProvider>
   );
 }
 
-export function Tooltip({
-  content,
-  children,
-  side = 'top',
-  pinOnClick = false,
-}: {
-  content: ReactNode;
-  children: ReactElement<ComponentPropsWithRef<'button'>>;
-  side?: 'top' | 'right';
+type TooltipButtonProps = ComponentProps<typeof Button> & {
+  tooltip?: ReactNode;
   pinOnClick?: boolean;
+};
+
+export function TooltipButton(props: TooltipButtonProps) {
+  return <TooltipControl {...props} />;
+}
+
+export function TooltipBadge({
+  variant = 'secondary',
+  ...props
+}: ComponentProps<'button'> & {
+  variant?: ComponentProps<typeof Badge>['variant'];
+  tooltip: ReactNode;
 }) {
-  const id = useId();
+  return <TooltipControl {...props} badgeVariant={variant} pinOnClick />;
+}
+
+function TooltipControl({
+  tooltip,
+  title,
+  pinOnClick = false,
+  children,
+  onClick,
+  badgeVariant,
+  ...props
+}: TooltipButtonProps & { badgeVariant?: ComponentProps<typeof Badge>['variant'] }) {
   const autoFocus = useContext(TooltipAutoFocusContext);
-  const [open, setOpen] = useState(false);
+  const [hint, setHint] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const focused = useRef(false);
-  const bubble = useRef<HTMLDivElement>(null);
-  const anchor = useRef<HTMLButtonElement>(null);
-  const forwardedRef = children.props.ref;
-  const anchorRef = useCallback(
-    (node: HTMLButtonElement | null) => {
-      anchor.current = node;
-      if (typeof forwardedRef === 'function') return forwardedRef(node);
-      if (forwardedRef) forwardedRef.current = node;
+  const id = useId();
+  const content = tooltip ?? title ?? props['aria-label'];
+  const triggerId = props.id ?? id;
+  const richContent = badgeVariant !== undefined;
+  const buttonProps = {
+    type: 'button' as const,
+    id: triggerId,
+    ...props,
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+      setHint(false);
+      onClick?.(event);
     },
-    [forwardedRef],
+  };
+  const button = richContent ? (
+    <Badge asChild variant={badgeVariant}>
+      <button {...buttonProps} data-slot="badge">
+        {children}
+      </button>
+    </Badge>
+  ) : (
+    <Button {...buttonProps}>{children}</Button>
   );
-  const cancel = () => clearTimeout(timer.current);
-  const close = () => {
-    cancel();
-    setOpen(false);
-    setPinned(false);
-  };
-  const show = () => {
-    window.dispatchEvent(new CustomEvent('ba:tooltip-open', { detail: id }));
-    setOpen(true);
-  };
-  const enter = () => {
-    cancel();
-    if (pinned) return;
-    timer.current = setTimeout(show, 400);
-  };
-  const leave = () => {
-    cancel();
-    if (!focused.current && !pinned) timer.current = setTimeout(() => setOpen(false), 120);
-  };
-
-  useEffect(() => () => clearTimeout(timer.current), []);
-  useEffect(() => {
-    const dismissOther = (event: Event) => {
-      if ((event as CustomEvent<string>).detail === id) return;
-      clearTimeout(timer.current);
-      setOpen(false);
-      setPinned(false);
-    };
-    window.addEventListener('ba:tooltip-open', dismissOther);
-    return () => window.removeEventListener('ba:tooltip-open', dismissOther);
-  }, [id]);
-  useEffect(() => {
-    if (!open) return;
-    const dismiss = () => {
-      clearTimeout(timer.current);
-      setOpen(false);
-      setPinned(false);
-    };
-    const pointerDown = (event: PointerEvent) => {
-      if (
-        pinned &&
-        (anchor.current?.contains(event.target as Node) ||
-          bubble.current?.contains(event.target as Node))
-      )
-        return;
-      dismiss();
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (pinned && event.key === 'Tab') {
-        dismiss();
-        return;
-      }
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      event.stopPropagation();
-      dismiss();
-    };
-    const scroll = (event: Event) => {
-      if (!bubble.current?.contains(event.target as Node)) dismiss();
-    };
-    window.addEventListener('keydown', escape, true);
-    document.addEventListener('pointerdown', pointerDown, true);
-    document.addEventListener('scroll', scroll, true);
-    window.addEventListener('resize', dismiss);
-    return () => {
-      window.removeEventListener('keydown', escape, true);
-      document.removeEventListener('pointerdown', pointerDown, true);
-      document.removeEventListener('scroll', scroll, true);
-      window.removeEventListener('resize', dismiss);
-    };
-  }, [open, pinned]);
-
-  const props = children.props;
+  if (!content) return button;
+  const trigger =
+    props.disabled !== undefined ? (
+      <span
+        className="inline-flex"
+        tabIndex={props.disabled ? 0 : undefined}
+        aria-label={props.disabled ? props['aria-label'] : undefined}
+      >
+        {button}
+      </span>
+    ) : (
+      button
+    );
+  const hintTrigger = pinOnClick ? <PopoverTrigger asChild>{trigger}</PopoverTrigger> : trigger;
+  const panelClassName = richContent
+    ? 'w-80 max-w-[calc(100vw-2rem)] max-h-[70svh] overflow-y-auto p-4'
+    : undefined;
+  const panelContent = (gap: string) => (
+    <div className={cn('flex flex-col', richContent ? 'gap-4' : gap)}>{content}</div>
+  );
+  const explanation = (
+    <TooltipProvider delayDuration={400}>
+      <PrimitiveTooltip
+        open={hint && !pinned}
+        onOpenChange={(value) => {
+          if (!value || !autoFocus?.current) setHint(value);
+        }}
+      >
+        <TooltipTrigger asChild>{hintTrigger}</TooltipTrigger>
+        <TooltipContent
+          variant={richContent ? 'popover' : 'default'}
+          className={panelClassName}
+          sideOffset={richContent ? 8 : undefined}
+          collisionPadding={richContent ? 12 : undefined}
+        >
+          {panelContent('gap-1')}
+        </TooltipContent>
+      </PrimitiveTooltip>
+    </TooltipProvider>
+  );
+  if (!pinOnClick) return explanation;
   return (
-    <Popper.Root>
-      <Popper.Anchor asChild>
-        {cloneElement(children, {
-          ref: anchorRef,
-          title: undefined,
-          'aria-expanded': pinOnClick ? pinned : props['aria-expanded'],
-          'aria-controls': pinOnClick && pinned ? id : props['aria-controls'],
-          'aria-describedby':
-            [props['aria-describedby'], open ? id : undefined].filter(Boolean).join(' ') ||
-            undefined,
-          onPointerEnter: (event) => {
-            props.onPointerEnter?.(event);
-            if (event.pointerType !== 'touch') enter();
-          },
-          onPointerLeave: (event) => {
-            props.onPointerLeave?.(event);
-            leave();
-          },
-          onFocus: (event) => {
-            props.onFocus?.(event);
-            if (autoFocus?.current || !event.currentTarget.matches(':focus-visible')) return;
-            focused.current = true;
-            cancel();
-            show();
-          },
-          onBlur: (event) => {
-            props.onBlur?.(event);
-            focused.current = false;
-            if (!pinned) close();
-          },
-          onPointerDown: (event) => {
-            props.onPointerDown?.(event);
-            if (!pinOnClick) close();
-          },
-          onClick: (event) => {
-            props.onClick?.(event);
-            if (!pinOnClick || pinned) close();
-            else {
-              setPinned(true);
-              show();
-            }
-          },
-        })}
-      </Popper.Anchor>
-      {open &&
-        createPortal(
-          <Popper.Content
-            ref={bubble}
-            id={id}
-            role="tooltip"
-            className="button-tooltip"
-            side={side}
-            sideOffset={8}
-            collisionPadding={8}
-            hideWhenDetached
-            onPointerEnter={cancel}
-            onPointerLeave={leave}
-          >
-            {content}
-          </Popper.Content>,
-          document.body,
-        )}
-    </Popper.Root>
+    <Popover
+      open={pinned}
+      onOpenChange={(value) => {
+        setHint(false);
+        setPinned(value);
+      }}
+    >
+      {explanation}
+      <PopoverContent
+        aria-labelledby={triggerId}
+        className={cn('max-h-[70svh] overflow-y-auto', panelClassName)}
+        side={richContent ? 'top' : undefined}
+        sideOffset={richContent ? 8 : undefined}
+        collisionPadding={richContent ? 12 : undefined}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
+        {panelContent('gap-2')}
+      </PopoverContent>
+    </Popover>
   );
 }

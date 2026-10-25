@@ -1,24 +1,40 @@
 import { useEffect, type ReactNode } from 'react';
 import {
-  faArrowRight,
-  faBoxArchive,
-  faCrosshairs,
-  faLayerGroup,
-  faMagnifyingGlass,
-  faShieldHalved,
-  faTrophy,
-  faUsers,
-  faVideo,
-  faCirclePlay,
-  faClock,
-} from '@fortawesome/free-solid-svg-icons';
-import { Icon } from '../../components/Icon';
+  ArrowRight,
+  Archive,
+  Crosshair,
+  Layers,
+  Search,
+  Settings,
+  ShieldCheck,
+  Trophy,
+  Users,
+  Video,
+} from 'lucide-react';
 import type { Match } from '@ba/contracts';
 import { formatDuration, formatMetric, formatTime, outcomeTone } from '@ba/shared';
+import { cn } from '@/lib/utils';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Badge, Button, Card, Empty, Loading, Notice } from '../../components/ui';
+import {
+  Card as MetricCard,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from '@/components/ui/card';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item';
+import { Separator } from '@/components/ui/separator';
 import { SessionPanel } from '../session/SessionPanel';
 import { ApmPanel } from '../apm/ApmPanel';
 
@@ -34,16 +50,16 @@ function Metric({
   icon: ReactNode;
 }) {
   return (
-    <div className="metric-card">
-      <div className="metric-label">
-        <span>{label}</span>
-        <span className="metric-icon" aria-hidden="true">
-          {icon}
-        </span>
-      </div>
-      <strong className="metric-value">{value}</strong>
-      <span className="metric-detail">{detail}</span>
-    </div>
+    <MetricCard size="sm">
+      <CardHeader>
+        <CardDescription>{label}</CardDescription>
+        <CardAction>{icon}</CardAction>
+      </CardHeader>
+      <CardContent className="metric-content flex items-baseline justify-between gap-3">
+        <strong className="text-3xl font-semibold tracking-tight tabular-nums">{value}</strong>
+        <p className="text-xs text-muted-foreground">{detail}</p>
+      </CardContent>
+    </MetricCard>
   );
 }
 
@@ -58,15 +74,18 @@ export function Dashboard() {
     (a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0),
   );
   const personal = all.filter(
-    (m) => state.session.localPlayerId && m.localPlayerId === state.session.localPlayerId,
+    (match) => state.session.localPlayerId && match.localPlayerId === state.session.localPlayerId,
   );
   const recent = personal
     .filter(
-      (m) => m.endedAt !== null && !m.restarted && (m.outcome === 'win' || m.outcome === 'loss'),
+      (match) =>
+        match.endedAt !== null &&
+        !match.restarted &&
+        (match.outcome === 'win' || match.outcome === 'loss'),
     )
     .slice(0, 12);
-  const wins = recent.filter((m) => m.outcome === 'win').length;
-  const latest = personal.find((m) => m.endedAt !== null && m.eloAfter !== null);
+  const wins = recent.filter((match) => match.outcome === 'win').length;
+  const latest = personal.find((match) => match.endedAt !== null && match.eloAfter !== null);
   const roster = state.session.current?.players ?? state.session.lobbyPlayers;
   const recording = state.recording;
   const recordingActive = recording.phase === 'recording';
@@ -79,7 +98,6 @@ export function Dashboard() {
         : state.config.replayEnabled
           ? 'recordingReady'
           : 'recordingOff';
-  const count = data === null ? '—' : all.length;
   return (
     <div className="dashboard">
       <div className="metrics-grid" aria-label={t('sessionOverview')}>
@@ -87,7 +105,7 @@ export function Dashboard() {
           label={t('recentRating')}
           value={formatMetric(latest?.eloAfter ?? null, 0)}
           detail={t('completedMatch')}
-          icon={<Icon icon={faCrosshairs} size={18} />}
+          icon={<Crosshair size={16} aria-hidden="true" />}
         />
         <Metric
           label={t('recentWinRate')}
@@ -95,19 +113,19 @@ export function Dashboard() {
           detail={
             recent.length ? t('winLossCount', { wins, losses: recent.length - wins }) : t('empty')
           }
-          icon={<Icon icon={faTrophy} size={18} />}
+          icon={<Trophy size={16} aria-hidden="true" />}
         />
         <Metric
           label={t('archiveCount')}
-          value={count}
+          value={data === null ? '—' : all.length}
           detail={t('localArchive')}
-          icon={<Icon icon={faBoxArchive} size={18} />}
+          icon={<Archive size={16} aria-hidden="true" />}
         />
         <Metric
           label={t('livePlayers')}
           value={roster.length}
           detail={t(state.session.phase === 'match' ? 'liveMatch' : 'waiting')}
-          icon={<Icon icon={faUsers} size={18} />}
+          icon={<Users size={16} aria-hidden="true" />}
         />
       </div>
       {error && (
@@ -118,136 +136,125 @@ export function Dashboard() {
           </Button>
         </Notice>
       )}
+      <SessionPanel />
       <div className="dashboard-grid">
-        <SessionPanel />
-        <aside className="dashboard-side" aria-label={t('quickTools')}>
-          <Card
-            title={t('replays')}
-            icon={<Icon icon={faVideo} size={18} />}
-            className="recording-widget"
-          >
-            <div
-              className={`recording-illustration ${recordingActive ? 'is-recording' : ''}`}
-              aria-hidden="true"
-            >
-              <div className="recording-frame">
-                <Icon icon={faCirclePlay} size={32} />
-              </div>
-              <span className="recording-rec">
-                REC <span />
-              </span>
-            </div>
-            <div className="recording-widget-status">
-              <span
-                className={`status-dot ${recordingActive ? 'status-recording' : state.config.replayEnabled ? 'status-success' : ''}`}
-              />
-              <strong>{t(recordingLabel)}</strong>
-            </div>
-            {recordingActive ? (
-              <p className="muted">
-                <Icon icon={faClock} size={14} aria-hidden="true" />{' '}
-                {formatDuration(recording.seconds)} · {recording.map || '—'}
-              </p>
-            ) : (
-              <p className="muted">{t('recordingHint')}</p>
-            )}
-            {recording.error && <Notice error>{recording.error}</Notice>}
-            <Button
-              className="widget-action button-borderless"
-              onClick={() =>
-                openModal({ type: 'recordingSettings', enable: !state.config.replayEnabled })
-              }
-            >
-              {t(state.config.replayEnabled ? 'recordingSettings' : 'enableRecording')}
-              <Icon icon={faArrowRight} size={15} />
+        <Card
+          title={t('recent')}
+          icon={<Archive />}
+          className="recent-card"
+          actions={
+            <Button variant="ghost" size="sm" onClick={() => setPage('archive')}>
+              {t('viewAll')}
+              <ArrowRight data-icon="inline-end" />
             </Button>
-          </Card>
-          <Card title={t('quickTools')} className="quick-tools">
-            {(
-              [
-                ['players', <Icon icon={faMagnifyingGlass} size={18} />, 'playerShortcut'],
-                ['decks', <Icon icon={faLayerGroup} size={18} />, 'deckShortcut'],
-                ['bans', <Icon icon={faShieldHalved} size={18} />, 'banShortcut'],
-              ] as const
-            ).map(([page, icon, hint]) => (
-              <button className="quick-tool" key={page} onClick={() => setPage(page)}>
-                <span className="quick-tool-icon" aria-hidden="true">
-                  {icon}
-                </span>
-                <span>
-                  <strong>{t(page)}</strong>
-                  <small>{t(hint)}</small>
-                </span>
-                <Icon icon={faArrowRight} size={15} aria-hidden="true" />
-              </button>
-            ))}
+          }
+        >
+          {pending && !data ? (
+            <Loading />
+          ) : all.length ? (
+            <ItemGroup className="recent-matches">
+              {all.slice(0, 3).map((match) => (
+                <Item size="sm" asChild key={match.id}>
+                  <Button
+                    variant="ghost"
+                    className="recent-match h-auto w-full justify-start"
+                    disabled={!match.fid}
+                    onClick={() => match.fid && openModal({ type: 'match', fid: match.fid })}
+                  >
+                    <ItemContent>
+                      <ItemTitle>{match.map || `#${match.id}`}</ItemTitle>
+                      <ItemDescription>
+                        {t(match.mode)} · {formatTime(match.endedAt, locale)}
+                      </ItemDescription>
+                    </ItemContent>
+                    <Badge tone={outcomeTone(match.outcome)}>
+                      {match.restarted ? t('restarted') : t(match.outcome)}
+                    </Badge>
+                    <span
+                      className={cn(
+                        'recent-elo',
+                        match.eloAfter !== null &&
+                          match.eloBefore !== null &&
+                          (match.eloAfter >= match.eloBefore ? 'text-success' : 'text-danger'),
+                      )}
+                    >
+                      {match.eloAfter !== null && match.eloBefore !== null
+                        ? `${match.eloAfter - match.eloBefore > 0 ? '+' : ''}${formatMetric(match.eloAfter - match.eloBefore, 0)}`
+                        : '—'}{' '}
+                      <small>ELO</small>
+                    </span>
+                  </Button>
+                </Item>
+              ))}
+            </ItemGroup>
+          ) : (
+            <Empty icon={<Archive />} description={t('noMatchesHint')}>
+              {t('empty')}
+            </Empty>
+          )}
+        </Card>
+        <aside className="dashboard-side" aria-label={t('quickTools')}>
+          <Card title={t('quickTools')} className="quick-tools" contentClassName="gap-2">
+            <Item size="xs">
+              <ItemMedia variant="icon">
+                <Video />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{t('replays')}</ItemTitle>
+                <ItemDescription>
+                  {t(recordingLabel)}
+                  {recordingActive && <> · {formatDuration(recording.seconds)}</>}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t(
+                    state.config.replayEnabled ? 'recordingSettings' : 'enableRecording',
+                  )}
+                  onClick={() =>
+                    openModal({ type: 'recordingSettings', enable: !state.config.replayEnabled })
+                  }
+                >
+                  <Settings />
+                </Button>
+              </ItemActions>
+            </Item>
+            {recording.error && <Notice error>{recording.error}</Notice>}
+            <Separator />
+            <ItemGroup>
+              {(
+                [
+                  { page: 'players', icon: Search, hint: 'playerShortcut' },
+                  { page: 'decks', icon: Layers, hint: 'deckShortcut' },
+                  { page: 'bans', icon: ShieldCheck, hint: 'banShortcut' },
+                ] as const
+              ).map(({ page, icon: ToolIcon, hint }) => (
+                <Item size="xs" asChild key={page}>
+                  <Button
+                    variant="ghost"
+                    className="h-auto w-full justify-start"
+                    onClick={() => setPage(page)}
+                  >
+                    <ItemMedia variant="icon">
+                      <ToolIcon />
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle>{t(page)}</ItemTitle>
+                      <ItemDescription>{t(hint)}</ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <ArrowRight />
+                    </ItemActions>
+                  </Button>
+                </Item>
+              ))}
+            </ItemGroup>
           </Card>
         </aside>
       </div>
-      <Card
-        title={t('recent')}
-        icon={<Icon icon={faBoxArchive} size={18} />}
-        className="recent-card"
-        actions={
-          <Button className="text-button" onClick={() => setPage('archive')}>
-            {t('viewAll')}
-            <Icon icon={faArrowRight} size={15} />
-          </Button>
-        }
-      >
-        {pending && !data ? (
-          <Loading />
-        ) : all.length ? (
-          <div className="recent-matches">
-            {all.slice(0, 3).map((m) => (
-              <button
-                className="recent-match"
-                key={m.id}
-                disabled={!m.fid}
-                onClick={() => m.fid && openModal({ type: 'match', fid: m.fid })}
-              >
-                <span
-                  className={`recent-match-mark mark-${outcomeTone(m.outcome)}`}
-                  aria-hidden="true"
-                >
-                  <Icon icon={faCrosshairs} size={21} />
-                </span>
-                <span className="recent-match-description">
-                  <strong>{m.map || `#${m.id}`}</strong>
-                  <small>
-                    {t(m.mode)} · {formatTime(m.endedAt, locale)}
-                  </small>
-                </span>
-                <Badge tone={outcomeTone(m.outcome)}>
-                  {m.restarted ? t('restarted') : t(m.outcome)}
-                </Badge>
-                <span
-                  className={`recent-elo ${
-                    m.eloAfter !== null && m.eloBefore !== null
-                      ? m.eloAfter >= m.eloBefore
-                        ? 'text-success'
-                        : 'text-danger'
-                      : ''
-                  }`}
-                >
-                  {m.eloAfter !== null && m.eloBefore !== null
-                    ? `${m.eloAfter - m.eloBefore > 0 ? '+' : ''}${formatMetric(m.eloAfter - m.eloBefore, 0)}`
-                    : '—'}{' '}
-                  <small>ELO</small>
-                </span>
-                <Icon icon={faArrowRight} size={15} className="muted" aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <Empty icon={<Icon icon={faBoxArchive} size={24} />} description={t('noMatchesHint')}>
-            {t('empty')}
-          </Empty>
-        )}
-      </Card>
-      <div className="dashboard-optional-panels">
-        {state.config.inputHookEnabled && state.config.panelOrder.includes('apm') && <ApmPanel />}
-      </div>
+      {state.config.inputHookEnabled && state.config.panelOrder.includes('apm') && <ApmPanel />}
     </div>
   );
 }

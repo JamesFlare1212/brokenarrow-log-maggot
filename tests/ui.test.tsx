@@ -46,6 +46,8 @@ import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
 import { ReplayDialog } from '../apps/web/src/features/replays/ReplayDialog';
 import { RecordingSettings } from '../apps/web/src/features/replays/RecordingSettings';
 import { ReplaysPanel } from '../apps/web/src/features/replays/ReplaysPanel';
+import { DecksPanel } from '../apps/web/src/features/decks/DecksPanel';
+import { SidebarProvider } from '../apps/web/src/components/ui/sidebar';
 import { Button, Dialog } from '../apps/web/src/components/ui';
 import { BatraceStatus } from '../apps/web/src/components/BatraceStatus';
 import { UpdatePanel } from '../apps/web/src/features/settings/UpdatePanel';
@@ -203,7 +205,11 @@ function nativeFixture(
 
 function wrapper(api: Bridge) {
   return function TestProvider({ children }: { children: ReactNode }) {
-    return <AppProvider api={api}>{children}</AppProvider>;
+    return (
+      <AppProvider api={api}>
+        <SidebarProvider>{children}</SidebarProvider>
+      </AppProvider>
+    );
   };
 }
 
@@ -233,6 +239,41 @@ afterEach(() => {
 });
 
 describe('BATrace status indicator', () => {
+  it('shows every endpoint before the first check and runs checks inside the details without duplicate requests', async () => {
+    const pending = deferred<RpcOutputs['api.health']>();
+    const onCheck = vi.fn(() => pending.promise);
+    const native = nativeFixture(bootstrapForApp());
+    render(<BatraceStatus health={{ state: 'unknown', at: 0, checks: [] }} onCheck={onCheck} />, {
+      wrapper: wrapper(native.api),
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'BATrace · 未知' }));
+    const details = within(explanation());
+    expect(details.getAllByText('未检查')).toHaveLength(5);
+    expect(details.getByText('/api/players/search')).toBeTruthy();
+    expect(details.getByText('/api/match')).toBeTruthy();
+    const check = details.getByRole('button', { name: 'API 健康检查' });
+    fireEvent.click(check);
+    fireEvent.click(check);
+    expect(onCheck).toHaveBeenCalledTimes(1);
+    expect(check.getAttribute('aria-busy')).toBe('true');
+    await act(async () =>
+      pending.resolve({
+        state: 'ok',
+        at: 1000,
+        checks: [
+          '/api/players/search',
+          '/api/players/info',
+          '/api/leaderboard/ban',
+          '/api/players/matches',
+          '/api/match',
+        ].map((path) => ({ path, ok: true, ms: 12, status: 200 })),
+      }),
+    );
+    expect(screen.getByRole('button', { name: 'BATrace · 服务可用' })).toBeTruthy();
+    expect(details.getAllByText('HTTP 200 · 12 ms')).toHaveLength(5);
+    expect(check.getAttribute('aria-busy')).toBe('false');
+  });
+
   it('names the match detail API and preserves its block diagnostics beside the page fallback', async () => {
     const native = nativeFixture(bootstrapForApp());
     render(
@@ -256,7 +297,7 @@ describe('BATrace status indicator', () => {
       { wrapper: wrapper(native.api) },
     );
     fireEvent.click(await screen.findByRole('button', { name: 'BATrace · 服务部分可用' }));
-    const tooltip = within(screen.getByRole('tooltip'));
+    const tooltip = within(explanation());
     for (const text of [
       '对局详情',
       '/api/match?matchid=9227650',
@@ -296,9 +337,11 @@ describe('BATrace status indicator', () => {
       const trigger = await screen.findByRole('button', {
         name: `BATrace · ${ok ? '服务部分可用' : '服务不可用'}`,
       });
-      expect(trigger.classList.contains(ok ? 'badge-warning' : 'badge-danger')).toBe(true);
+      expect(trigger.querySelector('[data-slot=badge]')?.getAttribute('data-variant')).toBe(
+        ok ? 'warning' : 'destructive',
+      );
       fireEvent.click(trigger);
-      const tooltip = screen.getByRole('tooltip');
+      const tooltip = explanation();
       const blocked = within(tooltip).getByText('被 Cloudflare 拦截');
       const fallback = within(tooltip).getByText(ok ? 'fallback 成功' : 'fallback 失败');
       expect(blocked.className).toBe(ok ? 'text-warning' : 'text-danger');
@@ -309,7 +352,8 @@ describe('BATrace status indicator', () => {
     },
   );
 
-  it('shows endpoint diagnostics on hover, focus and tap, and dismisses on Escape or outside pointer', async () => {
+  it('shows endpoint diagnostics in the native popover and dismisses on Escape or outside press', async () => {
+    const user = userEvent.setup();
     const initial = bootstrapForApp();
     const native = nativeFixture(initial);
     const health = {
@@ -344,9 +388,9 @@ describe('BATrace status indicator', () => {
     const view = render(<BatraceStatus health={health} />, { wrapper: wrapper(native.api) });
     const trigger = await screen.findByRole('button', { name: 'BATrace · 服务部分可用' });
     expect(screen.queryByRole('tooltip')).toBeNull();
-    fireEvent.mouseEnter(trigger);
-    const tooltip = screen.getByRole('tooltip');
-    expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id);
+    await user.click(trigger);
+    const tooltip = explanation();
+    expect(trigger.getAttribute('aria-controls')).toBe(tooltip.id);
     for (const text of [
       '玩家资料',
       '被 Cloudflare 拦截',
@@ -361,19 +405,15 @@ describe('BATrace status indicator', () => {
     expect(tooltip.textContent).toContain('上次检查：');
     expect(tooltip.textContent).toContain('每 10 分钟');
     expect(tooltip.textContent).toContain('业务请求也会更新状态');
-    fireEvent.mouseLeave(trigger);
-    expect(screen.queryByRole('tooltip')).toBeNull();
-    fireEvent.focus(trigger);
-    expect(screen.getByRole('tooltip')).toBeTruthy();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('tooltip')).toBeNull();
-    fireEvent.click(trigger);
-    expect(screen.getByRole('tooltip')).toBeTruthy();
-    fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole('tooltip')).toBeNull();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await user.click(trigger);
+    expect(explanation()).toBeTruthy();
+    await user.click(document.body);
+    expect(screen.queryByRole('dialog')).toBeNull();
     view.rerender(<BatraceStatus health={{ state: 'unknown', at: 0, checks: [] }} />);
-    fireEvent.focus(trigger);
-    expect(within(screen.getByRole('tooltip')).getByText('尚无检查结果。')).toBeTruthy();
+    await user.click(trigger);
+    expect(within(explanation()).getByText('尚无检查结果。')).toBeTruthy();
   });
 
   it('shows readable state and matching dot colors as health events arrive', async () => {
@@ -382,7 +422,7 @@ describe('BATrace status indicator', () => {
     const native = nativeFixture(initial);
     const { container } = render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByText('BATrace');
-    const badge = container.querySelector('.health-status-trigger')!;
+    const badge = container.querySelector('[data-slot=popover-trigger]')!;
     expect(badge.textContent).toContain('未知');
     expect(badge.querySelector('.sr-only')).toBeNull();
     for (const [state, tone, label] of [
@@ -398,8 +438,15 @@ describe('BATrace status indicator', () => {
         }),
       );
       expect(badge.textContent).toContain(label);
-      expect(badge.classList.contains(`badge-${tone}`)).toBe(true);
-      expect(badge.querySelector(`.status-${tone}`)).not.toBeNull();
+      expect(badge.querySelector('[data-slot=badge]')?.getAttribute('data-variant')).toBe(
+        tone === 'success'
+          ? 'success'
+          : tone === 'danger'
+            ? 'destructive'
+            : tone === 'warning'
+              ? 'warning'
+              : 'secondary',
+      );
     }
   });
 });
@@ -415,10 +462,10 @@ describe('application updates', () => {
     });
     render(<App />, { wrapper: wrapper(f.api) });
     const check = await screen.findByRole('button', { name: '检查更新' });
-    expect(check.closest('.sidebar-footer')).not.toBeNull();
-    expect(check.querySelector('[data-icon="arrows-rotate"]')).not.toBeNull();
+    expect(check.closest('[data-slot=sidebar-footer]')).not.toBeNull();
+    expect(check.querySelector('svg')).not.toBeNull();
     fireEvent.click(check);
-    expect(check.querySelector('[data-icon="arrows-rotate"].fa-spin')).not.toBeNull();
+    expect(check.querySelector('[data-slot=spinner]')).not.toBeNull();
     expect(check.getAttribute('disabled')).not.toBeNull();
     fireEvent.click(check);
     await act(async () => checking.resolve(initial.updates));
@@ -433,12 +480,10 @@ describe('application updates', () => {
       }),
     );
     const download = screen.getByRole('button', { name: '下载更新' });
-    expect(download.querySelector('[data-icon="download"]')).not.toBeNull();
-    expect(download.querySelector('.update-dot')).not.toBeNull();
+    expect(download.querySelector('svg')).not.toBeNull();
+    expect(download.textContent).toContain('下载更新');
     act(() => download.focus());
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toContain(
-      '下载完成后，点击“重启并安装”应用更新',
-    );
+    expect(explanation().textContent).toContain('下载完成后，点击“重启并安装”应用更新');
     fireEvent.blur(download);
     expect(f.calls.some((call) => call.method === 'updates.download')).toBe(false);
     fireEvent.click(download);
@@ -448,7 +493,7 @@ describe('application updates', () => {
     expect(screen.queryByRole('main', { name: '设置' })).toBeNull();
   });
 
-  it('shows ring progress without percentages and installs only after clicking the ready button', async () => {
+  it('shows native download progress and installs only after clicking the ready button', async () => {
     const initial = structuredClone(fixtureBootstrap);
     initial.session.current = null;
     initial.recording.phase = 'idle';
@@ -466,10 +511,8 @@ describe('application updates', () => {
       name: '正在下载更新…',
     })) as HTMLButtonElement;
     expect(download.disabled).toBe(true);
-    expect(download.textContent).toBe('');
-    expect(download.querySelector('.update-ring-progress')?.getAttribute('stroke-dashoffset')).toBe(
-      '63',
-    );
+    expect(download.textContent).toBe('正在下载更新…');
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('37');
     expect(download.querySelector('.update-percent')).toBeNull();
     expect(download.querySelector('[data-icon="download"].fa-spin')).toBeNull();
     fireEvent.click(download);
@@ -483,8 +526,8 @@ describe('application updates', () => {
     );
     const install = screen.getByRole('button', { name: '重启并安装' }) as HTMLButtonElement;
     expect(install.disabled).toBe(false);
-    expect(install.querySelector('[data-icon="arrow-rotate-right"]')).not.toBeNull();
-    expect(install.querySelector('.update-dot')).not.toBeNull();
+    expect(install.querySelector('svg')).not.toBeNull();
+    expect(install.textContent).toContain('重启并安装');
     expect(f.calls.some((call) => call.method === 'updates.install')).toBe(false);
     fireEvent.click(install);
     await waitFor(() =>
@@ -501,7 +544,7 @@ describe('application updates', () => {
       (screen.getByRole('button', { name: '正在保存数据并重启安装…' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    expect(install.querySelector('[data-icon="arrow-rotate-right"].fa-spin')).not.toBeNull();
+    expect(install.querySelector('[data-slot=spinner]')).not.toBeNull();
     fireEvent.click(install);
     expect(f.calls.filter((call) => call.method === 'updates.install')).toHaveLength(1);
   });
@@ -534,7 +577,7 @@ describe('application updates', () => {
     );
     const download = screen.getByRole('button', { name: '下载更新' });
     act(() => download.focus());
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toContain('便携版');
+    expect(explanation().textContent).toContain('便携版');
     fireEvent.blur(download);
     await waitFor(() => expect((download as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(download);
@@ -570,7 +613,7 @@ describe('application updates', () => {
         revision: 1,
       }),
     );
-    expect(screen.getByRole('progressbar').getAttribute('value')).toBe('37');
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('37');
     act(() =>
       f.emit({
         type: 'updates',
@@ -773,7 +816,9 @@ describe('settings pages and automatic saving', () => {
       fireEvent.click(screen.getByRole('button', { name: '返回' }));
       await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
       expect(
-        within(screen.getByRole('navigation')).queryByRole('button', { name: '关于' }),
+        within(screen.getByRole('navigation', { name: '工作空间' })).queryByRole('button', {
+          name: '关于',
+        }),
       ).toBeNull();
     },
   );
@@ -936,7 +981,9 @@ describe('settings pages and automatic saving', () => {
       }),
     );
     fireEvent.click(
-      within(screen.getByRole('navigation')).getByRole('button', { name: '玩家查询' }),
+      within(screen.getByRole('navigation', { name: '工作空间' })).getByRole('button', {
+        name: '玩家查询',
+      }),
     );
     fireEvent.change(screen.getByRole('searchbox', { name: translate('zh', 'searchLabel') }), {
       target: { value: localPlayer.name },
@@ -964,12 +1011,10 @@ describe('settings pages and automatic saving', () => {
     initial.config.themeMode = 'dark';
     const native = nativeFixture(initial);
     const page = await openSettings(native);
-    expect(within(page.getByRole('group', { name: '主题' })).getAllByRole('button')).toHaveLength(
-      3,
-    );
     expect(
-      within(page.getByRole('group', { name: '配色方案' })).getAllByRole('button'),
-    ).toHaveLength(18);
+      within(page.getByRole('radiogroup', { name: '配色模式' })).getAllByRole('radio'),
+    ).toHaveLength(3);
+    expect(page.getAllByRole('radio')).toHaveLength(3);
     fireEvent.click(page.getByRole('button', { name: '森林 · 浅色' }));
     expect(document.documentElement.dataset.mode).toBe('dark');
     fireEvent.click(page.getByRole('button', { name: '紫夜 · 深色' }));
@@ -981,7 +1026,7 @@ describe('settings pages and automatic saving', () => {
       }),
     );
     expect(document.documentElement.dataset).toMatchObject({ mode: 'dark', theme: 'violet' });
-    fireEvent.click(page.getByRole('button', { name: '浅色' }));
+    fireEvent.click(page.getByRole('radio', { name: '浅色' }));
     await waitFor(() => expect(native.backend.config.themeMode).toBe('light'));
     expect(document.documentElement.dataset).toMatchObject({ mode: 'light', theme: 'forest' });
     expect(page.getByRole('button', { name: '森林 · 浅色' }).getAttribute('aria-pressed')).toBe(
@@ -1053,8 +1098,8 @@ describe('settings pages and automatic saving', () => {
       });
       expect(
         page
-          .getByRole('button', { name: translate('zh', 'themeMode.' + mode) })
-          .getAttribute('aria-pressed'),
+          .getByRole('radio', { name: translate('zh', 'themeMode.' + mode) })
+          .getAttribute('aria-checked'),
       ).toBe('true');
       expect(
         native.calls
@@ -1063,6 +1108,44 @@ describe('settings pages and automatic saving', () => {
       ).toBe(true);
     },
   );
+
+  it('keeps picked spheres selected, supports arrow-key selection and applies pairs from the card surface', async () => {
+    const initial = bootstrapForApp();
+    initial.config.themeMode = 'system';
+    initial.config.lightTheme = 'forest';
+    initial.config.darkTheme = 'violet';
+    const native = nativeFixture(initial);
+    const page = await openSettings(native);
+    const user = userEvent.setup();
+    const light = page.getByRole('button', { name: '森林 · 浅色' });
+    const dark = page.getByRole('button', { name: '森林 · 深色' });
+    light.focus();
+    await user.keyboard(' ');
+    expect(light.getAttribute('aria-pressed')).toBe('true');
+    expect(native.calls.filter((call) => call.method === 'config.update')).toEqual([]);
+    await user.keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(dark);
+    await user.keyboard(' ');
+    await waitFor(() => expect(native.backend.config.darkTheme).toBe('forest'));
+    expect(native.backend.config.themeMode).toBe('system');
+    expect(light.getAttribute('aria-pressed')).toBe('true');
+    expect(dark.getAttribute('aria-pressed')).toBe('true');
+    expect(page.getByRole('button', { name: '紫夜 · 深色' }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+    const ocean = page.getByRole('button', { name: '深海 · 选择整组配色' });
+    fireEvent.click(ocean.closest('[data-theme-library-card]')!);
+    await waitFor(() =>
+      expect(native.backend.config).toMatchObject({
+        lightTheme: 'ocean',
+        darkTheme: 'ocean',
+        themeMode: 'system',
+      }),
+    );
+    expect(
+      native.calls.filter((call) => call.method === 'config.update').map((call) => call.input),
+    ).toEqual([{ darkTheme: 'forest' }, { lightTheme: 'ocean', darkTheme: 'ocean' }]);
+  });
 
   it('selects a full palette pair with the keyboard, preserves system mode, and keeps swatches independent', async () => {
     const initial = bootstrapForApp();
@@ -1112,11 +1195,13 @@ describe('settings pages and automatic saving', () => {
   });
 
   it('follows the OS by default and uses each saved palette, including after leaving settings', async () => {
-    const listeners = new Set<() => void>();
+    const listeners = new Set<(event: MediaQueryListEvent) => void>();
     const media = {
       matches: false,
-      addEventListener: (_: string, callback: () => void) => listeners.add(callback),
-      removeEventListener: (_: string, callback: () => void) => listeners.delete(callback),
+      addEventListener: (_: string, callback: (event: MediaQueryListEvent) => void) =>
+        listeners.add(callback),
+      removeEventListener: (_: string, callback: (event: MediaQueryListEvent) => void) =>
+        listeners.delete(callback),
     };
     vi.stubGlobal(
       'matchMedia',
@@ -1124,9 +1209,7 @@ describe('settings pages and automatic saving', () => {
     );
     const native = nativeFixture(bootstrapForApp());
     const page = await openSettings(native);
-    expect(page.getByRole('button', { name: '跟随系统' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
+    expect(page.getByRole('radio', { name: '跟随系统' }).getAttribute('aria-checked')).toBe('true');
     fireEvent.click(page.getByRole('button', { name: '森林 · 浅色' }));
     fireEvent.click(page.getByRole('button', { name: '深海 · 深色' }));
     await waitFor(() =>
@@ -1139,14 +1222,14 @@ describe('settings pages and automatic saving', () => {
     expect(document.documentElement.dataset).toMatchObject({ mode: 'light', theme: 'forest' });
     act(() => {
       media.matches = true;
-      listeners.forEach((callback) => callback());
+      listeners.forEach((callback) => callback({ matches: media.matches } as MediaQueryListEvent));
     });
     expect(document.documentElement.dataset).toMatchObject({ mode: 'dark', theme: 'ocean' });
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
     act(() => {
       media.matches = false;
-      listeners.forEach((callback) => callback());
+      listeners.forEach((callback) => callback({ matches: media.matches } as MediaQueryListEvent));
     });
     expect(document.documentElement.dataset).toMatchObject({ mode: 'light', theme: 'forest' });
   });
@@ -1253,17 +1336,26 @@ describe('settings pages and automatic saving', () => {
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByText('监听中');
-    fireEvent.click(screen.getByRole('button', { name: '折叠侧边栏' }));
+    const workspaceToggle = screen.getByRole('button', { name: '折叠侧边栏' });
+    expect(workspaceToggle.closest('.topbar')).not.toBeNull();
+    expect(workspaceToggle.getAttribute('aria-controls')).toBe('workspace-sidebar');
+    expect(workspaceToggle.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(workspaceToggle);
     await waitFor(() => expect(native.backend.config.sidebarCollapsed).toBe(true));
-    expect(document.querySelector('.app-shell')?.classList.contains('sidebar-collapsed')).toBe(
-      true,
-    );
-    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    expect(workspaceToggle.getAttribute('aria-expanded')).toBe('false');
+    expect(Boolean(document.querySelector('[data-slot=sidebar][data-state=collapsed]'))).toBe(true);
+    expect(document.getElementById('workspace-sidebar')?.hasAttribute('inert')).toBe(true);
+    expect(screen.queryByRole('button', { name: '设置' })).toBeNull();
+    history.replaceState(null, '', '#settings/appearance');
+    fireEvent(window, new HashChangeEvent('hashchange'));
     await screen.findByRole('main', { name: '设置' });
     expect(
-      document.querySelector('.settings-page')?.classList.contains('settings-page-collapsed'),
+      Boolean(document.querySelector('.settings-page [data-slot=sidebar][data-state=collapsed]')),
     ).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: '展开侧边栏' }));
+    const settingsToggle = screen.getByRole('button', { name: '展开侧边栏' });
+    expect(settingsToggle.closest('.settings-page-toolbar')).not.toBeNull();
+    expect(settingsToggle.getAttribute('aria-controls')).toBe('settings-sidebar');
+    fireEvent.click(settingsToggle);
     await waitFor(() => expect(native.backend.config.sidebarCollapsed).toBe(false));
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
@@ -1277,10 +1369,10 @@ describe('settings pages and automatic saving', () => {
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
     const page = within(await screen.findByRole('main', { name: '设置' }));
-    const checkbox = page.getByRole('checkbox', {
+    const checkbox = page.getByRole('switch', {
       name: translate('zh', 'telemetryEnabled'),
     }) as HTMLInputElement;
-    expect(checkbox.checked).toBe(false);
+    expect(checkbox.getAttribute('aria-checked') === 'true').toBe(false);
     expect(checkbox.getAttribute('aria-describedby')).toBe(
       'telemetry-description telemetry-privacy',
     );
@@ -1303,12 +1395,12 @@ describe('settings pages and automatic saving', () => {
     render(<App />, { wrapper: wrapper(native.api) });
     const page = within(await screen.findByRole('main', { name: '设置' }));
     expect(screen.getByRole('tab', { name: '自动化' }).getAttribute('aria-selected')).toBe('true');
-    const checkbox = page.getByRole('checkbox', {
+    const checkbox = page.getByRole('switch', {
       name: translate('zh', 'autoQuery'),
     }) as HTMLInputElement;
     fireEvent.click(page.getByText(translate('zh', 'autoQuery')));
     await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(false));
-    expect(checkbox.checked).toBe(false);
+    expect(checkbox.getAttribute('aria-checked') === 'true').toBe(false);
     fireEvent.click(checkbox);
     await waitFor(() => expect(native.backend.config.autoQueryCurrentMatch).toBe(true));
     checkbox.focus();
@@ -1321,13 +1413,59 @@ describe('settings pages and automatic saving', () => {
 });
 
 describe('auto-record controls and preview', () => {
+  it('opens the configured recording directory beside its path', async () => {
+    const native = nativeFixture(bootstrapForApp(), { 'replays.open': () => null });
+    render(<ReplaysPanel />, { wrapper: wrapper(native.api) });
+    const input = await screen.findByRole('textbox', { name: '保存目录' });
+    const directory = input.closest('footer')!;
+    await userEvent.setup().click(within(directory).getByRole('button', { name: '打开目录' }));
+    expect(native.calls.filter((call) => call.method === 'replays.open')).toEqual([
+      { method: 'replays.open', input: null },
+    ]);
+  });
+
+  it('switches the replay library between cards and a list without reloading recordings', async () => {
+    const native = nativeFixture(bootstrapForApp(), {
+      'replays.list': () => [
+        {
+          id: 'view-switch.webm',
+          fid: null,
+          map: 'Dam',
+          uploaderId: null,
+          uploaderName: 'Raven',
+          teamId: null,
+          size: 1024,
+          createdAt: 1700000000000,
+          durationSec: 60,
+          test: true,
+        },
+      ],
+    });
+    render(<ReplaysPanel />, { wrapper: wrapper(native.api) });
+    const library = within(await screen.findByRole('list', { name: '录像库' }));
+    const user = userEvent.setup();
+    const grid = screen.getByRole('radio', { name: '网格视图' });
+    const list = screen.getByRole('radio', { name: '列表视图' });
+    expect(grid.getAttribute('aria-checked')).toBe('true');
+    expect(library.getByRole('button', { name: '播放: Dam' })).toBeTruthy();
+    await user.click(list);
+    expect(list.getAttribute('aria-checked')).toBe('true');
+    expect(library.getByRole('button', { name: '播放: Dam' })).toBeTruthy();
+    await user.click(library.getByRole('button', { name: '操作: Dam' }));
+    expect(await screen.findByRole('menuitem', { name: '删除' })).toBeTruthy();
+    await user.keyboard('{Escape}');
+    await user.click(grid);
+    expect(grid.getAttribute('aria-checked')).toBe('true');
+    expect(native.calls.filter((call) => call.method === 'replays.list')).toHaveLength(1);
+  });
+
   it('toggles directly only from the switch and keeps settings behind their own button', async () => {
     history.replaceState(null, '', '#replays');
     const initial = bootstrapForApp();
     initial.config.replayEnabled = false;
     const native = nativeFixture(initial, { 'displays.thumbnail': () => null });
     render(<App />, { wrapper: wrapper(native.api) });
-    const toggle = (await screen.findByRole('checkbox', {
+    const toggle = (await screen.findByRole('switch', {
       name: '自动录制',
     })) as HTMLInputElement;
     const user = userEvent.setup();
@@ -1338,7 +1476,7 @@ describe('auto-record controls and preview', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 
     await user.click(toggle);
-    await waitFor(() => expect(toggle.checked).toBe(true));
+    await waitFor(() => expect(toggle.getAttribute('aria-checked') === 'true').toBe(true));
     expect(native.backend.config.replayEnabled).toBe(true);
     expect(native.calls.filter((call) => call.method === 'config.update').at(-1)?.input).toEqual({
       replayEnabled: true,
@@ -1349,7 +1487,7 @@ describe('auto-record controls and preview', () => {
 
     toggle.focus();
     await user.keyboard(' ');
-    await waitFor(() => expect(toggle.checked).toBe(false));
+    await waitFor(() => expect(toggle.getAttribute('aria-checked') === 'true').toBe(false));
     expect(native.backend.config.replayEnabled).toBe(false);
     expect(screen.queryByRole('dialog')).toBeNull();
 
@@ -1376,7 +1514,7 @@ describe('auto-record controls and preview', () => {
       initial.recording.phase = phase;
       const native = nativeFixture(initial);
       render(<ReplaysPanel />, { wrapper: wrapper(native.api) });
-      await screen.findByRole('checkbox', { name: '自动录制' });
+      await screen.findByRole('switch', { name: '自动录制' });
       const preview = document.querySelector('.recording-preview-media') as HTMLElement;
       expect(within(preview).getByText(message)).toBeTruthy();
     },
@@ -1403,7 +1541,9 @@ describe('recording settings automatic saving', () => {
     const directory = panel.getByRole('textbox', { name: '保存目录' });
     const destination = 'F:\\Recordings';
     fireEvent.change(directory, { target: { value: destination } });
-    fireEvent.change(panel.getByRole('slider', { name: /帧率/ }), { target: { value: '45' } });
+    fireEvent.keyDown(panel.getByRole('slider', { name: /帧率/ }), { key: 'Home' });
+    for (let index = 0; index < 15; index++)
+      fireEvent.keyDown(panel.getByRole('slider', { name: /帧率/ }), { key: 'ArrowRight' });
     fireEvent.click(screen.getByRole('tab', { name: '自动化' }));
     await waitFor(() => expect(native.backend.config.replaySaveDir).toBe(destination));
     expect(native.backend.config.replayFps).toBe(45);
@@ -1435,18 +1575,20 @@ describe('recording settings automatic saving', () => {
     const dialog = await open(native);
     expect(dialog.queryByRole('button', { name: '保存' })).toBeNull();
     expect(dialog.queryByRole('button', { name: '取消' })).toBeNull();
-    fireEvent.change(dialog.getByRole('slider', { name: /帧率/ }), { target: { value: '45' } });
+    fireEvent.keyDown(dialog.getByRole('slider', { name: /帧率/ }), { key: 'Home' });
+    for (let index = 0; index < 15; index++)
+      fireEvent.keyDown(dialog.getByRole('slider', { name: /帧率/ }), { key: 'ArrowRight' });
     fireEvent.click(dialog.getByRole('button', { name: '录制 60 秒测试' }));
     await waitFor(() => expect(saves).toBe(1));
     expect(native.calls.some((call) => call.method === 'replays.test')).toBe(false);
-    fireEvent.change(dialog.getByRole('slider', { name: /帧率/ }), { target: { value: '60' } });
+    fireEvent.keyDown(dialog.getByRole('slider', { name: /帧率/ }), { key: 'End' });
     await act(async () => saving.resolve(config));
     await waitFor(() =>
       expect(native.calls.filter((call) => call.method === 'replays.test')).toHaveLength(1),
     );
     expect(saves).toBe(2);
     expect(dialog.getByText('已自动保存')).toBeTruthy();
-    fireEvent.click(dialog.getByRole('checkbox', { name: '自动录制' }));
+    fireEvent.click(dialog.getByRole('switch', { name: '自动录制' }));
     await waitFor(() => expect(config.replayEnabled).toBe(!initial.config.replayEnabled));
   });
 
@@ -1459,7 +1601,7 @@ describe('recording settings automatic saving', () => {
       'replays.move': () => ({ moved: 0, failed: ++attempts === 1 ? ['match.webm'] : [] }),
     });
     const dialog = await open(native);
-    fireEvent.click(dialog.getByRole('checkbox', { name: '更换目录时迁移已有录像' }));
+    fireEvent.click(dialog.getByRole('switch', { name: '更换目录时迁移已有录像' }));
     const directory = dialog.getByRole('textbox', { name: '保存目录' });
     fireEvent.change(directory, { target: { value: destination } });
     expect(native.calls.some((call) => call.method === 'replays.move')).toBe(false);
@@ -1759,7 +1901,135 @@ describe('request and native event ordering', () => {
 });
 
 describe('user interaction regressions', () => {
-  it('keeps the ban list mounted while a filter request is pending', async () => {
+  it('highlights the saved local player when the current session has no login identity', async () => {
+    const bootstrap = bootstrapForApp();
+    const match = matchFixture({ localPlayerId: localPlayer.id });
+    bootstrap.session.localPlayerId = null;
+    bootstrap.session.localName = '';
+    bootstrap.session.current = match;
+    const native = nativeFixture(bootstrap);
+    render(<SessionPanel standalone />, { wrapper: wrapper(native.api) });
+    const name = await screen.findByRole('button', { name: localPlayer.name });
+    const card = name.closest('.player-card') as HTMLElement;
+    expect(card.getAttribute('data-variant')).toBe('muted');
+    expect(within(card).queryByText('你')).toBeNull();
+    expect(screen.getByText('我方队伍')).toBeTruthy();
+  });
+
+  it('supports partial, full, and keyboard deck selection through the same checkbox controls', async () => {
+    const native = nativeFixture(bootstrapForApp(), {
+      'decks.list': () => ({
+        found: true,
+        decksDir: 'test-profile/Decks',
+        backupsDir: 'test-profile/Backups',
+        decks: [
+          { name: 'Armored.deck', size: 8200, modifiedAt: 1 },
+          { name: 'Airborne.deck', size: 6400, modifiedAt: 1 },
+        ],
+        backups: [],
+      }),
+    });
+    render(<DecksPanel />, { wrapper: wrapper(native.api) });
+    const files = within(await screen.findByRole('group', { name: '当前卡组' }));
+    const user = userEvent.setup();
+    const all = files.getByRole('checkbox', { name: '全选' });
+    const first = files.getByRole('checkbox', { name: 'Armored.deck' });
+    const second = files.getByRole('checkbox', { name: 'Airborne.deck' });
+    await user.click(first);
+    expect(all.getAttribute('aria-checked')).toBe('mixed');
+    await user.click(all);
+    expect(first.getAttribute('aria-checked')).toBe('true');
+    expect(second.getAttribute('aria-checked')).toBe('true');
+    await user.click(all);
+    expect(first.getAttribute('aria-checked')).toBe('false');
+    expect(second.getAttribute('aria-checked')).toBe('false');
+    document.getElementById('front-decks')!.focus();
+    await user.keyboard('{Control>}a{/Control}');
+    expect(all.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('closes narrow-screen navigation without changing the desktop collapse preference', async () => {
+    vi.stubGlobal('innerWidth', 375);
+    const native = nativeFixture(bootstrapForApp());
+    render(<App />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: '打开导航' }));
+    const dialog = await screen.findByRole('dialog', { name: translate('zh', 'workspaceNav') });
+    expect(dialog.id).toBe('workspace-sidebar');
+    fireEvent.click(within(dialog).getByRole('button', { name: '关闭导航' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(native.backend.config.sidebarCollapsed).toBe(false);
+    expect(native.calls.filter((call) => call.method === 'config.update')).toEqual([]);
+  });
+
+  it('retains an invalid match draft, associates errors and allows retry without dismissing a pending save', async () => {
+    const pending = deferred<RpcOutputs['matches.add']>();
+    let attempts = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.add': () => {
+        if (++attempts === 1) throw new Error('Match temporarily unavailable');
+        return pending.promise;
+      },
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    const addLabel = translate('zh', 'addMatch');
+    fireEvent.click(await screen.findByRole('button', { name: addLabel }));
+    const modal = screen.getByRole('dialog', { name: addLabel });
+    const dialog = within(modal);
+    const input = dialog.getByRole('textbox', { name: '对局 ID' }) as HTMLInputElement;
+    const submit = dialog.getByRole('button', { name: addLabel });
+    await waitFor(() => expect(document.activeElement).toBe(input));
+    fireEvent.change(input, { target: { value: 'invalid' } });
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(dialog.getByRole('alert').textContent).toBe(translate('zh', 'matchIdInvalid'));
+    expect(input.getAttribute('aria-describedby')).toBe(dialog.getByRole('alert').id);
+    expect(submit.hasAttribute('disabled')).toBe(true);
+    fireEvent.change(input, { target: { value: ' 9227650 ' } });
+    fireEvent.click(submit);
+    await dialog.findByText('Error: Match temporarily unavailable');
+    expect(input.value).toBe(' 9227650 ');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    fireEvent.click(submit);
+    expect(dialog.queryByRole('alert')).toBeNull();
+    expect(input.disabled).toBe(true);
+    expect(dialog.queryByRole('button', { name: '关闭' })).toBeNull();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('dialog', { name: addLabel })).toBe(modal);
+    expect(
+      native.calls.filter((call) => call.method === 'matches.add').map((call) => call.input),
+    ).toEqual([{ fid: '9227650' }, { fid: '9227650' }]);
+    await act(async () => pending.resolve(matchFixture({ fid: '9227650' })));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('adds a match from the archive dialog and refreshes the list after saving', async () => {
+    const user = userEvent.setup();
+    let saved: ReturnType<typeof matchFixture> | null = null;
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => (saved ? [saved] : []),
+      'matches.add': ({ fid }) => {
+        saved = matchFixture({ id: 'added-match', fid, map: 'Added match' });
+        return saved;
+      },
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    await user.click(await screen.findByRole('button', { name: translate('zh', 'addMatch') }));
+    const dialog = within(screen.getByRole('dialog', { name: translate('zh', 'addMatch') }));
+    const submit = dialog.getByRole('button', { name: translate('zh', 'addMatch') });
+    expect(submit.hasAttribute('disabled')).toBe(true);
+    const input = dialog.getByRole('textbox', { name: translate('zh', 'matchId') });
+    await user.type(input, 'abc');
+    expect(submit.hasAttribute('disabled')).toBe(true);
+    await user.clear(input);
+    await user.type(input, '9227650');
+    await user.click(submit);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(await screen.findByRole('button', { name: 'Added match' })).toBeTruthy();
+    expect(native.calls.filter((call) => call.method === 'matches.add')).toEqual([
+      { method: 'matches.add', input: { fid: '9227650' } },
+    ]);
+  });
+
+  it('keeps the ban table mounted while a filter request is pending', async () => {
     const pending = deferred<Ban[]>();
     const rows = [
       bannedPlayer(),
@@ -1770,16 +2040,16 @@ describe('user interaction regressions', () => {
     });
     render(<BansPanel />, { wrapper: wrapper(native.api) });
     await screen.findByRole('button', { name: 'Unmet player #9001' });
-    const list = screen.getByRole('list', { name: '封禁追踪' });
-    const viewport = list.parentElement!;
-    fireEvent.click(screen.getByRole('switch', { name: '我遇到过的作弊者' }));
+    const list = screen.getByRole('table', { name: '封禁追踪' });
+    const viewport = list.closest<HTMLElement>('[aria-busy]')!;
+    fireEvent.click(screen.getByRole('radio', { name: '我遇到过的作弊者' }));
     expect(viewport.getAttribute('aria-busy')).toBe('true');
-    expect(screen.getByRole('list', { name: '封禁追踪' })).toBe(list);
-    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getByRole('table', { name: '封禁追踪' })).toBe(list);
+    expect(within(list).getAllByRole('row').slice(1)).toHaveLength(2);
     await act(async () => pending.resolve([rows[0]!]));
     expect(viewport.getAttribute('aria-busy')).toBe('false');
-    expect(screen.getByRole('list', { name: '封禁追踪' })).toBe(list);
-    expect(within(list).getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByRole('table', { name: '封禁追踪' })).toBe(list);
+    expect(within(list).getAllByRole('row').slice(1)).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Unmet player #9001' })).toBeNull();
     expect(screen.queryByRole('navigation', { name: '封禁追踪' })).toBeNull();
   });
@@ -1797,36 +2067,94 @@ describe('user interaction regressions', () => {
     });
     render(<BansPanel />, { wrapper: wrapper(native.api) });
     await screen.findByText('第 1–20 条，共 45 条');
-    const filter = screen.getByRole('switch', { name: '我遇到过的作弊者' });
+    const filter = screen.getByRole('radio', { name: '我遇到过的作弊者' });
     expect(filter.getAttribute('aria-checked')).toBe('false');
-    const list = screen.getByRole('list', { name: '封禁追踪' });
-    expect(within(list).getAllByRole('listitem')).toHaveLength(20);
-    expect(screen.getByRole('button', { name: '上一页' }).hasAttribute('disabled')).toBe(true);
-    fireEvent.scroll(list, { target: { scrollTop: 150 } });
-    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
-    expect(list.scrollTop).toBe(0);
+    const list = screen.getByRole('table', { name: '封禁追踪' });
+    expect(within(list).getAllByRole('row').slice(1)).toHaveLength(20);
+    expect(
+      screen.getByRole('link', { name: '上一页' }).getAttribute('aria-disabled') === 'true',
+    ).toBe(true);
+    fireEvent.scroll(list.closest('.ban-list-paged')!, { target: { scrollTop: 150 } });
+    fireEvent.click(screen.getByRole('link', { name: '下一页' }));
+    expect(list.closest('.ban-list-paged')!.scrollTop).toBe(0);
     expect(screen.getByRole('button', { name: 'Banned player 20 #9020' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Banned player 0 #9000' })).toBeNull();
-    fireEvent.change(screen.getByLabelText('页码'), { target: { value: '3' } });
-    expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+    fireEvent.click(screen.getByRole('link', { name: '第 3 页' }));
+    expect(within(list).getAllByRole('row').slice(1)).toHaveLength(5);
     expect(screen.getByRole('button', { name: 'Banned player 44 #9044' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '下一页' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      screen.getByRole('link', { name: '下一页' }).getAttribute('aria-disabled') === 'true',
+    ).toBe(true);
     fireEvent.click(filter);
     expect(filter.getAttribute('aria-checked')).toBe('true');
     await screen.findByRole('button', { name: 'Banned player 0 #9000' });
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(within(list).getAllByRole('row').slice(1)).toHaveLength(3);
     expect(screen.queryByRole('navigation', { name: '封禁追踪' })).toBeNull();
     filter.focus();
-    await userEvent.setup().keyboard(' ');
+    fireEvent.click(screen.getByRole('radio', { name: translate('zh', 'allBans') }));
     expect(filter.getAttribute('aria-checked')).toBe('false');
     await screen.findByText('第 1–20 条，共 45 条');
-    fireEvent.change(screen.getByLabelText('页码'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('link', { name: '第 3 页' }));
     rows = rows.slice(0, 25);
     fireEvent.click(screen.getByRole('button', { name: '同步' }));
     await screen.findByText('第 21–25 条，共 25 条');
     expect(screen.getByRole('button', { name: 'Banned player 24 #9024' })).toBeTruthy();
-    expect(screen.getAllByRole('listitem')).toHaveLength(5);
-    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('2');
+    expect(within(list).getAllByRole('row').slice(1)).toHaveLength(5);
+    expect(screen.getByRole('link', { name: '第 2 页' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('sorts the entire archive, resets the selected page and preserves sortable column semantics', async () => {
+    const rows = Array.from({ length: 55 }, (_, index) =>
+      matchFixture({
+        id: `sorted-${index}`,
+        map: `Sorted map ${index}`,
+        endedAt: 1_700_000_000_000 + 55 - index,
+        eloBefore: 1500,
+        eloAfter: 1500 + index,
+      }),
+    );
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => rows });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    await screen.findByRole('button', { name: 'Sorted map 0' });
+    fireEvent.click(screen.getByRole('link', { name: '下一页' }));
+    await screen.findByRole('button', { name: 'Sorted map 54' });
+    const viewport = document.querySelector<HTMLDivElement>('.archive-table')!;
+    fireEvent.scroll(viewport, { target: { scrollTop: 180 } });
+    const sort = screen.getByRole('button', { name: 'ELO 变化' });
+    fireEvent.click(sort);
+    expect(screen.getByRole('link', { name: '第 1 页' }).getAttribute('aria-current')).toBe('page');
+    expect(sort.closest('th')?.getAttribute('aria-sort')).toBe('descending');
+    expect(
+      within(screen.getByRole('table', { name: '对局档案' })).getAllByRole('row')[1]?.textContent,
+    ).toContain('Sorted map 54');
+    expect(viewport.scrollTop).toBe(0);
+    fireEvent.click(sort);
+    expect(sort.closest('th')?.getAttribute('aria-sort')).toBe('ascending');
+    expect(
+      within(screen.getByRole('table', { name: '对局档案' })).getAllByRole('row')[1]?.textContent,
+    ).toContain('Sorted map 0');
+  });
+
+  it('filters the ban table locally and resets pagination without another service request', async () => {
+    const rows = Array.from({ length: 45 }, (_, index) => ({
+      ...bannedPlayer(),
+      id: String(9000 + index),
+      name: `Banned player ${index}`,
+    }));
+    const native = nativeFixture(bootstrapForApp(), { 'bans.list': () => rows });
+    render(<BansPanel />, { wrapper: wrapper(native.api) });
+    await screen.findByRole('button', { name: 'Banned player 0 #9000' });
+    fireEvent.click(screen.getByRole('link', { name: '第 3 页' }));
+    const search = screen.getByRole('searchbox', { name: '筛选名字或 ID' });
+    fireEvent.change(search, { target: { value: '9044' } });
+    expect(screen.getByRole('button', { name: 'Banned player 44 #9044' })).toBeTruthy();
+    expect(
+      within(screen.getByRole('table', { name: '封禁追踪' })).getAllByRole('row'),
+    ).toHaveLength(2);
+    expect(screen.queryByRole('navigation', { name: '封禁追踪' })).toBeNull();
+    fireEvent.change(search, { target: { value: '' } });
+    expect(screen.getByRole('link', { name: '第 1 页' }).getAttribute('aria-current')).toBe('page');
+    expect(native.calls.filter((call) => call.method === 'bans.list')).toHaveLength(1);
   });
 
   it('makes archive records beyond 500 reachable and resets pagination when filters change', async () => {
@@ -1863,29 +2191,35 @@ describe('user interaction regressions', () => {
     expect(screen.getAllByRole('row')).toHaveLength(51);
     expect(screen.getByText('样本数: 525')).toBeTruthy();
     expect(screen.getByText('第 1–50 条，共 525 条')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '上一页' }).hasAttribute('disabled')).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
-    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('2');
+    expect(
+      screen.getByRole('link', { name: '上一页' }).getAttribute('aria-disabled') === 'true',
+    ).toBe(true);
+    fireEvent.click(screen.getByRole('link', { name: '下一页' }));
+    expect(screen.getByRole('link', { name: '第 2 页' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('button', { name: 'Archive map 474' })).toBeTruthy();
     expect(table.scrollTop).toBe(0);
     expect(screen.getByText('第 51–100 条，共 525 条')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('页码'), { target: { value: '11' } });
+    fireEvent.click(screen.getByRole('link', { name: '第 11 页' }));
     expect(screen.getByRole('button', { name: 'Archive map 0' })).toBeTruthy();
     expect(screen.getAllByRole('row')).toHaveLength(26);
-    expect(screen.getByRole('button', { name: '下一页' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      screen.getByRole('link', { name: '下一页' }).getAttribute('aria-disabled') === 'true',
+    ).toBe(true);
     expect(screen.getByText('第 501–525 条，共 525 条')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '上一页' }));
-    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('10');
+    fireEvent.click(screen.getByRole('link', { name: '上一页' }));
+    expect(screen.getByRole('link', { name: '第 10 页' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
     table.scrollTop = 500;
-    fireEvent.click(screen.getByRole('button', { name: '胜利' }));
+    fireEvent.click(screen.getByRole('radio', { name: '胜利' }));
     expect(table.scrollTop).toBe(0);
-    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
+    expect(screen.getByRole('link', { name: '第 1 页' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText('样本数: 263')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '全部结果' }));
-    fireEvent.change(screen.getByLabelText('页码'), { target: { value: '11' } });
+    fireEvent.click(screen.getByRole('radio', { name: '全部结果' }));
+    fireEvent.click(screen.getByRole('link', { name: '第 11 页' }));
     fireEvent.change(screen.getByLabelText('账号'), { target: { value: '2' } });
     await waitFor(() => expect(screen.getByText('样本数: 262')).toBeTruthy());
-    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
+    expect(screen.getByRole('link', { name: '第 1 页' }).getAttribute('aria-current')).toBe('page');
   });
 
   it('hides unknown outcomes across filters, resets pagination, and clears an empty filter', async () => {
@@ -1932,45 +2266,45 @@ describe('user interaction regressions', () => {
     });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
     await screen.findByRole('button', { name: 'Unknown result A' });
-    const toggle = screen.getByRole('checkbox', { name: '隐藏未知结果' }) as HTMLInputElement;
-    expect(toggle.checked).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
+    const toggle = screen.getByRole('switch', { name: '隐藏未知结果' }) as HTMLInputElement;
+    expect(toggle.getAttribute('aria-checked') === 'true').toBe(false);
+    fireEvent.click(screen.getByRole('link', { name: '下一页' }));
     const table = document.querySelector<HTMLDivElement>('.archive-table')!;
     table.scrollTop = 900;
     toggle.focus();
     await userEvent.setup().keyboard(' ');
-    expect(toggle.checked).toBe(true);
+    expect(toggle.getAttribute('aria-checked') === 'true').toBe(true);
     expect(table.scrollTop).toBe(0);
-    expect((screen.getByLabelText('页码') as HTMLSelectElement).value).toBe('1');
+    expect(screen.getByRole('link', { name: '第 1 页' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText('样本数: 13')).toBeTruthy();
     const pagination = screen.getByRole('navigation', { name: '对局档案分页' });
     expect(within(pagination).getByText('第 1–13 条，共 13 条')).toBeTruthy();
     expect(
-      within(pagination).getByRole('button', { name: '上一页' }).hasAttribute('disabled'),
+      within(pagination).getByRole('link', { name: '上一页' }).getAttribute('aria-disabled') ===
+        'true',
     ).toBe(true);
     expect(
-      within(pagination).getByRole('button', { name: '下一页' }).hasAttribute('disabled'),
+      within(pagination).getByRole('link', { name: '下一页' }).getAttribute('aria-disabled') ===
+        'true',
     ).toBe(true);
-    expect(
-      within(pagination).getByRole('combobox', { name: '页码' }).hasAttribute('disabled'),
-    ).toBe(true);
-    expect(within(pagination).getByRole('option', { name: '1 / 1' })).toBeTruthy();
+    expect(within(pagination).queryByRole('combobox', { name: '页码' }) === null).toBe(true);
+    expect(within(pagination).getByRole('link', { name: '第 1 页' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Unknown result A' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Unknown result B' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Spectator result' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '胜利' }));
+    fireEvent.click(screen.getByRole('radio', { name: '胜利' }));
     expect(screen.getByText('样本数: 6')).toBeTruthy();
-    expect(toggle.checked).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: '全部结果' }));
+    expect(toggle.getAttribute('aria-checked') === 'true').toBe(true);
+    fireEvent.click(screen.getByRole('radio', { name: '全部结果' }));
     fireEvent.change(screen.getByLabelText('账号'), { target: { value: '2' } });
     await screen.findByText('样本数: 0');
     expect(screen.getByRole('navigation', { name: '对局档案分页' })).toBeTruthy();
     expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '清除筛选' }));
     await screen.findByRole('button', { name: 'Unknown result A' });
-    expect(toggle.checked).toBe(false);
+    expect(toggle.getAttribute('aria-checked') === 'true').toBe(false);
     expect(screen.getByText('样本数: 63')).toBeTruthy();
-    expect((screen.getByLabelText('页码') as HTMLSelectElement).disabled).toBe(false);
+    expect(screen.getByRole('link', { name: '第 2 页' })).toBeTruthy();
     expect((screen.getByLabelText('账号') as HTMLSelectElement).value).toBe('');
   });
 
@@ -2069,9 +2403,11 @@ describe('user interaction regressions', () => {
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Settings' })).toBeNull());
     await screen.findByText('Listening');
     expect(screen.queryByText('Not listening')).toBeNull();
-    expect(view.container.querySelector('.status-dot')?.classList.contains('status-success')).toBe(
-      true,
-    );
+    expect(
+      view.container
+        .querySelector('[data-log-status] [data-slot=badge]')
+        ?.getAttribute('data-variant'),
+    ).toBe('success');
     expect(document.documentElement.lang).toBe('en');
     expect(native.backend.config.lang).toBe('en');
     expect(native.backend.watcher.listening).toBe(true);
@@ -2133,14 +2469,14 @@ describe('user interaction regressions', () => {
     bootstrap.config.panelOrder = ['current', 'players', 'decks'];
     const native = nativeFixture(bootstrap);
     const user = userEvent.setup();
-    const view = render(<App />, { wrapper: wrapper(native.api) });
+    let view = render(<App />, { wrapper: wrapper(native.api) });
     fireEvent.click(await screen.findByRole('button', { name: '设置' }));
     await screen.findByRole('main', { name: '设置' });
     fireEvent.click(screen.getByRole('tab', { name: '导航' }));
-    const players = screen.getByRole('checkbox', { name: '在导航中显示 玩家查询' });
+    const players = screen.getByRole('switch', { name: '在导航中显示 玩家查询' });
     players.focus();
     await user.keyboard(' ');
-    fireEvent.click(screen.getByRole('checkbox', { name: '在导航中显示 卡组工具' }));
+    fireEvent.click(screen.getByRole('switch', { name: '在导航中显示 卡组工具' }));
     fireEvent.click(screen.getByRole('button', { name: '上移 卡组工具' }));
     await waitFor(() => {
       expect(native.backend.config.hiddenPanels).toEqual(['players', 'decks']);
@@ -2148,26 +2484,33 @@ describe('user interaction regressions', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
-    expect(within(screen.getByRole('navigation')).getAllByRole('button')).toHaveLength(1);
+    expect(
+      within(screen.getByRole('navigation', { name: '工作空间' })).getAllByRole('button'),
+    ).toHaveLength(1);
+    view.unmount();
+    vi.stubGlobal('innerWidth', 390);
+    view = render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByRole('heading', { name: '对局工作台' });
     fireEvent.click(screen.getByRole('button', { name: '打开导航' }));
     const dialog = within(screen.getByRole('dialog', { name: translate('zh', 'workspaceNav') }));
-    const navigation = within(dialog.getByRole('navigation'));
+    const navigation = within(dialog.getByRole('navigation', { name: '工作空间' }));
     expect(navigation.queryByRole('button', { name: '玩家查询' })).toBeNull();
     expect(navigation.queryByRole('button', { name: '卡组工具' })).toBeNull();
     expect(navigation.getByRole('button', { name: '总览' })).toBeTruthy();
 
     view.unmount();
+    vi.stubGlobal('innerWidth', 1024);
     window.history.replaceState(null, '', '#settings/navigation');
     render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByRole('main', { name: '设置' });
-    const restoredPlayers = screen.getByRole('checkbox', { name: '在导航中显示 玩家查询' });
-    expect((restoredPlayers as HTMLInputElement).checked).toBe(false);
+    const restoredPlayers = screen.getByRole('switch', { name: '在导航中显示 玩家查询' });
+    expect(restoredPlayers.getAttribute('aria-checked') === 'true').toBe(false);
     fireEvent.click(restoredPlayers);
-    fireEvent.click(screen.getByRole('checkbox', { name: '在导航中显示 卡组工具' }));
+    fireEvent.click(screen.getByRole('switch', { name: '在导航中显示 卡组工具' }));
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
     expect(
-      within(screen.getByRole('navigation'))
+      within(screen.getByRole('navigation', { name: '工作空间' }))
         .getAllByRole('button')
         .map((button) => button.textContent?.trim()),
     ).toEqual(['总览', '卡组工具', '玩家查询']);
@@ -2185,13 +2528,15 @@ describe('user interaction regressions', () => {
     fireEvent.click(await screen.findByRole('button', { name: '设置' }));
     await screen.findByRole('main', { name: '设置' });
     fireEvent.click(screen.getByRole('tab', { name: '导航' }));
-    const toggle = screen.getByRole('checkbox', { name: '在导航中显示 当前房间 / 对局' });
-    expect((toggle as HTMLInputElement).checked).toBe(false);
+    const toggle = screen.getByRole('switch', { name: '在导航中显示 当前房间 / 对局' });
+    expect(toggle.getAttribute('aria-checked') === 'true').toBe(false);
     fireEvent.click(toggle);
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
     expect(
-      within(screen.getByRole('navigation')).getByRole('button', { name: '总览' }),
+      within(screen.getByRole('navigation', { name: '工作空间' })).getByRole('button', {
+        name: '总览',
+      }),
     ).toBeTruthy();
     expect(native.backend.config.hiddenPanels).toEqual([]);
   });
@@ -2205,10 +2550,10 @@ describe('user interaction regressions', () => {
       </AppProvider>,
     );
     await screen.findByRole('heading', { level: 1, name: '对局档案' });
-    const scroll = screen.getByRole('main').parentElement!;
+    const scroll = document.querySelector<HTMLElement>('.workspace-scroll')!;
     fireEvent.scroll(scroll, { target: { scrollTop: 180 } });
     const navigation = screen.getByRole('navigation', { name: '工作空间' });
-    fireEvent.click(screen.getByRole('button', { name: '失败' }));
+    fireEvent.click(screen.getByRole('radio', { name: '失败' }));
     await screen.findByText(
       `样本数: ${capturedMatches.filter((m) => m.outcome === 'loss').length}`,
     );
@@ -2224,9 +2569,9 @@ describe('user interaction regressions', () => {
       window.location.hash = 'archive';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     });
-    expect(screen.getByRole('button', { name: '失败' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('radio', { name: '失败' }).getAttribute('aria-checked')).toBe('true');
     expect(scroll.scrollTop).toBe(180);
-    expect(document.activeElement).toBe(screen.getByRole('main'));
+    expect(document.activeElement).toBe(document.getElementById('main-content'));
     fireEvent.click(within(navigation).getByRole('button', { name: '玩家查询' }));
     expect(scroll.scrollTop).toBe(90);
     expect((screen.getByLabelText(translate('zh', 'searchLabel')) as HTMLInputElement).value).toBe(
@@ -2246,7 +2591,7 @@ describe('user interaction regressions', () => {
     await screen.findByText('监听中');
     expect(screen.queryByRole('group', { name: '封禁追踪' })).toBeNull();
     expect(list).not.toHaveBeenCalled();
-    const nav = within(screen.getByRole('navigation'));
+    const nav = within(screen.getByRole('navigation', { name: '工作空间' }));
     fireEvent.click(nav.getByRole('button', { name: '封禁追踪' }));
     expect(screen.getByRole('heading', { level: 1, name: '封禁追踪' })).toBeTruthy();
     await screen.findByRole('button', { name: /Banned Arrow/ });
@@ -2272,7 +2617,7 @@ describe('user interaction regressions', () => {
     await waitFor(() => expect(overviewPrevious.hasAttribute('disabled')).toBe(false));
     fireEvent.click(overviewPrevious);
     await screen.findByRole('button', { name: '返回当前局' });
-    const nav = within(screen.getByRole('navigation'));
+    const nav = within(screen.getByRole('navigation', { name: '工作空间' }));
     fireEvent.click(nav.getByRole('button', { name: '蛐雷达' }));
     expect(location.hash).toBe('#radar');
     expect(screen.getByRole('heading', { level: 1, name: '蛐雷达' })).toBeTruthy();
@@ -2335,16 +2680,32 @@ describe('user interaction regressions', () => {
     const playerHeading = screen
       .getByRole('button', { name: localPlayer.name })
       .closest('.player-heading')!;
-    expect(playerHeading.querySelector('.match-score-labels')?.parentElement).toBe(playerHeading);
+    expect(playerHeading.querySelector('[data-award-source="score"]')?.parentElement).toBe(
+      playerHeading,
+    );
     expect(document.querySelector('.session-roster .player-avatar')).toBeNull();
     fireEvent.click(await screen.findByRole('button', { name: '大腿' }));
-    expect(screen.getByText('赢方净交换最高：摧毁 6000 − 损失 1000 = 5000。')).toBeTruthy();
+    expect(screen.getByText('本局赢方净交换最高：摧毁 6000 − 损失 1000 = 5000。')).toBeTruthy();
     const back = screen.getByRole('button', { name: '返回当前局' });
     await waitFor(() => expect(back.hasAttribute('disabled')).toBe(false));
     fireEvent.click(back);
     expect(screen.queryByRole('button', { name: '大腿' })).toBeNull();
     expect(screen.queryByRole('button', { name: '击杀王' })).toBeNull();
     expect(document.querySelector('button button')).toBeNull();
+  });
+
+  it('copies the match identifier without its display prefix', async () => {
+    const bootstrap = bootstrapForApp();
+    bootstrap.session.current = matchFixture({ fid: '987654321' });
+    const native = nativeFixture(bootstrap);
+    const user = userEvent.setup();
+    const copy = vi.spyOn(navigator.clipboard, 'writeText');
+    render(<SessionPanel standalone />, { wrapper: wrapper(native.api) });
+    const button = await screen.findByRole('button', {
+      name: `${translate('zh', 'copy')} ${translate('zh', 'matchId')}: 987654321`,
+    });
+    await user.click(button);
+    expect(copy).toHaveBeenCalledExactlyOnceWith('987654321');
   });
 
   it('requires explicit confirmation before deleting a match and restores focus after cancellation', async () => {
@@ -2374,7 +2735,7 @@ describe('user interaction regressions', () => {
     await user.click(within(dialog).getByRole('button', { name: '取消' }));
     expect(remove).not.toHaveBeenCalled();
     dialog = await openConfirmation();
-    await user.click(document.querySelector('.confirmation-overlay')!);
+    await user.click(document.querySelector('[data-slot=alert-dialog-overlay]')!);
     expect(screen.getByRole('alertdialog')).toBe(dialog);
     expect(remove).not.toHaveBeenCalled();
     await user.click(within(dialog).getByRole('button', { name: '删除' }));
@@ -2402,10 +2763,10 @@ describe('user interaction regressions', () => {
       name: translate('zh', `title.${titles[0]!.id}`),
     });
     fireEvent.click(title);
-    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    const tooltip = explanation();
     expect(tooltip.textContent).not.toMatch(/\{\w+\}/);
     expect(dialog.contains(tooltip)).toBe(false);
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     expect(screen.getByRole('dialog')).toBe(dialog);
     expect(document.querySelector('button button')).toBeNull();
@@ -2425,11 +2786,11 @@ describe('user interaction regressions', () => {
       </AppProvider>,
     );
     await screen.findByText('1 胜 · 1 负');
-    const metric = screen.getByText('近期胜率').closest('.metric-card') as HTMLElement;
+    const metric = screen.getByText('近期胜率').closest('[data-slot="card"]') as HTMLElement;
     expect(within(metric).getByText('50%')).toBeTruthy();
-    const rating = screen.getByText('最近 ELO').closest('.metric-card') as HTMLElement;
+    const rating = screen.getByText('最近 ELO').closest('[data-slot="card"]') as HTMLElement;
     expect(within(rating).getByText(formatMetric(win.eloAfter, 0))).toBeTruthy();
-    const archive = screen.getByText('已收录对局').closest('.metric-card') as HTMLElement;
+    const archive = screen.getByText('已收录对局').closest('[data-slot="card"]') as HTMLElement;
     expect(within(archive).getByText('4')).toBeTruthy();
   });
 
@@ -2662,17 +3023,17 @@ describe('profile refresh and report scopes', () => {
     expect(screen.queryByRole('heading', { name: '相遇记录' })).toBeNull();
     expect(screen.getAllByText(/缓存数据，可能已过期/)).toHaveLength(1);
     expect(screen.getByRole('table', { name: '近期对局' })).toBeTruthy();
-    const details = screen.getByText('对局数据明细', { selector: 'summary' }).closest('details')!;
-    expect(details.open).toBe(false);
-    await userEvent
-      .setup()
-      .click(within(details).getByText('对局数据明细', { selector: 'summary' }));
-    expect(details.open).toBe(true);
+    const details = screen
+      .getByRole('button', { name: '对局数据明细' })
+      .closest<HTMLElement>('[data-slot=accordion-item]')!;
+    expect(details.getAttribute('data-state')).toBe('closed');
+    await userEvent.setup().click(within(details).getByRole('button', { name: '对局数据明细' }));
+    expect(details.getAttribute('data-state')).toBe('open');
     expect(within(details).getByRole('table')).toBeTruthy();
-    const aliases = document.querySelector<HTMLDetailsElement>('.profile-name-history')!;
-    expect(aliases.open).toBe(false);
+    const aliases = document.querySelector<HTMLElement>('.profile-name-history')!;
+    expect(within(aliases).getByRole('button').getAttribute('aria-expanded')).toBe('false');
     await userEvent.setup().click(within(aliases).getByText('名字历史'));
-    expect(aliases.open).toBe(true);
+    expect(within(aliases).getByRole('button').getAttribute('aria-expanded')).toBe('true');
     expect(within(aliases).getByText('Previous alias')).toBeTruthy();
     expect(within(aliases).queryByText('Profile player')).toBeNull();
   });
@@ -2838,6 +3199,61 @@ describe('UX failure recovery', () => {
     expect(screen.queryByRole('button', { name: '查蛆指数' })).toBeNull();
   });
 
+  it('keeps search results in place during another query and cancels late results when cleared', async () => {
+    const pending = deferred<RpcOutputs['players.search']>();
+    const native = nativeFixture(bootstrapForApp(), {
+      'players.search': ({ query }) =>
+        query === 'first' ? { source: 'local', players: [localPlayer] } : pending.promise,
+    });
+    render(<PlayersPanel />, { wrapper: wrapper(native.api) });
+    const input = (await screen.findByRole('searchbox', {
+      name: translate('zh', 'searchLabel'),
+    })) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'first' } });
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }));
+    const result = await screen.findByRole('button', { name: new RegExp('^' + localPlayer.name) });
+    await screen.findByText(
+      translate('zh', 'searchResultSummary', { query: 'first', count: 1 }) +
+        ' · ' +
+        translate('zh', 'offline'),
+    );
+    fireEvent.change(input, { target: { value: 'second' } });
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }));
+    expect(result.isConnected).toBe(true);
+    expect(result.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText(translate('zh', 'searchingPlayers'))).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '清除搜索' }));
+    expect(input.value).toBe('');
+    expect(document.activeElement).toBe(input);
+    expect(document.querySelector('.player-results-card')).toBeNull();
+    await act(async () => pending.resolve({ source: 'local', players: [secondPlayer] }));
+    expect(document.querySelector('.player-results-card')).toBeNull();
+    expect(screen.queryByText(translate('zh', 'searchingPlayers'))).toBeNull();
+  });
+
+  it('associates search failures with the input and recovers on a second submit', async () => {
+    let attempts = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'players.search': () => {
+        if (++attempts === 1) throw new Error('Search temporarily unavailable');
+        return { source: 'local', players: [localPlayer] };
+      },
+    });
+    render(<PlayersPanel />, { wrapper: wrapper(native.api) });
+    const input = await screen.findByRole('searchbox', { name: translate('zh', 'searchLabel') });
+    fireEvent.change(input, { target: { value: localPlayer.name } });
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }));
+    const error = await screen.findByRole('alert');
+    expect(error.textContent).toBe('Search temporarily unavailable');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe(error.id);
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }));
+    await screen.findByRole('button', { name: new RegExp('^' + localPlayer.name) });
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(input.getAttribute('aria-describedby')).toBe('player-search-hint');
+  });
+
   it('keeps profile content in place while its two refresh requests finish separately', async () => {
     const nextProfile = deferred<PlayerProfile>();
     const nextReport = deferred<RpcOutputs['players.report']>();
@@ -2906,10 +3322,10 @@ describe('UX failure recovery', () => {
       await waitFor(() =>
         expect(view.container.ownerDocument.querySelector('video')).not.toBeNull(),
       );
-      const speed = screen.getByRole('button', { name: '3×' });
+      const speed = screen.getByRole('radio', { name: '3×' });
       fireEvent.click(speed);
-      expect(speed.getAttribute('aria-pressed')).toBe('true');
-      expect(screen.getByRole('button', { name: '1×' }).getAttribute('aria-pressed')).toBe('false');
+      expect(speed.getAttribute('aria-checked')).toBe('true');
+      expect(screen.getByRole('radio', { name: '1×' }).getAttribute('aria-checked')).toBe('false');
       const video = document.querySelector('video')!;
       expect(video.playbackRate).toBe(3);
       fireEvent.error(video);
@@ -3027,8 +3443,7 @@ describe('APM capture presentation', () => {
     expect(screen.getByText(translate('zh', 'apmAverage'))).toBeTruthy();
     expect(screen.getByText(translate('zh', 'apmCurrent'))).toBeTruthy();
     expect(screen.getByText(translate('zh', 'apmPeak'))).toBeTruthy();
-    fireEvent.click(screen.getByText(translate('zh', 'apmBucketTable')));
-    expect(screen.getByRole('table').textContent).toContain('0:00–0:05 *');
+    expect(screen.queryByText(translate('zh', 'apmBucketTable'))).toBeNull();
   });
   it('groups second counts into ten-second intervals and exposes exact values with keyboard navigation', async () => {
     const bootstrap = structuredClone(fixtureBootstrap);
@@ -3045,35 +3460,38 @@ describe('APM capture presentation', () => {
     };
     const native = nativeFixture(bootstrap);
     render(<ApmPanel />, { wrapper: wrapper(native.api) });
-    const chart = await screen.findByRole('group', { name: translate('zh', 'apmBuckets') });
-    const first = within(chart).getByRole('img', { name: '0:00–0:10: 20 操作次数' });
-    const last = within(chart).getByRole('img', { name: '0:20–0:25 *: 4 操作次数' });
-    const band = chart.querySelector('.apm-selection-band')!;
-    const trend = chart.querySelector('.apm-trend-line')!;
-    expect(band.compareDocumentPosition(trend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    fireEvent.mouseEnter(first);
-    expect(band.getAttribute('x')).toBe('0');
-    expect(first.classList.contains('is-active')).toBe(true);
-    fireEvent.focus(first);
-    fireEvent.keyDown(first, { key: 'ArrowRight' });
-    expect(document.activeElement?.getAttribute('aria-label')).toBe('0:10–0:20: 10 操作次数');
-    fireEvent.keyDown(document.activeElement!, { key: 'End' });
-    expect(document.activeElement).toBe(last);
-    expect(band.getAttribute('x')).toBe(last.querySelector('rect')!.getAttribute('x'));
-    expect(band.getAttribute('width')).toBe(last.querySelector('rect')!.getAttribute('width'));
+    const chart = await screen.findByRole(
+      'group',
+      { name: translate('zh', 'apmBuckets') },
+      { timeout: 5000 },
+    );
+    const plot = await waitFor(() => within(chart).getByRole('application'));
+    expect(plot.getAttribute('tabindex')).toBe('0');
+    act(() => plot.focus());
+    await userEvent.setup().keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(plot);
     expect(screen.queryByText(translate('zh', 'apmLegacyData'))).toBeNull();
     expect(screen.queryByText(translate('zh', 'apmWarmup'))).toBeNull();
-    fireEvent.click(screen.getByText(translate('zh', 'apmBucketTable')));
-    const rows = within(screen.getByRole('table')).getAllByRole('row');
-    expect(
-      rows
-        .slice(1)
-        .map((row) => Array.from(row.querySelectorAll('td'), (cell) => cell.textContent)),
-    ).toEqual([
-      ['0:00–0:10', '0:10', '20'],
-      ['0:10–0:20', '0:10', '10'],
-      ['0:20–0:25 *', '0:05', '4'],
-    ]);
+    await userEvent.setup().keyboard('{ArrowRight}{ArrowRight}{ArrowRight}');
+    await waitFor(() => {
+      const tooltip = document.querySelector('.recharts-tooltip-wrapper');
+      expect(tooltip?.textContent).toContain('0:20–0:25 *');
+      expect(tooltip?.textContent).toContain('4');
+    });
+    await userEvent.setup().keyboard('{ArrowLeft}');
+    await waitFor(() => {
+      const tooltip = document.querySelector('.recharts-tooltip-wrapper');
+      expect(tooltip?.textContent).toContain('0:10–0:20');
+      expect(tooltip?.textContent).toContain('10');
+    });
+    await userEvent.setup().keyboard('{ArrowLeft}');
+    await waitFor(() => {
+      const tooltip = document.querySelector('.recharts-tooltip-wrapper');
+      expect(tooltip?.textContent).toContain('0:00–0:10');
+      expect(tooltip?.textContent).toContain('20');
+    });
+    expect(screen.queryByText(translate('zh', 'apmBucketTable'))).toBeNull();
+    expect(screen.queryByText(translate('zh', 'apmChartHint'))).toBeNull();
   });
   it('opens a stored capture while monitoring is disabled without starting input collection', async () => {
     const bootstrap = structuredClone(fixtureBootstrap);
@@ -3120,3 +3538,10 @@ describe('APM capture presentation', () => {
     await waitFor(() => expect(screen.queryByText(translate('zh', 'apmHistoryError'))).toBeNull());
   });
 });
+
+function explanation() {
+  return (
+    document.querySelector<HTMLElement>('[data-slot="popover-content"]') ??
+    screen.getByRole('tooltip', { hidden: true })
+  );
+}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import type { PublicConfig } from '@ba/contracts';
 
 /** Used for both saved preferences and the settings draft, including live OS changes. */
@@ -14,7 +14,7 @@ export function useAppearance(appearance: Appearance | undefined) {
     themeMode = appearance?.themeMode,
     lightTheme = appearance?.lightTheme,
     darkTheme = appearance?.darkTheme;
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!theme || !themeMode) return;
     const root = document.documentElement;
     const media = window.matchMedia?.('(prefers-color-scheme: dark)');
@@ -22,6 +22,8 @@ export function useAppearance(appearance: Appearance | undefined) {
       const mode = themeMode === 'system' ? (media?.matches ? 'dark' : 'light') : themeMode;
       root.dataset.theme = colorSchemeFor({ theme, themeMode, lightTheme, darkTheme }, mode);
       root.dataset.mode = mode;
+      root.classList.toggle('dark', mode === 'dark');
+      root.style.colorScheme = mode;
     };
     apply();
     if (themeMode === 'system') media?.addEventListener('change', apply);

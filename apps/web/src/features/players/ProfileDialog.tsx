@@ -1,6 +1,21 @@
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from '@/components/ui/table';
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect } from 'react';
-import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { RefreshCw as faArrowsRotate } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
 import { formatTime, formatMetric, formatDelta, outcomeTone } from '@ba/shared';
@@ -58,7 +73,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
             {t('openBatrace')}
           </Button>
           {report.data && <ReportCopyButton report={report.data} />}
-          <Button variant="primary" disabled={maggot.busy} onClick={() => void runMaggot(id)}>
+          <Button variant="default" disabled={maggot.busy} onClick={() => void runMaggot(id)}>
             {t('maggot')}
           </Button>
         </div>
@@ -108,30 +123,30 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
                 {p.recentError && <Notice error>{p.recentError}</Notice>}
                 {p.recentMatches.length > 0 && (
                   <div className="table-wrap">
-                    <table>
-                      <caption className="sr-only">{t('recent')}</caption>
-                      <thead>
-                        <tr>
-                          <th>{t('map')}</th>
-                          <th>{t('result')}</th>
-                          <th className="elo-column">{t('eloDelta')}</th>
-                          <th>{t('time')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <Table>
+                      <TableCaption className="sr-only">{t('recent')}</TableCaption>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('map')}</TableHead>
+                          <TableHead>{t('result')}</TableHead>
+                          <TableHead className="elo-column">{t('eloDelta')}</TableHead>
+                          <TableHead>{t('time')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {p.recentMatches.map((m) => (
-                          <tr key={m.id}>
-                            <td>
+                          <TableRow key={m.id}>
+                            <TableCell>
                               <Button
                                 onClick={() => openModal({ type: 'match', fid: m.fid || m.id })}
                               >
                                 {m.map || '#' + m.id}
                               </Button>
-                            </td>
-                            <td>
+                            </TableCell>
+                            <TableCell>
                               <Badge tone={outcomeTone(m.outcome)}>{t(m.outcome)}</Badge>
-                            </td>
-                            <td
+                            </TableCell>
+                            <TableCell
                               className={
                                 m.eloAfter === null || m.eloBefore === null
                                   ? 'elo-column'
@@ -145,12 +160,12 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
                                   ? m.eloAfter - m.eloBefore
                                   : null,
                               )}
-                            </td>
-                            <td>{formatTime(m.endedAt, locale)}</td>
-                          </tr>
+                            </TableCell>
+                            <TableCell>{formatTime(m.endedAt, locale)}</TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </section>
@@ -170,52 +185,56 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
                   />
                 </div>
                 <div className="table-wrap">
-                  <table>
-                    <caption className="sr-only">{t('encounters')}</caption>
-                    <thead>
-                      <tr>
-                        <th>{t('map')}</th>
-                        <th>{t('team')}</th>
-                        <th>{t('result')}</th>
-                        <th>{t('time')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableCaption className="sr-only">{t('encounters')}</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('map')}</TableHead>
+                        <TableHead>{t('team')}</TableHead>
+                        <TableHead>{t('result')}</TableHead>
+                        <TableHead>{t('time')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {encounters.map((e, i) => (
-                        <tr key={e.matchId + ':' + i}>
-                          <td>
+                        <TableRow key={e.matchId + ':' + i}>
+                          <TableCell>
                             <Button onClick={() => openModal({ type: 'match', fid: e.matchId })}>
                               {e.map || e.matchId}
                             </Button>
-                          </td>
-                          <td>{t(e.relation)}</td>
-                          <td>
+                          </TableCell>
+                          <TableCell>{t(e.relation)}</TableCell>
+                          <TableCell>
                             {e.won === null ? t('unknown') : t(e.won ? 'win' : 'loss')}{' '}
                             {e.custom && <Badge>{t('custom')}</Badge>}
-                          </td>
-                          <td>{formatTime(e.at, locale)}</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell>{formatTime(e.at, locale)}</TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </section>
             )}
           </div>
           {aliases.length > 0 && (
-            <details className="profile-name-history">
-              <summary>
-                {t('names')} <Badge>{aliases.length}</Badge>
-              </summary>
-              <div className="name-history">
-                {aliases.map((n) => (
-                  <span className="profile-alias" key={n.name}>
-                    <strong>{n.name}</strong>
-                    <small>{formatTime(n.lastSeen, locale)}</small>
-                  </span>
-                ))}
-              </div>
-            </details>
+            <Accordion type="single" collapsible className="profile-name-history">
+              <AccordionItem value="details">
+                <AccordionTrigger>
+                  {t('names')} <Badge>{aliases.length}</Badge>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="name-history">
+                    {aliases.map((n) => (
+                      <span className="profile-alias" key={n.name}>
+                        <strong>{n.name}</strong>
+                        <small>{formatTime(n.lastSeen, locale)}</small>
+                      </span>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           )}
         </>
       )}

@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Button, Dialog, Menu } from '../apps/web/src/components/ui';
-import { TooltipButton } from '../apps/web/src/components/Tooltip';
+import { TooltipBadge, TooltipButton } from '../apps/web/src/components/Tooltip';
 
 afterEach(() => {
   cleanup();
@@ -11,6 +11,48 @@ afterEach(() => {
 });
 
 describe('button tooltips', () => {
+  it('uses a Badge trigger with the same rich panel and content for hover and click', async () => {
+    vi.useFakeTimers();
+    render(
+      <TooltipBadge
+        variant="info"
+        tooltip={
+          <section>
+            <h3>Match evidence</h3>
+            <p>Damage dealt: 1,471</p>
+          </section>
+        }
+      >
+        Damage Dealer
+      </TooltipBadge>,
+    );
+    const badge = screen.getByRole('button', { name: 'Damage Dealer' });
+    expect(badge.getAttribute('data-slot')).toBe('badge');
+    expect(badge.getAttribute('data-variant')).toBe('info');
+    expect(badge.classList.contains('group/button')).toBe(false);
+    fireEvent.pointerMove(badge, { pointerType: 'mouse' });
+    await act(async () => vi.advanceTimersByTime(400));
+    const hover = document.querySelector<HTMLElement>('[data-slot=tooltip-content]')!;
+    const content = hover.firstElementChild!.innerHTML;
+    const panelClasses = (element: HTMLElement) =>
+      element.className
+        .split(/\s+/)
+        .filter(
+          (name) => !name.startsWith('origin-') && !name.startsWith('data-[state=delayed-open]'),
+        )
+        .sort();
+    const hoverClasses = panelClasses(hover);
+    fireEvent.click(badge);
+    const pinned = document.querySelector<HTMLElement>('[data-slot=popover-content]')!;
+    expect(pinned.firstElementChild!.innerHTML).toBe(content);
+    expect(panelClasses(pinned)).toEqual(hoverClasses);
+    fireEvent.pointerLeave(badge);
+    await act(async () => vi.advanceTimersByTime(500));
+    expect(document.querySelector('[data-slot=popover-content]')).toBe(pinned);
+    fireEvent.click(badge);
+    expect(document.querySelector('[data-slot=popover-content]')).toBeNull();
+  });
+
   it('pins explanations through pointer movement and closes on a second click, outside press or Escape', async () => {
     const user = userEvent.setup();
     const { container } = render(
@@ -20,12 +62,12 @@ describe('button tooltips', () => {
     );
     const button = screen.getByRole('button', { name: 'Carry' });
     await user.click(button);
-    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    const tooltip = explanation();
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(container.contains(tooltip)).toBe(false);
     fireEvent.pointerLeave(button);
     fireEvent.pointerDown(tooltip);
-    expect(screen.getByRole('tooltip', { hidden: true })).toBe(tooltip);
+    expect(explanation()).toBe(tooltip);
     await user.click(button);
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     expect(button.getAttribute('aria-expanded')).toBe('false');
@@ -67,9 +109,10 @@ describe('button tooltips', () => {
     );
     const button = screen.getByRole('button', { name: 'Ocean palette' });
     expect(container.firstElementChild).toBe(button);
-    expect(button.className).toBe('palette-choice');
+    expect(button.classList.contains('palette-choice')).toBe(true);
+    expect(button.getAttribute('data-slot')).toBe('tooltip-trigger');
     await user.tab();
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toBe('Ocean palette');
+    expect(explanation().textContent).toBe('Ocean palette');
     await user.keyboard('{Enter}');
     expect(select).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
@@ -88,11 +131,11 @@ describe('button tooltips', () => {
       </>,
     );
     act(() => screen.getByRole('button', { name: 'Copy team' }).focus());
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toBe('Copy team');
-    fireEvent.pointerEnter(screen.getByRole('button', { name: 'Move up' }));
+    expect(explanation().textContent).toBe('Copy team');
+    fireEvent.pointerMove(screen.getByRole('button', { name: 'Move up' }));
     await act(async () => vi.advanceTimersByTime(400));
     expect(screen.getAllByRole('tooltip', { hidden: true })).toHaveLength(1);
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toBe('Move up');
+    expect(explanation().textContent).toBe('Move up');
   });
 
   it('keeps menu keyboard navigation working with a tooltip on the trigger', async () => {
@@ -104,7 +147,7 @@ describe('button tooltips', () => {
       </Menu>,
     );
     await user.tab();
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toBe('Match actions');
+    expect(explanation().textContent).toBe('Match actions');
     await user.keyboard('{Enter}');
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     expect(screen.getByRole('menu')).toBeTruthy();
@@ -128,7 +171,7 @@ describe('button tooltips', () => {
     expect(button.hasAttribute('title')).toBe(false);
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     await user.tab();
-    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    const tooltip = explanation();
     expect(tooltip.textContent).toBe('Check for updates');
     expect(button.getAttribute('aria-describedby')).toBe(`description ${tooltip.id}`);
     expect(container.contains(tooltip)).toBe(false);
@@ -139,7 +182,7 @@ describe('button tooltips', () => {
     expect(activate).not.toHaveBeenCalled();
     await user.tab();
     await user.tab({ shift: true });
-    expect(screen.getByRole('tooltip', { hidden: true })).toBeTruthy();
+    expect(explanation()).toBeTruthy();
     await user.keyboard('{Enter}');
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     expect(activate).toHaveBeenCalledTimes(1);
@@ -149,19 +192,20 @@ describe('button tooltips', () => {
     vi.useFakeTimers();
     render(<Button title="Update details">Update</Button>);
     const button = screen.getByRole('button');
-    fireEvent.pointerEnter(button);
+    fireEvent.pointerMove(button, { pointerType: 'mouse' });
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     fireEvent.pointerLeave(button);
     await act(async () => vi.advanceTimersByTime(500));
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
-    fireEvent.pointerEnter(button);
+    fireEvent.pointerMove(button, { pointerType: 'mouse' });
     await act(async () => vi.advanceTimersByTime(400));
-    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    const tooltip = explanation();
     fireEvent.pointerLeave(button);
-    fireEvent.pointerEnter(tooltip);
+    fireEvent.pointerMove(tooltip, { pointerType: 'mouse' });
     await act(async () => vi.advanceTimersByTime(200));
-    expect(screen.getByRole('tooltip', { hidden: true })).toBe(tooltip);
+    expect(explanation()).toBe(tooltip);
     fireEvent.pointerLeave(tooltip);
+    fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 1000, clientY: 1000 });
     await act(async () => vi.advanceTimersByTime(120));
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
   });
@@ -174,14 +218,12 @@ describe('button tooltips', () => {
       </Button>,
     );
     const button = screen.getByRole('button');
-    fireEvent.pointerEnter(button);
+    fireEvent.pointerMove(button, { pointerType: 'mouse' });
     await act(async () => vi.advanceTimersByTime(400));
-    expect(screen.getByRole('tooltip', { hidden: true }).textContent).toBe(
-      'Wait for the match to end',
-    );
+    expect(explanation().textContent).toBe('Wait for the match to end');
     fireEvent.scroll(document);
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
-    fireEvent.pointerEnter(button);
+    fireEvent.pointerMove(button, { pointerType: 'mouse' });
     unmount();
     await act(async () => vi.advanceTimersByTime(500));
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
@@ -197,7 +239,7 @@ describe('button tooltips', () => {
     );
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     await user.tab();
-    expect(screen.getByRole('tooltip', { hidden: true })).toBeTruthy();
+    expect(explanation()).toBeTruthy();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     expect(close).not.toHaveBeenCalled();
@@ -205,3 +247,10 @@ describe('button tooltips', () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 });
+
+function explanation() {
+  return (
+    document.querySelector<HTMLElement>('[data-slot="popover-content"]') ??
+    screen.getByRole('tooltip', { hidden: true })
+  );
+}

@@ -61,12 +61,18 @@ describe('UI backed by the complete recorded BATrace service', () => {
     );
     await screen.findByRole('heading', { name: 'Dam' });
     await waitFor(() => expect(document.querySelectorAll('.match-player-cell')).toHaveLength(10));
-    expect(document.querySelectorAll('.match-title-button').length).toBeGreaterThan(0);
-    expect(document.querySelectorAll('.match-score-label-button').length).toBeGreaterThan(0);
-    fireEvent.click(document.querySelector<HTMLButtonElement>('.match-title-button')!);
-    expect((await screen.findByRole('tooltip')).textContent).toContain(
-      t('title.condition.evidence'),
+    expect(
+      document.querySelectorAll('[data-award-source="title"] .match-award-button').length,
+    ).toBeGreaterThan(0);
+    expect(
+      document.querySelectorAll('[data-award-source="score"] .match-award-button').length,
+    ).toBeGreaterThan(0);
+    fireEvent.click(
+      document.querySelector<HTMLButtonElement>('[data-award-source="title"] .match-award-button')!,
     );
+    const details = await Promise.resolve(explanation());
+    expect(details.querySelector('.match-award-evidence')?.textContent).toMatch(/\d/);
+    expect(details.textContent).not.toContain(t('title.condition.evidence'));
     fireEvent.click(screen.getByRole('button', { name: t('refresh') }));
     await waitFor(() =>
       expect(completed).toContainEqual({
@@ -103,3 +109,10 @@ describe('UI backed by the complete recorded BATrace service', () => {
     expect(fetch).not.toHaveBeenCalled();
   }, 30000);
 });
+
+function explanation() {
+  return (
+    document.querySelector<HTMLElement>('[data-slot="popover-content"]') ??
+    screen.getByRole('tooltip', { hidden: true })
+  );
+}

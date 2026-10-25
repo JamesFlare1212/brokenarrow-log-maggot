@@ -3,6 +3,7 @@ import { object, number, text, team } from '../values';
 import { awardTitles, type TitleAward } from './engine';
 import type { RawTitleMatch, RawTitlePlayer } from './types';
 export { titleConditionDetails } from './conditions';
+export { MAX_TITLES } from './engine';
 
 /** Evaluate completed matches only; lobby and live statistics cannot establish absence. */
 export function matchTitles(match: Match, value?: unknown): Record<string, MatchTitle[]> {

@@ -3,6 +3,7 @@ import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Dialog, Button, Loading, Notice } from '../../components/ui';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 export function ReplayDialog({ id, title }: { id: string; title: string }) {
   const { api, closeModal, backModal } = useApp(),
     { t } = useI18n(),
@@ -63,22 +64,24 @@ export function ReplayDialog({ id, title }: { id: string; title: string }) {
           </div>
         )}
       </div>
-      <div className="actions" role="group" aria-label={t('speed')}>
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        value={String(speed)}
+        disabled={!request.data || request.pending}
+        aria-label={t('speed')}
+        onValueChange={(value) => {
+          if (!value) return;
+          setSpeed(Number(value));
+          if (video.current) video.current.playbackRate = Number(value);
+        }}
+      >
         {[1, 2, 3].map((value) => (
-          <Button
-            key={value}
-            variant={speed === value ? 'primary' : 'ghost'}
-            aria-pressed={speed === value}
-            disabled={!request.data || request.pending}
-            onClick={() => {
-              setSpeed(value);
-              if (video.current) video.current.playbackRate = value;
-            }}
-          >
+          <ToggleGroupItem key={value} value={String(value)}>
             {value}×
-          </Button>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
     </Dialog>
   );
 }

@@ -1,6 +1,8 @@
+import { Progress } from '@/components/ui/progress';
+
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
-import { Button } from '../../components/ui';
+import { Button, Notice } from '../../components/ui';
 import { UpdateButton } from './UpdateButton';
 
 export function UpdatePanel() {
@@ -31,14 +33,14 @@ export function UpdatePanel() {
           <p>{t('updateManualInstall')}</p>
         )}
         {update.status === 'downloading' && (
-          <progress
+          <Progress
             max={100}
             value={update.downloadPercent ?? 0}
             aria-label={t('updateProgress')}
           />
         )}
         {(update.error || update.notAppliedVersion) && (
-          <div className="settings-update-error" role="alert">
+          <Notice error>
             {update.error && (
               <p>
                 {t('updateFailed')} {update.error}
@@ -56,7 +58,7 @@ export function UpdatePanel() {
             >
               {t('updateReleasePage')}
             </Button>
-          </div>
+          </Notice>
         )}
       </div>
       <UpdateButton inline />
