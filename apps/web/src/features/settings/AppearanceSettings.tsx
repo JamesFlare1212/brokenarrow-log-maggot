@@ -1,11 +1,18 @@
-import { Moon, Sun } from 'lucide-react';
+import { Moon, RotateCcw, Sun } from 'lucide-react';
 import { COLOR_SCHEMES, GLASS_OPACITY, THEME_MODES, type PublicConfig } from '@ba/contracts';
 import { useI18n } from '../../hooks/useI18n';
 import { colorSchemeFor } from '../../hooks/useAppearance';
-import { Tooltip } from '../../components/Tooltip';
+import { Tooltip, TooltipButton } from '../../components/Tooltip';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Slider } from '@/components/ui/slider';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ThemePreviewCircle, previewColorsFor } from './ThemePreviewCircle';
@@ -21,6 +28,7 @@ export function AppearanceSettings({
   const { t } = useI18n();
   const lightTheme = colorSchemeFor(draft, 'light');
   const darkTheme = colorSchemeFor(draft, 'dark');
+  const resetOpacityLabel = t('glassOpacityReset', { opacity: GLASS_OPACITY.default });
   const pickPair = (color: (typeof COLOR_SCHEMES)[number]) =>
     change({ lightTheme: color, darkTheme: color });
   return (
@@ -82,35 +90,47 @@ export function AppearanceSettings({
           </CardHeader>
           <CardContent>
             <FieldGroup>
-              <Field>
-                <FieldLabel
-                  id="glass-opacity-label"
-                  htmlFor="glass-opacity"
-                  className="justify-between"
-                >
-                  {t('glassOpacity')}
-                  <span className="tabular-nums" aria-hidden="true">
+              <Field orientation="horizontal" className="appearance-opacity-field">
+                <FieldContent className="min-w-0">
+                  <div className="flex items-center gap-1">
+                    <FieldLabel id="glass-opacity-label" htmlFor="glass-opacity">
+                      {t('glassOpacity')}
+                    </FieldLabel>
+                    <TooltipButton
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={resetOpacityLabel}
+                      tooltip={resetOpacityLabel}
+                      disabled={draft.glassOpacity === GLASS_OPACITY.default}
+                      onClick={() => change({ glassOpacity: GLASS_OPACITY.default })}
+                    >
+                      <RotateCcw data-icon="inline-start" aria-hidden="true" />
+                    </TooltipButton>
+                  </div>
+                  <FieldDescription>{t('glassOpacityHint')}</FieldDescription>
+                </FieldContent>
+                <div className="appearance-opacity-control">
+                  <Badge
+                    variant="secondary"
+                    className="h-7 min-w-14 rounded-lg tabular-nums"
+                    aria-hidden="true"
+                  >
                     {draft.glassOpacity}%
-                  </span>
-                </FieldLabel>
-                <Slider
-                  id="glass-opacity"
-                  className="min-h-6"
-                  min={GLASS_OPACITY.min}
-                  max={GLASS_OPACITY.max}
-                  step={1}
-                  value={[draft.glassOpacity]}
-                  aria-labelledby="glass-opacity-label"
-                  aria-valuetext={`${draft.glassOpacity}%`}
-                  onValueChange={([value]) => {
-                    if (value !== undefined) change({ glassOpacity: value }, 180);
-                  }}
-                />
-                <div className="flex justify-between text-muted-foreground" aria-hidden="true">
-                  <span>{GLASS_OPACITY.min}%</span>
-                  <span>{GLASS_OPACITY.max}%</span>
+                  </Badge>
+                  <Slider
+                    id="glass-opacity"
+                    className="min-h-6"
+                    min={GLASS_OPACITY.min}
+                    max={GLASS_OPACITY.max}
+                    step={GLASS_OPACITY.step}
+                    value={[draft.glassOpacity]}
+                    aria-labelledby="glass-opacity-label"
+                    aria-valuetext={`${draft.glassOpacity}%`}
+                    onValueChange={([value]) => {
+                      if (value !== undefined) change({ glassOpacity: value }, 180);
+                    }}
+                  />
                 </div>
-                <FieldDescription>{t('glassOpacityHint')}</FieldDescription>
               </Field>
             </FieldGroup>
           </CardContent>

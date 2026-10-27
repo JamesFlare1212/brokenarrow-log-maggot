@@ -41,7 +41,7 @@ export const THEMES = ['dark', 'light', 'cyan', 'orange', 'violet', 'forest', 'o
 export const THEME_MODES = ['system', 'light', 'dark'] as const;
 // Keep legacy palette keys so existing installations retain their colors.
 export const COLOR_SCHEMES = ['dark', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
-export const GLASS_OPACITY = { min: 40, max: 100, default: 50 } as const;
+export const GLASS_OPACITY = { min: 40, max: 100, step: 5, default: 50 } as const;
 export function legacyThemeMode(theme: unknown): ThemeMode {
   if (theme === undefined) return 'system';
   return ['light', 'cyan', 'orange'].includes(String(theme)) ? 'light' : 'dark';

@@ -42,7 +42,10 @@ export function useAppearance(appearance: Appearance | undefined) {
     darkTheme = appearance?.darkTheme,
     glassOpacity = appearance?.glassOpacity ?? GLASS_OPACITY.default;
   useLayoutEffect(() => {
-    document.documentElement.style.setProperty('--glass-opacity', `${glassOpacity}%`);
+    const root = document.documentElement;
+    root.style.setProperty('--glass-opacity', `${glassOpacity}%`);
+    if (glassOpacity === GLASS_OPACITY.max) root.style.setProperty('--glass-blur', '0px');
+    else root.style.removeProperty('--glass-blur');
   }, [glassOpacity]);
   useLayoutEffect(() => {
     if (!theme || !themeMode) return;

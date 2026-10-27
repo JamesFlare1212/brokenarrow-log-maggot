@@ -52,9 +52,10 @@ export const messages: Record<string, readonly [string, string]> = {
   appearanceGlass: ['玻璃效果', 'Glass'],
   glassOpacity: ['Glass opacity', 'Glass opacity'],
   glassOpacityHint: [
-    '调整卡片背景的不透明度，数值越低越通透。默认 50%。',
-    'Adjust card background opacity. Lower values make cards more transparent. Default: 50%.',
+    '数值越高，卡片背景越不透明。',
+    'Higher values make card backgrounds more solid.',
   ],
+  glassOpacityReset: ['恢复默认透明度（{opacity}%）', 'Reset opacity to default ({opacity}%)'],
   appearanceThemeVariants: ['{theme}浅色与深色配色', '{theme} light and dark palettes'],
   appearanceUseMode: ['仅用于{mode}模式', 'Use for {mode} mode only'],
   clearSearch: ['清除搜索', 'Clear search'],
