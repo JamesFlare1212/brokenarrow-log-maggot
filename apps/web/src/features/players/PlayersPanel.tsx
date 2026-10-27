@@ -27,11 +27,11 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Item, ItemActions, ItemContent, ItemGroup } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
-import { ReportView, MaggotView, MaggotProgress } from './Reports';
+import { ReportView } from './Reports';
 import { PlayerActions } from './PlayerActions';
 
 export function PlayersPanel() {
-  const { api, state, maggot } = useApp(),
+  const { api, state } = useApp(),
     { t } = useI18n();
   const [query, setQuery] = useState('');
   const [completedQuery, setCompletedQuery] = useState('');
@@ -255,9 +255,6 @@ export function PlayersPanel() {
               </section>
             )
           )}
-          {selectedId && <MaggotProgress id={selectedId} />}
-          {maggot.error && selectedId === maggot.id && <Notice error>{maggot.error}</Notice>}
-          {maggot.data && selectedId === maggot.id && <MaggotView report={maggot.data} />}
         </div>
       </div>
     </section>

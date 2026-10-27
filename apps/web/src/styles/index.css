@@ -56,6 +56,13 @@
   color-scheme: light dark;
   --radius: 0.625rem;
   --glass-opacity: 50%;
+  --elo-increase: var(--success);
+  --elo-decrease: var(--destructive);
+}
+
+:root[data-elo-color-scheme='red-up'] {
+  --elo-increase: var(--destructive);
+  --elo-decrease: var(--success);
 }
 
 :root,
@@ -89,7 +96,7 @@
     color-mix(in srgb, var(--foreground) 10%, transparent),
     rgb(255 255 255 / 0.08)
   );
-  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  --glass-shadow: 0 1px 2px light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.16));
   --popover: light-dark(
     oklch(0.996 calc(var(--theme-chroma) * 0.2) var(--theme-hue)),
     oklch(0.265 calc(var(--theme-chroma) * 1.15) var(--theme-hue))
@@ -164,7 +171,6 @@
 .theme-palette[data-mode='dark'] {
   --glass-blur: 16px;
   --glass-saturation: 1.08;
-  --glass-shadow: inset 0 1px rgb(255 255 255 / 0.04), 0 24px 72px -20px rgb(0 0 0 / 0.9);
 }
 
 :root[data-theme='cyan'],
@@ -202,9 +208,11 @@
   --theme-primary-light: oklch(0.49 0.17 258);
   --theme-primary-dark: oklch(0.77 0.125 252);
 }
+:root[data-mode='light'],
 .theme-palette[data-mode='light'] {
   color-scheme: light;
 }
+:root[data-mode='dark'],
 .theme-palette[data-mode='dark'] {
   color-scheme: dark;
 }

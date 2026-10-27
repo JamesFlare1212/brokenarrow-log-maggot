@@ -24,7 +24,7 @@ function readWindowThemeColors(): WindowThemeColors | undefined {
 /** Used for both saved preferences and the settings draft, including live OS changes. */
 export type Appearance = Pick<
   PublicConfig,
-  'theme' | 'themeMode' | 'lightTheme' | 'darkTheme' | 'glassOpacity'
+  'theme' | 'themeMode' | 'lightTheme' | 'darkTheme' | 'glassOpacity' | 'eloColorScheme'
 >;
 export function colorSchemeFor(
   appearance: Pick<Appearance, 'theme' | 'lightTheme' | 'darkTheme'>,
@@ -40,7 +40,11 @@ export function useAppearance(appearance: Appearance | undefined) {
     themeMode = appearance?.themeMode,
     lightTheme = appearance?.lightTheme,
     darkTheme = appearance?.darkTheme,
+    eloColorScheme = appearance?.eloColorScheme ?? 'green-up',
     glassOpacity = appearance?.glassOpacity ?? GLASS_OPACITY.default;
+  useLayoutEffect(() => {
+    document.documentElement.dataset.eloColorScheme = eloColorScheme;
+  }, [eloColorScheme]);
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('--glass-opacity', `${glassOpacity}%`);

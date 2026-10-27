@@ -75,6 +75,7 @@ describe('browser development with repository fixtures', () => {
       themeMode: 'light',
       lightTheme: 'forest',
       darkTheme: 'violet',
+      eloColorScheme: 'red-up',
       sidebarCollapsed: true,
       hiddenPanels: ['players', 'decks'],
     });
@@ -86,6 +87,7 @@ describe('browser development with repository fixtures', () => {
           themeMode: 'light',
           lightTheme: 'forest',
           darkTheme: 'violet',
+          eloColorScheme: 'red-up',
           sidebarCollapsed: true,
           hiddenPanels: ['players', 'decks'],
         }),

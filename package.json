@@ -103,5 +103,15 @@
   },
   "dependencies": {
     "electron-updater": "6.8.11"
-  }
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "trustedDependencies": [
+    "electron",
+    "esbuild",
+    "rolldown",
+    "@swc/core"
+  ]
 }

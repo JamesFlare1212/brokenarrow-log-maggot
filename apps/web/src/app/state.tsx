@@ -12,12 +12,11 @@ import type {
   Player,
   PublicConfig,
   MiniInfo,
-  MaggotReport,
 } from '@ba/contracts';
 import { LocaleContext, translate } from '../hooks/useI18n';
 import { PANELS } from '@ba/contracts';
 import { errorMessage } from '@ba/shared';
-import { useRef } from 'react';
+import { useMaggotRequests } from '../hooks/useMaggotRequests';
 import { useAppearance } from '../hooks/useAppearance';
 import { useSettingsAutosave } from '../hooks/useSettingsAutosave';
 import { settingsTabFromHash, type SettingsTab } from '../features/settings/routes';
@@ -134,14 +133,8 @@ interface AppContextValue {
   backModal?: () => void;
   patchConfig: (patch: Partial<PublicConfig>) => Promise<void>;
   notify: (message: string, error?: boolean) => void;
-  maggot: {
-    busy: boolean;
-    requestId: string | null;
-    id: string | null;
-    data: MaggotReport | null;
-    error: string | null;
-  };
-  runMaggot: (id: string) => Promise<void>;
+  maggot: ReturnType<typeof useMaggotRequests>['maggot'];
+  runMaggot: ReturnType<typeof useMaggotRequests>['runMaggot'];
 }
 const Context = createContext<AppContextValue | null>(null);
 export function useApp(): AppContextValue {
@@ -162,14 +155,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     ),
     [modalStack, setModalStack] = useState<NonNullable<ModalRoute>[]>([]),
     [error, setError] = useState<string | null>(null);
-  const [maggot, setMaggot] = useState<AppContextValue['maggot']>({
-      busy: false,
-      requestId: null,
-      id: null,
-      data: null,
-      error: null,
-    }),
-    maggotRunning = useRef(false);
+  const { maggot, runMaggot } = useMaggotRequests(api);
   const settings = useSettingsAutosave(api, state?.config);
   const modal = modalStack.at(-1) ?? null;
   const openModal = (route: ModalRoute) =>
@@ -299,20 +285,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     },
     notify,
     maggot,
-    runMaggot: async (id) => {
-      if (maggotRunning.current) return;
-      maggotRunning.current = true;
-      const requestId = crypto.randomUUID();
-      setMaggot({ busy: true, requestId, id, data: null, error: null });
-      try {
-        const data = await api.invoke('players.maggot', { id, requestId });
-        setMaggot({ busy: false, requestId, id, data, error: null });
-      } catch (e) {
-        setMaggot({ busy: false, requestId, id, data: null, error: errorMessage(e) });
-      } finally {
-        maggotRunning.current = false;
-      }
-    },
+    runMaggot,
   };
   return (
     <Context.Provider value={value}>

@@ -30,6 +30,7 @@ import {
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, formatDuration, outcomeTone } from '@ba/shared';
+import { eloChangeClass } from '@/lib/elo';
 import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
@@ -60,7 +61,7 @@ export function MatchArchive() {
     [addError, setAddError] = useState<string | null>(null),
     [addDialog, setAddDialog] = useState(false),
     [scanning, setScanning] = useState(false),
-    [hideUnknown, setHideUnknown] = useState(false),
+    [hideUnknown, setHideUnknown] = useState(true),
     [view, setView] = useState<'grid' | 'list'>('list'),
     [page, setPage] = useState(1),
     [sorting, setSorting] = useState<SortingState>([{ id: 'time', desc: true }]),
@@ -163,13 +164,7 @@ export function MatchArchive() {
               match.eloAfter !== null && match.eloBefore !== null
                 ? match.eloAfter - match.eloBefore
                 : null;
-          return (
-            <span
-              className={delta === null ? undefined : delta >= 0 ? 'text-success' : 'text-danger'}
-            >
-              {formatDelta(delta)}
-            </span>
-          );
+          return <span className={eloChangeClass(delta)}>{formatDelta(delta)}</span>;
         },
       },
       {

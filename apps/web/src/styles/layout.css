@@ -105,8 +105,8 @@ button:not(:disabled),
 }
 @media (min-width: 768px) {
   .app-shell:has([data-slot='sidebar'][data-state='expanded']) [data-slot='sidebar-inset'] {
-    border-start-start-radius: 1.5rem;
-    border-end-start-radius: 1.5rem;
+    border-start-start-radius: 1.25rem;
+    border-end-start-radius: 1.25rem;
   }
 }
 .settings-main {
@@ -346,8 +346,7 @@ button:not(:disabled),
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 .team-grid,
-.deck-columns,
-.profile-columns {
+.deck-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--content-gap);
@@ -879,9 +878,38 @@ button:not(:disabled),
   min-width: 0;
   overflow: auto;
 }
+.report-match-table {
+  container: match-data / inline-size;
+}
+@container match-data (max-width: 60rem) {
+  .report-match-table [data-column='matchId'] {
+    display: none;
+  }
+}
+@container match-data (max-width: 52rem) {
+  .report-match-table [data-column='result'] {
+    display: none;
+  }
+}
+@container match-data (max-width: 44rem) {
+  .report-match-table [data-column='time'] {
+    display: none;
+  }
+}
+@container match-data (max-width: 36rem) {
+  .report-match-table [data-column='DMR'] {
+    display: none;
+  }
+}
 .elo-column {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+.elo-increase {
+  color: var(--elo-increase);
+}
+.elo-decrease {
+  color: var(--elo-decrease);
 }
 .text-success {
   color: var(--success);
@@ -1178,7 +1206,14 @@ button:not(:disabled),
   max-width: 80rem;
 }
 .profile-dialog {
-  max-width: 68rem;
+  max-width: 72rem;
+  height: min(52rem, calc(100svh - var(--window-controls-height) - 3rem));
+}
+.profile-dialog > .dialog-body {
+  gap: 1rem;
+}
+.profile-dialog .dialog-body > * {
+  flex-shrink: 0;
 }
 .recording-settings-dialog {
   width: calc(100% - 3rem);
@@ -1192,8 +1227,281 @@ button:not(:disabled),
 }
 .profile-toolbar {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.profile-heading,
+.profile-overview {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1rem;
+}
+.profile-heading {
+  gap: 0.375rem;
+}
+.profile-heading-title,
+.profile-meta,
+.profile-meta > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.profile-heading-title h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.profile-meta {
+  gap: 1rem;
+  font-size: 0.75rem;
+}
+.profile-meta dt,
+.profile-preference-section h4,
+.profile-unit-rank,
+.profile-time,
+.profile-encounter-summary dt {
+  color: var(--muted-foreground);
+}
+.profile-meta dd {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.profile-overview .stats {
+  gap: 0.75rem;
+}
+.profile-overview {
+  container: profile-overview / inline-size;
+}
+.profile-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 1fr);
+  align-items: stretch;
+  gap: 0.75rem;
+}
+.profile-analysis-grid > :only-child {
+  grid-column: 1 / -1;
+}
+.profile-analysis-grid > * {
+  min-width: 0;
+}
+.profile-preference-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 1rem;
+}
+.profile-preference-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.profile-preference-section:only-child {
+  grid-column: 1 / -1;
+}
+.profile-preference-section h4 {
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.profile-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.profile-unit-list {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  row-gap: 0.625rem;
+  column-gap: inherit;
+}
+.profile-unit-section {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) max-content;
+  align-content: start;
+  column-gap: 0.75rem;
+}
+.profile-unit-section > .profile-category-label {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  column-gap: inherit;
+}
+.profile-unit-section h4 {
+  grid-column: 1 / 3;
+}
+.profile-unit-section > p {
+  grid-column: 1 / -1;
+}
+.profile-unit-section > .profile-category-label > span {
+  text-align: right;
+  white-space: nowrap;
+}
+.profile-category-list > li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.profile-category-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8125rem;
+}
+.profile-unit-list > li {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  min-height: 1.875rem;
+  align-items: center;
+  column-gap: inherit;
+  font-size: 0.8125rem;
+}
+.profile-unit-list > li > :last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+.profile-unit-name,
+.profile-preference-section > p {
+  overflow-wrap: anywhere;
+}
+.profile-unit-rank {
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+.maggot-card-content,
+.maggot-loading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.maggot-progress-label,
+.maggot-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.maggot-progress-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.maggot-score {
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.maggot-summary-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+}
+.maggot-summary-metrics > div {
+  display: flex;
   justify-content: space-between;
   gap: 0.75rem;
+}
+.maggot-summary-metrics dt {
+  color: var(--muted-foreground);
+}
+.maggot-summary-metrics dd {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+@container profile-overview (max-width: 52rem) {
+  .profile-analysis-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@container profile-overview (max-width: 28rem) {
+  .profile-preference-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.profile-records {
+  min-width: 0;
+  gap: 1rem;
+}
+.profile-tab-scroll {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.125rem;
+  border-bottom: 1px solid var(--border);
+}
+.profile-tab-scroll > [data-slot='tabs-list'] {
+  height: 2.75rem;
+  gap: 1rem;
+}
+.profile-tab-count {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+.profile-records > [data-slot='tabs-content'][data-state='active'] {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.profile-table {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.profile-table table {
+  min-width: 32rem;
+}
+.profile-table th {
+  background: var(--muted);
+  font-size: 0.75rem;
+}
+.profile-table th,
+.profile-table td {
+  padding: 0.625rem 1rem;
+}
+.profile-table td:first-child [data-slot='button'] {
+  min-height: 1.5rem;
+  height: auto;
+  justify-content: flex-start;
+  padding: 0;
+  white-space: normal;
+  text-align: left;
+}
+.profile-table .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.profile-time {
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.profile-statistics-table table {
+  min-width: 0;
+}
+.profile-encounter-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 0.25rem 0 0.75rem;
+}
+.profile-encounter-summary dt {
+  font-size: 0.75rem;
+}
+.profile-encounter-summary dd {
+  margin-top: 0.25rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .match-team {
   display: flex;
@@ -1767,9 +2075,6 @@ button:not(:disabled),
   }
 }
 @media (max-width: 1099px) {
-  .profile-columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .report-embedded .stats[data-count='6'],
   .stats[data-count='5'] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1778,6 +2083,21 @@ button:not(:disabled),
 @media (max-width: 767px) {
   :root {
     --content-gap: 1rem;
+  }
+  .profile-dialog {
+    width: calc(100% - 1.5rem);
+  }
+  .profile-dialog > .dialog-body {
+    padding: 1rem;
+  }
+  .profile-toolbar > .actions {
+    gap: 0.375rem;
+  }
+  .profile-tab-scroll > [data-slot='tabs-list'] {
+    gap: 0.5rem;
+  }
+  .profile-encounter-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .recording-settings,
   .cache-category-grid {

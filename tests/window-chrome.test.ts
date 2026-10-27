@@ -10,6 +10,7 @@ const appearance: Appearance = {
   lightTheme: 'forest',
   darkTheme: 'ocean',
   glassOpacity: 50,
+  eloColorScheme: 'green-up',
 };
 const colors = { background: '#101820', foreground: '#f0f4f8' };
 

@@ -61,6 +61,7 @@ export const configSchema = z.object({
   themeMode: z.enum(THEME_MODES).default('system'),
   lightTheme: z.enum(COLOR_SCHEMES).optional(),
   darkTheme: z.enum(COLOR_SCHEMES).optional(),
+  eloColorScheme: z.enum(['green-up', 'red-up']).default('green-up'),
   glassOpacity: z
     .number()
     .int()

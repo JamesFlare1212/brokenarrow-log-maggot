@@ -12,12 +12,13 @@ import {
   Video,
 } from 'lucide-react';
 import type { Match } from '@ba/contracts';
-import { formatDuration, formatMetric, formatTime, outcomeTone } from '@ba/shared';
+import { formatDuration, formatMetric, formatTime } from '@ba/shared';
 import { cn } from '@/lib/utils';
+import { eloChangeClass } from '@/lib/elo';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Badge, Button, Card, Empty, Loading, Notice } from '../../components/ui';
+import { Button, Card, Empty, Loading, Notice } from '../../components/ui';
 import {
   Card as MetricCard,
   CardAction,
@@ -167,15 +168,14 @@ export function Dashboard() {
                         {t(match.mode)} · {formatTime(match.endedAt, locale)}
                       </ItemDescription>
                     </ItemContent>
-                    <Badge tone={outcomeTone(match.outcome)}>
-                      {match.restarted ? t('restarted') : t(match.outcome)}
-                    </Badge>
                     <span
                       className={cn(
                         'recent-elo',
-                        match.eloAfter !== null &&
-                          match.eloBefore !== null &&
-                          (match.eloAfter >= match.eloBefore ? 'text-success' : 'text-danger'),
+                        eloChangeClass(
+                          match.eloAfter !== null && match.eloBefore !== null
+                            ? match.eloAfter - match.eloBefore
+                            : null,
+                        ),
                       )}
                     >
                       {match.eloAfter !== null && match.eloBefore !== null

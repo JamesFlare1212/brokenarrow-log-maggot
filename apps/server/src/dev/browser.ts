@@ -41,6 +41,7 @@ const preferences = new Set([
   'themeMode',
   'lightTheme',
   'darkTheme',
+  'eloColorScheme',
   'sidebarCollapsed',
   'lang',
   'panelOrder',

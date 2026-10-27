@@ -27,6 +27,8 @@ import { useRequest } from '../../hooks/useRequest';
 import { Button, Dialog, Loading, Notice, Badge } from '../../components/ui';
 import { TooltipButton } from '../../components/Tooltip';
 import { MatchAwards } from './MatchAwards';
+import { eloChangeClass } from '@/lib/elo';
+import { cn } from '@/lib/utils';
 export function MatchDialog({ fid }: { fid: string }) {
   const { api, openModal, closeModal, backModal } = useApp(),
     { t, locale } = useI18n(),
@@ -39,6 +41,10 @@ export function MatchDialog({ fid }: { fid: string }) {
       .then((list) => setReplays(list.filter((r) => r.fid === fid)));
   }, [api, fid]);
   const match = request.data;
+  const eloDelta =
+    match && match.eloAfter !== null && match.eloBefore !== null
+      ? match.eloAfter - match.eloBefore
+      : null;
   const titles = useMemo(() => (match ? (match.titles ?? matchTitles(match)) : {}), [match]);
   const columns = [
     'player',
@@ -115,13 +121,7 @@ export function MatchDialog({ fid }: { fid: string }) {
               </div>
               <div>
                 <dt>{t('eloDelta')}</dt>
-                <dd>
-                  {formatDelta(
-                    match.eloAfter !== null && match.eloBefore !== null
-                      ? match.eloAfter - match.eloBefore
-                      : null,
-                  )}
-                </dd>
+                <dd className={eloChangeClass(eloDelta)}>{formatDelta(eloDelta)}</dd>
               </div>
               <div>
                 <dt>{t('account')}</dt>
@@ -195,7 +195,16 @@ export function MatchDialog({ fid }: { fid: string }) {
                             </TableCell>
                             <TableCell className="elo-column">
                               {formatMetric(p.newRating)}{' '}
-                              <small className="muted">
+                              <small
+                                className={cn(
+                                  'muted',
+                                  eloChangeClass(
+                                    p.newRating !== null && p.oldRating !== null
+                                      ? p.newRating - p.oldRating
+                                      : null,
+                                  ),
+                                )}
+                              >
                                 (
                                 {formatDelta(
                                   p.newRating !== null && p.oldRating !== null

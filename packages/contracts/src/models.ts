@@ -301,6 +301,7 @@ export interface PublicConfig {
   themeMode: ThemeMode;
   lightTheme?: ColorScheme;
   darkTheme?: ColorScheme;
+  eloColorScheme: 'green-up' | 'red-up';
   glassOpacity: number;
   sidebarCollapsed: boolean;
   lang: Locale;

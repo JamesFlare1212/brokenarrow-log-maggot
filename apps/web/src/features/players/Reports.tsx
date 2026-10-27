@@ -6,7 +6,6 @@ import {
   CardAction,
   CardContent,
 } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import {
   Accordion,
@@ -24,12 +23,14 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { BATRACE_ORIGIN } from '@ba/contracts';
-import type { MaggotReport, PlayerReport } from '@ba/contracts';
+import type { PlayerReport } from '@ba/contracts';
 import type { ReactNode } from 'react';
 import { formatMetric, formatDelta, formatTime } from '@ba/shared';
+import { eloChangeClass } from '@/lib/elo';
 import { Badge, Button, Notice, Stats } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 import { useApp } from '../../app/state';
+import { MaggotCard } from './MaggotCard';
 export function ReportCopyButton({ report }: { report: PlayerReport }) {
   const { t } = useI18n(),
     { notify } = useApp();
@@ -76,7 +77,7 @@ export function ReportView({
   embedded?: boolean;
 }) {
   const { t, locale } = useI18n(),
-    { api, openModal, notify, maggot, runMaggot } = useApp();
+    { api, openModal, notify } = useApp();
   const ReportContainer = embedded ? 'div' : ReportCard;
   const ReportContent = embedded ? 'div' : CardContent;
   return (
@@ -102,13 +103,6 @@ export function ReportView({
               onClick={() => openModal({ type: 'profile', id: report.id, name: report.name })}
             >
               {t('investigate')}
-            </Button>
-            <Button
-              disabled={maggot.busy}
-              variant="default"
-              onClick={() => void runMaggot(report.id)}
-            >
-              {t('maggot')}
             </Button>
             <ReportCopyButton report={report} />
           </CardAction>
@@ -164,6 +158,7 @@ export function ReportView({
             )}
           </div>
         )}
+        {!embedded && <MaggotCard id={report.id} />}
         {report.mapStats.length > 0 && (
           <ReportDetails embedded label={t('mapStatistics')}>
             <div className="report-tags">
@@ -177,61 +172,7 @@ export function ReportView({
         )}
         {!!report.recentMatches.length && (
           <ReportDetails embedded={embedded} label={t('matchStatistics')}>
-            <div className="table-wrap">
-              <Table>
-                <TableCaption className="sr-only">
-                  {t(embedded ? 'matchStatistics' : 'recent')}
-                </TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    {[
-                      'matchId',
-                      'result',
-                      'eloDelta',
-                      'K/D',
-                      'DMR',
-                      'destruction',
-                      'losses',
-                      'objectives',
-                      'time',
-                    ].map((k) => (
-                      <TableHead key={k} className={k === 'eloDelta' ? 'elo-column' : undefined}>
-                        {t(k)}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {report.recentMatches.map((m) => (
-                    <TableRow key={m.matchId}>
-                      <TableCell>
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => openModal({ type: 'match', fid: m.matchId })}
-                        >
-                          #{m.matchId}
-                        </Button>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          tone={m.won === true ? 'success' : m.won === false ? 'danger' : 'muted'}
-                        >
-                          {m.won === null ? t('unknown') : m.won ? t('win') : t('loss')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="elo-column">{formatDelta(m.eloDelta)}</TableCell>
-                      <TableCell>{formatMetric(m.kd)}</TableCell>
-                      <TableCell>{formatMetric(m.dmr)}</TableCell>
-                      <TableCell>{formatMetric(m.destruction, 0)}</TableCell>
-                      <TableCell>{formatMetric(m.losses, 0)}</TableCell>
-                      <TableCell>{formatMetric(m.objectives, 0)}</TableCell>
-                      <TableCell>{formatTime(m.endTime, locale)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <ReportMatchTable report={report} label={t(embedded ? 'matchStatistics' : 'recent')} />
           </ReportDetails>
         )}
         {!embedded && (
@@ -251,97 +192,66 @@ export function ReportView({
     </ReportContainer>
   );
 }
-export function MaggotView({ report }: { report: MaggotReport }) {
-  const { t } = useI18n(),
-    { openModal } = useApp();
-  const rankAverage = (key: 'killRank' | 'lossRank' | 'kdRank') => {
-    const values = report.rows.map((r) => r[key]).filter((v): v is number => v !== null);
-    return values.length ? formatMetric(values.reduce((s, n) => s + n, 0) / values.length, 1) : '—';
-  };
+export function ReportMatchTable({ report, label }: { report: PlayerReport; label?: string }) {
+  const { t, locale } = useI18n();
+  const { openModal } = useApp();
   return (
-    <div className="maggot-report">
-      <h3>
-        {t('maggot')} · #{report.id}
-      </h3>
-      {!report.complete && <Notice>{t('partialMaggot', { n: report.rows.length })}</Notice>}
-      <Stats
-        items={[
-          {
-            label: t('maggot'),
-            value: (
-              <span
-                className={
-                  report.index === null
-                    ? ''
-                    : report.index <= 3.5
-                      ? 'text-success'
-                      : report.index <= 7
-                        ? 'text-warning'
-                        : 'text-danger'
-                }
+    <div className="table-wrap report-match-table">
+      <Table>
+        <TableCaption className="sr-only">{label ?? t('matchStatistics')}</TableCaption>
+        <TableHeader>
+          <TableRow>
+            {[
+              'matchId',
+              'result',
+              'eloDelta',
+              'K/D',
+              'DMR',
+              'destruction',
+              'losses',
+              'objectives',
+              'time',
+            ].map((k) => (
+              <TableHead
+                key={k}
+                data-column={k}
+                className={k === 'eloDelta' ? 'elo-column' : undefined}
               >
-                {formatMetric(report.index, 1)}
-              </span>
-            ),
-          },
-          { label: t('averageRank'), value: formatMetric(report.averageRank) },
-          { label: t('trend'), value: t(report.trend) },
-          { label: t('calls'), value: report.calls },
-          { label: t('kills'), value: rankAverage('killRank') },
-          { label: t('losses'), value: rankAverage('lossRank') },
-          { label: 'K/D', value: rankAverage('kdRank') },
-        ]}
-      />
-      <div className="table-wrap">
-        <Table>
-          <TableCaption className="sr-only">{t('maggot')}</TableCaption>
-          <TableHeader>
-            <TableRow>
-              {['matchId', 'result', 'MVP', 'kills', 'losses', 'K/D', 'eloDelta'].map((k) => (
-                <TableHead key={k} className={k === 'eloDelta' ? 'elo-column' : undefined}>
-                  {t(k)}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {report.rows.map((r) => (
-              <TableRow key={r.matchId}>
-                <TableCell>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => openModal({ type: 'match', fid: r.matchId })}
-                  >
-                    #{r.matchId}
-                  </Button>
-                </TableCell>
-                <TableCell>{r.won === null ? t('unknown') : t(r.won ? 'win' : 'loss')}</TableCell>
-                <TableCell>{formatMetric(r.mvpRank, 1)}</TableCell>
-                <TableCell>{formatMetric(r.killRank, 1)}</TableCell>
-                <TableCell>{formatMetric(r.lossRank, 1)}</TableCell>
-                <TableCell>{formatMetric(r.kdRank, 1)}</TableCell>
-                <TableCell className="elo-column">{formatDelta(r.eloDelta)}</TableCell>
-              </TableRow>
+                {t(k)}
+              </TableHead>
             ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
-export function MaggotProgress({ id }: { id?: string } = {}) {
-  const { state, maggot } = useApp(),
-    { t } = useI18n();
-  if (!maggot.busy || (id && maggot.id !== id)) return null;
-  const progress =
-    state.maggotProgress?.requestId === maggot.requestId ? state.maggotProgress : null;
-  return (
-    <div className="progress" role="status">
-      <span>
-        {t('maggot')} · {progress?.done ?? 0}/12 · #{maggot.id}
-      </span>
-      <Progress max={12} value={progress?.done ?? 0} aria-label={t('maggot')} />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {report.recentMatches.map((m) => (
+            <TableRow key={m.matchId}>
+              <TableCell data-column="matchId">
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => openModal({ type: 'match', fid: m.matchId })}
+                >
+                  #{m.matchId}
+                </Button>
+              </TableCell>
+              <TableCell data-column="result">
+                <Badge tone={m.won === true ? 'success' : m.won === false ? 'danger' : 'muted'}>
+                  {m.won === null ? t('unknown') : m.won ? t('win') : t('loss')}
+                </Badge>
+              </TableCell>
+              <TableCell className={cn('elo-column', eloChangeClass(m.eloDelta))}>
+                {formatDelta(m.eloDelta)}
+              </TableCell>
+              <TableCell>{formatMetric(m.kd)}</TableCell>
+              <TableCell data-column="DMR">{formatMetric(m.dmr)}</TableCell>
+              <TableCell>{formatMetric(m.destruction, 0)}</TableCell>
+              <TableCell>{formatMetric(m.losses, 0)}</TableCell>
+              <TableCell>{formatMetric(m.objectives, 0)}</TableCell>
+              <TableCell data-column="time">{formatTime(m.endTime, locale)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

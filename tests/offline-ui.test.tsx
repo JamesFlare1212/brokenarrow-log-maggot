@@ -84,7 +84,7 @@ describe('UI backed by the complete recorded BATrace service', () => {
     expect(fetch).not.toHaveBeenCalled();
   }, 30000);
 
-  it('renders the recorded player report and recent games and refreshes both without network access', async () => {
+  it('automatically calculates the recorded player index and refreshes the profile offline', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected network'));
     const { data } = await loadRealData(source);
     const id = data.activeAccountId!;
@@ -94,18 +94,34 @@ describe('UI backed by the complete recorded BATrace service', () => {
         <ProfileDialog id={id} name={id} />
       </AppProvider>,
     );
-    const recent = await screen.findByRole('table', { name: t('recent') });
-    expect(within(recent).getAllByRole('row').length).toBeGreaterThan(1);
+    const matchData = await screen.findByRole('table', { name: t('matchStatistics') });
+    expect(within(matchData).getAllByRole('row')).toHaveLength(13);
+    expect(within(matchData).getAllByRole('columnheader')).toHaveLength(9);
+    expect(screen.queryByRole('tab', { name: new RegExp(t('recent')) })).toBeNull();
     expect(screen.getAllByText(t('latestKd'))).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: t('maggot') })).toBeNull();
+    await waitFor(
+      () => expect(completed.filter((call) => call.method === 'players.maggot')).toHaveLength(1),
+      { timeout: 10000 },
+    );
+    const maggot = screen.getByRole('region', { name: t('maggot') });
+    const index = maggot.querySelector('.maggot-score')?.textContent;
+    expect(index).toBeTruthy();
+    expect(index).not.toBe('—');
+    expect(within(maggot).getByText(translate('zh', 'maggotSample', { n: 12 }))).toBeTruthy();
+    expect(within(maggot).queryByRole('table')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: t('refresh') }));
     await waitFor(() => {
       expect(completed).toContainEqual({ method: 'players.profile', input: { id, force: true } });
       expect(completed).toContainEqual({ method: 'players.report', input: { id, force: true } });
     });
-    fireEvent.click(screen.getByRole('button', { name: t('maggot') }));
-    await waitFor(() => expect(calls.some((call) => call.method === 'players.maggot')).toBe(true));
-    const maggot = await screen.findByRole('table', { name: t('maggot') });
-    expect(within(maggot).getAllByRole('row')).toHaveLength(13);
+    await waitFor(
+      () => expect(completed.filter((call) => call.method === 'players.maggot')).toHaveLength(2),
+      { timeout: 10000 },
+    );
+    expect(calls.filter((call) => call.method === 'players.maggot')).toHaveLength(2);
+    expect(maggot.querySelector('.maggot-score')?.textContent).toBe(index);
+    expect(within(maggot).queryByRole('button', { name: '查看计算明细' })).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   }, 30000);
 });
