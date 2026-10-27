@@ -26,7 +26,7 @@ export function AppearanceSettings({
     <div className="appearance-settings">
       <section className="appearance-section" aria-labelledby="settings-mode-heading">
         <h3 className="appearance-section-title" id="settings-mode-heading">
-          {t('appearanceColorScheme')}
+          {t('appearanceThemes')}
         </h3>
         <FieldGroup>
           <Field>
@@ -73,7 +73,7 @@ export function AppearanceSettings({
       </section>
       <section className="appearance-section" aria-labelledby="appearance-themes-heading">
         <h3 className="appearance-section-title" id="appearance-themes-heading">
-          {t('appearanceThemes')}
+          {t('appearanceColorScheme')}
         </h3>
         <div className="appearance-theme-grid">
           {COLOR_SCHEMES.map((color) => {

@@ -274,8 +274,15 @@ export type AppEvent = (
   | { type: 'health'; health: ApiHealth }
   | { type: 'error'; message: string }
 ) & { revision: number };
+export const windowThemeColorsSchema = z
+  .object({
+    background: z.string().regex(/^#[\da-f]{6}$/i),
+    foreground: z.string().regex(/^#[\da-f]{6}$/i),
+  })
+  .strict();
+export type WindowThemeColors = z.infer<typeof windowThemeColorsSchema>;
 export interface Bridge {
-  setWindowTheme?(mode: 'light' | 'dark'): Promise<void>;
+  setWindowTheme?(mode: 'light' | 'dark', colors?: WindowThemeColors): Promise<void>;
   invoke<K extends RpcMethod>(method: K, input: RpcInputs[K]): Promise<RpcOutputs[K]>;
   subscribe(callback: (event: AppEvent) => void): () => void;
 }

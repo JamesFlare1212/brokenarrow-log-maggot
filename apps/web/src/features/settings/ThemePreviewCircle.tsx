@@ -2,11 +2,13 @@
  * Copyright (c) 2026 T3 Tools Inc. MIT; see THIRD_PARTY_NOTICES.txt.
  */
 import type { CSSProperties } from 'react';
-import type { PublicConfig } from '@ba/contracts';
+import type { ColorScheme, PublicConfig } from '@ba/contracts';
 import { cn } from '@/lib/utils';
 
 type ThemeAppearance = 'light' | 'dark';
 export type ThemeCardPreviewColors = Readonly<{
+  scheme: ColorScheme;
+  mode: ThemeAppearance;
   sidebar: string;
   canvas: string;
   surface: string;
@@ -14,28 +16,8 @@ export type ThemeCardPreviewColors = Readonly<{
   accent: string;
   messageSurface: string;
   messageAction: string;
+  border: string;
 }>;
-
-const STANDARD_THEME_PREVIEW_COLORS: Record<ThemeAppearance, ThemeCardPreviewColors> = {
-  light: {
-    sidebar: '#fafafa',
-    canvas: '#fcfcfc',
-    surface: '#ffffff',
-    accentSurface: '#f4f4f5',
-    accent: '#f4f4f5',
-    messageSurface: '#e4e4e7',
-    messageAction: '#4f46e5',
-  },
-  dark: {
-    sidebar: '#0f0f10',
-    canvas: '#0a0a0a',
-    surface: '#121212',
-    accentSurface: '#27272a',
-    accent: '#1c1c1f',
-    messageSurface: '#27272a',
-    messageAction: '#8b9cff',
-  },
-};
 
 const THEME_PREVIEW_RENDER_SPECS = {
   light: {
@@ -70,15 +52,17 @@ export function previewColorsFor(
   color: PublicConfig['lightTheme'],
   mode: ThemeAppearance,
 ): ThemeCardPreviewColors {
-  const standard = STANDARD_THEME_PREVIEW_COLORS[mode];
-  if (color === 'dark') return standard;
-  const accent = `var(--palette-${color}-${mode})`;
   return {
-    ...standard,
-    canvas: `color-mix(in oklab, ${accent} 4%, ${standard.canvas})`,
-    accentSurface: `color-mix(in oklab, ${accent} 12%, ${standard.surface})`,
-    accent,
-    messageAction: accent,
+    scheme: color ?? 'dark',
+    mode,
+    sidebar: 'var(--sidebar)',
+    canvas: 'var(--background)',
+    surface: 'var(--card)',
+    accentSurface: 'var(--sidebar-accent)',
+    accent: 'var(--primary)',
+    messageSurface: 'var(--secondary)',
+    messageAction: 'var(--primary)',
+    border: 'var(--border)',
   };
 }
 
@@ -118,9 +102,11 @@ export function ThemePreviewCircle({
     <span
       aria-hidden
       className={cn(
-        'relative block size-14 shrink-0 overflow-hidden rounded-full border-2 border-background',
+        'theme-palette relative block size-14 shrink-0 overflow-hidden rounded-full border-2 border-background',
         className,
       )}
+      data-theme={colors.scheme}
+      data-mode={colors.mode}
       style={{ boxShadow: themePreviewEdgeShadow(mode) }}
     >
       <span

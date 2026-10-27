@@ -3,7 +3,7 @@ import type { AppEvent, Bridge, RpcMethod, RpcInputs, RpcOutputs } from '@ba/con
 const bridge: Bridge = {
   setWindowTheme:
     process.platform === 'win32'
-      ? (mode) => ipcRenderer.invoke('ba:window:theme', mode)
+      ? (mode, colors) => ipcRenderer.invoke('ba:window:theme', mode, colors)
       : undefined,
   invoke: <K extends RpcMethod>(method: K, input: RpcInputs[K]) =>
     ipcRenderer.invoke('ba:rpc', method, input) as Promise<RpcOutputs[K]>,

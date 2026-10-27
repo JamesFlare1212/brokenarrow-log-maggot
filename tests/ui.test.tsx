@@ -1012,8 +1012,15 @@ describe('settings pages and automatic saving', () => {
     const native = nativeFixture(initial);
     const page = await openSettings(native);
     expect(
-      within(page.getByRole('radiogroup', { name: '配色模式' })).getAllByRole('radio'),
+      within(page.getByRole('radiogroup', { name: '主题' })).getAllByRole('radio'),
     ).toHaveLength(3);
+    expect(page.getByRole('heading', { name: '主题', level: 3 })).toBeTruthy();
+    expect(page.getByRole('heading', { name: '配色模式', level: 3 })).toBeTruthy();
+    expect(
+      within(page.getByRole('region', { name: '配色模式' })).getByRole('button', {
+        name: '森林 · 浅色',
+      }),
+    ).toBeTruthy();
     expect(page.getAllByRole('radio')).toHaveLength(3);
     fireEvent.click(page.getByRole('button', { name: '森林 · 浅色' }));
     expect(document.documentElement.dataset.mode).toBe('dark');

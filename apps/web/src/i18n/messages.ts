@@ -48,7 +48,7 @@ export const messages: Record<string, readonly [string, string]> = {
   recognizedAccounts: ['已识别的账号', 'Recognized accounts'],
   accountMatches: ['{count} 场对局', '{count} matches'],
   appearanceColorScheme: ['配色模式', 'Color scheme'],
-  appearanceThemes: ['主题', 'Themes'],
+  appearanceThemes: ['主题', 'Theme'],
   appearanceThemeVariants: ['{theme}浅色与深色配色', '{theme} light and dark palettes'],
   appearanceUseMode: ['仅用于{mode}模式', 'Use for {mode} mode only'],
   clearSearch: ['清除搜索', 'Clear search'],

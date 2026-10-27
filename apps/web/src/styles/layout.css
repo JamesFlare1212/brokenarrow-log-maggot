@@ -1339,7 +1339,7 @@ button:not(:disabled),
   align-items: center;
 }
 .appearance-settings {
-  --appearance-selection: oklch(0.623 0.214 259.815);
+  --appearance-selection: var(--ring);
   display: flex;
   flex-direction: column;
   gap: var(--content-gap);

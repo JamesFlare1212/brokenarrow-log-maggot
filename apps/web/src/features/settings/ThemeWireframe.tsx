@@ -9,10 +9,12 @@ function ThemeWireframePane({
   colors: ThemeCardPreviewColors;
   clip?: 'left' | 'right' | undefined;
 }) {
-  const line = 'rgb(127 127 127 / 0.25)';
+  const line = colors.border;
   return (
     <span
-      className="absolute inset-0"
+      className="theme-palette absolute inset-0"
+      data-theme={colors.scheme}
+      data-mode={colors.mode}
       style={
         clip === undefined
           ? undefined

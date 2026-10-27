@@ -13,7 +13,7 @@ import electronUpdater from 'electron-updater';
 import { join, resolve } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { Application, type Platform } from '@ba/server';
-import { rpcSchemas, type RpcMethod } from '@ba/contracts';
+import { rpcSchemas, windowThemeColorsSchema, type RpcMethod } from '@ba/contracts';
 import { errorMessage } from '@ba/shared';
 import { RecordingController } from './recordings/controller';
 import { ReplayProtocol } from './recordings/protocol';
@@ -42,7 +42,7 @@ process.on('uncaughtExceptionMonitor', (error) => service?.reportError('main', e
 const smoke = process.env.BA_SMOKE === '1';
 const offline = process.env.BA_OFFLINE === '1';
 const allowedDevUrl = process.env.BA_RENDERER_URL || '';
-// Match the renderer's --background and --foreground tokens for native caption buttons.
+// Fallback colors until the renderer supplies the active palette.
 const windowColors = {
   light: { color: '#ffffff', symbolColor: '#262626' },
   dark: { color: '#0a0a0a', symbolColor: '#fafafa' },
@@ -229,7 +229,8 @@ async function start(): Promise<void> {
       `new Promise((resolve,reject)=>{let attempts=0;const timer=setInterval(()=>{if(document.querySelector('[data-ready="true"]')){clearInterval(timer);resolve({title:document.title,buttons:document.querySelectorAll('button').length,hasBridge:typeof window.assistant?.invoke==='function'});}else if(++attempts>100){clearInterval(timer);reject(new Error(document.body.innerText||'Renderer did not initialize'));}},100);})`,
     );
     if (process.platform === 'win32') {
-      result.windowChrome = await window.webContents.executeJavaScript(`(async () => {
+      const { backgroundColor, ...windowChrome } = await window.webContents
+        .executeJavaScript(`(async () => {
         const toolbar = document.querySelector('.topbar');
         const workspace = document.querySelector('.workspace');
         const actions = document.querySelector('.topbar-actions');
@@ -240,10 +241,22 @@ async function start(): Promise<void> {
         const toolbarStyle = getComputedStyle(toolbar);
         const separatorWidth = parseFloat(toolbarStyle.borderBottomWidth);
         const theme = document.documentElement.dataset.mode;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 1;
+        const context = canvas.getContext('2d');
+        const toHex = (color) => {
+          context.fillStyle = color;
+          context.fillRect(0, 0, 1, 1);
+          return '#' + Array.from(context.getImageData(0, 0, 1, 1).data)
+            .slice(0, 3).map(channel => channel.toString(16).padStart(2, '0')).join('');
+        };
+        const style = getComputedStyle(document.body);
+        const colors = { background: toHex(style.backgroundColor), foreground: toHex(style.color) };
         await window.assistant.setWindowTheme('light');
         await window.assistant.setWindowTheme('dark');
-        await window.assistant.setWindowTheme(theme);
+        await window.assistant.setWindowTheme(theme, colors);
         return {
+          backgroundColor: colors.background,
           overlay: overlay?.visible === true,
           integrated: toolbar?.getBoundingClientRect().top === 0,
           separatorVisible: separatorWidth > 0 &&
@@ -257,6 +270,10 @@ async function start(): Promise<void> {
             Math.abs(bounds?.bottom - innerHeight) < 1,
         };
       })()`);
+      result.windowChrome = {
+        ...windowChrome,
+        paletteSynced: window.getBackgroundColor().toLowerCase() === backgroundColor,
+      };
       if (!result.windowChrome.flush)
         result.windowGeometry = await window.webContents.executeJavaScript(`(() => ({
           bounds: document.querySelector('.workspace').getBoundingClientRect().toJSON(),
@@ -278,11 +295,15 @@ ipcMain.handle('ba:rpc', async (event, method: unknown, input: unknown) => {
   if (!service) throw new Error('Application not ready');
   return service.invoke(method as RpcMethod, input);
 });
-ipcMain.handle('ba:window:theme', (event, mode: unknown) => {
+ipcMain.handle('ba:window:theme', (event, mode: unknown, input: unknown) => {
   if (!window || event.sender !== window.webContents) throw new Error('Untrusted IPC sender');
   if (mode !== 'light' && mode !== 'dark') throw new Error('Invalid window theme');
-  if (process.platform === 'win32') window.setTitleBarOverlay(windowColors[mode]);
-  window.setBackgroundColor(windowColors[mode].color);
+  const colors = input === undefined ? undefined : windowThemeColorsSchema.parse(input);
+  const palette = colors
+    ? { color: colors.background, symbolColor: colors.foreground }
+    : windowColors[mode];
+  if (process.platform === 'win32') window.setTitleBarOverlay(palette);
+  window.setBackgroundColor(palette.color);
 });
 ipcMain.handle('ba:recording:config', (event) => recordings?.config(event.sender.id));
 ipcMain.handle('ba:recording:started', (event, id: string, audio: boolean) =>
