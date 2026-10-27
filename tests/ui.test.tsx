@@ -2812,6 +2812,46 @@ describe('user interaction regressions', () => {
     expect(within(archive).getByText('4')).toBeTruthy();
   });
 
+  it('keeps the initial empty room height after showing a taller previous-match roster', async () => {
+    const bootstrap = structuredClone(fixtureBootstrap);
+    bootstrap.session.phase = 'idle';
+    bootstrap.session.current = null;
+    bootstrap.session.lobbyPlayers = [];
+    const previous = matchFixture();
+    const native = nativeFixture(bootstrap, {
+      'matches.list': () => [previous],
+      'matches.detail': () => previous,
+      'session.query': ({ requestId }) => ({
+        requestId,
+        queried: 0,
+        skipped: previous.players.length,
+        cancelled: false,
+      }),
+    });
+    const rect = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.classList.contains('session-layout')) {
+        return new DOMRect(0, 0, 900, this.querySelector('.team-grid') ? 650 : 489);
+      }
+      return rect.call(this);
+    });
+    render(<SessionPanel />, { wrapper: wrapper(native.api) });
+    const toggle = await screen.findByRole('button', { name: '上一局' });
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    const layout = document.querySelector<HTMLElement>('.session-layout')!;
+    expect(layout.style.minHeight).toBe('');
+    fireEvent.click(toggle);
+    await screen.findByRole('button', { name: '返回当前局' });
+    expect(layout.querySelectorAll('.player-card')).toHaveLength(previous.players.length);
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(toggle);
+    await screen.findByText('等待游戏日志');
+    expect(layout.querySelector('.team-grid')).toBeNull();
+    expect(layout.style.minHeight).toBe('');
+  });
+
   it('safely disables an empty lobby and releases refresh after a fulfilled zero-row query', async () => {
     const bootstrap = structuredClone(fixtureBootstrap);
     bootstrap.session.phase = 'lobby';
