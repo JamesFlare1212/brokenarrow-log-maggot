@@ -118,6 +118,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const actions = (
     <>
       <Button
+        size="sm"
         className="button-borderless"
         disabled={!previous || pending}
         onClick={previousView}
@@ -128,6 +129,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
       </Button>
       <Button
         variant="default"
+        size="sm"
         disabled={pending || !players.length}
         aria-busy={pending}
         onClick={() => void query(view)}

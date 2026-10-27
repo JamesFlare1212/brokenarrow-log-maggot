@@ -167,10 +167,7 @@ export function Dialog({
         }}
       >
         <DialogContent
-          className={cn(
-            'app-dialog flex max-h-[calc(100svh-3rem)] flex-col gap-0 overflow-hidden p-0',
-            className,
-          )}
+          className={cn('app-dialog flex flex-col gap-0 overflow-hidden p-0', className)}
           showCloseButton={false}
           aria-describedby={undefined}
           onEscapeKeyDown={(event) => {
@@ -210,9 +207,9 @@ export function Dialog({
             });
           }}
         >
-          <DialogHeader className="flex-row items-center gap-3 p-5">
+          <DialogHeader className="flex-row items-center gap-2 px-4 py-2">
             {onBack && (
-              <Button variant="ghost" size="icon" aria-label={t('dialogBack')} onClick={onBack}>
+              <Button variant="ghost" size="icon-sm" aria-label={t('dialogBack')} onClick={onBack}>
                 <ArrowLeft />
               </Button>
             )}
@@ -223,7 +220,7 @@ export function Dialog({
               <DialogClose asChild>
                 <PrimitiveButton
                   variant="ghost"
-                  size="icon"
+                  size="icon-sm"
                   className="ml-auto"
                   aria-label={t('close')}
                 >
