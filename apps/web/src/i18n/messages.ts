@@ -4,6 +4,8 @@ export const messages: Record<string, readonly [string, string]> = {
   encounterTimeUnknown: ['未记录时间', 'Time not recorded'],
   healthEndpointNotChecked: ['未检查', 'Not checked'],
   replayView: ['录像视图', 'Replay view'],
+  archiveView: ['对局档案视图', 'Match archive view'],
+  archiveRosterUnavailable: ['暂无玩家数据', 'Player data unavailable'],
   gridView: ['网格视图', 'Grid view'],
   listView: ['列表视图', 'List view'],
   testReplay: ['测试录像', 'Test recording'],
