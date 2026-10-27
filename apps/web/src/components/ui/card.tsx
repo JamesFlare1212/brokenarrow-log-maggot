@@ -13,9 +13,8 @@ function Card({
       data-size={size}
       data-variant={variant}
       className={cn(
-        'group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
-        variant === 'appearance' &&
-          'bg-card/60 ring-border/70 transition-colors hover:bg-accent/10',
+        'group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-(--glass-surface) bg-linear-to-br from-(--glass-sheen) to-transparent py-(--card-spacing) text-sm text-card-foreground shadow-[inset_0_1px_0_var(--glass-highlight),0_8px_24px_-16px_rgb(0_0_0_/_0.22)] ring-1 ring-(--glass-border) backdrop-blur-[16px] backdrop-saturate-125 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
+        variant === 'appearance' && 'ring-border/70 transition-colors hover:ring-foreground/20',
         className,
       )}
       {...props}

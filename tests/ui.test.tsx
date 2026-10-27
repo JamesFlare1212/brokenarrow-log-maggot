@@ -981,6 +981,41 @@ describe('settings pages and automatic saving', () => {
     ).toBe(localPlayer.name);
   });
 
+  it('previews glass opacity within its bounds and saves it before leaving settings', async () => {
+    const native = nativeFixture(bootstrapForApp());
+    const page = await openSettings(native);
+    const slider = page.getByRole('slider', { name: 'Glass opacity' });
+    const opacity = () => document.documentElement.style.getPropertyValue('--glass-opacity');
+    expect(slider.getAttribute('aria-valuemin')).toBe('40');
+    expect(slider.getAttribute('aria-valuemax')).toBe('100');
+    expect(slider.getAttribute('aria-valuenow')).toBe('50');
+    expect(slider.getAttribute('aria-valuetext')).toBe('50%');
+    expect(opacity()).toBe('50%');
+    fireEvent.keyDown(slider, { key: 'End' });
+    fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    expect(slider.getAttribute('aria-valuenow')).toBe('100');
+    expect(opacity()).toBe('100%');
+    fireEvent.keyDown(slider, { key: 'Home' });
+    fireEvent.keyDown(slider, { key: 'ArrowLeft' });
+    expect(slider.getAttribute('aria-valuenow')).toBe('40');
+    expect(opacity()).toBe('40%');
+    fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    expect(opacity()).toBe('41%');
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => expect(screen.queryByRole('main', { name: '设置' })).toBeNull());
+    expect(native.backend.config.glassOpacity).toBe(41);
+    expect(opacity()).toBe('41%');
+    fireEvent.click(screen.getByRole('button', { name: '设置' }));
+    const reopened = within(await screen.findByRole('main', { name: '设置' }));
+    expect(
+      reopened.getByRole('slider', { name: 'Glass opacity' }).getAttribute('aria-valuetext'),
+    ).toBe('41%');
+    fireEvent.click(reopened.getByRole('radio', { name: '浅色' }));
+    expect(opacity()).toBe('41%');
+    fireEvent.click(reopened.getByRole('radio', { name: '深色' }));
+    expect(opacity()).toBe('41%');
+  });
+
   it('autosaves separate light and dark palettes and restores them when switching modes and reopening', async () => {
     const initial = bootstrapForApp();
     initial.config.themeMode = 'dark';

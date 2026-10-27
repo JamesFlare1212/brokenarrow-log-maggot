@@ -118,6 +118,20 @@ button:not(:disabled),
   scroll-padding-block: 1.5rem;
   overscroll-behavior: contain;
 }
+.workspace-scroll,
+.settings-content {
+  background-image:
+    radial-gradient(
+      ellipse at 12% 0%,
+      color-mix(in oklab, var(--primary) 7%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 95% 75%,
+      color-mix(in oklab, var(--primary) 4%, transparent),
+      transparent 55%
+    );
+}
 .workspace-scroll-results {
   display: flex;
   flex-direction: column;

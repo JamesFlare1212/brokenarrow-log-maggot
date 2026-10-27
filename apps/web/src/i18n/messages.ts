@@ -49,6 +49,12 @@ export const messages: Record<string, readonly [string, string]> = {
   accountMatches: ['{count} 场对局', '{count} matches'],
   appearanceColorScheme: ['配色模式', 'Color scheme'],
   appearanceThemes: ['主题', 'Theme'],
+  appearanceGlass: ['玻璃效果', 'Glass'],
+  glassOpacity: ['Glass opacity', 'Glass opacity'],
+  glassOpacityHint: [
+    '调整卡片背景的不透明度，数值越低越通透。默认 50%。',
+    'Adjust card background opacity. Lower values make cards more transparent. Default: 50%.',
+  ],
   appearanceThemeVariants: ['{theme}浅色与深色配色', '{theme} light and dark palettes'],
   appearanceUseMode: ['仅用于{mode}模式', 'Use for {mode} mode only'],
   clearSearch: ['清除搜索', 'Clear search'],

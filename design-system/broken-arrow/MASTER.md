@@ -6,6 +6,8 @@ The desktop app and browser preview share one React interface. This document rec
 
 Use a calm graphite workspace, subtle surface separation and restrained borders. Graphite uses neutral gray accents in both light and dark appearances. Green communicates successful or healthy states; it is not the graphite selection color. Other palettes use their own accent colors.
 
+Shared shadcn Card surfaces use frosted glass: theme-colored translucent backgrounds, 16px backdrop blur, subtle reflections, fine borders and soft shadows. Workspace and Settings content use restrained theme-colored background lighting. Settings → Appearance exposes Glass opacity from 40% to 100%, defaulting to 50% for new and existing installations. Changes preview immediately and save automatically; opacity affects card backgrounds while text and controls stay fully opaque.
+
 The settings reference is the T3 Code layout supplied for this project: a category sidebar, a dedicated content area, three appearance-mode previews and separate palette pairs. Keep the application's match data and workflows central to the design.
 
 ## Brand identity
@@ -61,7 +63,7 @@ Settings opens as a full page, not a modal. The initial category is Appearance. 
 | Category                   | Route                  | Content                                                                             |
 | -------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
 | 常规 / General             | `#settings/general`    | Interface language, About, version, update action, project links and import notices |
-| 外观 / Appearance          | `#settings/appearance` | Theme mode and palette pairs                                                        |
+| 外观 / Appearance          | `#settings/appearance` | Theme mode, glass opacity and palette pairs                                         |
 | 游戏连接 / Game connection | `#settings/connection` | Log and deck folders, log detection, API health                                     |
 | 自动化 / Automation        | `#settings/automation` | Automatic queries, input monitoring, ban polling, match sync, account linking       |
 | 导航 / Navigation          | `#settings/navigation` | Sidebar page order                                                                  |

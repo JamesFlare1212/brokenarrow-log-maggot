@@ -42,6 +42,9 @@ describe('configuration patches', () => {
     { themeMode: 'system' },
     { themeMode: 'light', theme: 'forest' },
     { lightTheme: 'forest', darkTheme: 'violet', sidebarCollapsed: true },
+    { glassOpacity: 40 },
+    { glassOpacity: 50 },
+    { glassOpacity: 100 },
     { collapsedPanels: [] },
     { hiddenPanels: ['players', 'decks'] },
     { hiddenPanels: [] },
@@ -69,6 +72,10 @@ describe('configuration patches', () => {
       { themeMode: 'forest' },
       { lightTheme: 'light' },
       { darkTheme: 'invalid' },
+      { glassOpacity: 39 },
+      { glassOpacity: 101 },
+      { glassOpacity: 50.5 },
+      { glassOpacity: '50' },
       { logDir: null },
       { replayFps: 10 },
       { replayQuality: 480 },
@@ -93,6 +100,7 @@ describe('configuration patches', () => {
     expect(configSchema.parse({}).analyticsEnabled).toBe(false);
     expect(configSchema.parse({}).analyticsChoiceSaved).toBe(false);
     expect(configSchema.parse({}).themeMode).toBe('system');
+    expect(configSchema.parse({}).glassOpacity).toBe(50);
     expect(configSchema.parse({}).hiddenPanels).toEqual([]);
     expect(configSchema.parse({ replayAudio: 'default' }).replayMicrophone).toBe(true);
     expect(configSchema.parse({ replayMicrophone: false }).replayMicrophone).toBe(false);
@@ -106,6 +114,7 @@ describe('configuration patches', () => {
       db = new Database(file);
       expect(db.config().inputHookEnabled).toBe(true);
       expect(db.config().themeMode).toBe('system');
+      expect(db.config().glassOpacity).toBe(50);
       expect(db.updateConfig({ lang: 'en' }).themeMode).toBe('system');
       const initial = db.updateConfig({
         inputHookEnabled: false,
@@ -117,6 +126,7 @@ describe('configuration patches', () => {
         themeMode: 'system',
         lightTheme: 'forest',
         darkTheme: 'violet',
+        glassOpacity: 67,
         sidebarCollapsed: true,
         hiddenPanels: ['players', 'decks'],
         lang: 'zh',

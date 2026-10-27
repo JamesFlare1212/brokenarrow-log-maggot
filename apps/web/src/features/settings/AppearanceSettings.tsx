@@ -1,11 +1,12 @@
 import { Moon, Sun } from 'lucide-react';
-import { COLOR_SCHEMES, THEME_MODES, type PublicConfig } from '@ba/contracts';
+import { COLOR_SCHEMES, GLASS_OPACITY, THEME_MODES, type PublicConfig } from '@ba/contracts';
 import { useI18n } from '../../hooks/useI18n';
 import { colorSchemeFor } from '../../hooks/useAppearance';
 import { Tooltip } from '../../components/Tooltip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldGroup } from '@/components/ui/field';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Slider } from '@/components/ui/slider';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ThemePreviewCircle, previewColorsFor } from './ThemePreviewCircle';
 import { ThemeWireframe } from './ThemeWireframe';
@@ -15,7 +16,7 @@ export function AppearanceSettings({
   change,
 }: {
   draft: PublicConfig;
-  change: (patch: Partial<PublicConfig>) => void;
+  change: (patch: Partial<PublicConfig>, delay?: number) => void;
 }) {
   const { t } = useI18n();
   const lightTheme = colorSchemeFor(draft, 'light');
@@ -70,6 +71,50 @@ export function AppearanceSettings({
             </ToggleGroup>
           </Field>
         </FieldGroup>
+      </section>
+      <section className="appearance-section" aria-labelledby="appearance-glass-heading">
+        <h3 className="appearance-section-title" id="appearance-glass-heading">
+          {t('appearanceGlass')}
+        </h3>
+        <Card>
+          <CardHeader className="sr-only">
+            <CardTitle>{t('glassOpacity')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <Field>
+                <FieldLabel
+                  id="glass-opacity-label"
+                  htmlFor="glass-opacity"
+                  className="justify-between"
+                >
+                  {t('glassOpacity')}
+                  <span className="tabular-nums" aria-hidden="true">
+                    {draft.glassOpacity}%
+                  </span>
+                </FieldLabel>
+                <Slider
+                  id="glass-opacity"
+                  className="min-h-6"
+                  min={GLASS_OPACITY.min}
+                  max={GLASS_OPACITY.max}
+                  step={1}
+                  value={[draft.glassOpacity]}
+                  aria-labelledby="glass-opacity-label"
+                  aria-valuetext={`${draft.glassOpacity}%`}
+                  onValueChange={([value]) => {
+                    if (value !== undefined) change({ glassOpacity: value }, 180);
+                  }}
+                />
+                <div className="flex justify-between text-muted-foreground" aria-hidden="true">
+                  <span>{GLASS_OPACITY.min}%</span>
+                  <span>{GLASS_OPACITY.max}%</span>
+                </div>
+                <FieldDescription>{t('glassOpacityHint')}</FieldDescription>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
       </section>
       <section className="appearance-section" aria-labelledby="appearance-themes-heading">
         <h3 className="appearance-section-title" id="appearance-themes-heading">

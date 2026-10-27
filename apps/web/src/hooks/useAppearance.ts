@@ -1,5 +1,5 @@
 import { useLayoutEffect } from 'react';
-import type { PublicConfig, WindowThemeColors } from '@ba/contracts';
+import { GLASS_OPACITY, type PublicConfig, type WindowThemeColors } from '@ba/contracts';
 
 function readWindowThemeColors(): WindowThemeColors | undefined {
   const canvas = document.createElement('canvas');
@@ -22,8 +22,14 @@ function readWindowThemeColors(): WindowThemeColors | undefined {
 }
 
 /** Used for both saved preferences and the settings draft, including live OS changes. */
-export type Appearance = Pick<PublicConfig, 'theme' | 'themeMode' | 'lightTheme' | 'darkTheme'>;
-export function colorSchemeFor(appearance: Appearance, mode: 'light' | 'dark') {
+export type Appearance = Pick<
+  PublicConfig,
+  'theme' | 'themeMode' | 'lightTheme' | 'darkTheme' | 'glassOpacity'
+>;
+export function colorSchemeFor(
+  appearance: Pick<Appearance, 'theme' | 'lightTheme' | 'darkTheme'>,
+  mode: 'light' | 'dark',
+) {
   return (
     appearance[mode === 'light' ? 'lightTheme' : 'darkTheme'] ??
     (appearance.theme === 'light' ? 'dark' : appearance.theme)
@@ -33,14 +39,18 @@ export function useAppearance(appearance: Appearance | undefined) {
   const theme = appearance?.theme,
     themeMode = appearance?.themeMode,
     lightTheme = appearance?.lightTheme,
-    darkTheme = appearance?.darkTheme;
+    darkTheme = appearance?.darkTheme,
+    glassOpacity = appearance?.glassOpacity ?? GLASS_OPACITY.default;
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty('--glass-opacity', `${glassOpacity}%`);
+  }, [glassOpacity]);
   useLayoutEffect(() => {
     if (!theme || !themeMode) return;
     const root = document.documentElement;
     const media = window.matchMedia?.('(prefers-color-scheme: dark)');
     const apply = () => {
       const mode = themeMode === 'system' ? (media?.matches ? 'dark' : 'light') : themeMode;
-      root.dataset.theme = colorSchemeFor({ theme, themeMode, lightTheme, darkTheme }, mode);
+      root.dataset.theme = colorSchemeFor({ theme, lightTheme, darkTheme }, mode);
       root.dataset.mode = mode;
       root.classList.toggle('dark', mode === 'dark');
       root.style.colorScheme = mode;

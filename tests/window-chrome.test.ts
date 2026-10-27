@@ -9,6 +9,7 @@ const appearance: Appearance = {
   themeMode: 'dark',
   lightTheme: 'forest',
   darkTheme: 'ocean',
+  glassOpacity: 50,
 };
 const colors = { background: '#101820', foreground: '#f0f4f8' };
 
@@ -47,6 +48,10 @@ describe('native window appearance', () => {
 
     expect(setWindowTheme).toHaveBeenLastCalledWith('dark', colors);
     expect(document.documentElement.dataset.windowControlsOverlay).toBe('true');
+    expect(document.documentElement.style.getPropertyValue('--glass-opacity')).toBe('50%');
+    rerender({ ...appearance, glassOpacity: 80 });
+    expect(document.documentElement.style.getPropertyValue('--glass-opacity')).toBe('80%');
+    expect(setWindowTheme).toHaveBeenCalledTimes(1);
     rerender({ ...appearance, darkTheme: 'violet' });
     expect(setWindowTheme).toHaveBeenCalledTimes(2);
     expect(setWindowTheme).toHaveBeenLastCalledWith('dark', colors);

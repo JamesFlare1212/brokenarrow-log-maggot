@@ -55,6 +55,7 @@
 :root {
   color-scheme: light dark;
   --radius: 0.625rem;
+  --glass-opacity: 50%;
 }
 
 :root,
@@ -81,6 +82,13 @@
     oklch(0.225 calc(var(--theme-chroma) * 1.1) var(--theme-hue))
   );
   --card-foreground: var(--foreground);
+  --glass-surface: color-mix(in oklab, var(--card) var(--glass-opacity), transparent);
+  --glass-border: light-dark(
+    color-mix(in oklab, var(--foreground) 10%, transparent),
+    color-mix(in oklab, var(--foreground) 14%, transparent)
+  );
+  --glass-highlight: light-dark(rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.08));
+  --glass-sheen: light-dark(rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.035));
   --popover: light-dark(
     oklch(0.996 calc(var(--theme-chroma) * 0.2) var(--theme-hue)),
     oklch(0.265 calc(var(--theme-chroma) * 1.15) var(--theme-hue))
