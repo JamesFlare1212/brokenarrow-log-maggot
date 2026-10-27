@@ -9,6 +9,8 @@ body {
 }
 :root {
   --content-gap: 1.5rem;
+  --toolbar-height: 3rem;
+  --window-controls-height: 0px;
   --motion-fast: 140ms;
   --motion-normal: 220ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -145,20 +147,23 @@ button:not(:disabled),
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  min-height: 4rem;
-  padding: 0.75rem 1.5rem;
+  min-height: calc(var(--toolbar-height) + 1px);
+  padding: 0.5rem 1.5rem;
   border-bottom: 1px solid var(--border);
+}
+:root[data-window-controls-overlay='true'] {
+  --window-controls-height: env(titlebar-area-height, var(--toolbar-height));
 }
 :root[data-window-controls-overlay='true'] .page-toolbar {
   /* Keep the separator below the native caption overlay, which paints above the renderer. */
-  height: calc(env(titlebar-area-height, 64px) + 1px);
-  min-height: calc(env(titlebar-area-height, 64px) + 1px);
+  height: calc(var(--window-controls-height) + 1px);
+  min-height: calc(var(--window-controls-height) + 1px);
   padding-right: calc(100vw - env(titlebar-area-width, 100vw) + 1.5rem);
   -webkit-app-region: drag;
   user-select: none;
 }
 :root[data-window-controls-overlay='true'] [data-slot='sidebar-header'] {
-  min-height: env(titlebar-area-height, 64px);
+  min-height: calc(var(--window-controls-height) + 1px);
   -webkit-app-region: drag;
   user-select: none;
 }
@@ -166,9 +171,12 @@ button:not(:disabled),
   -webkit-app-region: no-drag;
 }
 @media (display-mode: fullscreen) {
+  :root[data-window-controls-overlay='true'] {
+    --window-controls-height: 0px;
+  }
   :root[data-window-controls-overlay='true'] .page-toolbar {
-    height: 64px;
-    min-height: 64px;
+    height: calc(var(--toolbar-height) + 1px);
+    min-height: calc(var(--toolbar-height) + 1px);
     padding-right: 1.5rem;
   }
 }
@@ -1150,6 +1158,12 @@ button:not(:disabled),
   min-width: 0;
 }
 
+[data-slot='dialog-content'],
+[data-slot='alert-dialog-content'] {
+  /* Native caption buttons paint above every renderer layer, including modal portals. */
+  top: calc(50% + var(--window-controls-height) / 2);
+  max-height: calc(100svh - var(--window-controls-height) - 3rem);
+}
 .app-dialog > [data-slot='dialog-header'] {
   flex-shrink: 0;
 }
@@ -1828,9 +1842,6 @@ button:not(:disabled),
     width: calc(100% - 1.5rem);
   }
   .dialog-body {
-    padding: 1rem;
-  }
-  .app-dialog > [data-slot='dialog-header'] {
     padding: 1rem;
   }
 }

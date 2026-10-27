@@ -185,7 +185,11 @@ async function start(): Promise<void> {
     ...(process.platform === 'win32'
       ? {
           titleBarStyle: 'hidden' as const,
-          titleBarOverlay: { ...windowColors[windowMode], height: 64 },
+          titleBarOverlay: {
+            color: '#00000000',
+            symbolColor: windowColors[windowMode].symbolColor,
+            height: 48,
+          },
         }
       : {}),
     backgroundColor: windowColors[windowMode].color,
@@ -226,6 +230,28 @@ async function start(): Promise<void> {
       `new Promise((resolve,reject)=>{let attempts=0;const timer=setInterval(()=>{if(document.querySelector('[data-ready="true"]')){clearInterval(timer);resolve({title:document.title,buttons:document.querySelectorAll('button').length,hasBridge:typeof window.assistant?.invoke==='function'});}else if(++attempts>100){clearInterval(timer);reject(new Error(document.body.innerText||'Renderer did not initialize'));}},100);})`,
     );
     if (process.platform === 'win32') {
+      await window.webContents.executeJavaScript(`(async () => {
+        const waitFor = async (find) => {
+          const deadline = Date.now() + 10000;
+          while (Date.now() < deadline) {
+            const element = find();
+            if (element) return element;
+            await new Promise(resolve => setTimeout(resolve, 25));
+          }
+          throw new Error('Window chrome smoke dialog did not initialize');
+        };
+        document.querySelector('.app-dialog .dialog-footer button')?.click();
+        await waitFor(() => !document.querySelector('.app-dialog'));
+        document.querySelector('.nav-item[aria-label="对局录像"], .nav-item[aria-label="Recordings"]').click();
+        const settings = await waitFor(() => Array.from(document.querySelectorAll('button'))
+          .find(button => ['录像设置', 'Recording settings'].includes(button.textContent.trim())));
+        settings.click();
+        const dialog = await waitFor(() => document.querySelector('.recording-settings-dialog'));
+        // Exercise the shared dialog layout with content as wide and tall as match details.
+        dialog.style.width = 'calc(100% - 3rem)';
+        dialog.style.maxWidth = 'none';
+        dialog.style.height = '100svh';
+      })()`);
       const inspectChrome = `(async () => {
         const toolbar = document.querySelector('.topbar');
         const workspace = document.querySelector('.workspace');
@@ -255,11 +281,23 @@ async function start(): Promise<void> {
         const actionsBounds = actions.getBoundingClientRect();
         const toolbarStyle = getComputedStyle(toolbar);
         const separatorWidth = parseFloat(toolbarStyle.borderBottomWidth);
+        const dialog = document.querySelector('.recording-settings-dialog');
+        const dialogBounds = dialog.getBoundingClientRect();
+        const backdrop = document.querySelector('[data-slot="dialog-overlay"]');
+        const backdropBounds = backdrop.getBoundingClientRect();
+        const headerTarget = document.elementFromPoint(
+          toolbarBounds.left + 8, toolbarBounds.top + toolbarBounds.height / 2);
+        const close = dialog.querySelector('[data-slot="dialog-close"]');
+        const closeBounds = close.getBoundingClientRect();
+        const closeTarget = document.elementFromPoint(
+          closeBounds.x + closeBounds.width / 2, closeBounds.y + closeBounds.height / 2);
         return {
           backgroundColor: colors.background,
           geometry: {
             bounds: bounds.toJSON(), toolbar: toolbarBounds.toJSON(),
             actions: actionsBounds.toJSON(), titlebar: area?.toJSON(),
+            dialog: dialogBounds.toJSON(), close: closeBounds.toJSON(),
+            backdrop: backdropBounds.toJSON(),
             paddingRight: toolbarStyle.paddingRight,
             viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
           },
@@ -271,6 +309,16 @@ async function start(): Promise<void> {
           interactive: getComputedStyle(actions).webkitAppRegion === 'no-drag',
           controlsReserved: area?.width > 0 &&
             actionsBounds.right < area.right,
+          compact: area?.height <= 48 && toolbarBounds.height <= 50,
+          dialogBelowControls: dialogBounds.top >= area?.bottom &&
+            dialogBounds.bottom <= innerHeight,
+          backdropCoversHeader: Math.abs(backdropBounds.top) < 1 &&
+            Math.abs(backdropBounds.left) < 1 &&
+            Math.abs(backdropBounds.right - innerWidth) < 1 &&
+            Math.abs(backdropBounds.bottom - innerHeight) < 1 &&
+            getComputedStyle(backdrop).backdropFilter !== 'none' && backdrop.contains(headerTarget),
+          dialogCloseAccessible: closeBounds.top >= area?.bottom &&
+            closeBounds.bottom <= dialogBounds.bottom && close.contains(closeTarget),
           // Native viewport dimensions round to integers at fractional display scales.
           flush: Math.abs(bounds?.top) < 1 && Math.abs(bounds?.right - innerWidth) < 1 &&
             Math.abs(bounds?.bottom - innerHeight) < 1,
@@ -316,7 +364,8 @@ ipcMain.handle('ba:window:theme', (event, mode: unknown, input: unknown) => {
   const palette = colors
     ? { color: colors.background, symbolColor: colors.foreground }
     : windowColors[mode];
-  if (process.platform === 'win32') window.setTitleBarOverlay(palette);
+  if (process.platform === 'win32')
+    window.setTitleBarOverlay({ color: '#00000000', symbolColor: palette.symbolColor });
   window.setBackgroundColor(palette.color);
 });
 ipcMain.handle('ba:recording:config', (event) => recordings?.config(event.sender.id));

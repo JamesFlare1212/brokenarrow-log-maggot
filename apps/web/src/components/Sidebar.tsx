@@ -41,8 +41,8 @@ export function SidebarHeader({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const { isMobile, setOpenMobile } = useSidebar();
   return (
-    <PrimitiveHeader className="min-h-16 justify-center">
-      <div className="flex min-h-12 items-center gap-2">
+    <PrimitiveHeader className="min-h-[calc(var(--toolbar-height)+1px)] justify-center py-3">
+      <div className="flex min-h-0 items-center gap-2">
         <div className="min-w-0 flex-1">{children}</div>
         {isMobile && (
           <TooltipButton
@@ -95,7 +95,7 @@ export function SidebarHeading({
   return (
     <div
       className={cn(
-        'flex min-w-0 items-center gap-3 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
+        'flex min-w-0 items-center gap-3 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
         className,
       )}
     >
@@ -117,8 +117,8 @@ export function SidebarNavigation({
 }: ComponentPropsWithoutRef<'nav'> & { as?: 'nav' | 'div'; heading?: string }) {
   return (
     <SidebarContent className="group-data-[collapsible=icon]:overflow-auto">
-      <Element {...props} className={cn('py-2', className)}>
-        <SidebarGroup>
+      <Element {...props} className={cn('pb-2', className)}>
+        <SidebarGroup className="pt-0">
           {heading && <SidebarGroupLabel>{heading}</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu className="gap-1 group-data-[collapsible=icon]:items-center">

@@ -64,6 +64,7 @@ export function MatchDialog({ fid }: { fid: string }) {
     >
       <div className="actions match-dialog-actions">
         <Button
+          size="sm"
           disabled={request.pending}
           aria-busy={request.pending}
           onClick={() =>
@@ -74,6 +75,7 @@ export function MatchDialog({ fid }: { fid: string }) {
           {t('refresh')}
         </Button>
         <Button
+          size="sm"
           onClick={() =>
             void api.invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${fid}` })
           }
@@ -83,6 +85,7 @@ export function MatchDialog({ fid }: { fid: string }) {
         {replays.map((r) => (
           <Button
             key={r.id}
+            size="sm"
             onClick={() => openModal({ type: 'replay', id: r.id, title: r.uploaderName || r.map })}
           >
             {t('play')} · {r.uploaderName || teamLabel(r.teamId)}
