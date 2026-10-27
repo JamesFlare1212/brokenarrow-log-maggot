@@ -1,4 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, net, Notification, protocol } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  nativeTheme,
+  net,
+  Notification,
+  protocol,
+} from 'electron';
 import { existsSync } from 'node:fs';
 import electronUpdater from 'electron-updater';
 import { join, resolve } from 'node:path';
@@ -33,6 +42,11 @@ process.on('uncaughtExceptionMonitor', (error) => service?.reportError('main', e
 const smoke = process.env.BA_SMOKE === '1';
 const offline = process.env.BA_OFFLINE === '1';
 const allowedDevUrl = process.env.BA_RENDERER_URL || '';
+// Match the renderer's --background and --foreground tokens for native caption buttons.
+const windowColors = {
+  light: { color: '#ffffff', symbolColor: '#262626' },
+  dark: { color: '#0a0a0a', symbolColor: '#fafafa' },
+};
 function canInstallUpdate(): boolean {
   const match = service?.parser.snapshot().current;
   return (
@@ -157,15 +171,24 @@ async function start(): Promise<void> {
   );
   await service.start();
   if (smoke && offline) await service.invoke('matches.scan', null);
+  const themeMode = service.db.config().themeMode;
+  const windowMode =
+    themeMode === 'system' ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') : themeMode;
   window = new BrowserWindow({
     width: 1280,
     height: 850,
     minWidth: 900,
     minHeight: 600,
-    show: !smoke,
+    show: false,
     title: '断箭蛐工具',
     autoHideMenuBar: true,
-    backgroundColor: '#111827',
+    ...(process.platform === 'win32'
+      ? {
+          titleBarStyle: 'hidden' as const,
+          titleBarOverlay: { ...windowColors[windowMode], height: 64 },
+        }
+      : {}),
+    backgroundColor: windowColors[windowMode].color,
     icon: join(root, 'build/icon.png'),
     webPreferences: {
       preload: join(__dirname, 'preload.cjs'),
@@ -173,6 +196,9 @@ async function start(): Promise<void> {
       nodeIntegration: false,
       sandbox: true,
     },
+  });
+  window.once('ready-to-show', () => {
+    if (!smoke) window?.show();
   });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event) => event.preventDefault());
@@ -202,6 +228,41 @@ async function start(): Promise<void> {
     const result = await window.webContents.executeJavaScript(
       `new Promise((resolve,reject)=>{let attempts=0;const timer=setInterval(()=>{if(document.querySelector('[data-ready="true"]')){clearInterval(timer);resolve({title:document.title,buttons:document.querySelectorAll('button').length,hasBridge:typeof window.assistant?.invoke==='function'});}else if(++attempts>100){clearInterval(timer);reject(new Error(document.body.innerText||'Renderer did not initialize'));}},100);})`,
     );
+    if (process.platform === 'win32') {
+      result.windowChrome = await window.webContents.executeJavaScript(`(async () => {
+        const toolbar = document.querySelector('.topbar');
+        const workspace = document.querySelector('.workspace');
+        const actions = document.querySelector('.topbar-actions');
+        const overlay = navigator.windowControlsOverlay;
+        const area = overlay?.getTitlebarAreaRect();
+        const bounds = workspace?.getBoundingClientRect();
+        const toolbarBounds = toolbar.getBoundingClientRect();
+        const toolbarStyle = getComputedStyle(toolbar);
+        const separatorWidth = parseFloat(toolbarStyle.borderBottomWidth);
+        const theme = document.documentElement.dataset.mode;
+        await window.assistant.setWindowTheme('light');
+        await window.assistant.setWindowTheme('dark');
+        await window.assistant.setWindowTheme(theme);
+        return {
+          overlay: overlay?.visible === true,
+          integrated: toolbar?.getBoundingClientRect().top === 0,
+          separatorVisible: separatorWidth > 0 &&
+            toolbarBounds.bottom - separatorWidth >= area?.bottom,
+          draggable: getComputedStyle(toolbar).webkitAppRegion === 'drag',
+          interactive: getComputedStyle(actions).webkitAppRegion === 'no-drag',
+          controlsReserved: area?.width > 0 &&
+            actions.getBoundingClientRect().right < area.right,
+          // Native viewport dimensions round to integers at fractional display scales.
+          flush: Math.abs(bounds?.top) < 1 && Math.abs(bounds?.right - innerWidth) < 1 &&
+            Math.abs(bounds?.bottom - innerHeight) < 1,
+        };
+      })()`);
+      if (!result.windowChrome.flush)
+        result.windowGeometry = await window.webContents.executeJavaScript(`(() => ({
+          bounds: document.querySelector('.workspace').getBoundingClientRect().toJSON(),
+          viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
+        }))()`);
+    }
     if (offline)
       result.matches = await window.webContents.executeJavaScript(
         "window.assistant.invoke('matches.list', {}).then(matches => matches.length)",
@@ -216,6 +277,12 @@ ipcMain.handle('ba:rpc', async (event, method: unknown, input: unknown) => {
     throw new Error('Unknown RPC method');
   if (!service) throw new Error('Application not ready');
   return service.invoke(method as RpcMethod, input);
+});
+ipcMain.handle('ba:window:theme', (event, mode: unknown) => {
+  if (!window || event.sender !== window.webContents) throw new Error('Untrusted IPC sender');
+  if (mode !== 'light' && mode !== 'dark') throw new Error('Invalid window theme');
+  if (process.platform === 'win32') window.setTitleBarOverlay(windowColors[mode]);
+  window.setBackgroundColor(windowColors[mode].color);
 });
 ipcMain.handle('ba:recording:config', (event) => recordings?.config(event.sender.id));
 ipcMain.handle('ba:recording:started', (event, id: string, audio: boolean) =>

@@ -93,6 +93,20 @@ button:not(:disabled),
 .workspace {
   container: workspace / inline-size;
 }
+.app-shell [data-slot='sidebar-inset'] {
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.app-shell [data-slot='sidebar-container'] {
+  padding-block: 0;
+}
+@media (min-width: 768px) {
+  .app-shell:has([data-slot='sidebar'][data-state='expanded']) [data-slot='sidebar-inset'] {
+    border-start-start-radius: 1.5rem;
+    border-end-start-radius: 1.5rem;
+  }
+}
 .settings-main {
   container: settings / inline-size;
 }
@@ -135,6 +149,29 @@ button:not(:disabled),
   padding: 0.75rem 1.5rem;
   border-bottom: 1px solid var(--border);
 }
+:root[data-window-controls-overlay='true'] .page-toolbar {
+  /* Keep the separator below the native caption overlay, which paints above the renderer. */
+  height: calc(env(titlebar-area-height, 64px) + 1px);
+  min-height: calc(env(titlebar-area-height, 64px) + 1px);
+  padding-right: calc(100vw - env(titlebar-area-width, 100vw) + 1.5rem);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+:root[data-window-controls-overlay='true'] [data-slot='sidebar-header'] {
+  min-height: env(titlebar-area-height, 64px);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+:root[data-window-controls-overlay='true'] .topbar-actions {
+  -webkit-app-region: no-drag;
+}
+@media (display-mode: fullscreen) {
+  :root[data-window-controls-overlay='true'] .page-toolbar {
+    height: 64px;
+    min-height: 64px;
+    padding-right: 1.5rem;
+  }
+}
 .topbar-location,
 .topbar-actions,
 .topbar-health,
@@ -150,6 +187,20 @@ button:not(:disabled),
 }
 .topbar-location {
   min-width: 0;
+}
+.topbar-location [data-slot='breadcrumb-list'] {
+  flex-wrap: nowrap;
+}
+.topbar-location [data-slot='breadcrumb-item']:last-child {
+  min-width: 0;
+}
+.topbar-location [data-slot='breadcrumb-page'] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar-actions {
+  flex-shrink: 0;
 }
 .actions,
 .section-heading {

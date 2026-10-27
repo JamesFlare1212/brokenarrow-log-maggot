@@ -24,6 +24,8 @@ export function useAppearance(appearance: Appearance | undefined) {
       root.dataset.mode = mode;
       root.classList.toggle('dark', mode === 'dark');
       root.style.colorScheme = mode;
+      root.dataset.windowControlsOverlay = String(Boolean(window.assistant?.setWindowTheme));
+      void window.assistant?.setWindowTheme?.(mode).catch(() => {});
     };
     apply();
     if (themeMode === 'system') media?.addEventListener('change', apply);

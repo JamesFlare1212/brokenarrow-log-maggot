@@ -265,6 +265,7 @@ export type AppEvent = (
   | { type: 'error'; message: string }
 ) & { revision: number };
 export interface Bridge {
+  setWindowTheme?(mode: 'light' | 'dark'): Promise<void>;
   invoke<K extends RpcMethod>(method: K, input: RpcInputs[K]): Promise<RpcOutputs[K]>;
   subscribe(callback: (event: AppEvent) => void): () => void;
 }
