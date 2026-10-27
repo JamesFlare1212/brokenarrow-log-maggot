@@ -301,6 +301,7 @@ export interface PublicConfig {
   themeMode: ThemeMode;
   lightTheme?: ColorScheme;
   darkTheme?: ColorScheme;
+  glassOpacity: number;
   sidebarCollapsed: boolean;
   lang: Locale;
   panelOrder: Panel[];

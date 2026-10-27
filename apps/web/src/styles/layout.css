@@ -1373,6 +1373,24 @@ button:not(:disabled),
   white-space: normal;
   text-align: center;
 }
+.appearance-opacity-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 20rem);
+  align-items: center;
+  gap: 1.5rem;
+}
+.appearance-opacity-control {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.875rem;
+}
+@container appearance (max-width: 36rem) {
+  .appearance-opacity-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+}
 .appearance-theme-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

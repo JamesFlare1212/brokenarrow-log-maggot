@@ -6,6 +6,10 @@ The desktop app and browser preview share one React interface. This document rec
 
 Use a calm graphite workspace, subtle surface separation and restrained borders. Graphite uses neutral gray accents in both light and dark appearances. Green communicates successful or healthy states; it is not the graphite selection color. Other palettes use their own accent colors.
 
+Shared shadcn Card surfaces adapt the edge and backdrop parameters from [T3 Code's dialog-glass styles](https://github.com/pingdotgg/t3code/blob/36d4d711b79c73eb33131944f73ea4a8c6156484/apps/web/src/index.css#L426-L438) to the existing uniform theme-colored card fill. Dark mode uses a 1px border at 8% white, a 1px top inset highlight at 4% white, 16px backdrop blur, 1.08 saturation and a `0 24px 72px -20px` outer shadow at 90% black. Light mode uses a border at 10% foreground, 12px blur, 1.14 saturation and [T3 Code's composer shadow](https://github.com/pingdotgg/t3code/blob/36d4d711b79c73eb33131944f73ea4a8c6156484/apps/web/src/index.css#L194-L197): `0 1px 2px` at 5% black, keeping persistent cards close to the page surface. Card interiors remain uniform, with no gradients or broad sheen overlays. Workspace and Settings retain the original flat theme background, including the black background in dark mode; glass styling must not add page-wide gradients or lighting.
+
+Settings → Appearance exposes Glass opacity from 40% to 100% in 5% slider steps, defaulting to 50% for new and existing installations. Its settings row places the label, reset-to-default action and description on the left, with a percentage badge and slider on the right; narrow layouts stack the controls below the description. Existing saved integer values remain valid. Changes preview immediately and save automatically; opacity affects card backgrounds while text and controls stay fully opaque. At 100% opacity, backdrop blur is disabled; lowering opacity restores the active theme's blur.
+
 The settings reference is the T3 Code layout supplied for this project: a category sidebar, a dedicated content area, three appearance-mode previews and separate palette pairs. Keep the application's match data and workflows central to the design.
 
 ## Brand identity
@@ -61,7 +65,7 @@ Settings opens as a full page, not a modal. The initial category is Appearance. 
 | Category                   | Route                  | Content                                                                             |
 | -------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
 | 常规 / General             | `#settings/general`    | Interface language, About, version, update action, project links and import notices |
-| 外观 / Appearance          | `#settings/appearance` | Theme mode and palette pairs                                                        |
+| 外观 / Appearance          | `#settings/appearance` | Theme mode, glass opacity and palette pairs                                         |
 | 游戏连接 / Game connection | `#settings/connection` | Log and deck folders, log detection, API health                                     |
 | 自动化 / Automation        | `#settings/automation` | Automatic queries, input monitoring, ban polling, match sync, account linking       |
 | 导航 / Navigation          | `#settings/navigation` | Sidebar page order                                                                  |
