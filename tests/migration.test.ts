@@ -234,9 +234,9 @@ describe('legacy migration integrity', () => {
       lang: 'zh',
       autoQueryCurrentMatch: false,
       replayAudio: 'off',
-      replayQuality: 240,
+      replayQuality: 720,
       replayFps: 60,
-      replayBitrateMbps: 3,
+      replayBitrateMbps: 5,
       multiAccountBond: false,
     });
     expect(db.config().panelOrder.slice(0, 4)).toEqual(['players', 'decks', 'bans', 'archive']);
@@ -707,7 +707,7 @@ describe('legacy migration integrity', () => {
       theme: 'dark',
       replayQuality: 720,
       replayFps: 30,
-      replayBitrateMbps: 3,
+      replayBitrateMbps: 5,
     });
     expect(rawImport('settings.json')?.raw).toBe(bytes.toString());
     expect(await migrateLegacy(db, dir)).toEqual(status);

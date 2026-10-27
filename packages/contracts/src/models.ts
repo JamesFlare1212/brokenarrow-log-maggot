@@ -1,3 +1,5 @@
+import type { RecordingQuality } from './recording';
+
 export type Id = string;
 export type Metric = number | null;
 export type TeamId = 0 | 1 | 100 | null;
@@ -307,7 +309,7 @@ export interface PublicConfig {
   collapsedPanels: Panel[];
   replayEnabled: boolean;
   replayDisplayId: string;
-  replayQuality: 240 | 360 | 480 | 720 | 1080;
+  replayQuality: RecordingQuality;
   replayFps: number;
   replayBitrateMbps: number;
   replayAudio: 'default' | 'off';

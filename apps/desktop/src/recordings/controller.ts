@@ -67,9 +67,12 @@ export class RecordingController {
       displays = screen.getAllDisplays();
     return sources.map((s) => {
       const d = displays.find((d) => String(d.id) === s.display_id);
+      // Electron display bounds use device-independent pixels, not physical pixels.
+      const width = d ? Math.round(d.bounds.width * d.scaleFactor) : 0;
+      const height = d ? Math.round(d.bounds.height * d.scaleFactor) : 0;
       return {
         id: s.id,
-        label: d ? `${d.label || 'Display'} · ${d.bounds.width}×${d.bounds.height}` : s.name,
+        label: d ? `${d.label || 'Display'} · ${width}×${height}` : s.name,
         thumbnail: s.thumbnail.toDataURL(),
       };
     });

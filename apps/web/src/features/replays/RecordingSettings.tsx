@@ -1,5 +1,5 @@
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { FolderOpen } from 'lucide-react';
 import {
   Card,
@@ -18,7 +18,12 @@ import {
 } from '@/components/ui/input-group';
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Display, PublicConfig } from '@ba/contracts';
+import {
+  RECORDING_FPS,
+  RECORDING_BITRATE_MBPS,
+  type Display,
+  type PublicConfig,
+} from '@ba/contracts';
 import { QUALITIES, normalizeQuality, estimateRecordingBytes, formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
@@ -38,6 +43,7 @@ export function RecordingSettings({
     { t } = useI18n(),
     [directory, setDirectory] = useState(state.config.replaySaveDir),
     [displays, setDisplays] = useState<Display[]>([]),
+    [previewAspectRatio, setPreviewAspectRatio] = useState(16 / 9),
     [move, setMove] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
@@ -179,12 +185,21 @@ export function RecordingSettings({
             <div className="recording-video-grid">
               <div
                 className="display-preview-slot"
+                style={{ '--display-preview-ratio': previewAspectRatio } as CSSProperties}
                 aria-busy={thumbnail.pending && !thumbnail.data}
               >
                 {thumbnail.data ? (
-                  <img className="display-preview" src={thumbnail.data} alt={t('display')} />
+                  <img
+                    className="display-preview"
+                    src={thumbnail.data}
+                    alt={t('display')}
+                    onLoad={({ currentTarget: image }) => {
+                      if (image.naturalWidth > 0 && image.naturalHeight > 0)
+                        setPreviewAspectRatio(image.naturalWidth / image.naturalHeight);
+                    }}
+                  />
                 ) : thumbnail.pending ? (
-                  <Skeleton className="h-36 w-full" />
+                  <Skeleton className="size-full" />
                 ) : (
                   <span role={thumbnail.error ? 'alert' : 'status'} className="muted">
                     {thumbnail.error || t('previewUnavailable')}
@@ -196,7 +211,7 @@ export function RecordingSettings({
                   <Slider
                     id="rec-quality"
                     min={0}
-                    max={4}
+                    max={QUALITIES.length - 1}
                     step={1}
                     value={[QUALITIES.indexOf(draft.replayQuality)]}
                     aria-label={t('quality')}
@@ -209,23 +224,27 @@ export function RecordingSettings({
                 <Field id="rec-fps" label={`${t('fps')} · ${draft.replayFps}`}>
                   <Slider
                     id="rec-fps"
-                    min={30}
-                    max={60}
-                    step={1}
+                    min={RECORDING_FPS.min}
+                    max={RECORDING_FPS.max}
+                    step={RECORDING_FPS.step}
                     value={[draft.replayFps]}
                     aria-label={t('fps')}
-                    onValueChange={([value]) => set('replayFps', value ?? 30, 250)}
+                    onValueChange={([value]) =>
+                      set('replayFps', value ?? RECORDING_FPS.default, 250)
+                    }
                   />
                 </Field>
                 <Field id="rec-bitrate" label={`${t('bitrate')} · ${draft.replayBitrateMbps} Mbps`}>
                   <Slider
                     id="rec-bitrate"
-                    min={3}
-                    max={10}
+                    min={RECORDING_BITRATE_MBPS.min}
+                    max={RECORDING_BITRATE_MBPS.max}
                     step={1}
                     value={[draft.replayBitrateMbps]}
                     aria-label={t('bitrate')}
-                    onValueChange={([value]) => set('replayBitrateMbps', value ?? 3, 250)}
+                    onValueChange={([value]) =>
+                      set('replayBitrateMbps', value ?? RECORDING_BITRATE_MBPS.default, 250)
+                    }
                   />
                 </Field>
               </FieldGroup>

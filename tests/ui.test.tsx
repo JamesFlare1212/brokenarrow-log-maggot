@@ -1529,6 +1529,40 @@ describe('recording settings automatic saving', () => {
     return within(await screen.findByRole('dialog', { name: '录像设置' }));
   }
 
+  it('starts at the new minimums and saves the highest resolution, frame rate and bitrate', async () => {
+    const initial = bootstrapForApp();
+    Object.assign(initial.config, { replayQuality: 720, replayFps: 30, replayBitrateMbps: 5 });
+    const native = nativeFixture(initial, { 'displays.thumbnail': () => null });
+    const dialog = await open(native);
+    const quality = dialog.getByRole('slider', { name: '分辨率' });
+    const fps = dialog.getByRole('slider', { name: '帧率' });
+    const bitrate = dialog.getByRole('slider', { name: '码率' });
+    expect(quality.getAttribute('aria-valuetext')).toBe('720p');
+    expect(fps.getAttribute('aria-valuemin')).toBe('30');
+    expect(fps.getAttribute('aria-valuemax')).toBe('120');
+    expect(bitrate.getAttribute('aria-valuemin')).toBe('5');
+    expect(bitrate.getAttribute('aria-valuemax')).toBe('20');
+    fireEvent.keyDown(fps, { key: 'ArrowRight' });
+    expect(fps.getAttribute('aria-valuenow')).toBe('40');
+    for (const slider of [quality, fps, bitrate]) fireEvent.keyDown(slider, { key: 'End' });
+    fireEvent.click(dialog.getByRole('button', { name: '关闭' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(native.backend.config).toMatchObject({
+      replayQuality: 2160,
+      replayFps: 120,
+      replayBitrateMbps: 20,
+    });
+    fireEvent.click(screen.getByRole('button', { name: '录像设置' }));
+    const reopened = within(await screen.findByRole('dialog', { name: '录像设置' }));
+    expect(reopened.getByRole('slider', { name: '分辨率' }).getAttribute('aria-valuetext')).toBe(
+      '2160p',
+    );
+    expect(reopened.getByRole('slider', { name: '帧率' }).getAttribute('aria-valuenow')).toBe(
+      '120',
+    );
+    expect(reopened.getByRole('slider', { name: '码率' }).getAttribute('aria-valuenow')).toBe('20');
+  });
+
   it('opens recording settings as a sidebar tab and preserves pending changes when leaving it', async () => {
     history.replaceState(null, '', '#settings/recording');
     const native = nativeFixture(bootstrapForApp(), { 'displays.thumbnail': () => null });
@@ -1542,11 +1576,11 @@ describe('recording settings automatic saving', () => {
     const destination = 'F:\\Recordings';
     fireEvent.change(directory, { target: { value: destination } });
     fireEvent.keyDown(panel.getByRole('slider', { name: /帧率/ }), { key: 'Home' });
-    for (let index = 0; index < 15; index++)
+    for (let index = 0; index < 2; index++)
       fireEvent.keyDown(panel.getByRole('slider', { name: /帧率/ }), { key: 'ArrowRight' });
     fireEvent.click(screen.getByRole('tab', { name: '自动化' }));
     await waitFor(() => expect(native.backend.config.replaySaveDir).toBe(destination));
-    expect(native.backend.config.replayFps).toBe(45);
+    expect(native.backend.config.replayFps).toBe(50);
     expect(screen.queryByRole('button', { name: '录像设置' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: '录像设置' }));
     expect(location.hash).toBe('#settings/recording');
@@ -1568,7 +1602,7 @@ describe('recording settings automatic saving', () => {
         return config;
       },
       'replays.test': () => {
-        expect(config.replayFps).toBe(60);
+        expect(config.replayFps).toBe(120);
         return null;
       },
     });
@@ -1576,7 +1610,7 @@ describe('recording settings automatic saving', () => {
     expect(dialog.queryByRole('button', { name: '保存' })).toBeNull();
     expect(dialog.queryByRole('button', { name: '取消' })).toBeNull();
     fireEvent.keyDown(dialog.getByRole('slider', { name: /帧率/ }), { key: 'Home' });
-    for (let index = 0; index < 15; index++)
+    for (let index = 0; index < 2; index++)
       fireEvent.keyDown(dialog.getByRole('slider', { name: /帧率/ }), { key: 'ArrowRight' });
     fireEvent.click(dialog.getByRole('button', { name: '录制 60 秒测试' }));
     await waitFor(() => expect(saves).toBe(1));

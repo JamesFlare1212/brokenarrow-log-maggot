@@ -141,6 +141,38 @@ async function start() {
 }
 
 describe('recorder microphone capture', () => {
+  it('passes 4K, 120fps and 20Mbps through to the capture source and encoder', async () => {
+    config.quality = 2160;
+    config.fps = 120;
+    config.bitrateMbps = 20;
+    const width = vi.spyOn(HTMLVideoElement.prototype, 'videoWidth', 'get').mockReturnValue(3840);
+    const height = vi.spyOn(HTMLVideoElement.prototype, 'videoHeight', 'get').mockReturnValue(2160);
+    const capture = vi.spyOn(HTMLCanvasElement.prototype, 'captureStream');
+    try {
+      const recorder = await start();
+      expect(getUserMedia).toHaveBeenCalledWith(
+        expect.objectContaining({
+          video: {
+            mandatory: {
+              chromeMediaSource: 'desktop',
+              chromeMediaSourceId: config.sourceId,
+              maxFrameRate: 120,
+            },
+            optional: [{ minFrameRate: 120 }],
+          },
+        }),
+      );
+      expect(capture).toHaveBeenCalledWith(120);
+      const output = capture.mock.instances[0] as HTMLCanvasElement;
+      expect([output.width, output.height]).toEqual([3840, 2160]);
+      expect(recorder.options.videoBitsPerSecond).toBe(20_000_000);
+    } finally {
+      capture.mockRestore();
+      width.mockRestore();
+      height.mockRestore();
+    }
+  });
+
   it('mixes system and microphone into one encoded audio track, saves chunks, and releases all resources', async () => {
     const recorder = await start();
     expect(getUserMedia).toHaveBeenLastCalledWith({ audio: true, video: false });

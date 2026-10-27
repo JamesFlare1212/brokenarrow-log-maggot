@@ -16,7 +16,16 @@ import type {
   SearchPlayer,
 } from '@ba/contracts';
 import { configSchema, legacyThemeMode, PANELS } from '@ba/contracts';
-import { object, text, number, mergeMatch, determineOutcome } from '@ba/shared';
+import {
+  object,
+  text,
+  number,
+  mergeMatch,
+  determineOutcome,
+  normalizeQuality,
+  normalizeFps,
+  normalizeBitrate,
+} from '@ba/shared';
 import { projectConfig } from '../config';
 
 function includeRadar(order: PublicConfig['panelOrder']): PublicConfig['panelOrder'] {
@@ -161,6 +170,9 @@ export class Database {
       themeMode: legacyThemeMode(stored.theme),
       ...stored,
       lang: stored.lang === 'ja' || stored.lang === 'ru' ? 'zh' : stored.lang,
+      replayQuality: normalizeQuality(stored.replayQuality),
+      replayFps: normalizeFps(stored.replayFps),
+      replayBitrateMbps: normalizeBitrate(stored.replayBitrateMbps),
     });
     config.panelOrder = includeRadar(config.panelOrder);
     return config;
