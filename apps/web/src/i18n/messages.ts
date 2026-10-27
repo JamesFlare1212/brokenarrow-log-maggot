@@ -105,8 +105,8 @@ export const messages: Record<string, readonly [string, string]> = {
     'Allow usage and diagnostics statistics?',
   ],
   telemetryConsentPrompt: [
-    '统计服务已改为 Aptabase，请阅读下面更新后的采集说明。仅在同意后向新服务发送统计；此前的同意需要重新确认。',
-    'Analytics now uses Aptabase. Read the updated collection details below. Nothing is sent to the new service before consent; previous opt-ins require confirmation.',
+    '请阅读下面的匿名使用统计说明。仅在同意后向 Aptabase 发送事件；不上传账号哈希或持久化用户标识。',
+    'Read the anonymous usage statistics details below. Events are sent to Aptabase only after consent; account hashes and persistent user identifiers are not sent.',
   ],
   telemetryConsentChangeLater: [
     '不同意不影响应用功能。之后可在“设置 → 常规”中随时修改。',
@@ -117,12 +117,12 @@ export const messages: Record<string, readonly [string, string]> = {
   telemetry: ['使用统计与隐私', 'Usage statistics and privacy'],
   telemetryEnabled: ['发送可选使用统计', 'Send optional usage statistics'],
   telemetryDescription: [
-    '同意后向 aptabase.jamesflare.com 发送安装与启动、实时对局开始次数、版本与更新结果、每分钟在线心跳与前台活跃状态、功能使用结果和耗时、分类错误，以及主进程和渲染进程的 CPU、内存、界面就绪和卡顿汇总。通过 Aptabase 会话标识关联一次使用。安装、对局开始、更新与异常等关键事件可在本机暂存最多 23 小时并有限重试；关闭统计会停止发送并清空待发送数据。',
-    'After consent, sends installation/startup, live match start counts, versions and update results, minute presence and foreground activity, feature results/timings, classified errors, main/renderer CPU and memory, UI-ready timings, and long-task summaries to aptabase.jamesflare.com. Aptabase session IDs link a usage session. Critical installation, match start, update, and error events may be buffered locally for up to 23 hours with bounded retries. Turning statistics off stops sending and clears pending data.',
+    '同意后向 aptabase.jamesflare.com 发送启动、首次打开与版本变化、实时对局开始次数、更新结果、功能使用和耗时、分类错误，以及前台活跃时的 CPU、内存和界面性能汇总。系统版本、应用版本和语言作为事件环境信息发送。仅使用短期随机会话；空闲一小时、跨 UTC 日期、重启或关闭统计后会话失效。事件仅在内存中短暂排队并有限重试，不写入持久化队列；关闭统计会取消请求并清空队列。',
+    'After consent, sends startup, first open and version changes, live match start counts, update outcomes, feature usage/timings, classified errors, and foreground-active CPU, memory, and UI performance summaries to aptabase.jamesflare.com. System/app versions and language accompany events. Random sessions expire after an idle hour, a UTC date change, restart, or opt-out. Events use a short-lived memory queue with bounded retries and are never stored in a durable queue. Turning statistics off cancels requests and clears the queue.',
   ],
   telemetryPrivacy: [
-    '使用日志识别到的本机数字账号的 SHA-256 哈希关联跨次使用；尚未识别账号时使用本地随机安装标识的哈希。这些稳定标识可关联使用记录，不上传原始账号、昵称、其他玩家标识、搜索内容、日志、路径、卡组、录像或按键。错误仅发送类型、代码、来源和应用代码位置，不发送原始消息或完整堆栈。不创建人员档案。服务器接收来源 IP，可能用于地理统计。开发、离线和测试模式不发送。',
-    'A SHA-256 hash of the local numeric account identified in game logs links usage across launches; until an account is known, a hash of a local random installation ID is used. These stable IDs link usage records. Raw accounts, names, other players, searches, logs, paths, decks, recordings, and keystrokes are not sent. Errors include only type, code, source, and app code locations, without raw messages or full stacks. No person profiles are created. The server receives your source IP and may derive geographic statistics. Development, offline, and test modes do not send data.',
+    '不上传原始账号、账号哈希、安装或设备标识、昵称、其他玩家标识、搜索内容、日志、路径、卡组、录像或按键。错误仅发送类型、代码、来源和应用代码位置，不发送原始消息或完整堆栈。首次打开和版本变化仅在本机保存版本与是否已上报的标记，待确认的更新仅保存版本与阶段，不包含关联标识。服务器会接收来源 IP，并按 Aptabase 的匿名机制生成短期统计和地理信息。开发、离线和测试模式不发送。',
+    'Raw accounts, account hashes, installation/device identifiers, names, other players, searches, logs, paths, decks, recordings, and keystrokes are not sent. Errors include only type, code, source, and app code locations, without raw messages or full stacks. Local first-open/version markers store versions and reporting status only; pending updates store versions and stage without correlation identifiers. The server receives the source IP and uses Aptabase anonymous analytics and geographic processing. Development, offline, and test modes do not send data.',
   ],
   paginationRange: ['第 {start}–{end} 条，共 {total} 条', 'Showing {start}–{end} of {total}'],
   version: ['版本', 'Version'],

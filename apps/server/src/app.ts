@@ -36,12 +36,8 @@ import { DeckService } from './decks/service';
 import { ReplayFiles } from './replays/files';
 import { projectConfig } from './config';
 import type { Platform } from './ports';
-import {
-  TelemetryService,
-  type InstallationState,
-  type TelemetryIdentity,
-  type ErrorSource,
-} from './telemetry';
+import { TelemetryService, type VersionObservation, type ErrorSource } from './telemetry';
+import { versionObservationSchema } from './telemetry-protocol';
 type EventInput = AppEvent extends infer E
   ? E extends AppEvent
     ? Omit<E, 'revision'>
@@ -87,7 +83,6 @@ export class Application {
   private apmTasks = Promise.resolve();
   private lastApmStatus: ApmState['status'] | null = null;
   private apmCheckpointAt = -Infinity;
-  private telemetryPersona = '';
   private telemetryApmActive = false;
   private telemetryRecordingActive = false;
   constructor(
@@ -98,38 +93,31 @@ export class Application {
   ) {
     this.existingInstallation = existsSync(join(dir, 'assistant.sqlite'));
     this.db = new Database(join(dir, 'assistant.sqlite'));
-    let identity: TelemetryIdentity | undefined;
-    if (platform.telemetry?.enabled && network && !platform.http.offline) {
-      try {
-        const saved = this.db.state<TelemetryIdentity | null>('telemetryIdentity', null);
-        identity =
-          saved && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(saved.installationId)
-            ? saved
-            : { installationId: randomUUID() };
-        this.db.setState('telemetryIdentity', identity);
-      } catch {
-        /* Optional telemetry identity must not prevent startup. */
-      }
+    try {
+      // Retire pseudonymous identities and durable payloads before any telemetry can resume.
+      this.db.sql
+        .prepare(
+          `DELETE FROM app_state WHERE key IN (
+        'telemetryIdentity', 'telemetryInstallation', 'telemetry:outbox:v1',
+        'telemetry:run:v1', 'telemetry:update:v1'
+      )`,
+        )
+        .run();
+    } catch {
+      // Cleanup failure must not prevent startup; retired state is never read for collection.
     }
     this.telemetry = new TelemetryService({
       allowed: !!platform.telemetry?.enabled && network && !platform.http.offline,
       fetch: platform.http.fetch,
       version: platform.version,
       distribution: platform.telemetry?.distribution ?? 'installed',
-      identity,
       persistence: {
-        read: (key) => this.db.state(`telemetry:${key}:v1`, null),
+        read: (key) => this.db.state(`telemetry:${key}:v2`, null),
         write: (key, value) => {
-          if (!this.disposed) this.db.setState(`telemetry:${key}:v1`, value);
+          if (!this.disposed) this.db.setState(`telemetry:${key}:v2`, value);
         },
       },
       sampleRuntime: platform.telemetry?.sampleRuntime,
-      saveAccountHash: (hash) => {
-        if (identity && !this.closing && !this.disposed) {
-          identity = { ...identity, accountHash: hash };
-          this.db.setState('telemetryIdentity', identity);
-        }
-      },
     });
     this.db.recoverApmCaptures();
     this.files = new ReplayFiles(this.db, dir);
@@ -499,8 +487,13 @@ export class Application {
     this.migration = await migrateLegacy(this.db, this.dir);
     if (this.platform.telemetry?.enabled && this.network && !this.platform.http.offline) {
       try {
-        const previous = this.db.state<InstallationState | null>('telemetryInstallation', null);
-        const observed: InstallationState =
+        let stored: unknown;
+        try {
+          stored = this.db.state('telemetryVersion', null);
+        } catch {}
+        const saved = versionObservationSchema.safeParse(stored);
+        const previous = saved.success ? saved.data : null;
+        const observed: VersionObservation =
           previous?.version === this.platform.version
             ? previous
             : {
@@ -513,15 +506,9 @@ export class Application {
                 ...(previous ? { previousVersion: previous.version } : {}),
                 reported: false,
               };
-        const installation: InstallationState = {
-          ...observed,
-          eventId: observed.eventId ?? randomUUID(),
-          updateEventId: observed.updateEventId ?? randomUUID(),
-        };
-        this.db.setState('telemetryInstallation', installation);
-        this.telemetry.observeInstallation(installation, () => {
-          if (!this.disposed)
-            this.db.setState('telemetryInstallation', { ...installation, reported: true });
+        this.db.setState('telemetryVersion', observed);
+        this.telemetry.observeVersion(observed, () => {
+          if (!this.disposed) this.db.setState('telemetryVersion', { ...observed, reported: true });
         });
       } catch {
         // Optional telemetry state must not prevent the application from starting.
@@ -608,17 +595,6 @@ export class Application {
     if (this.disposed || this.closing) return;
     if (event.type === 'session') {
       const session = event.session;
-      if (session.localPlayerId) {
-        this.telemetryPersona = session.localName;
-        this.telemetry.identifyAccount(session.localPlayerId);
-      } else if (
-        session.localName &&
-        this.telemetryPersona &&
-        session.localName !== this.telemetryPersona
-      ) {
-        this.telemetryPersona = session.localName;
-        this.telemetry.identifyAccount(null);
-      }
       if (session.current) {
         const match = session.current;
         void this.queueApm(async () => {

@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   hasTelemetryConsent,
@@ -12,19 +11,17 @@ import { diagnosticErrorType, LongTaskAggregate } from '../apps/web/src/app/diag
 const services: TelemetryService[] = [];
 function setup() {
   const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
-  const saveAccountHash = vi.fn();
   const telemetry = new TelemetryService({
     allowed: true,
     fetch: fetchImpl,
     version: '4.1.8',
     distribution: 'installed',
-    saveAccountHash,
+    sampleRuntime: () => ({ foreground: true, active: true }),
   });
   services.push(telemetry);
   return {
     telemetry,
     fetchImpl,
-    saveAccountHash,
     events: () => fetchImpl.mock.calls.flatMap(([, init]) => JSON.parse(String(init?.body))),
   };
 }
@@ -33,7 +30,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('account identity and diagnostics telemetry', () => {
+describe('anonymous diagnostics telemetry', () => {
   it('separates errors at different app code positions and preserves occurrence totals when deduplicating', async () => {
     vi.useFakeTimers();
     const { telemetry, events } = setup();
@@ -87,41 +84,6 @@ describe('account identity and diagnostics telemetry', () => {
     ]);
   });
 
-  it('hashes only numeric local account IDs and freezes identity on queued events across account switches', async () => {
-    vi.useFakeTimers();
-    const { telemetry, saveAccountHash, events } = setup();
-    telemetry.configure(true, 'en');
-    telemetry.identifyAccount('918273645');
-    const expected = createHash('sha256')
-      .update('brokenarrow.desktop:account:918273645')
-      .digest('hex');
-    const cancelled = telemetry.beginOperation('players.report');
-    telemetry.operation('players.search', true, 42.4);
-    telemetry.identifyAccount('55443322');
-    cancelled(true);
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(events().map((event) => event.eventName)).toEqual([
-      'app_started',
-      'user_identified',
-      'operation_completed',
-      'user_identified',
-    ]);
-    expect(events()[1].props.identity_hash).toBe(expected);
-    expect(events()[2].props.identity_hash).toBe(expected);
-    expect(events()[3].props.identity_hash).not.toBe(expected);
-    expect(events()[2].props).toMatchObject({
-      identity_source: 'game_account',
-      operation: 'player_search',
-      duration_ms: 42,
-    });
-    expect(new Set(events().map((event) => event.props.installation_id)).size).toBe(1);
-    expect(JSON.stringify(events())).not.toMatch(/918273645|55443322/);
-    expect(saveAccountHash).toHaveBeenCalledWith(expected);
-    telemetry.identifyAccount('A private nickname');
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(events().at(-1).props.identity_source).toBe('installation');
-  });
-
   it('sends periodic presence and resource metrics only during a consented session', async () => {
     vi.useFakeTimers();
     const { telemetry, fetchImpl, events } = setup();
@@ -131,12 +93,9 @@ describe('account identity and diagnostics telemetry', () => {
     await vi.advanceTimersByTimeAsync(61000);
     const heartbeat = events().find((event) => event.eventName === 'app_heartbeat');
     expect(heartbeat.props).toMatchObject({
-      version: '4.1.8',
-      uptime_seconds: expect.any(Number),
       rss_mb: expect.any(Number),
       heap_used_mb: expect.any(Number),
       cpu_percent: expect.any(Number),
-      timer_lag_ms: expect.any(Number),
     });
     telemetry.configure(false, 'en');
     const count = events().length;

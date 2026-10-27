@@ -229,17 +229,11 @@ async function start(): Promise<void> {
       `new Promise((resolve,reject)=>{let attempts=0;const timer=setInterval(()=>{if(document.querySelector('[data-ready="true"]')){clearInterval(timer);resolve({title:document.title,buttons:document.querySelectorAll('button').length,hasBridge:typeof window.assistant?.invoke==='function'});}else if(++attempts>100){clearInterval(timer);reject(new Error(document.body.innerText||'Renderer did not initialize'));}},100);})`,
     );
     if (process.platform === 'win32') {
-      const { backgroundColor, ...windowChrome } = await window.webContents
-        .executeJavaScript(`(async () => {
+      const inspectChrome = `(async () => {
         const toolbar = document.querySelector('.topbar');
         const workspace = document.querySelector('.workspace');
         const actions = document.querySelector('.topbar-actions');
         const overlay = navigator.windowControlsOverlay;
-        const area = overlay?.getTitlebarAreaRect();
-        const bounds = workspace?.getBoundingClientRect();
-        const toolbarBounds = toolbar.getBoundingClientRect();
-        const toolbarStyle = getComputedStyle(toolbar);
-        const separatorWidth = parseFloat(toolbarStyle.borderBottomWidth);
         const theme = document.documentElement.dataset.mode;
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = 1;
@@ -255,30 +249,53 @@ async function start(): Promise<void> {
         await window.assistant.setWindowTheme('light');
         await window.assistant.setWindowTheme('dark');
         await window.assistant.setWindowTheme(theme, colors);
+        await document.fonts.ready;
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        // Measure native and DOM geometry together after theme changes and layout settle.
+        const area = overlay?.getTitlebarAreaRect();
+        const bounds = workspace.getBoundingClientRect();
+        const toolbarBounds = toolbar.getBoundingClientRect();
+        const actionsBounds = actions.getBoundingClientRect();
+        const toolbarStyle = getComputedStyle(toolbar);
+        const separatorWidth = parseFloat(toolbarStyle.borderBottomWidth);
         return {
           backgroundColor: colors.background,
+          geometry: {
+            bounds: bounds.toJSON(), toolbar: toolbarBounds.toJSON(),
+            actions: actionsBounds.toJSON(), titlebar: area?.toJSON(),
+            paddingRight: toolbarStyle.paddingRight,
+            viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
+          },
           overlay: overlay?.visible === true,
-          integrated: toolbar?.getBoundingClientRect().top === 0,
+          integrated: toolbarBounds.top === 0,
           separatorVisible: separatorWidth > 0 &&
             toolbarBounds.bottom - separatorWidth >= area?.bottom,
-          draggable: getComputedStyle(toolbar).webkitAppRegion === 'drag',
+          draggable: toolbarStyle.webkitAppRegion === 'drag',
           interactive: getComputedStyle(actions).webkitAppRegion === 'no-drag',
           controlsReserved: area?.width > 0 &&
-            actions.getBoundingClientRect().right < area.right,
+            actionsBounds.right < area.right,
           // Native viewport dimensions round to integers at fractional display scales.
           flush: Math.abs(bounds?.top) < 1 && Math.abs(bounds?.right - innerWidth) < 1 &&
             Math.abs(bounds?.bottom - innerHeight) < 1,
         };
-      })()`);
-      result.windowChrome = {
-        ...windowChrome,
-        paletteSynced: window.getBackgroundColor().toLowerCase() === backgroundColor,
-      };
-      if (!result.windowChrome.flush)
-        result.windowGeometry = await window.webContents.executeJavaScript(`(() => ({
-          bounds: document.querySelector('.workspace').getBoundingClientRect().toJSON(),
-          viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
-        }))()`);
+      })()`;
+      const sizes = [window.getSize(), window.getMinimumSize()];
+      const failures = [];
+      for (const [width, height] of sizes) {
+        window.setSize(width!, height!);
+        const { backgroundColor, geometry, ...checks } =
+          await window.webContents.executeJavaScript(inspectChrome);
+        checks.paletteSynced = window.getBackgroundColor().toLowerCase() === backgroundColor;
+        if (Object.values(checks).some((passed) => passed !== true))
+          failures.push({ ...geometry, checks });
+        result.windowChrome = Object.fromEntries(
+          Object.entries(checks).map(([key, passed]) => [
+            key,
+            passed === true && result.windowChrome?.[key] !== false,
+          ]),
+        );
+      }
+      if (failures.length) result.windowGeometry = failures;
     }
     if (offline)
       result.matches = await window.webContents.executeJavaScript(

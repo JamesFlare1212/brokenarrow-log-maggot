@@ -803,7 +803,8 @@ describe('settings pages and automatic saving', () => {
       const initial = bootstrapForApp();
       const native = nativeFixture(initial);
       render(<App />, { wrapper: wrapper(native.api) });
-      const settings = within(await screen.findByRole('main', { name: '设置' }));
+      // A cold CI worker also transforms the lazy settings module on this first navigation.
+      const settings = within(await screen.findByRole('main', { name: '设置' }, { timeout: 5000 }));
       expect(location.hash).toBe('#settings/general');
       expect(screen.getByRole('tab', { name: '常规' }).getAttribute('aria-selected')).toBe('true');
       const about = within(settings.getByRole('region', { name: '关于' }));

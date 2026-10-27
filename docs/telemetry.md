@@ -1,185 +1,111 @@
-# Usage and diagnostic telemetry
+# Anonymous usage and diagnostic telemetry
 
-## Aptabase integration
+## Aptabase model
 
-BARadar sends explicit events to `https://aptabase.jamesflare.com/api/v0/events`
-with the public App Key `A-SH-7889591672` in the `App-Key` header. This is a
-self-hosted key; it cannot select a cloud region automatically. Administrative
-credentials never enter the application.
+BARadar follows Aptabase's short-lived anonymous sessions and explicit event model.
+No account hashes, installation/device identifiers, persistent user tags, run IDs,
+event IDs, or update-attempt IDs are sent. Game-account detection is independent
+of analytics, and account switches have no effect on the analytics session.
 
-Electron's main process owns collection through the existing telemetry service.
-React components report allowlisted diagnostics through the existing validated
-IPC bridge. No browser analytics provider or extra renderer transport is needed.
+Aptabase Users retain the server's temporary anonymous counting semantics. They
+are not game accounts, installations, or distinct people across days. Account-level
+retention, cohorts, and unique monthly account counts are not reconstructed.
+See [Aptabase's data and privacy documentation](https://aptabase.com/docs#data--privacy).
 
-The official Electron SDK fits desktop applications better than the React SDK:
-it can collect main-process events and obtains native app/OS/Electron versions.
-The React SDK provides a provider/hook for browser components and requires an
-explicit app version. Both require explicit event calls. BARadar uses the
-[Aptabase ingestion protocol](https://github.com/aptabase/aptabase/blob/main/src/Features/Ingestion/EventsController.cs)
-directly because the current Electron SDK does not expose request cancellation,
-HTTP failure results, persisted timestamps, or a durable retry queue. Retaining
-those controls preserves immediate opt-out and existing recovery behavior.
+The main-process adapter posts to `https://aptabase.jamesflare.com/api/v0/events`
+with public App Key `A-SH-7889591672` in the `App-Key` header. Administrative keys
+never enter the app. React diagnostics use the existing validated IPC bridge.
+The direct ingestion adapter preserves request cancellation for immediate opt-out.
+It also avoids introducing the Electron SDK's second privileged-protocol
+registration alongside BARadar's replay protocol: Electron allows that
+registration only once before readiness.
 
-## Consent and identity
+## Consent and migration
 
-Collection requires an online packaged desktop runtime and consent to disclosure
-version 4. Previous opt-ins must confirm the new provider before any events are
-sent. Saved refusals remain disabled without another prompt. Development, browser
-fixtures, smoke tests, offline mode, and `BA_DISABLE_TELEMETRY=1` do not send events.
-Opt-out aborts requests and purges the outbox, run marker, and update attempt.
-Starting offline preserves a previously consented outbox for a later online launch.
-Legacy provider envelopes fail the new schema and are never forwarded to Aptabase.
+Collection requires an online packaged desktop runtime and disclosure version 4
+consent. Previous provider opt-ins require confirmation; saved refusals remain
+disabled. Existing version 4 consent covers this reduced collection scope.
+Development, fixtures, smoke tests, offline mode, and `BA_DISABLE_TELEMETRY=1`
+send nothing.
 
-`identity_hash` is `SHA-256("brokenarrow.desktop:account:" + accountId)` when the
-log parser identifies the numeric local account. Other roster members and local
-persona names never become telemetry IDs. A random installation UUID is stored
-locally; its namespaced SHA-256 hash identifies installations and is the fallback
-before an account is known. Stable hashes are pseudonymous and can link usage
-across launches and installations. No person profiles, aliases, cookies, browser
-trackers, input contents, or session replay are enabled.
+Startup removes legacy `telemetryIdentity`, `telemetryInstallation`, and v1
+outbox/run/update state, including in disabled/offline mode. Retired data is never
+read for collection or replayed, even if optional cleanup fails. Already submitted
+server data is unchanged.
 
-`identity_source` distinguishes game accounts from installation fallbacks.
-`identity_confidence` is `confirmed` after this launch's logs identify the account,
-`cached` when reusing the previous account hash, or `installation` when unknown.
-Queued events freeze identity, language, version, session, and capture time.
-Operations spanning consent or account boundaries are excluded. These hashes are
-custom properties; they do not override Aptabase's native anonymous user counts.
+Opt-out cancels requests, empties the memory queue, resets the anonymous session,
+and removes pending update metadata. It does not flush before disabling. Optional
+analytics/storage failures must not affect the application.
 
-## Envelope, sessions, and presence
+## Sessions and properties
 
-Requests contain an array of `{ eventName, timestamp, sessionId, systemProps, props }`.
-`systemProps` includes release mode, OS/version, locale, app version, engine/version,
-and the honest adapter identifier `baradar-aptabase@1`. `props` contains only flat
-strings and finite numbers; booleans become 0/1 and absent values are omitted.
-Property names stay within 40 characters and strings within 180 characters.
+The required `sessionId` is generated in memory using the Electron SDK's
+epoch-seconds plus eight random digits format. It rotates after an hour without
+events, clock rollback, a UTC date change, restart, or opt-out. Nothing persists
+the session. Daily rotation additionally prevents a long-running desktop process
+from bridging daily anonymous users.
 
-Every event has `event_id`, `identity_hash`, `app`, `version`, `distribution`,
-`language`, `installation_id`, `identity_source`, `identity_confidence`,
-`app_session_id`, `platform`, `arch`, and `telemetry_schema = 4`. The receiver sees
-the source IP and may derive geographic properties.
+Requests contain up to 20 objects with `eventName`, `timestamp`, `sessionId`,
+`systemProps`, and `props`. System properties hold app/OS versions, locale,
+engine/version, release mode, and adapter identifier `baradar-aptabase@2`.
+Custom properties contain `distribution` and event-specific dimensions only.
+Version and language are not duplicated as user properties.
 
-`app_session_id` identifies an application run. `session_id` is an interaction
-UUIDv7 that rotates on account changes, clock rollback, 30 minutes without
-activity, or the 24-hour limit. Aptabase's required `sessionId` uses that UUID, including for installation events
-before the first explicit action. Idle events omit the custom `session_id` and
-retain the current native session. Persisted events retain their
-original native session and timestamp. Native sessions include background
-presence and can therefore differ from explicit interaction sessions; use the
-custom property for interaction analysis.
+Properties are flat strings and finite numbers, limited to 40-character keys
+and 180-character strings. Feature/operation names and result categories are
+explicitly selected. Raw RPC inputs, names, searches, local paths, account/player/
+match identifiers, arbitrary objects, and nested exception objects are excluded.
 
-`app_heartbeat` is emitted every minute and on window presence changes. Online
-presence is approximated by the latest event per installation in five minutes.
-`foreground = 1` requires a focused, visible, non-minimized window; `active = 1`
-also requires system idle time below 60 seconds. Key and mouse details are never
-sent. Killing, disconnecting, or suspending the app eventually ages out presence.
+## Events
 
-## Delivery and recovery
+- `app_started`: once when consent becomes available in a process.
+- `app_first_open`: first consented local-profile observation. `kind` distinguishes
+  `first_run` and `existing_profile`. It is not installer completion or a unique
+  person/installation count. Resetting or copying a profile affects observations.
+- `app_updated`: observed version change with `previous_version`, including
+  manual replacement or downgrade.
+- `match_started`: one live observed start while consented. Recovered logs,
+  archives, repeated notifications, and pre-consent starts are excluded. Local
+  match keys only suppress duplicates in memory and are never uploaded. Multiple
+  assisted players can each observe the same battle.
+- `feature_used`: selected page views and APM/recording start/stop transitions.
+  Consecutive duplicate views are suppressed.
+- `operation_completed`: selected operation, result, numeric duration, and bucket.
+  Passive list reads are excluded.
+- `app_heartbeat`: resource sample only while foreground and active, at most once
+  per minute including focus changes. Hidden/idle apps emit no periodic presence.
+  This is not a count of all online installations.
+- `performance_sample`: service/UI-ready timings and aggregate long tasks. A
+  per-window maximum is not a percentile of individual task durations.
+- `app_error`, `exception_summary`: classified type/code/status, source, operation,
+  level, code-location fingerprint, occurrence count, and public app positions.
+  The fingerprint describes code, not users. Raw messages, full stacks, and paths
+  are excluded. Repeats aggregate in memory; sum `occurrences` across both events.
+- `update_state_changed`, `update_not_applied`, `update_attempt_result`: update
+  stages/outcomes. Next-launch results use the new session and carry only
+  source/target versions, stage, and outcome. No identifier links the sessions.
+  Interrupted downloads are separate from install-stage failures.
 
-The queue holds at most 200 events. Up to 50 critical events are stored in SQLite
-for at most 23 hours. The shorter retention leaves delivery margin under
-[Aptabase's 24-hour event age limit](https://github.com/aptabase/aptabase/blob/main/src/Features/Ingestion/EventBody.cs).
-Persisted envelopes and critical properties are validated before replay, including
-capture age, installation ownership, schema version, and public error locations.
-Critical events can displace normal events; error samples can be displaced by
-other critical events. Drops are counted.
+Local `telemetryVersion` stores only version, kind, previous version, and reporting
+status. Failed first-open observations can be attempted anew on a later consented
+launch, without replaying an old envelope/session. Local `telemetry:update:v2`
+stores only from/target versions and stage; extra correlation fields fail strict
+validation. No run marker, unclean-exit recovery, or durable delivery summary remains.
 
-Requests use Electron's network stack, at most 20 events per batch (Aptabase's
-limit is 25), and a three-second timeout. Transient network failures, HTTP 408/429,
-and HTTP 5xx use bounded backoff, honoring `Retry-After`. Events make at most five
-attempts per run. Exhausted critical events remain until a later launch or expiry;
-normal events and permanent HTTP failures are dropped. Any HTTP 2xx acknowledges
-receipt; Aptabase normally returns `{}`. The batch endpoint may discard invalid
-events without failing the request, so an acknowledgement is not proof that an
-event appears in the dashboard.
+## Delivery limits
 
-`event_id` remains stable across retries and restarts. Aptabase does not provide
-PostHog-style ingestion deduplication by this ID. A lost acknowledgement can cause
-duplicates; exports or downstream queries must deduplicate by `event_id` when
-exact totals are required. Built-in dashboard event totals may include retries.
+At most 200 events queue in memory for five minutes, with three attempts per
+event. Previous-UTC-date events are discarded. Requests time out after three
+seconds. Network failures and HTTP 408/429/5xx may retry with bounded backoff and
+`Retry-After`; permanent failures are dropped. HTTP 2xx acknowledges receipt,
+normally with `{}`. Batch acknowledgements are not dashboard verification.
 
-Shutdown attempts a bounded 1.5-second flush before SQLite closes. Remaining
-critical events survive; unsent normal events contribute to a durable delivery
-summary. Opt-out performs no flush. Analytics and optional persistence failures
-never enter the application's error UI.
+Shutdown allows a 1.5-second flush and discards the remainder. Crashes, restarts,
+offline periods, and opt-out can lose events. Lost acknowledgements can duplicate
+counts because Aptabase does not deduplicate these events. Totals are approximate;
+no durable queue or persistent identifier is added to make them exact.
 
-A consented local run marker records normal shutdown. An open marker on restart
-generates `previous_run_exit`, classified as `exception` only when a fatal error
-was recorded; otherwise it is `unclean_exit`, which may also mean power loss or
-a kill. Native crash dumps are not collected.
-
-Update transitions share a persisted `update_attempt_id`. A later launch reports
-`applied`, `not_applied`, `other_version`, or `interrupted`; observed failures
-report `failed`. Interrupted downloads are separate from installation failures.
-`app_updated` also observes manual replacements and downgrades.
-
-## Event reference
-
-- `app_installed`: first execution or version observation. `kind` is `first_run`,
-  `existing_profile`, or `version_change`; changes include `previous_version`.
-  Local observation UUIDs are persisted before sending. This counts first runs,
-  not installer completions, and recreating/copying a profile affects counts.
-- `app_started`: startup after consent becomes available in a launch.
-- `user_identified`: a changed account or confirmation of a cached account.
-- `match_started`: one live match start observed while the application is running
-  with telemetry consent. Loading-battle and GameRoom notifications share the
-  parser's local match session; repeated room notifications and metadata updates
-  do not add events. Startup recovery, log rereads, archive scans, and matches
-  started before consent are excluded. No match identifiers, map, roster, or deck
-  details are sent. Starts are critical events with durable retry and stable UUIDs.
-- `app_heartbeat`: presence, main-process CPU/RSS/heap, aggregate renderer CPU/RSS
-  and process count, timer lag, buffered events, and delivery counters. CPU is
-  measured relative to one logical core and can exceed 100% with multiple threads
-  or renderer processes. Timer lag can reflect sleep or suspension.
-- `app_updated`: the first observed execution of a different app version.
-- `update_state_changed`, `update_attempt_result`, `update_not_applied`: update
-  funnel states, restart-confirmed results, and the updater's legacy failure marker.
-- `operation_completed`: allowlisted user actions with operation, success/failure,
-  numeric duration, and duration bucket. Passive list reads and background scans
-  do not create feature usage. RPC inputs and outputs are never forwarded.
-- `feature_used`: allowlisted page views and APM/recording start/stop transitions.
-  Duplicate renders and progress-only state updates are suppressed.
-- `app_error`: curated type, code, HTTP status, source, operation, fingerprint,
-  occurrence count, and app code positions. Fingerprints include sanitized code
-  positions. Raw messages, names, account IDs, URLs, full stacks, and local paths
-  are excluded. Renderer and server frames retain only known module basenames or
-  public hashed chunk names and line/column numbers, without local paths.
-- `exception_summary`: counts repeated occurrences of a classified error during
-  the reporting window. Sum `occurrences` across this and `app_error` to count
-  repeats; do not treat sampled event rows as total errors.
-- `performance_sample`: service startup and UI-ready timings, or complete
-  per-window renderer long-task aggregates. UI-ready waits for the real app
-  bootstrap marker and two rendering frames. Long-task aggregates contain count,
-  total duration, longest task, total blocking time above 50 ms, and window length.
-  Per-window maxima are not individual-task latency percentiles.
-- `previous_run_exit`: a recovered open run marker with the previous run/version
-  and qualified exit reason.
-- `delivery_summary`: durable end-of-run counters, including unsent normal events.
-  Retry counters count retry requests, not merely scheduled retries.
-
-## Diagnostics and metric limits
-
-`app_error` and `exception_summary` are ordinary Aptabase events with flat
-`error_type`, `error_code`, `http_status`, `source`, `operation`, `error_level`,
-`error_fingerprint`, `occurrences`, and up to eight `error_frame_N` strings in
-`basename:line:column` form. Repeated errors are aggregated by sanitized location
-and identity. There are no nested exception objects or raw messages/stacks.
-
-Builds still generate local source maps. The former PostHog CLI, source-map
-injection/upload, dashboard definition, and CI credentials are removed. This
-integration does not configure native exception grouping, source-map symbolication,
-SQL dashboards, cohorts, or release alerts in Aptabase. Historical PostHog data
-is not copied.
-
-For downstream analyses, count distinct installation hashes for first executions,
-distinct `event_id` values for assisted match starts, and distinct
-`update_attempt_id` results for update outcomes. Sum `occurrences` across error
-and summary events. Compare the latest confirmed account/version or the latest
-installation/version separately. Presence is independent of explicit feature
-activity. Heartbeats include resources and cumulative delivery counters; take
-per-run maxima before summing those counters. Native Aptabase users and sessions
-use Aptabase's own semantics and are not game-account counts.
-
-These metrics cover consenting clients only. First executions are not installer
-downloads, match starts are not globally unique battles or completed matches,
-background presence is not foreground interaction, and missing data does not
-prove the absence of errors.
+No PostHog-style profiles, source-map upload/symbolication, retention/cohort
+reports, or release alerts are implemented. Local source maps remain for developer
+debugging. Historical PostHog data was not imported. This refactor does not erase
+previously submitted server-side pseudonymous properties.

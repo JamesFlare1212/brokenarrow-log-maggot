@@ -293,6 +293,7 @@ describe('application telemetry', () => {
   it.each([true, false])(
     'captures startup failures before service start only with saved consent: %s',
     async (consent) => {
+      vi.useFakeTimers();
       const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
       const p = platform(fetchImpl);
       p.telemetry = { enabled: true, distribution: 'installed' };
@@ -303,17 +304,17 @@ describe('application telemetry', () => {
         telemetryConsentVersion: 4,
       });
       app.reportError('startup', new TypeError('private startup detail'));
-      const outbox = app.db.state<
-        { payload: { eventName: string; props: Record<string, unknown> } }[]
-      >('telemetry:outbox:v1', []);
-      expect(outbox.some((item) => item.payload.eventName === 'app_error')).toBe(consent);
-      if (consent) {
-        expect(
-          outbox.find((item) => item.payload.eventName === 'app_error')?.payload.props,
-        ).toMatchObject({ source: 'startup', error_level: 'fatal' });
-        expect(app.db.state<{ fatal?: boolean }>('telemetry:run:v1', {}).fatal).toBe(true);
-      }
-      expect(JSON.stringify(outbox)).not.toContain('private startup detail');
+      await vi.advanceTimersByTimeAsync(1000);
+      const errors = fetchImpl.mock.calls
+        .flatMap(([, init]) => JSON.parse(String(init?.body)))
+        .filter((event) => event.eventName === 'app_error');
+      expect(errors).toHaveLength(consent ? 1 : 0);
+      if (consent)
+        expect(errors[0].props).toMatchObject({ source: 'startup', error_level: 'fatal' });
+      expect(app.db.state('telemetry:outbox:v1', null)).toBeNull();
+      expect(app.db.state('telemetry:run:v1', null)).toBeNull();
+      expect(JSON.stringify(errors)).not.toContain('private startup detail');
+      vi.useRealTimers();
     },
   );
 
@@ -354,7 +355,7 @@ describe('application telemetry', () => {
       const bodies = fetchImpl.mock.calls.flatMap(([, init]) =>
         JSON.parse(String(init?.body)).map((event: unknown) => JSON.stringify(event)),
       );
-      expect(bodies[0]).toContain('"language":"en"');
+      expect(bodies[0]).toContain('"locale":"en"');
       expect(bodies[1]).toContain('"operation":"recording_play"');
       expect(bodies[1]).toContain('"result":"failure"');
       expect(bodies.join('')).not.toMatch(/private-player|\.webm|in-memory-lifecycle/);

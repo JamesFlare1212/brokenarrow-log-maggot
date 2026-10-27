@@ -39,38 +39,35 @@ deduplication uses a set of match IDs.
 
 公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout / settings；布局、配色与组件状态约定见[视觉规范](../design-system/broken-arrow/MASTER.md)。
 
-## Optional usage and diagnostic telemetry
+## Optional anonymous telemetry
 
-The main process sends explicit Aptabase events after the user accepts disclosure
-version 4. This includes installation and version transitions, minute presence
-heartbeats, selected feature results and numeric durations, classified exceptions,
-and application performance samples. Older disclosure versions must confirm the
-expanded disclosure; saved refusals remain disabled without another prompt.
+The main process sends explicit Aptabase events after disclosure version 4 consent.
+Collection includes startup/first-open/version observations, live match starts,
+selected feature results and durations, classified errors, update outcomes, and
+foreground-active resource samples. Saved refusals remain disabled. Development,
+fixtures, smoke tests, offline mode, and `BA_DISABLE_TELEMETRY=1` send nothing.
 
-The identity is the SHA-256 hash of the local numeric game account identified by
-the log parser, with an application-specific namespace. An installation UUID is
-stored locally and hashed for installation counting and as the fallback user ID.
-The last recognized account hash is persisted; raw account IDs and names are not
-included in telemetry. Each queued event freezes its identity at capture time.
-Account switches do not merge profiles or reattribute earlier events. Identity
-hashes are custom properties; Aptabase native users retain its anonymous counting
-semantics. No person profiles, browser tracker, cookies, or session replay
-are enabled.
+A short-lived random Aptabase session exists only in memory. It rotates after an
+hour without events, clock rollback, a UTC date change, restart, or opt-out.
+No account hashes, installation/device IDs, run/event/update correlation IDs, or
+persistent user tags are uploaded. Local game-account detection never reaches
+analytics. Version and locale use native system properties. Custom dimensions
+are explicit feature names, result categories, durations, and sanitized code locations.
 
-Requests use Electron's network stack, bounded batches and finite retries with
-three-second request timeouts. Up to 50 critical events are stored locally for
-23 hours; shutdown performs a bounded flush before closing SQLite. UUIDv7
-interaction sessions, foreground/active presence, restarted update-attempt confirmation,
-unclean-exit recovery and complete long-task aggregates improve metric accuracy.
-Opt-out clears pending work and aborts requests. Unpackaged development,
-browser fixtures, offline mode, smoke tests, and BA_DISABLE_TELEMETRY=1 disable
-collection. The service uses Aptabase batch ingestion directly so requests remain
-abortable and critical capture timestamps survive retries. The old provider
-outbox is discarded, and prior opt-ins must confirm the provider change.
-Optional identity or delivery failures must not affect the app.
+Events queue only in memory: at most 200 events, five minutes, three attempts,
+and 20 events per request. Opt-out aborts requests and clears the queue. Shutdown
+allows a bounded flush and discards remaining events. Resource samples are
+limited to once per minute while foreground-active. Native user and session counts
+retain Aptabase's anonymous semantics and cannot measure cross-day account retention.
 
-See [telemetry events and metric definitions](telemetry.md) for event fields,
-privacy boundaries, error and performance coverage, and Aptabase metric limits.
+Only non-identifying first-open/version flags and update version/stage metadata
+survive locally. Startup removes retired identity, outbox, and run/update records;
+legacy payloads never replay. The direct ingestion adapter preserves abortable
+Electron networking and the existing replay-protocol registration. Optional
+telemetry/storage errors must not prevent startup or enter the application UI.
+
+See [anonymous telemetry](telemetry.md) for event definitions, delivery limits,
+migration, and the distinction between anonymous usage and game-account metrics.
 
 ## Temporary QUIC workaround
 
