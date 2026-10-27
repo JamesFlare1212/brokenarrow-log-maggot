@@ -23,8 +23,7 @@ import type {
   RpcMethod,
   RpcOutputs,
 } from '@ba/contracts';
-import { configSchema, initialApmState } from '@ba/contracts';
-import { ApmPanel } from '../apps/web/src/features/apm/ApmPanel';
+import { configSchema } from '@ba/contracts';
 import { formatMetric, formatDuration, formatTime, matchTitles, summarizeMaggot } from '@ba/shared';
 import { App } from '../apps/web/src/app/App';
 import { AppProvider, useApp } from '../apps/web/src/app/state';
@@ -114,7 +113,6 @@ function nativeFixture(
     },
     'players.maggot': ({ id }) => summarizeMaggot(id, []),
     'bans.list': () => [],
-    'apm.history': () => [],
     'decks.list': () => ({
       found: false,
       decksDir: 'test-profile/Decks',
@@ -2762,9 +2760,8 @@ describe('user interaction regressions', () => {
 
   it('applies saved panel order and keeps standalone tools visible while preserving overview collapse preferences', async () => {
     const bootstrap = bootstrapForApp();
-    bootstrap.config.panelOrder = ['current', 'apm', 'decks'];
-    bootstrap.config.inputHookEnabled = true;
-    bootstrap.config.collapsedPanels = ['decks', 'apm'];
+    bootstrap.config.panelOrder = ['current', 'players', 'decks'];
+    bootstrap.config.collapsedPanels = ['decks'];
     const native = nativeFixture(bootstrap, {
       'decks.list': () => ({
         found: true,
@@ -2791,7 +2788,7 @@ describe('user interaction regressions', () => {
       within(navigation)
         .getAllByRole('button')
         .map((button) => button.textContent?.trim()),
-    ).toEqual([translate('zh', 'overview'), '卡组工具', 'APM 统计']);
+    ).toEqual([translate('zh', 'overview'), '卡组工具', translate('zh', 'players')]);
     fireEvent.click(within(navigation).getByRole('button', { name: '卡组工具' }));
     expect(screen.getByRole('heading', { level: 1, name: '卡组工具' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '卡组工具 展开' })).toBeNull();
@@ -2803,12 +2800,8 @@ describe('user interaction regressions', () => {
     await waitFor(() =>
       expect(native.calls.filter((call) => call.method === 'decks.list')).toHaveLength(2),
     );
-    fireEvent.click(within(navigation).getByRole('button', { name: 'APM 统计' }));
-    expect(screen.getByRole('heading', { level: 1, name: 'APM 统计' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'APM 统计 展开' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'APM 统计' })).toBeTruthy();
-    expect(native.backend.config.collapsedPanels).toEqual(['decks', 'apm']);
-    expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'apm']);
+    expect(native.backend.config.collapsedPanels).toEqual(['decks']);
+    expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'players']);
   });
 
   it('saves page visibility in both navigation menus and restores pages in their saved order', async () => {
@@ -3963,132 +3956,6 @@ describe('shared dialog focus recovery', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(opener));
-  });
-});
-
-describe('APM capture presentation', () => {
-  it('explains partial capture, rolling warmup and unfinished buckets', async () => {
-    const bootstrap = structuredClone(fixtureBootstrap);
-    bootstrap.config.inputHookEnabled = true;
-    bootstrap.apm = {
-      ...initialApmState('active'),
-      captureId: 'capture',
-      sessionId: 'session',
-      startedAt: 1000000,
-      durationSec: 5.5,
-      totalActions: 60,
-      apm: 120,
-      perMinute: [60],
-      perSecond: [10, 10, 10, 10, 10, 10],
-      partial: true,
-    };
-    const native = nativeFixture(bootstrap);
-    render(<ApmPanel />, { wrapper: wrapper(native.api) });
-    expect(await screen.findByText(translate('zh', 'apmWarmup'))).toBeTruthy();
-    expect(screen.getByText(translate('zh', 'apmPartial'))).toBeTruthy();
-    expect(screen.getByText(translate('zh', 'apmPartialBucket'))).toBeTruthy();
-    expect(screen.getByText(translate('zh', 'apmAverage'))).toBeTruthy();
-    expect(screen.getByText(translate('zh', 'apmCurrent'))).toBeTruthy();
-    expect(screen.getByText(translate('zh', 'apmPeak'))).toBeTruthy();
-    expect(screen.queryByText(translate('zh', 'apmBucketTable'))).toBeNull();
-  });
-  it('groups second counts into ten-second intervals and exposes exact values with keyboard navigation', async () => {
-    const bootstrap = structuredClone(fixtureBootstrap);
-    bootstrap.apm = {
-      ...initialApmState('complete'),
-      captureId: 'seconds',
-      durationSec: 25.5,
-      totalActions: 34,
-      apm: 80,
-      currentApm: 60,
-      peak: 120,
-      perMinute: [34],
-      perSecond: [...Array<number>(10).fill(2), ...Array<number>(10).fill(1), 4, 0, 0, 0, 0, 0],
-    };
-    const native = nativeFixture(bootstrap);
-    render(<ApmPanel />, { wrapper: wrapper(native.api) });
-    const chart = await screen.findByRole(
-      'group',
-      { name: translate('zh', 'apmBuckets') },
-      { timeout: 5000 },
-    );
-    const plot = await waitFor(() => within(chart).getByRole('application'));
-    expect(plot.getAttribute('tabindex')).toBe('0');
-    act(() => plot.focus());
-    await userEvent.setup().keyboard('{ArrowRight}');
-    expect(document.activeElement).toBe(plot);
-    expect(screen.queryByText(translate('zh', 'apmLegacyData'))).toBeNull();
-    expect(screen.queryByText(translate('zh', 'apmWarmup'))).toBeNull();
-    await userEvent.setup().keyboard('{ArrowRight}{ArrowRight}{ArrowRight}');
-    await waitFor(() => {
-      const tooltip = document.querySelector('.recharts-tooltip-wrapper');
-      expect(tooltip?.textContent).toContain('0:20–0:25 *');
-      expect(tooltip?.textContent).toContain('4');
-    });
-    await userEvent.setup().keyboard('{ArrowLeft}');
-    await waitFor(() => {
-      const tooltip = document.querySelector('.recharts-tooltip-wrapper');
-      expect(tooltip?.textContent).toContain('0:10–0:20');
-      expect(tooltip?.textContent).toContain('10');
-    });
-    await userEvent.setup().keyboard('{ArrowLeft}');
-    await waitFor(() => {
-      const tooltip = document.querySelector('.recharts-tooltip-wrapper');
-      expect(tooltip?.textContent).toContain('0:00–0:10');
-      expect(tooltip?.textContent).toContain('20');
-    });
-    expect(screen.queryByText(translate('zh', 'apmBucketTable'))).toBeNull();
-    expect(screen.queryByText(translate('zh', 'apmChartHint'))).toBeNull();
-  });
-  it('opens a stored capture while monitoring is disabled without starting input collection', async () => {
-    const bootstrap = structuredClone(fixtureBootstrap);
-    const history = {
-      ...initialApmState('complete'),
-      captureId: 'saved',
-      sessionId: 'old',
-      fid: '123',
-      map: 'Saved map',
-      startedAt: 1000000,
-      durationSec: 120,
-      totalActions: 80,
-      apm: 40,
-      peak: 60,
-      currentApm: 20,
-      perMinute: [60, 20],
-      perSecond: undefined,
-      partial: true,
-    };
-    const native = nativeFixture(bootstrap, { 'apm.history': () => [history] });
-    render(<ApmPanel />, { wrapper: wrapper(native.api) });
-    const select = await screen.findByRole('combobox', { name: translate('zh', 'apmHistory') });
-    fireEvent.change(select, { target: { value: 'saved' } });
-    expect(screen.getByText('Saved map')).toBeTruthy();
-    expect(screen.getByText(translate('zh', 'apmStopped'))).toBeTruthy();
-    const toolbar = select.closest<HTMLElement>('.apm-toolbar')!;
-    expect(within(toolbar).getByText('Saved map')).toBeTruthy();
-    expect(within(toolbar).getByText(translate('zh', 'apmStopped'))).toBeTruthy();
-    expect(select.closest('[data-slot="field"]')?.getAttribute('data-orientation')).toBe(
-      'horizontal',
-    );
-    expect(screen.getByText(translate('zh', 'apmLegacyData'))).toBeTruthy();
-    expect(screen.getByText(translate('zh', 'apmCurrentLegacy'))).toBeTruthy();
-    expect(screen.queryByText(translate('zh', 'apmCurrent'))).toBeNull();
-    expect(screen.queryByText(translate('zh', 'apmDisabled'))).toBeNull();
-    expect(native.calls.some((call) => call.method === 'config.update')).toBe(false);
-  });
-  it('shows a retry when stored captures cannot be loaded', async () => {
-    let failed = true;
-    const native = nativeFixture(fixtureBootstrap, {
-      'apm.history': () => {
-        if (failed) throw new Error('Database unavailable');
-        return [];
-      },
-    });
-    render(<ApmPanel />, { wrapper: wrapper(native.api) });
-    expect(await screen.findByText(translate('zh', 'apmHistoryError'))).toBeTruthy();
-    failed = false;
-    fireEvent.click(screen.getByRole('button', { name: translate('zh', 'retry') }));
-    await waitFor(() => expect(screen.queryByText(translate('zh', 'apmHistoryError'))).toBeNull());
   });
 });
 

@@ -29,7 +29,9 @@ deduplication uses a set of match IDs.
 
 日志支持新旧大厅和名单格式，跨批次保留原始时间戳与历史半行的来源。无 FID 对局按日志来源和开局位置生成稳定身份，重复恢复不会新增档案。延迟网络时长优先按连接或 FID 关联，无法区分的事件不写入新局。
 
-历史档案使用独立 LogParser，启动、切换目录、每 30 秒及手动刷新时递归扫描所有 `.log` / `.txt`（不跟随符号链接），不会改变实时会话或触发录像、APM、卡组操作。按文件身份、大小和修改时间保存 SQLite 检查点，每份日志的对局与检查点在同一事务提交；未变化的文件跳过，失败可重试。保留无结束事件的记录，结束时间保持未知。删除记录保存日志排除标记，避免后续扫描复活。查询返回全部档案，前端每页 50 条并提供页码跳转。
+Historical archives use a separate LogParser and recursively scan `.log` and `.txt` files at startup, after directory changes, every 30 seconds, and on manual refresh. Scans do not follow symbolic links or change the live session, recording, or deck state. SQLite checkpoints track file identity, size, and modification time; matches and checkpoints commit in one transaction. Unchanged files are skipped and failed scans can retry. Matches without end events keep an unknown end time. Deletion markers prevent rescans from restoring removed matches. Queries return the full archive, with 50 matches per page and page navigation in the UI.
+
+Database startup removes retired input-statistics tables and the obsolete collection setting. Saved navigation filters retired pages while preserving other preferences.
 
 玩家报告区分总场次、已知胜负样本和最近一场指标；未知胜负不进入胜率分母。蛆指数校验双方各五名唯一玩家，同分共享平均名次；重试失败也计入报告请求数。刷新贯通报告与调查，兜底档案同样刷新并保存快照。对局先保存近期列表再补全详情，较旧 API 数据只能补缺。自定义局仅依据明确胜方字段判胜负，不使用摧毁分猜测。
 

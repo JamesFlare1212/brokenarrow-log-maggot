@@ -49,7 +49,7 @@ identifiers, and arbitrary objects are excluded.
 - `app_updated`: observed app-version change with `previous_version`.
 - `match_started`: a live match start while analytics is enabled. The local match
   key suppresses duplicate notifications in memory and is never uploaded.
-- `feature_used`: page views and APM/recording start/stop transitions.
+- `feature_used`: page views and recording start/stop transitions.
 - `operation_completed`: selected operation, result, numeric duration, and bucket.
 - `resource_sample`: aggregate CPU/memory while foreground-active, at most once
   per minute including focus changes.

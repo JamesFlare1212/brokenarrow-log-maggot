@@ -149,7 +149,6 @@ describe('captured local real data', () => {
       autoQueryCurrentMatch: false,
       banPollEnabled: false,
       matchSyncEnabled: false,
-      inputHookEnabled: false,
       replayEnabled: false,
     });
     expect(db.state('privateHeaders', null)).toBeNull();

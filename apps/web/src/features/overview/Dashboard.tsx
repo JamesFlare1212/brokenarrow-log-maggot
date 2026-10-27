@@ -37,7 +37,6 @@ import {
 } from '@/components/ui/item';
 import { Separator } from '@/components/ui/separator';
 import { SessionPanel } from '../session/SessionPanel';
-import { ApmPanel } from '../apm/ApmPanel';
 
 function Metric({
   label,
@@ -265,7 +264,6 @@ export function Dashboard() {
           </Card>
         </aside>
       </div>
-      {state.config.inputHookEnabled && state.config.panelOrder.includes('apm') && <ApmPanel />}
     </div>
   );
 }

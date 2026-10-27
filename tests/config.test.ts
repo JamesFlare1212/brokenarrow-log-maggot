@@ -50,8 +50,6 @@ describe('configuration patches', () => {
     { collapsedPanels: [] },
     { hiddenPanels: ['players', 'decks'] },
     { hiddenPanels: [] },
-    { inputHookEnabled: true },
-    { inputHookEnabled: false },
     { analyticsEnabled: true },
     { analyticsEnabled: false },
     { analyticsChoiceSaved: false },
@@ -68,6 +66,8 @@ describe('configuration patches', () => {
   it('continues to reject unknown fields and invalid values', () => {
     for (const patch of [
       { unknown: true },
+      { inputHookEnabled: true },
+      { inputHookEnabled: false },
       { lang: 'invalid' },
       { lang: 'ja' },
       { lang: 'ru' },
@@ -99,8 +99,6 @@ describe('configuration patches', () => {
       expect(rpcSchemas['config.update'].safeParse(patch).success).toBe(false);
     }
     expect(configSchema.parse({}).theme).toBe('dark');
-    expect(configSchema.parse({}).inputHookEnabled).toBe(true);
-    expect(configSchema.parse({ inputHookEnabled: false }).inputHookEnabled).toBe(false);
     expect(configSchema.parse({}).analyticsEnabled).toBe(false);
     expect(configSchema.parse({}).analyticsChoiceSaved).toBe(false);
     expect(configSchema.parse({}).themeMode).toBe('system');
@@ -117,13 +115,11 @@ describe('configuration patches', () => {
     let db: Database | undefined;
     try {
       db = new Database(file);
-      expect(db.config().inputHookEnabled).toBe(true);
       expect(db.config().themeMode).toBe('system');
       expect(db.config().glassOpacity).toBe(50);
       expect(db.config().eloColorScheme).toBe('green-up');
       expect(db.updateConfig({ lang: 'en' }).themeMode).toBe('system');
       const initial = db.updateConfig({
-        inputHookEnabled: false,
         analyticsEnabled: true,
         analyticsChoiceSaved: true,
         logDir: 'custom-logs',
@@ -158,7 +154,7 @@ describe('configuration patches', () => {
     }
   });
 
-  it('migrates legacy navigation by adding radar and removing About while preserving preferences', async () => {
+  it('migrates legacy navigation by adding radar and removing retired pages while preserving preferences', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'ba-radar-config-'));
     const db = new Database(join(dir, 'assistant.sqlite'));
     try {
@@ -176,7 +172,9 @@ describe('configuration patches', () => {
         'public',
         JSON.stringify({
           panelOrder: oldOrder,
-          collapsedPanels: ['about', 'decks'],
+          hiddenPanels: ['apm', 'players'],
+          collapsedPanels: ['about', 'apm', 'decks'],
+          inputHookEnabled: true,
           theme: 'forest',
           lang: 'ja',
           sidebarCollapsed: true,
@@ -186,20 +184,28 @@ describe('configuration patches', () => {
         'players',
         'current',
         'radar',
-        ...oldOrder.slice(2).filter((panel) => panel !== 'about'),
+        ...oldOrder.slice(2).filter((panel) => panel !== 'about' && panel !== 'apm'),
       ];
       expect(db.config()).toMatchObject({
         panelOrder: expectedOrder,
-        hiddenPanels: [],
+        hiddenPanels: ['players'],
         collapsedPanels: ['decks'],
         theme: 'forest',
         lang: 'zh',
         sidebarCollapsed: true,
       });
+      expect(db.config()).not.toHaveProperty('inputHookEnabled');
       db.updateConfig({ banPollEnabled: false });
       expect(db.config().panelOrder).toEqual(expectedOrder);
       db.updateConfig(rpcSchemas['config.update'].parse({ panelOrder: oldOrder }));
       expect(db.config().panelOrder).toEqual(expectedOrder);
+      const saved = JSON.parse(
+        String(db.sql.prepare("SELECT value FROM settings WHERE key='public'").get()?.value),
+      );
+      expect(saved).not.toHaveProperty('inputHookEnabled');
+      expect(saved.panelOrder).toEqual(expectedOrder);
+      expect(saved.hiddenPanels).toEqual(['players']);
+      expect(saved.collapsedPanels).toEqual(['decks']);
     } finally {
       db.close();
       await rm(dir, { recursive: true, force: true });

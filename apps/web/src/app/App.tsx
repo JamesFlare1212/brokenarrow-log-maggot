@@ -9,7 +9,6 @@ import {
   type CSSProperties,
 } from 'react';
 import {
-  Activity as faWaveSquare,
   Archive as faBoxArchive,
   Layers as faLayerGroup,
   LayoutDashboard as faTableCellsLarge,
@@ -43,7 +42,6 @@ import { PlayersPanel } from '../features/players/PlayersPanel';
 import { MatchArchive } from '../features/matches/MatchArchive';
 import { BansPanel, BanAlertDialog } from '../features/bans/BansPanel';
 import { DecksPanel } from '../features/decks/DecksPanel';
-import { ApmPanel } from '../features/apm/ApmPanel';
 import { ReplaysPanel } from '../features/replays/ReplaysPanel';
 import { UpdateButton } from '../features/settings/UpdateButton';
 import { AnalyticsConsentDialog } from '../features/settings/AnalyticsConsentDialog';
@@ -83,7 +81,6 @@ const icons: Record<Panel, ReactNode> = {
   current: <Icon icon={faTableCellsLarge} size={19} />,
   radar: <Icon icon={faSatelliteDish} size={19} />,
   players: <Icon icon={faMagnifyingGlass} size={19} />,
-  apm: <Icon icon={faWaveSquare} size={19} />,
   archive: <Icon icon={faBoxArchive} size={19} />,
   replays: <Icon icon={faVideo} size={19} />,
   decks: <Icon icon={faLayerGroup} size={19} />,
@@ -187,7 +184,6 @@ export function App() {
     replays: <ReplaysPanel />,
     decks: <DecksPanel />,
     bans: <BansPanel />,
-    apm: <ApmPanel standalone />,
   };
   const status =
     state.watcher.error ||

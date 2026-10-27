@@ -6,19 +6,17 @@ standard; this record describes the component review and its verification.
 
 ## Source coverage
 
-The inventory covers 107 files under `apps/web/src`, including 82 React modules,
-38 shared primitive modules, 29 feature modules, and all four stylesheets.
-There are 33 Card construction sites in 15 consumer modules and two full-size
-card-choice groups. Counts describe source locations, not the number of cards
-created by rendering lists.
+The inventory covers the renderer under `apps/web/src`, including shared
+primitives, feature modules, stylesheets, Card construction sites, and full-size
+card-choice groups. Retired feature surfaces have been removed from this scope.
 
-The review covers Overview, Radar, Player Search and player details, APM,
+The review covers Overview, Radar, Player Search and player details,
 match archives and details, recordings and their settings, decks, bans, every
 Settings category, development tools, and shared controls and overlays.
 
 | Component family                                               | Result                                                                                              |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Dashboard metrics, rooms, APM, and quick tools                 | Use the shared Card surface; stable roster height and compact APM composition remain intact         |
+| Dashboard metrics, rooms, and quick tools                      | Use the shared Card surface; stable roster height remains intact                                    |
 | Player summary, preferences, and Maggot Index                  | Use shared Card/Stats composition; ELO changes retain semantic color preferences                    |
 | Archive grid cards                                             | Removed the separate large-radius override; custom content spacing remains allowed                  |
 | Recording, display configuration, deck, cache, and About cards | Use shared Card composition; media frames retain their framing surfaces                             |
@@ -83,7 +81,7 @@ calculating contrast.
 | Visible Card corners                                    | Consistent 14px radius on the inspected routes               |
 | Page overflow                                           | None detected; table scrolling remains inside table surfaces |
 
-The responsive routes are Overview, Radar, Player Search, APM, Archives,
+The responsive routes are Overview, Radar, Player Search, Archives,
 Recordings, Decks, Bans, Appearance, General, Connection, Automation, and Cache.
 Archive and recording grids were opened so their individual cards were included.
 

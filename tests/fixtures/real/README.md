@@ -24,7 +24,7 @@ pnpm dev:web
 pnpm smoke:real
 ```
 
-`pnpm dev` 每次创建 `.test-data/real-dev/run-*/`，将样本展开为 GameLogs 和独立 SQLite。应用只读已录制的缓存响应，缓存缺失时明确报错，不请求 BATrace，也不生成替代评分。录屏、APM、后台查询和同步默认关闭；卡组和录像目录不指向本机真实目录。开发中的刷新、删除和设置修改只写入本次副本。退出后重开会重新生成干净副本，已提交样本保持不变。
+`pnpm dev` creates a fresh `.test-data/real-dev/run-*/` directory with extracted GameLogs and an isolated SQLite database. The application reads captured cache responses only; cache misses report an error without contacting BATrace or generating replacement ratings. Recording, background queries, and synchronization are disabled by default. Deck and recording paths do not point to real local directories. Refreshes, deletions, and setting changes affect only the current copy. Restarting creates a clean copy and leaves committed fixtures unchanged.
 
 `pnpm dev:web` 在浏览器中展示同一批真实样本，默认地址为 `http://127.0.0.1:5174/`，支持前端热更新，无需 Electron。每次启动在 `.test-data/web-dev/run-*/` 创建离线副本，页面查询使用真实服务和缓存响应，缺少缓存时明确报错。目录选择、录屏、输入钩子等桌面功能不可用；路径设置不可修改，页面偏好和对局修改仅影响开发副本。
 

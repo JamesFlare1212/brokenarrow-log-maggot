@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-// Radix, Sonner and Recharts use browser layout APIs that jsdom does not implement.
+// Radix and Sonner use browser layout APIs that jsdom does not implement.
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -16,16 +16,7 @@ if (typeof window !== 'undefined') {
     })),
   });
   globalThis.ResizeObserver = class ResizeObserver {
-    constructor(private callback: ResizeObserverCallback) {}
-    observe(target: Element) {
-      if (target.closest('[data-chart]'))
-        queueMicrotask(() =>
-          this.callback(
-            [{ target, contentRect: { width: 640, height: 256 } } as ResizeObserverEntry],
-            this,
-          ),
-        );
-    }
+    observe() {}
     unobserve() {}
     disconnect() {}
   };

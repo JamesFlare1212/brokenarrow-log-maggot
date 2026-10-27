@@ -59,6 +59,38 @@ function rawImport(file: string): { raw: string; sha256: string } | null {
 }
 
 describe('legacy migration integrity', () => {
+  it('removes retired input captures and their setting while preserving other data across reopens', () => {
+    db.close();
+    const file = join(dir, 'application.sqlite');
+    db = new Database(file);
+    const config = db.updateConfig({ theme: 'forest', replayEnabled: true });
+    db.sql
+      .prepare("UPDATE settings SET value=? WHERE key='public'")
+      .run(JSON.stringify({ ...config, inputHookEnabled: true }));
+    db.saveCache('info:1', { name: 'One' }, 60_000);
+    db.setState('activeAccountId', '1');
+    db.sql.exec(`
+      CREATE TABLE apm_captures(id TEXT PRIMARY KEY,session_id TEXT NOT NULL,fid TEXT,started_at INTEGER NOT NULL,payload TEXT NOT NULL) STRICT;
+      CREATE INDEX apm_capture_time ON apm_captures(started_at DESC);
+      CREATE INDEX apm_capture_session ON apm_captures(session_id);
+      INSERT INTO apm_captures VALUES('capture','session','1',1,'{"status":"active"}');
+    `);
+    for (let reopen = 0; reopen < 2; reopen++) {
+      db.close();
+      db = new Database(file);
+      expect(
+        db.sql.prepare("SELECT name FROM sqlite_master WHERE name LIKE 'apm_%'").all(),
+      ).toEqual([]);
+      expect(db.config()).toEqual(config);
+      const saved = JSON.parse(
+        String(db.sql.prepare("SELECT value FROM settings WHERE key='public'").get()?.value),
+      );
+      expect(saved).not.toHaveProperty('inputHookEnabled');
+      expect(db.cache('info:1', true)?.value).toEqual({ name: 'One' });
+      expect(db.state('activeAccountId', null)).toBe('1');
+    }
+  });
+
   it('removes retired request counters from an existing database without changing other data', () => {
     db.close();
     const file = join(dir, 'application.sqlite');

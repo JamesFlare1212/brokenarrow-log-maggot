@@ -9,8 +9,7 @@ export type Locale = 'zh' | 'en';
 export type Theme = 'dark' | 'light' | 'cyan' | 'orange' | 'violet' | 'forest' | 'ocean';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type ColorScheme = Exclude<Theme, 'light'>;
-export type Panel =
-  'current' | 'radar' | 'players' | 'apm' | 'archive' | 'replays' | 'decks' | 'bans';
+export type Panel = 'current' | 'radar' | 'players' | 'archive' | 'replays' | 'decks' | 'bans';
 export interface Player {
   id: Id;
   name: string;
@@ -209,29 +208,6 @@ export interface ApiHealth {
 export interface VersionInfo {
   current: string;
 }
-export interface ApmState {
-  status: 'disabled' | 'unavailable' | 'replay' | 'active' | 'complete' | 'idle';
-  captureId: string | null;
-  sessionId: string | null;
-  map: string;
-  startedAt: number | null;
-  endedAt: number | null;
-  totalActions: number;
-  durationSec: number;
-  matchDurationSec: number | null;
-  focusedDurationSec: number;
-  apm: number;
-  currentApm: number | null;
-  peak: number;
-  perMinute: number[];
-  /** Counts by elapsed capture second; absent in legacy minute-only captures. */
-  perSecond?: number[];
-  focused: boolean;
-  fid: Id | null;
-  partial: boolean;
-  interrupted: boolean;
-  error: string | null;
-}
 export interface DeckFile {
   name: string;
   size: number;
@@ -292,7 +268,6 @@ export interface PublicConfig {
   logDir: string;
   decksDir: string;
   autoQueryCurrentMatch: boolean;
-  inputHookEnabled: boolean;
   banPollEnabled: boolean;
   matchSyncEnabled: boolean;
   banCardVisible: boolean;
@@ -324,7 +299,6 @@ export interface Bootstrap {
   session: Session;
   watcher: WatcherStatus;
   recording: RecordingState;
-  apm: ApmState;
   health: ApiHealth;
   version: VersionInfo;
   migration: MigrationStatus;

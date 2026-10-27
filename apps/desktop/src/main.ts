@@ -17,7 +17,6 @@ import { rpcSchemas, windowThemeColorsSchema, type RpcMethod } from '@ba/contrac
 import { errorMessage } from '@ba/shared';
 import { RecordingController } from './recordings/controller';
 import { ReplayProtocol } from './recordings/protocol';
-import { ApmController } from './apm';
 import { selectDirectory, detectLogDirectory, openPath } from './directories';
 import { UpdateController } from './updates/controller';
 import { readInstallRecord, writeInstallRecord } from './updates/install-record';
@@ -113,8 +112,7 @@ async function start(): Promise<void> {
     },
     (sessionId, dataUrl, hasAudio) => emit({ type: 'preview', sessionId, dataUrl, hasAudio }),
   );
-  const nativeRecordings = recordings,
-    apm = new ApmController();
+  const nativeRecordings = recordings;
   const platform: Platform = {
     analytics: {
       enabled:
@@ -159,7 +157,6 @@ async function start(): Promise<void> {
       thumbnail: (id) => nativeRecordings.thumbnail(id),
       playback: async (path) => replays?.url(path) || '',
     },
-    apm,
   };
   service = new Application(
     userDir,

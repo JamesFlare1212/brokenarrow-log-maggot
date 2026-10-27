@@ -72,7 +72,6 @@ const tabs = [
 ] as const;
 const flags = [
   ['autoQueryCurrentMatch', 'autoQuery', faMagnifyingGlass],
-  ['inputHookEnabled', 'inputHook', faWaveSquare],
   ['banPollEnabled', 'banPolling', faShieldHalved],
   ['matchSyncEnabled', 'matchSync', faArrowsRotate],
   ['multiAccountBond', 'multiAccount', faUsers],

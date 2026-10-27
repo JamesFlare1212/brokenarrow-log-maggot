@@ -104,10 +104,9 @@ describe('browser development with repository fixtures', () => {
 
   it('validates requests and keeps native features and filesystem paths out of browser RPC', async () => {
     const service = await create();
-    expect(await service.invoke('apm.history', null)).toEqual([]);
     for (const [method, input] of [
+      ['apm.history', null],
       ['config.update', { logDir: 'C:/real-game/GameLogs' }],
-      ['config.update', { inputHookEnabled: true }],
       ['replays.move', { from: 'C:/from', to: 'C:/to' }],
       ['replays.test', null],
       ['directory.select', { kind: 'logs' }],
@@ -116,9 +115,9 @@ describe('browser development with repository fixtures', () => {
     ])
       await expect(service.invoke(method, input)).rejects.toThrow('浏览器开发模式');
     await expect(service.invoke('matches.list', { accountId: 'invalid' })).rejects.toThrow();
+    await expect(service.invoke('config.update', { inputHookEnabled: true })).rejects.toThrow();
     expect(await service.invoke('app.bootstrap', null)).toMatchObject({
-      config: { inputHookEnabled: false, replayEnabled: false },
-      apm: { status: 'unavailable' },
+      config: { replayEnabled: false },
       updates: { mode: 'disabled' },
     });
   }, 30000);

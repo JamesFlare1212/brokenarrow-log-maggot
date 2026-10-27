@@ -3,7 +3,6 @@ import { DIAGNOSTIC_ERROR_TYPES, ANALYTICS_FEATURES, isDiagnosticFilename } from
 import { RECORDING_QUALITIES, RECORDING_FPS, RECORDING_BITRATE_MBPS } from './recording';
 import type {
   Account,
-  ApmState,
   ApiHealth,
   Ban,
   Bootstrap,
@@ -27,16 +26,15 @@ export const PANELS = [
   'current',
   'radar',
   'players',
-  'apm',
   'archive',
   'replays',
   'decks',
   'bans',
 ] as const;
-// Accept saved navigation from older versions while moving About into settings.
+// Remove retired pages from saved navigation without resetting other preferences.
 const panelListSchema = z
-  .array(z.enum([...PANELS, 'about']))
-  .transform((panels) => panels.filter((panel) => panel !== 'about'));
+  .array(z.enum([...PANELS, 'about', 'apm']))
+  .transform((panels) => panels.filter((panel) => panel !== 'about' && panel !== 'apm'));
 export const THEMES = ['dark', 'light', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
 export const THEME_MODES = ['system', 'light', 'dark'] as const;
 // Keep legacy palette keys so existing installations retain their colors.
@@ -52,7 +50,6 @@ export const configSchema = z.object({
   logDir: z.string().max(4096).default(''),
   decksDir: z.string().max(4096).default(''),
   autoQueryCurrentMatch: z.boolean().default(true),
-  inputHookEnabled: z.boolean().default(true),
   banPollEnabled: z.boolean().default(true),
   matchSyncEnabled: z.boolean().default(true),
   banCardVisible: z.boolean().default(false),
@@ -71,7 +68,10 @@ export const configSchema = z.object({
   sidebarCollapsed: z.boolean().default(false),
   lang: z.enum(['zh', 'en']).default('zh'),
   panelOrder: panelListSchema.default([...PANELS]),
-  hiddenPanels: z.array(z.enum(PANELS)).default([]),
+  hiddenPanels: z
+    .array(z.enum([...PANELS, 'apm']))
+    .transform((panels) => panels.filter((panel) => panel !== 'apm'))
+    .default([]),
   collapsedPanels: panelListSchema.default(['decks']),
   replayEnabled: z.boolean().default(false),
   replayDisplayId: z.string().max(256).default(''),
@@ -162,7 +162,6 @@ export const rpcSchemas = {
   'updates.install': empty,
   'updates.openDownload': empty,
   'app.bootstrap': empty,
-  'apm.history': empty,
   'config.update': configPatchSchema,
   'cache.stats': empty,
   'cache.clear': z.object({ mode: z.enum(['expired', 'all']) }).strict(),
@@ -215,7 +214,6 @@ export interface RpcOutputs {
   'updates.install': import('./updates').UpdateState;
   'updates.openDownload': null;
   'app.bootstrap': Bootstrap;
-  'apm.history': import('./models').ApmState[];
   'config.update': PublicConfig;
   'cache.stats': import('./cache').CacheStats;
   'cache.clear': { removed: number; stats: import('./cache').CacheStats };
@@ -274,7 +272,6 @@ export type AppEvent = (
   | { type: 'recording'; recording: RecordingState }
   | { type: 'preview'; sessionId: string; dataUrl: string; hasAudio: boolean }
   | { type: 'replays' }
-  | { type: 'apm'; apm: ApmState }
   | { type: 'decks'; alert: DeckSwitchAlert | null }
   | { type: 'health'; health: ApiHealth }
   | { type: 'error'; message: string }

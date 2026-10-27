@@ -2,7 +2,6 @@ export const ANALYTICS_FEATURES = [
   'current',
   'radar',
   'players',
-  'apm',
   'archive',
   'replays',
   'decks',
@@ -47,7 +46,6 @@ const appModules = new Set([
   'watcher.ts',
   'parser.ts',
   'controller.ts',
-  'apm.ts',
 ]);
 export function isDiagnosticFilename(value: string): boolean {
   return (

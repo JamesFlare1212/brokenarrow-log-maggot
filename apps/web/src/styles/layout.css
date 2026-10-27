@@ -279,8 +279,6 @@ button:not(:disabled),
 .replays-panel,
 .decks-panel,
 .session-panel,
-.apm-panel,
-.apm-metrics,
 .report-content,
 .maggot-report,
 .recording-settings,
@@ -608,7 +606,6 @@ button:not(:disabled),
   align-items: center;
   gap: 0.375rem;
 }
-.apm-notes,
 .path {
   color: var(--muted-foreground);
   font-size: 0.75rem;
@@ -976,34 +973,6 @@ button:not(:disabled),
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem;
-}
-.apm-panel > [data-slot='card'] [data-slot='empty'] {
-  min-height: 15rem;
-}
-.apm-toolbar {
-  display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 1rem;
-}
-.apm-history {
-  width: min(100%, 26rem);
-}
-.apm-history [data-slot='field-label'] {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.apm-history [data-slot='native-select-wrapper'] {
-  min-width: 0;
-  flex: 1;
-}
-.apm-context {
-  min-width: 0;
-}
-.apm-metrics > .stats {
-  gap: 0.75rem;
 }
 .ban-row {
   display: grid;

@@ -1,4 +1,4 @@
-import { initialApmState, rpcSchemas } from '@ba/contracts';
+import { rpcSchemas } from '@ba/contracts';
 import type {
   AppEvent,
   Bridge,
@@ -9,17 +9,10 @@ import type {
   RpcOutputs,
   Session,
 } from '@ba/contracts';
-import {
-  createDevelopmentData,
-  demoApm,
-  developmentPreview,
-  updateDemoApm,
-  type DevelopmentData,
-} from './data';
+import { createDevelopmentData, developmentPreview, type DevelopmentData } from './data';
 import { createDevelopmentVideo } from './media';
 
 export type DevelopmentMode = 'captured' | 'empty' | 'demo';
-export type DevelopmentApm = 'empty' | 'active' | 'complete';
 export type DevelopmentRecording = 'idle' | 'recording' | 'error';
 export const developmentLobbyPlayerCounts = [1, 2, 3, 4, 5] as const;
 export type DevelopmentLobbyPlayerCount = (typeof developmentLobbyPlayerCounts)[number];
@@ -29,7 +22,6 @@ export interface DevelopmentSnapshot {
   generation: number;
   pending: boolean;
   recording: DevelopmentRecording;
-  apm: DevelopmentApm;
   lobbyPlayerCount: DevelopmentLobbyPlayerCount | null;
 }
 type WithoutRevision<T> = T extends unknown ? Omit<T, 'revision'> : never;
@@ -50,7 +42,6 @@ export function createDevelopmentRuntime(
     generation: 0,
     pending: false,
     recording: 'idle',
-    apm: 'empty',
     lobbyPlayerCount: null,
   };
   let local: DevelopmentData | null = null;
@@ -101,10 +92,7 @@ export function createDevelopmentRuntime(
     publish({ recording: 'idle' });
   };
   const ensureClock = () => {
-    if (
-      !local ||
-      (local.bootstrap.recording.phase !== 'recording' && local.bootstrap.apm.status !== 'active')
-    ) {
+    if (!local || local.bootstrap.recording.phase !== 'recording') {
       stopClock();
       return;
     }
@@ -122,17 +110,6 @@ export function createDevelopmentRuntime(
           hasAudio: false,
         });
         if (state.recording.seconds >= 60) finishRecording();
-      }
-      if (state.apm.status === 'active') {
-        const samples = [...(state.apm.perSecond ?? []), 1 + (state.apm.durationSec % 6)];
-        state.apm = updateDemoApm({
-          ...state.apm,
-          perSecond: samples,
-          durationSec: samples.length,
-          focusedDurationSec: samples.length,
-          matchDurationSec: samples.length,
-        });
-        emit({ type: 'apm', apm: state.apm });
       }
       ensureClock();
     }, 1000);
@@ -167,31 +144,6 @@ export function createDevelopmentRuntime(
         hasAudio: false,
       });
     publish({ recording: phase });
-    ensureClock();
-  };
-  const setApm = (value: DevelopmentApm) => {
-    if (snapshot.mode === 'captured') return;
-    const scene = data();
-    scene.bootstrap.config = { ...scene.bootstrap.config, inputHookEnabled: true };
-    const current = scene.bootstrap.apm;
-    scene.bootstrap.apm =
-      value === 'empty'
-        ? initialApmState('idle')
-        : value === 'complete' && current.status === 'active'
-          ? { ...current, status: 'complete', endedAt: now(), focused: false }
-          : demoApm(value, now());
-    scene.history =
-      value === 'empty'
-        ? []
-        : [
-            scene.bootstrap.apm,
-            ...scene.history.filter(
-              (capture) => capture.captureId !== scene.bootstrap.apm.captureId,
-            ),
-          ];
-    emit({ type: 'config', config: scene.bootstrap.config });
-    emit({ type: 'apm', apm: scene.bootstrap.apm });
-    publish({ apm: value });
     ensureClock();
   };
   const reportFor = (id: string): PlayerReport =>
@@ -290,11 +242,6 @@ export function createDevelopmentRuntime(
       const state = data().bootstrap;
       state.config = { ...state.config, ...patch };
       if (patch.replayEnabled === false) finishRecording();
-      if (patch.inputHookEnabled === false) {
-        state.apm = initialApmState('disabled');
-        emit({ type: 'apm', apm: state.apm });
-        publish({ apm: 'empty' });
-      }
       emit({ type: 'config', config: state.config });
       ensureClock();
       return state.config;
@@ -395,7 +342,6 @@ export function createDevelopmentRuntime(
     },
     'bans.list': (input) => data().bans.filter((ban) => !input.metOnly || ban.encountered),
     'bans.sync': () => data().bans,
-    'apm.history': () => data().history,
     'replays.list': () => data().replays,
     'replays.directory': () => ({
       dir: data().bootstrap.config.replaySaveDir,
@@ -532,7 +478,6 @@ export function createDevelopmentRuntime(
             generation: snapshot.generation + 1,
             pending: false,
             recording: 'idle',
-            apm: mode === 'demo' ? 'complete' : 'empty',
             lobbyPlayerCount: null,
           };
           api = createBridge();
@@ -543,7 +488,6 @@ export function createDevelopmentRuntime(
         }
       },
       setRecording,
-      setApm,
       setLobbyPlayerCount,
     },
     dispose() {

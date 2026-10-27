@@ -106,19 +106,19 @@ items, such as recordings; do not add redundant glass wrappers around controls.
 
 ## Surface hierarchy and deliberate exceptions
 
-| Surface                                                                          | Treatment and reason                                                                                                  |
-| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Dashboard, room, APM, player summary, deck, recording, cache, and settings cards | Shared glass Card                                                                                                     |
-| Archive grid cards                                                               | Shared glass Card; custom content density is allowed, a separate radius is not                                        |
-| Appearance mode and ELO choices                                                  | Shared glass Toggle `card` variant                                                                                    |
-| Workspace, sidebar, and titlebar                                                 | Flat semantic background; keep navigation and native caption controls legible                                         |
-| Dialog, alert dialog, sheet, popover, dropdown, tooltip, toast                   | Existing overlay primitives and readable semantic fills; do not apply the adjustable content-card opacity             |
-| Data-table frames, sticky headers, and profile tables                            | Solid semantic surfaces, clear borders, and independent scrolling; rows must not bleed through sticky labels          |
-| Alerts and selected list rows                                                    | Semantic feedback or muted fills; these communicate state within the surrounding layout                               |
-| Inputs, sliders, switches, badges, and compact filters                           | Their shared control variants and semantic colors; do not add a glass layer to every control                          |
-| Video frames, display previews, and the recorder canvas                          | Media-specific neutral or black fills preserve framing and playback contrast                                          |
-| Theme wireframes and palette swatches                                            | Illustrations of palettes; decorative gradients and preview-specific edge effects are confined to these illustrations |
-| Approved logo                                                                    | Preserve the supplied image colors and white background                                                               |
+| Surface                                                                     | Treatment and reason                                                                                                  |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Dashboard, room, player summary, deck, recording, cache, and settings cards | Shared glass Card                                                                                                     |
+| Archive grid cards                                                          | Shared glass Card; custom content density is allowed, a separate radius is not                                        |
+| Appearance mode and ELO choices                                             | Shared glass Toggle `card` variant                                                                                    |
+| Workspace, sidebar, and titlebar                                            | Flat semantic background; keep navigation and native caption controls legible                                         |
+| Dialog, alert dialog, sheet, popover, dropdown, tooltip, toast              | Existing overlay primitives and readable semantic fills; do not apply the adjustable content-card opacity             |
+| Data-table frames, sticky headers, and profile tables                       | Solid semantic surfaces, clear borders, and independent scrolling; rows must not bleed through sticky labels          |
+| Alerts and selected list rows                                               | Semantic feedback or muted fills; these communicate state within the surrounding layout                               |
+| Inputs, sliders, switches, badges, and compact filters                      | Their shared control variants and semantic colors; do not add a glass layer to every control                          |
+| Video frames, display previews, and the recorder canvas                     | Media-specific neutral or black fills preserve framing and playback contrast                                          |
+| Theme wireframes and palette swatches                                       | Illustrations of palettes; decorative gradients and preview-specific edge effects are confined to these illustrations |
+| Approved logo                                                               | Preserve the supplied image colors and white background                                                               |
 
 An exception belongs to a surface role, not to a feature page. A new content card
 must not opt out simply because another surface is solid. Add a justified role
@@ -171,8 +171,6 @@ required by the current interface.
 - Player refresh is an icon action in the dialog header immediately before
   Close. It stays available while the content scrolls and refreshes the profile
   and report together.
-- APM history and capture context share a wrapping toolbar. Metric cards use a
-  12px grid gap. History selection must update the context and metrics together.
 - ELO color options sit directly under their section heading. Do not restore
   the removed explanatory paragraph or an additional wrapper card.
 - Quick tools keep their actions without an extra visible heading.

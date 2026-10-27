@@ -128,7 +128,6 @@ export function seedRealData(db: Database, data: RealData, logDir: string): void
       autoQueryCurrentMatch: false,
       banPollEnabled: false,
       matchSyncEnabled: false,
-      inputHookEnabled: false,
       replayEnabled: false,
     });
     db.setState('activeAccountId', data.activeAccountId);

@@ -4,11 +4,8 @@ import { appendFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AppEvent, ApmState, RecordingState } from '@ba/contracts';
+import type { AppEvent, RecordingState } from '@ba/contracts';
 import type { Platform } from '../apps/server/src/ports';
-import { initialApmState } from '@ba/contracts';
-import { ApmController } from '../apps/desktop/src/apm';
-import type { InputFrame } from '../apps/desktop/src/apm/windows-input';
 
 vi.mock('../apps/server/src/config', async (importOriginal) => {
   const original = await importOriginal<typeof import('../apps/server/src/config')>();
@@ -44,7 +41,6 @@ function deferred<T>() {
   return { promise, resolve };
 }
 function platform(fetchImpl: typeof fetch): Platform {
-  const apm: ApmState = initialApmState('idle');
   const recording: RecordingState = {
     phase: 'idle',
     sessionId: null,
@@ -64,13 +60,6 @@ function platform(fetchImpl: typeof fetch): Platform {
     openPath: vi.fn(async () => {}),
     openExternal: vi.fn(async () => {}),
     notify: vi.fn(),
-    apm: {
-      status: () => apm,
-      start: vi.fn(),
-      updateMatch: vi.fn(),
-      stop: vi.fn(),
-      disable: vi.fn(),
-    },
     recordings: {
       status: () => recording,
       start: vi.fn(async () => {}),
@@ -439,12 +428,11 @@ it('imports historical logs on startup and directory change without replacing th
     await mkdir(join(logs, 'history'), { recursive: true });
     await writeFile(join(logs, 'Gamelog__latest.log'), lines('101'));
     await writeFile(join(logs, 'history', 'old.txt'), lines('102'));
-    app.db.updateConfig({ logDir: logs, replayEnabled: true, inputHookEnabled: true });
+    app.db.updateConfig({ logDir: logs, replayEnabled: true });
     await app.start();
     await app.invoke('matches.scan', null);
     expect(app.db.matches()).toHaveLength(2);
     expect(p.recordings.start).not.toHaveBeenCalled();
-    expect(p.apm.start).not.toHaveBeenCalled();
     await app.watcher.poll();
     const session = app.parser.snapshot();
     const aborts = vi.mocked(p.recordings.abort).mock.calls.length;
@@ -454,7 +442,6 @@ it('imports historical logs on startup and directory change without replacing th
     expect(app.parser.snapshot()).toEqual(session);
     expect(p.recordings.abort).toHaveBeenCalledTimes(aborts);
     expect(p.recordings.start).not.toHaveBeenCalled();
-    expect(p.apm.start).not.toHaveBeenCalled();
     expect(events.some((event) => event.type === 'matches')).toBe(true);
     const other = join(dir, 'other');
     await mkdir(other);
@@ -542,7 +529,6 @@ describe('configuration updates', () => {
       decksDir: 'custom-decks',
       theme: 'forest',
       replayEnabled: true,
-      inputHookEnabled: true,
       replaySaveDir: 'custom-recordings',
     });
     const watch = vi.spyOn(app.watcher, 'start');
@@ -554,7 +540,6 @@ describe('configuration updates', () => {
     expect(events).toContainEqual({ type: 'config', config, revision: 1 });
     expect(watch).not.toHaveBeenCalled();
     expect(p.recordings.stop).not.toHaveBeenCalled();
-    expect(p.apm.disable).not.toHaveBeenCalled();
   });
 });
 
@@ -572,7 +557,7 @@ describe('application shutdown', () => {
       await finalization.promise;
     });
     const app = application(p);
-    app.db.updateConfig({ replayEnabled: true, inputHookEnabled: true });
+    app.db.updateConfig({ replayEnabled: true });
     const close = vi.spyOn(app.db, 'close');
     const stopping = app.stop();
     await stopStarted.promise;
@@ -582,7 +567,6 @@ describe('application shutdown', () => {
     ]);
     await expect(app.invoke('app.bootstrap', null)).rejects.toThrow('Application closed');
     expect(p.recordings.start).not.toHaveBeenCalled();
-    expect(p.apm.start).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();
     finalization.resolve();
     await stopping;
@@ -687,141 +671,5 @@ describe('application shutdown', () => {
     const closedAt = close.mock.invocationCallOrder[0]!;
     expect(write.mock.invocationCallOrder.every((order) => order < closedAt)).toBe(true);
     expect(close).toHaveBeenCalledTimes(1);
-  });
-});
-
-function measuredApm(finalization = Promise.resolve()) {
-  let receive!: (frame: InputFrame) => void;
-  const controller = new ApmController(
-    () => ({
-      start: (frame) => {
-        receive = frame;
-        frame({ type: 'ready', elapsedMs: 0, focusedMs: 0, focused: true, seconds: [] });
-      },
-      stop: async () => {
-        await finalization;
-        receive({
-          type: 'stopped',
-          elapsedMs: 2000,
-          focusedMs: 2000,
-          focused: true,
-          seconds: [[1, 3]],
-        });
-      },
-    }),
-    () => 0,
-    () => 1000000,
-  );
-  return controller;
-}
-
-describe('APM application lifecycle', () => {
-  it('captures matches by default and saves the final aggregate with rapid events and a late FID', async () => {
-    const p = platform(vi.fn<typeof fetch>());
-    p.apm = measuredApm();
-    const events: AppEvent[] = [];
-    const app = application(p, events);
-    expect(app.db.config().inputHookEnabled).toBe(true);
-    app.parser.feed([
-      'Log: Start loading battle... map: Dam, scenario: Test',
-      'Log: FID:123',
-      'Log: GameController dispose called',
-      'Log: [NET_ROOM] Connection closed. FightId=123 LiveTime: 300 sec',
-    ]);
-    await vi.waitFor(() => expect(p.apm.status().status).toBe('complete'));
-    expect(await app.invoke('apm.history', null)).toEqual([
-      expect.objectContaining({
-        status: 'complete',
-        fid: '123',
-        totalActions: 3,
-        durationSec: 2,
-        partial: false,
-        focused: false,
-        matchDurationSec: 300,
-      }),
-    ]);
-    expect(
-      events.some(
-        (event) =>
-          event.type === 'apm' && event.apm.status === 'complete' && event.apm.fid === '123',
-      ),
-    ).toBe(true);
-  });
-
-  it('publishes and checkpoints interrupted capture on log reset', async () => {
-    const p = platform(vi.fn<typeof fetch>());
-    p.apm = measuredApm();
-    const events: AppEvent[] = [];
-    const app = application(p, events);
-    app.db.updateConfig({ inputHookEnabled: true });
-    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
-    await vi.waitFor(() => expect(p.apm.status().status).toBe('active'));
-    app.parser.reset();
-    await vi.waitFor(() =>
-      expect(events.some((event) => event.type === 'apm' && event.apm.status === 'complete')).toBe(
-        true,
-      ),
-    );
-    expect(app.db.apmHistory()[0]).toMatchObject({
-      partial: true,
-      interrupted: true,
-      totalActions: 3,
-    });
-  });
-
-  it('keeps an active capture when recovery and match-start paths identify the same session', async () => {
-    const p = platform(vi.fn<typeof fetch>());
-    p.apm = measuredApm();
-    const start = vi.spyOn(p.apm, 'start');
-    const app = application(p);
-    app.db.updateConfig({ inputHookEnabled: true });
-    vi.spyOn(app.watcher, 'status').mockReturnValue({ ...app.watcher.status(), live: true });
-    vi.spyOn(app.parser, 'isRecoveredMatch').mockReturnValue(true);
-    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
-    await vi.waitFor(() => expect(p.apm.status().status).toBe('active'));
-    const id = p.apm.status().captureId;
-    await vi.waitFor(() => expect(start).toHaveBeenCalledOnce());
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(start).toHaveBeenCalledOnce();
-    expect(p.apm.status().captureId).toBe(id);
-  });
-
-  it('marks capture enabled mid-match as partial and saves it before disabling', async () => {
-    const p = platform(vi.fn<typeof fetch>());
-    p.apm = measuredApm();
-    const app = application(p);
-    app.db.updateConfig({ inputHookEnabled: false });
-    vi.spyOn(app.watcher, 'status').mockReturnValue({ ...app.watcher.status(), live: true });
-    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
-    await app.invoke('config.update', { inputHookEnabled: true });
-    expect(p.apm.status()).toMatchObject({ status: 'active', partial: true });
-    await app.invoke('config.update', { inputHookEnabled: false });
-    expect(p.apm.status().status).toBe('disabled');
-    expect(app.db.apmHistory()[0]).toMatchObject({
-      status: 'complete',
-      partial: true,
-      totalActions: 3,
-    });
-  });
-
-  it('waits for the last native batch before closing SQLite on shutdown', async () => {
-    const finalization = deferred<void>();
-    const p = platform(vi.fn<typeof fetch>());
-    p.apm = measuredApm(finalization.promise);
-    const app = application(p);
-    const close = vi.spyOn(app.db, 'close');
-    app.db.updateConfig({ inputHookEnabled: true });
-    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
-    await vi.waitFor(() => expect(p.apm.status().status).toBe('active'));
-    const stopping = app.stop();
-    try {
-      await Promise.resolve();
-      expect(close).not.toHaveBeenCalled();
-    } finally {
-      finalization.resolve();
-    }
-    await stopping;
-    expect(p.apm.status()).toMatchObject({ totalActions: 3, partial: true });
-    expect(close).toHaveBeenCalledOnce();
   });
 });

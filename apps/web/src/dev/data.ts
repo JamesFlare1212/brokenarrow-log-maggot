@@ -1,7 +1,5 @@
-import { initialApmState } from '@ba/contracts';
 import type {
   Account,
-  ApmState,
   Ban,
   Bootstrap,
   CacheStats,
@@ -15,47 +13,6 @@ import type {
 
 export const developmentPreview = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#152522"/><path d="M0 80H640M0 160H640M0 240H640M0 320H640M80 0V360M160 0V360M240 0V360M320 0V360M400 0V360M480 0V360M560 0V360" stroke="#263c35"/><path d="M0 280Q200 80 640 200" fill="none" stroke="#376171" stroke-width="45"/><g fill="#60a5fa"><circle cx="160" cy="130" r="10"/><circle cx="215" cy="245" r="10"/><circle cx="290" cy="140" r="10"/></g><g fill="#fb7185"><circle cx="440" cy="85" r="10"/><circle cx="470" cy="240" r="10"/><circle cx="530" cy="150" r="10"/></g><text x="24" y="36" fill="#ecfdf5" font-family="sans-serif" font-size="18">Broken Arrow · Development preview</text></svg>')}`;
 
-export function demoApm(status: 'active' | 'complete', now: number): ApmState {
-  const durationSec = status === 'active' ? 180 : 240;
-  const perSecond = Array.from({ length: durationSec }, (_, index) =>
-    Math.max(0, Math.round(2 + Math.sin(index / 9) * 1.5 + (index % 17 === 0 ? 5 : 0))),
-  );
-  return updateDemoApm({
-    ...initialApmState(status),
-    status,
-    captureId: `development-apm-${status}`,
-    sessionId: 'development-session',
-    fid: '9900100',
-    map: 'Dam',
-    startedAt: now - durationSec * 1000,
-    endedAt: status === 'complete' ? now : null,
-    durationSec,
-    focusedDurationSec: durationSec,
-    matchDurationSec: durationSec,
-    focused: status === 'active',
-    perSecond,
-  });
-}
-
-export function updateDemoApm(apm: ApmState): ApmState {
-  const samples = apm.perSecond ?? [];
-  const totalActions = samples.reduce((sum, value) => sum + value, 0);
-  const rolling = samples.map(
-    (_, index) =>
-      samples.slice(Math.max(0, index - 9), index + 1).reduce((sum, value) => sum + value, 0) * 6,
-  );
-  return {
-    ...apm,
-    totalActions,
-    apm: apm.durationSec ? (totalActions / apm.durationSec) * 60 : 0,
-    currentApm: samples.slice(-10).reduce((sum, value) => sum + value, 0) * 6,
-    peak: Math.max(0, ...rolling),
-    perMinute: Array.from({ length: Math.ceil(samples.length / 60) }, (_, index) =>
-      samples.slice(index * 60, (index + 1) * 60).reduce((sum, value) => sum + value, 0),
-    ),
-  };
-}
-
 export interface DevelopmentData {
   bootstrap: Bootstrap;
   matches: Match[];
@@ -64,7 +21,6 @@ export interface DevelopmentData {
   accounts: Account[];
   bans: Ban[];
   replays: Replay[];
-  history: ApmState[];
   decks: DeckList;
   cache: CacheStats;
 }
@@ -188,7 +144,6 @@ export function createDevelopmentData(
     ...bootstrap.config,
     analyticsEnabled: false,
     analyticsChoiceSaved: true,
-    inputHookEnabled: !empty,
     autoQueryCurrentMatch: !empty,
     replayEnabled: !empty,
     hiddenPanels: [],
@@ -243,7 +198,6 @@ export function createDevelopmentData(
     hasAudio: false,
     error: null,
   };
-  bootstrap.apm = empty ? initialApmState('idle') : demoApm('complete', now);
   bootstrap.health = {
     state: 'ok',
     at: now,
@@ -295,16 +249,6 @@ export function createDevelopmentData(
           durationSec: match.durationSec,
           test: true,
         })),
-    history: empty
-      ? []
-      : [
-          demoApm('complete', now),
-          {
-            ...demoApm('complete', now - 86400000),
-            captureId: 'development-apm-previous',
-            map: 'Coast',
-          },
-        ],
     decks: {
       found: !empty,
       decksDir: 'C:/Development/Decks',

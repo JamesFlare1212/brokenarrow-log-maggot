@@ -2,7 +2,6 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { initialApmState } from '@ba/contracts';
 import { Application } from '../apps/server/src/app';
 import { Database } from '../apps/server/src/storage/database';
 import type { Platform } from '../apps/server/src/ports';
@@ -31,13 +30,6 @@ async function launch(
     openPath: async () => {},
     openExternal: async () => {},
     notify: () => {},
-    apm: {
-      status: () => initialApmState('idle'),
-      start() {},
-      updateMatch() {},
-      stop() {},
-      disable() {},
-    },
     recordings: {
       status: () => ({
         phase: 'idle',

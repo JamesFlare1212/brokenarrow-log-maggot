@@ -89,7 +89,6 @@ describe('browser development scenes', () => {
     const initial = await runtime.api.invoke('app.bootstrap', null);
     const generation = runtime.controls.getSnapshot().generation;
     runtime.controls.setRecording('error');
-    runtime.controls.setApm('empty');
     for (const count of [5, 1, 3, 2, 4, 5, null] as const) {
       runtime.controls.setLobbyPlayerCount(count);
       const bootstrap = await runtime.api.invoke('app.bootstrap', null);
@@ -104,7 +103,6 @@ describe('browser development scenes', () => {
         generation,
         lobbyPlayerCount: count,
         recording: 'error',
-        apm: 'empty',
       });
     }
     expect(calls).toEqual(['app.bootstrap']);
@@ -220,7 +218,7 @@ describe('browser development scenes', () => {
     expect(await runtime.api.invoke('matches.list', {})).toEqual([]);
   });
 
-  it('provides replay and APM examples and advances only synthetic capture state', async () => {
+  it('provides replay examples and advances only synthetic recording state', async () => {
     vi.useFakeTimers();
     const { runtime, calls } = setup();
     await runtime.controls.setMode('demo');
@@ -229,24 +227,16 @@ describe('browser development scenes', () => {
     const unsubscribe = api.subscribe((event) => events.push(event));
     expect(await api.invoke('matches.list', {})).toHaveLength(72);
     expect(await api.invoke('replays.list', null)).toHaveLength(6);
-    expect(await api.invoke('apm.history', null)).toHaveLength(2);
     runtime.controls.setRecording('recording');
-    runtime.controls.setApm('active');
     vi.advanceTimersByTime(2000);
     const bootstrap = await api.invoke('app.bootstrap', null);
     expect(bootstrap.recording.seconds).toBe(2);
-    expect(bootstrap.apm.durationSec).toBe(182);
-    expect(bootstrap.apm.perSecond).toHaveLength(182);
     expect(events.some((event) => event.type === 'preview')).toBe(true);
-    expect(events.filter((event) => event.type === 'apm')).toHaveLength(3);
     expect(events.map((event) => event.revision)).toEqual(
       [...events.map((event) => event.revision)].sort((a, b) => a - b),
     );
     runtime.controls.setRecording('idle');
     expect(await api.invoke('replays.list', null)).toHaveLength(7);
-    runtime.controls.setApm('complete');
-    expect((await api.invoke('app.bootstrap', null)).apm.status).toBe('complete');
-    expect((await api.invoke('app.bootstrap', null)).apm.durationSec).toBe(182);
     expect(calls).toEqual(['app.bootstrap']);
     unsubscribe();
   });

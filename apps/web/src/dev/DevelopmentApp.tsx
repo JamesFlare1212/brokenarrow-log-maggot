@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { Activity, FlaskConical, GripVertical, RefreshCw, Users, Video } from 'lucide-react';
+import { FlaskConical, GripVertical, RefreshCw, Users, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toolStyles from './tools.css?inline';
 import { useDevelopmentLayer, useDevelopmentTheme, useToolPosition } from './layer';
@@ -31,7 +31,6 @@ import {
   type DevelopmentSnapshot,
   type DevelopmentMode,
   type DevelopmentRecording,
-  type DevelopmentApm,
 } from './runtime';
 
 function DevelopmentTools({
@@ -186,27 +185,6 @@ function DevelopmentTools({
                     {(['idle', 'recording', 'error'] as const).map((value) => (
                       <NativeSelectOption key={value} value={value}>
                         {t('devRecording.' + value)}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
-                </Field>
-                <Field data-disabled={!local || snapshot.pending}>
-                  <FieldLabel htmlFor="development-apm">
-                    <Activity aria-hidden="true" />
-                    {t('devApm')}
-                  </FieldLabel>
-                  <NativeSelect
-                    id="development-apm"
-                    className="w-full"
-                    value={snapshot.apm}
-                    disabled={!local || snapshot.pending}
-                    onChange={(event) =>
-                      runtime.controls.setApm(event.target.value as DevelopmentApm)
-                    }
-                  >
-                    {(['empty', 'active', 'complete'] as const).map((value) => (
-                      <NativeSelectOption key={value} value={value}>
-                        {t('devApm.' + value)}
                       </NativeSelectOption>
                     ))}
                   </NativeSelect>

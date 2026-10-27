@@ -16,7 +16,7 @@
 - 对局档案、完整评分、手动收录、刷新、删除和多个录像视角。
 - 卡组备份 / 部署、实时开局自动覆盖唯一的“上一局卡组包”、换号提醒。
 - 本地录像：240–1080p、30–60 fps、3–10 Mbps、系统声音与默认麦克风混音、预览、播放和目录迁移。
-- 可选真实输入 APM、封禁提醒。
+- Optional ban alerts.
 - System, light and dark appearance modes, six palette pairs, separate light/dark palettes, and Chinese/English interfaces.
 - 独立设置页面、自动保存、返回原页面，以及可折叠并记住状态的侧栏。
 
@@ -110,7 +110,7 @@ Temporary workaround: the desktop app disables Chromium QUIC/HTTP/3 to avoid obs
 
 数据保存在原 `broken-arrow-log-assistant` 用户目录中的 SQLite。旧 JSON 在首次启动备份并事务导入，原文件保留。录像仍是本地 WebM，播放通过受控 Range 协议按需读取。
 
-APM 和录像默认关闭。APM 仅统计进行中对局、游戏在前台时的真实输入；录像捕获所选显示器完整画面。
+Recording is disabled by default and captures the entire selected display.
 
 ## Optional anonymous analytics
 
@@ -127,7 +127,7 @@ semantics. Analytics requires no CI upload credentials.
 
 ## English
 
-A local Broken Arrow assistant: match analysis, player history, deck backups, recordings, optional real-input APM, three appearance modes, six palette pairs and Chinese/English interfaces. Run `pnpm install` and `pnpm dev`; validate with `pnpm check`. Existing JSON is backed up and imported transactionally into SQLite without changing the original files. Recordings remain local and use range-based playback. BATrace data can be delayed.
+A local Broken Arrow assistant: match analysis, player history, deck backups, recordings, three appearance modes, six palette pairs and Chinese/English interfaces. Run `pnpm install` and `pnpm dev`; validate with `pnpm check`. Existing JSON is backed up and imported transactionally into SQLite without changing the original files. Recordings remain local and use range-based playback. BATrace data can be delayed.
 
 ## 致谢与参考
 

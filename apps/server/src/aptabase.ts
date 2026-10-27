@@ -29,7 +29,6 @@ export type ErrorSource =
   | 'background'
   | 'watcher'
   | 'recording'
-  | 'apm'
   | 'update'
   | 'renderer'
   | 'renderer_rejection'
