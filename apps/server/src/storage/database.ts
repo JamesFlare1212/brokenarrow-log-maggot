@@ -16,7 +16,16 @@ import type {
   SearchPlayer,
 } from '@ba/contracts';
 import { configSchema, legacyThemeMode, PANELS } from '@ba/contracts';
-import { object, text, number, mergeMatch, determineOutcome } from '@ba/shared';
+import {
+  object,
+  text,
+  number,
+  mergeMatch,
+  determineOutcome,
+  normalizeQuality,
+  normalizeFps,
+  normalizeBitrate,
+} from '@ba/shared';
 import { projectConfig } from '../config';
 
 function includeRadar(order: PublicConfig['panelOrder']): PublicConfig['panelOrder'] {
@@ -161,6 +170,9 @@ export class Database {
       themeMode: legacyThemeMode(stored.theme),
       ...stored,
       lang: stored.lang === 'ja' || stored.lang === 'ru' ? 'zh' : stored.lang,
+      replayQuality: normalizeQuality(stored.replayQuality),
+      replayFps: normalizeFps(stored.replayFps),
+      replayBitrateMbps: normalizeBitrate(stored.replayBitrateMbps),
     });
     config.panelOrder = includeRadar(config.panelOrder);
     return config;
@@ -429,12 +441,21 @@ export class Database {
   }
   bans(metOnly = false): Ban[] {
     return this.prepare(
-      "SELECT b.payload,p.observed FROM bans b JOIN players p ON b.player_id=p.id ORDER BY json_extract(b.payload,'$.firstSeenAt') DESC",
+      "SELECT b.payload,p.observed,p.last_seen,e.encounter_at FROM bans b JOIN players p ON b.player_id=p.id LEFT JOIN (SELECT player_id,MAX(at) encounter_at FROM legacy_encounters GROUP BY player_id) e ON e.player_id=b.player_id ORDER BY json_extract(b.payload,'$.firstSeenAt') DESC",
     )
       .all()
       .map((r) => {
         const b = JSON.parse(String(r.payload)) as Ban;
-        return { ...b, encountered: b.encountered || Number(r.observed) === 1 };
+        const lastEncounterAt =
+          Math.max(
+            Number(r.observed) === 1 ? (number(r.last_seen) ?? 0) : 0,
+            number(r.encounter_at) ?? 0,
+          ) || null;
+        return {
+          ...b,
+          encountered: b.encountered || Number(r.observed) === 1 || lastEncounterAt !== null,
+          lastEncounterAt,
+        };
       })
       .filter((b) => !metOnly || b.encountered);
   }

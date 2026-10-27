@@ -6,27 +6,26 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type CSSProperties,
 } from 'react';
 import {
-  faWaveSquare,
-  faBoxArchive,
-  faChevronRight,
-  faLayerGroup,
-  faTableCellsLarge,
-  faBars,
-  faSatelliteDish,
-  faMagnifyingGlass,
-  faGear,
-  faShieldHalved,
-  faVideo,
-} from '@fortawesome/free-solid-svg-icons';
+  Activity as faWaveSquare,
+  Archive as faBoxArchive,
+  Layers as faLayerGroup,
+  LayoutDashboard as faTableCellsLarge,
+  Radar as faSatelliteDish,
+  Search as faMagnifyingGlass,
+  Settings as faGear,
+  ShieldCheck as faShieldHalved,
+  Video as faVideo,
+} from 'lucide-react';
 import { Icon } from '../components/Icon';
 import { BrandLogo } from '../components/BrandLogo';
 import { TooltipButton } from '../components/Tooltip';
 import type { Panel } from '@ba/contracts';
 import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
-import { Badge, Button, Dialog, Loading, Notice } from '../components/ui';
+import { Badge, Button, Loading, Notice } from '../components/ui';
 import { BatraceStatus } from '../components/BatraceStatus';
 import { PageToolbar } from '../components/PageToolbar';
 import {
@@ -36,6 +35,7 @@ import {
   SidebarHeading,
   SidebarItem,
   SidebarNavigation,
+  SidebarToggle,
 } from '../components/Sidebar';
 import { Dashboard } from '../features/overview/Dashboard';
 import { SessionPanel } from '../features/session/SessionPanel';
@@ -46,8 +46,19 @@ import { DecksPanel } from '../features/decks/DecksPanel';
 import { ApmPanel } from '../features/apm/ApmPanel';
 import { ReplaysPanel } from '../features/replays/ReplaysPanel';
 import { UpdateButton } from '../features/settings/UpdateButton';
-import { TelemetryConsentDialog } from '../features/settings/TelemetryConsentDialog';
-import { hasTelemetryConsent } from '@ba/contracts';
+import { AnalyticsConsentDialog } from '../features/settings/AnalyticsConsentDialog';
+import { hasAnalyticsChoice } from '@ba/contracts';
+import { cn } from '@/lib/utils';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 const ProfileDialog = lazy(() =>
   import('../features/players/ProfileDialog').then((module) => ({ default: module.ProfileDialog })),
 );
@@ -83,7 +94,8 @@ function Brand() {
   const { t } = useI18n();
   return (
     <SidebarHeading className="brand" icon={<BrandLogo />}>
-      <strong>{t('brand')}</strong>
+      <strong className="truncate text-base font-semibold">{t('brand')}</strong>
+      <span className="text-xs text-muted-foreground">Broken Arrow</span>
     </SidebarHeading>
   );
 }
@@ -92,7 +104,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   const { state, page, setPage, settings } = useApp(),
     { t } = useI18n();
   return (
-    <SidebarNavigation aria-label={t('workspaceNav')}>
+    <SidebarNavigation aria-label={t('workspaceNav')} heading={t('workspaceNav')}>
       {state.config.panelOrder
         .filter((panel) => !state.config.hiddenPanels.includes(panel))
         .map((panel) => (
@@ -137,29 +149,20 @@ function ModalRouter() {
 }
 
 export function App() {
-  const { state, api, page, settingsTab, settings, openSettings, openModal, notify } = useApp(),
+  const { state, api, page, settingsTab, settings, openSettings, openModal } = useApp(),
     { t } = useI18n();
-  const [healthBusy, setHealthBusy] = useState(false),
-    [navigationOpen, setNavigationOpen] = useState(false);
   const [visited, setVisited] = useState<Panel[]>([page]);
   useEffect(() => {
     if (
       window.assistant === api &&
-      state.config.telemetryEnabled &&
-      hasTelemetryConsent(state.config)
+      state.config.analyticsEnabled &&
+      hasAnalyticsChoice(state.config)
     )
       void api
         .invoke('diagnostics.report', { type: 'feature', feature: settingsTab ? 'settings' : page })
         .catch(() => {});
-  }, [
-    api,
-    page,
-    settingsTab,
-    state.config.telemetryEnabled,
-    state.config.telemetryConsentConfirmed,
-    state.config.telemetryConsentVersion,
-  ]);
-  const main = useRef<HTMLElement>(null),
+  }, [api, page, settingsTab, state.config.analyticsEnabled, state.config.analyticsChoiceSaved]);
+  const main = useRef<HTMLDivElement>(null),
     workspaceScroll = useRef<HTMLDivElement>(null),
     scrollPositions = useRef(new Map<string, number>()),
     previousPage = useRef<string>(settingsTab ? `settings/${settingsTab}` : page);
@@ -200,8 +203,11 @@ export function App() {
   const account = state.session.localName || t('noAccount');
   const collapsed = settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed;
   return (
-    <div
-      className={`app-shell ${settingsTab ? 'app-shell-settings' : ''} ${collapsed ? 'sidebar-collapsed' : ''}`}
+    <SidebarProvider
+      style={{ '--sidebar-width': '16rem' } as CSSProperties}
+      open={!collapsed}
+      onOpenChange={(open) => settings.change({ sidebarCollapsed: !open })}
+      className={cn('app-shell', settingsTab && 'app-shell-settings')}
       data-ready="true"
     >
       <a
@@ -214,17 +220,8 @@ export function App() {
       >
         {t('skipContent')}
       </a>
-      <Sidebar
-        id="workspace-sidebar"
-        className="sidebar"
-        collapsed={collapsed}
-        hidden={Boolean(settingsTab)}
-      >
-        <SidebarHeader
-          collapsed={collapsed}
-          controls="workspace-sidebar"
-          onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
-        >
+      <Sidebar id="workspace-sidebar" className="sidebar" hidden={Boolean(settingsTab)}>
+        <SidebarHeader>
           <Brand />
         </SidebarHeader>
         <Navigation />
@@ -240,43 +237,34 @@ export function App() {
           <UpdateButton />
         </SidebarFooter>
       </Sidebar>
-      <div className="workspace" hidden={Boolean(settingsTab)}>
+      <SidebarInset className="workspace" hidden={Boolean(settingsTab)}>
         <PageToolbar className="topbar">
           <div className="topbar-location">
-            <Button
-              className="mobile-menu"
-              aria-label={t('openNavigation')}
-              aria-expanded={navigationOpen}
-              onClick={() => setNavigationOpen(true)}
-            >
-              <Icon icon={faBars} size={20} />
-            </Button>
-            <span>Broken Arrow</span>
-            <Icon icon={faChevronRight} size={14} className="muted" aria-hidden="true" />
-            <strong>{t(page === 'current' ? 'overview' : page)}</strong>
+            <SidebarToggle controls="workspace-sidebar" />
+            <Separator
+              orientation="vertical"
+              className="mx-2 data-vertical:h-4 data-vertical:self-center"
+            />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>Broken Arrow</BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{t(page === 'current' ? 'overview' : page)}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
           <div className="topbar-actions">
             <div className="topbar-health">
-              <BatraceStatus health={state.health} />
-              <Button
-                className="health-button"
-                disabled={healthBusy}
-                aria-busy={healthBusy}
-                aria-label={t('health')}
-                onClick={() => {
-                  setHealthBusy(true);
-                  void api
-                    .invoke('api.health', { force: true })
-                    .then(() => notify(t('success')))
-                    .catch((e) => notify(String(e), true))
-                    .finally(() => setHealthBusy(false));
-                }}
-              >
-                <Icon icon={faWaveSquare} size={16} spin={healthBusy} aria-hidden="true" />
-              </Button>
+              <BatraceStatus
+                health={state.health}
+                onCheck={() => api.invoke('api.health', { force: true })}
+              />
             </div>
             <TooltipButton
-              className="account-button"
+              variant="ghost"
+              size="icon"
               aria-label={`${t('currentAccount')}: ${account}`}
               onClick={() =>
                 state.session.localPlayerId
@@ -284,42 +272,39 @@ export function App() {
                   : openSettings('accounts')
               }
             >
-              {account.slice(0, 1).toUpperCase()}
+              <Avatar size="sm">
+                <AvatarFallback>{account.slice(0, 1).toUpperCase()}</AvatarFallback>
+              </Avatar>
             </TooltipButton>
           </div>
         </PageToolbar>
         <div
-          className="workspace-scroll"
+          className={cn(
+            'workspace-scroll',
+            (page === 'archive' || page === 'bans') && 'workspace-scroll-results',
+          )}
           ref={workspaceScroll}
           onScroll={(event) => {
             if (!settingsTab) scrollPositions.current.set(page, event.currentTarget.scrollTop);
           }}
         >
-          <main
+          <div
             id="main-content"
             className={page === 'archive' || page === 'bans' ? 'results-page' : undefined}
             ref={main}
             tabIndex={-1}
             aria-labelledby="page-title"
           >
-            <div className="page-heading">
-              <div>
-                <h1 id="page-title">{title}</h1>
-                <p>{t(page === 'current' ? 'overviewDescription' : `${page}Description`)}</p>
-              </div>
-              {page !== 'replays' && (
-                <div className="page-heading-status">
-                  <span
-                    className={`status-dot ${isListening ? 'status-success' : ''}`}
-                    aria-hidden="true"
-                  />
-                  <span title={state.watcher.file || undefined}>{status}</span>
-                  {new URLSearchParams(location.search).has('real') && (
-                    <Badge tone="warning">{t('realDataOffline')}</Badge>
-                  )}
-                </div>
-              )}
-            </div>
+            <h1 id="page-title" className="sr-only">
+              {title}
+            </h1>
+            {page !== 'replays' && (
+              <span className="sr-only" role="status" data-log-status>
+                <Badge tone={isListening ? 'success' : state.watcher.error ? 'danger' : 'muted'}>
+                  {status}
+                </Badge>
+              </span>
+            )}
             {!state.config.logDir && page === 'current' && (
               <Notice>
                 <span>{t('noDirectory')}</span>
@@ -331,31 +316,9 @@ export function App() {
                 {components[panel]}
               </div>
             ))}
-          </main>
+          </div>
         </div>
-      </div>
-      {navigationOpen && (
-        <Dialog
-          open
-          title={t('workspaceNav')}
-          onClose={() => setNavigationOpen(false)}
-          className="navigation-dialog"
-          showHeader={false}
-        >
-          <Brand />
-          <Navigation onNavigate={() => setNavigationOpen(false)} />
-          <Button
-            className="button-borderless"
-            onClick={() => {
-              setNavigationOpen(false);
-              openSettings();
-            }}
-          >
-            <Icon icon={faGear} size={18} />
-            {t('settings')}
-          </Button>
-        </Dialog>
-      )}
+      </SidebarInset>
       {settingsTab && (
         <Suspense fallback={<Loading />}>
           <SettingsPage />
@@ -368,19 +331,21 @@ export function App() {
           </div>
         }
       >
-        {hasTelemetryConsent(state.config) && <ModalRouter />}
+        {hasAnalyticsChoice(state.config) && <ModalRouter />}
       </Suspense>
-      <TelemetryConsentDialog />
+      <AnalyticsConsentDialog />
       {settings.error && !settingsTab && (
-        <div className="settings-save-alert" role="alert">
-          <strong>{t('settingsSaveFailed')}</strong>
-          <p>{settings.error}</p>
-          <div className="actions">
-            <Button onClick={() => void settings.flush()}>{t('settingsRetry')}</Button>
-            <Button onClick={() => void settings.discard()}>{t('settingsDiscard')}</Button>
-          </div>
+        <div className="settings-save-alert">
+          <Notice error>
+            <strong>{t('settingsSaveFailed')}</strong>
+            <p>{settings.error}</p>
+            <div className="actions">
+              <Button onClick={() => void settings.flush()}>{t('settingsRetry')}</Button>
+              <Button onClick={() => void settings.discard()}>{t('settingsDiscard')}</Button>
+            </div>
+          </Notice>
         </div>
       )}
-    </div>
+    </SidebarProvider>
   );
 }

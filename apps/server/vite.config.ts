@@ -15,7 +15,6 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'node22',
     minify: false,
-    sourcemap: true,
     lib: {
       entry: fileURLToPath(new URL('./src/index.ts', import.meta.url)),
       formats: ['cjs'],

@@ -58,6 +58,9 @@ if (
   code !== 0 ||
   !result?.hasBridge ||
   result.buttons < 5 ||
+  (process.platform === 'win32' &&
+    (!result.windowChrome ||
+      Object.values(result.windowChrome).some((passed) => passed !== true))) ||
   (realData && result.matches !== expectedMatches)
 ) {
   console.error(errors || 'Electron smoke test failed to initialize');
@@ -66,5 +69,5 @@ if (
   console.log(
     realData
       ? `Electron real-data smoke passed: ${result.matches} real matches loaded through the native bridge, offline.`
-      : 'Electron smoke passed: SQLite service, sandboxed preload and React renderer initialized.',
+      : 'Electron smoke passed: SQLite service, sandboxed preload, React renderer and integrated window chrome initialized.',
   );

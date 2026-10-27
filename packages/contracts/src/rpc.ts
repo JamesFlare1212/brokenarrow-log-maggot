@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { DIAGNOSTIC_ERROR_TYPES, TELEMETRY_FEATURES, isDiagnosticFilename } from './telemetry';
+import { DIAGNOSTIC_ERROR_TYPES, ANALYTICS_FEATURES, isDiagnosticFilename } from './analytics';
+import { RECORDING_QUALITIES, RECORDING_FPS, RECORDING_BITRATE_MBPS } from './recording';
 import type {
   Account,
   ApmState,
@@ -45,9 +46,8 @@ export function legacyThemeMode(theme: unknown): ThemeMode {
   return ['light', 'cyan', 'orange'].includes(String(theme)) ? 'light' : 'dark';
 }
 export const configSchema = z.object({
-  telemetryEnabled: z.boolean().default(true),
-  telemetryConsentConfirmed: z.boolean().default(false),
-  telemetryConsentVersion: z.number().int().min(0).default(0),
+  analyticsEnabled: z.boolean().default(false),
+  analyticsChoiceSaved: z.boolean().default(false),
   logDir: z.string().max(4096).default(''),
   decksDir: z.string().max(4096).default(''),
   autoQueryCurrentMatch: z.boolean().default(true),
@@ -67,11 +67,20 @@ export const configSchema = z.object({
   collapsedPanels: panelListSchema.default(['decks']),
   replayEnabled: z.boolean().default(false),
   replayDisplayId: z.string().max(256).default(''),
-  replayQuality: z
-    .union([z.literal(240), z.literal(360), z.literal(480), z.literal(720), z.literal(1080)])
-    .default(720),
-  replayFps: z.number().int().min(30).max(60).default(30),
-  replayBitrateMbps: z.number().int().min(3).max(10).default(5),
+  replayQuality: z.literal(RECORDING_QUALITIES).default(RECORDING_QUALITIES[0]),
+  replayFps: z
+    .number()
+    .int()
+    .min(RECORDING_FPS.min)
+    .max(RECORDING_FPS.max)
+    .multipleOf(RECORDING_FPS.step)
+    .default(RECORDING_FPS.default),
+  replayBitrateMbps: z
+    .number()
+    .int()
+    .min(RECORDING_BITRATE_MBPS.min)
+    .max(RECORDING_BITRATE_MBPS.max)
+    .default(RECORDING_BITRATE_MBPS.default),
   replayAudio: z.enum(['default', 'off']).default('default'),
   replayMicrophone: z.boolean().default(true),
   replaySaveDir: z.string().max(4096).default(''),
@@ -102,13 +111,12 @@ const roster = z
   .max(100);
 export const rpcSchemas = {
   'diagnostics.report': z.discriminatedUnion('type', [
-    z.object({ type: z.literal('feature'), feature: z.enum(TELEMETRY_FEATURES) }).strict(),
+    z.object({ type: z.literal('feature'), feature: z.enum(ANALYTICS_FEATURES) }).strict(),
     z
       .object({
         type: z.literal('error'),
         source: z.enum(['renderer', 'renderer_rejection', 'react']),
         errorType: z.enum(DIAGNOSTIC_ERROR_TYPES),
-        releaseId: z.string().uuid().optional(),
         frames: z
           .array(
             z
@@ -116,7 +124,6 @@ export const rpcSchemas = {
                 filename: z.string().refine(isDiagnosticFilename),
                 lineno: z.number().int().positive().max(10000000),
                 colno: z.number().int().positive().max(10000000),
-                chunk_id: z.string().uuid().optional(),
               })
               .strict(),
           )
@@ -127,7 +134,7 @@ export const rpcSchemas = {
     z
       .object({
         type: z.literal('performance'),
-        metric: z.enum(['renderer_startup', 'renderer_long_task']),
+        metric: z.literal('renderer_startup'),
         durationMs: z.number().finite().min(0).max(600000),
       })
       .strict(),
@@ -264,7 +271,15 @@ export type AppEvent = (
   | { type: 'health'; health: ApiHealth }
   | { type: 'error'; message: string }
 ) & { revision: number };
+export const windowThemeColorsSchema = z
+  .object({
+    background: z.string().regex(/^#[\da-f]{6}$/i),
+    foreground: z.string().regex(/^#[\da-f]{6}$/i),
+  })
+  .strict();
+export type WindowThemeColors = z.infer<typeof windowThemeColorsSchema>;
 export interface Bridge {
+  setWindowTheme?(mode: 'light' | 'dark', colors?: WindowThemeColors): Promise<void>;
   invoke<K extends RpcMethod>(method: K, input: RpcInputs[K]): Promise<RpcOutputs[K]>;
   subscribe(callback: (event: AppEvent) => void): () => void;
 }

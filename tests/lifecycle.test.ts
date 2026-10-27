@@ -243,15 +243,15 @@ describe('application cache management', () => {
   });
 });
 
-describe('application telemetry', () => {
+describe('application analytics', () => {
   it('counts live match starts while excluding recovered logs, metadata, and repeated room notifications', async () => {
     vi.useFakeTimers();
-    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
     const p = platform(fetchImpl);
-    p.telemetry = { enabled: true, distribution: 'installed' };
+    p.analytics = { enabled: true, distribution: 'installed' };
     const app = application(p, [], true);
     try {
-      await app.invoke('config.update', { telemetryEnabled: true });
+      await app.invoke('config.update', { analyticsEnabled: true });
       const start = 'Log: Start loading battle... map: Dam, scenario: Test';
       app.parser.reset('private-game.log');
       app.parser.feed([start, 'Log: GameController dispose called'], true);
@@ -270,20 +270,20 @@ describe('application telemetry', () => {
       ]);
       await vi.advanceTimersByTimeAsync(1000);
       const matches = fetchImpl.mock.calls
-        .flatMap(([, init]) => JSON.parse(String(init?.body)).batch)
-        .filter((event) => event.event === 'match_started');
+        .flatMap(([, init]) => JSON.parse(String(init?.body)))
+        .filter((event) => event.eventName === 'match_started');
       expect(matches).toHaveLength(2);
       expect(JSON.stringify(matches)).not.toMatch(/private-game|9227650|9227651|Dam|Test/);
       app.parser.reset('private-game.log');
       app.parser.feed([start], true);
       app.parser.recovered();
-      await app.invoke('config.update', { telemetryEnabled: false });
+      await app.invoke('config.update', { analyticsEnabled: false });
       app.parser.feed(['Log: GameController dispose called', start]);
       await vi.advanceTimersByTimeAsync(1000);
       expect(
         fetchImpl.mock.calls
-          .flatMap(([, init]) => JSON.parse(String(init?.body)).batch)
-          .filter((event) => event.event === 'match_started'),
+          .flatMap(([, init]) => JSON.parse(String(init?.body)))
+          .filter((event) => event.eventName === 'match_started'),
       ).toHaveLength(2);
     } finally {
       vi.useRealTimers();
@@ -293,42 +293,40 @@ describe('application telemetry', () => {
   it.each([true, false])(
     'captures startup failures before service start only with saved consent: %s',
     async (consent) => {
-      const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+      vi.useFakeTimers();
+      const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
       const p = platform(fetchImpl);
-      p.telemetry = { enabled: true, distribution: 'installed' };
+      p.analytics = { enabled: true, distribution: 'installed' };
       const app = application(p, [], true);
       app.db.updateConfig({
-        telemetryEnabled: consent,
-        telemetryConsentConfirmed: true,
-        telemetryConsentVersion: 3,
+        analyticsEnabled: consent,
+        analyticsChoiceSaved: true,
       });
       app.reportError('startup', new TypeError('private startup detail'));
-      const outbox = app.db.state<
-        { payload: { event: string; properties: Record<string, unknown> } }[]
-      >('telemetry:outbox:v1', []);
-      expect(outbox.some((item) => item.payload.event === '$exception')).toBe(consent);
-      if (consent) {
-        expect(
-          outbox.find((item) => item.payload.event === '$exception')?.payload.properties,
-        ).toMatchObject({ source: 'startup', $exception_level: 'fatal' });
-        expect(app.db.state<{ fatal?: boolean }>('telemetry:run:v1', {}).fatal).toBe(true);
-      }
-      expect(JSON.stringify(outbox)).not.toContain('private startup detail');
+      await vi.advanceTimersByTimeAsync(1000);
+      const errors = fetchImpl.mock.calls
+        .flatMap(([, init]) => JSON.parse(String(init?.body)))
+        .filter((event) => event.eventName === 'app_error');
+      expect(errors).toHaveLength(consent ? 1 : 0);
+      if (consent)
+        expect(errors[0].props).toMatchObject({ source: 'startup', error_level: 'fatal' });
+      expect(JSON.stringify(errors)).not.toContain('private startup detail');
+      vi.useRealTimers();
     },
   );
 
   it.each(['unsupported', 'disabled', 'offline', 'no-network'] as const)(
-    'never sends telemetry in %s mode even with a saved opt-in',
+    'never sends analytics in %s mode even with a saved opt-in',
     async (mode) => {
       vi.useFakeTimers();
       const fetchImpl = vi.fn<typeof fetch>();
       const p = platform(fetchImpl);
       if (mode !== 'unsupported')
-        p.telemetry = { enabled: mode !== 'disabled', distribution: 'installed' };
+        p.analytics = { enabled: mode !== 'disabled', distribution: 'installed' };
       p.http.offline = mode === 'offline';
       const app = application(p, [], mode !== 'no-network');
       try {
-        await app.invoke('config.update', { telemetryEnabled: true });
+        await app.invoke('config.update', { analyticsEnabled: true });
         app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
         await vi.advanceTimersByTimeAsync(5000);
         expect(fetchImpl).not.toHaveBeenCalled();
@@ -340,25 +338,25 @@ describe('application telemetry', () => {
 
   it('applies consent immediately and keeps raw RPC inputs and error messages private', async () => {
     vi.useFakeTimers();
-    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
     const p = platform(fetchImpl);
-    p.telemetry = { enabled: true, distribution: 'installed' };
+    p.analytics = { enabled: true, distribution: 'installed' };
     const app = application(p, [], true);
     try {
-      await app.invoke('config.update', { telemetryEnabled: true, lang: 'en' });
+      await app.invoke('config.update', { analyticsEnabled: true, lang: 'en' });
       await expect(
         app.invoke('replays.play', { name: 'private-player-recording.webm' }),
       ).rejects.toThrow();
       await vi.advanceTimersByTimeAsync(2000);
       expect(fetchImpl).toHaveBeenCalledTimes(1);
       const bodies = fetchImpl.mock.calls.flatMap(([, init]) =>
-        JSON.parse(String(init?.body)).batch.map((event: unknown) => JSON.stringify(event)),
+        JSON.parse(String(init?.body)).map((event: unknown) => JSON.stringify(event)),
       );
-      expect(bodies[0]).toContain('"language":"en"');
+      expect(bodies[0]).toContain('"locale":"en"');
       expect(bodies[1]).toContain('"operation":"recording_play"');
       expect(bodies[1]).toContain('"result":"failure"');
       expect(bodies.join('')).not.toMatch(/private-player|\.webm|in-memory-lifecycle/);
-      await app.invoke('config.update', { telemetryEnabled: false });
+      await app.invoke('config.update', { analyticsEnabled: false });
       await expect(
         app.invoke('replays.play', { name: 'private-player-recording.webm' }),
       ).rejects.toThrow();

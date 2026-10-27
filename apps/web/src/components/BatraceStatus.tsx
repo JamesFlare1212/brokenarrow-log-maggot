@@ -1,4 +1,16 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { errorMessage } from '@ba/shared';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverDescription,
+} from './ui/popover';
 import type { ApiHealth } from '@ba/contracts';
 import { useI18n } from '../hooks/useI18n';
 
@@ -10,70 +22,93 @@ const endpoints: Record<string, string> = {
   '/api/match': 'healthMatchDetail',
 };
 
-export function BatraceStatus({ health }: { health: ApiHealth }) {
+export function BatraceStatus({
+  health,
+  onCheck,
+}: {
+  health: ApiHealth;
+  onCheck?: () => Promise<ApiHealth>;
+}) {
   const { t, locale } = useI18n();
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const id = useId();
-  const tone = { ok: 'success', partial: 'warning', down: 'danger', unknown: 'muted' }[
-    health.state
-  ];
+  const titleId = useId();
+  const running = useRef(false);
+  const [pending, setPending] = useState(false),
+    [error, setError] = useState<string | null>(null),
+    [result, setResult] = useState<ApiHealth | null>(null);
+  const current = result && result.at >= health.at ? result : health;
+  const checks: Array<ApiHealth['checks'][number] & { unchecked?: boolean }> = Object.keys(
+    endpoints,
+  ).map(
+    (path) =>
+      current.checks.find((check) => check.path.split('?')[0] === path) ?? {
+        path,
+        ok: false,
+        ms: 0,
+        status: null,
+        unchecked: true,
+      },
+  );
+  checks.push(
+    ...current.checks.filter((check) => !Object.hasOwn(endpoints, check.path.split('?')[0] ?? '')),
+  );
+  const check = async () => {
+    if (!onCheck || running.current) return;
+    running.current = true;
+    setPending(true);
+    setError(null);
+    try {
+      setResult(await onCheck());
+    } catch (value) {
+      setError(errorMessage(value));
+    } finally {
+      running.current = false;
+      setPending(false);
+    }
+  };
   const label = t(
     { ok: 'serviceConnected', partial: 'servicePartial', down: 'serviceDown', unknown: 'unknown' }[
-      health.state
+      current.state
     ],
   );
-  useEffect(() => {
-    if (!open) return;
-    const dismiss = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('pointerdown', dismiss);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', dismiss);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [open]);
-
   return (
-    <div
-      className="health-status"
-      ref={root}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => {
-        if (!root.current?.contains(document.activeElement)) setOpen(false);
-      }}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
-      }}
-    >
-      <button
-        type="button"
-        className={`badge badge-${tone} health-status-trigger`}
-        aria-label={`BATrace · ${label}`}
-        aria-describedby={open ? id : undefined}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(true)}
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" aria-label={`BATrace · ${label}`}>
+          BATrace
+          <Badge
+            variant={
+              current.state === 'ok'
+                ? 'success'
+                : current.state === 'down'
+                  ? 'destructive'
+                  : current.state === 'partial'
+                    ? 'warning'
+                    : 'secondary'
+            }
+          >
+            {label}
+          </Badge>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        aria-labelledby={titleId}
+        className="max-h-[75svh] w-96 max-w-[calc(100vw-2rem)] overflow-y-auto"
       >
-        <span className={`status-dot status-${tone}`} aria-hidden="true" />
-        BATrace <span>· {label}</span>
-      </button>
-      {open && (
-        <div className="health-status-details" role="tooltip" id={id}>
-          <strong>{t('health')}</strong>
-          <p className="muted">
-            {health.at
-              ? t('healthCheckedAt', { time: new Date(health.at).toLocaleString(locale) })
+        <PopoverHeader>
+          <PopoverTitle id={titleId}>{t('health')}</PopoverTitle>
+          <PopoverDescription>
+            {current.at
+              ? t('healthCheckedAt', { time: new Date(current.at).toLocaleString(locale) })
               : t('healthNotChecked')}
-          </p>
-          {health.checks.length > 0 && (
-            <ul className="health-checks">
-              {health.checks.map((check) => {
-                const reason = check.ok
+          </PopoverDescription>
+        </PopoverHeader>
+        {checks.length > 0 && (
+          <ul className="health-checks">
+            {checks.map((check) => {
+              const reason = check.unchecked
+                ? 'healthEndpointNotChecked'
+                : check.ok
                   ? 'healthSuccess'
                   : check.failure && check.failure !== 'http'
                     ? `healthFailure_${check.failure}`
@@ -85,63 +120,85 @@ export function BatraceStatus({ health }: { health: ApiHealth }) {
                           429: 'healthHttp429',
                         }[check.status] ?? 'healthHttpError')
                       : 'healthFailure_network';
-                return (
-                  <li key={check.path}>
-                    <div className="health-check-heading">
-                      <strong>
-                        {t(endpoints[check.path.split('?')[0] ?? ''] ?? 'healthEndpoint')}
-                      </strong>
-                      <span className="health-check-status">
-                        <span
-                          className={
-                            check.ok
+              return (
+                <li key={check.path}>
+                  <div className="health-check-heading">
+                    <strong>
+                      {t(endpoints[check.path.split('?')[0] ?? ''] ?? 'healthEndpoint')}
+                    </strong>
+                    <span className="health-check-status">
+                      <span
+                        className={
+                          check.unchecked
+                            ? 'muted'
+                            : check.ok
                               ? 'text-success'
                               : check.fallback?.ok
                                 ? 'text-warning'
                                 : 'text-danger'
-                          }
-                        >
-                          {t(reason)}
-                        </span>
-                        {check.fallback && (
-                          <span className={check.fallback.ok ? 'text-success' : 'text-danger'}>
-                            {t(
-                              check.fallback.ok ? 'healthFallbackSuccess' : 'healthFallbackFailed',
-                            )}
-                          </span>
-                        )}
+                        }
+                      >
+                        {t(reason)}
                       </span>
-                    </div>
-                    <code>{check.path}</code>
+                      {check.fallback && (
+                        <span className={check.fallback.ok ? 'text-success' : 'text-danger'}>
+                          {t(check.fallback.ok ? 'healthFallbackSuccess' : 'healthFallbackFailed')}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <code>{check.path}</code>
+                  {!check.unchecked && (
                     <small className="muted">
                       {check.status === null ? t('healthNoHttpResponse') : `HTTP ${check.status}`}
                       {' · '}
                       {check.ms} ms
                     </small>
-                    {check.rayId && <small className="muted">Ray ID: {check.rayId}</small>}
-                    {check.fallback && (
-                      <>
-                        <code>{check.fallback.path}</code>
-                        <small className="muted">
-                          {check.fallback.status === null
-                            ? t('healthNoHttpResponse')
-                            : `HTTP ${check.fallback.status}`}
-                          {' · '}
-                          {check.fallback.ms} ms
-                        </small>
-                        {check.fallback.rayId && (
-                          <small className="muted">Ray ID: {check.fallback.rayId}</small>
-                        )}
-                      </>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <p className="muted">{t('healthRefreshHint')}</p>
-        </div>
-      )}
-    </div>
+                  )}
+                  {check.rayId && <small className="muted">Ray ID: {check.rayId}</small>}
+                  {check.fallback && (
+                    <>
+                      <code>{check.fallback.path}</code>
+                      <small className="muted">
+                        {check.fallback.status === null
+                          ? t('healthNoHttpResponse')
+                          : `HTTP ${check.fallback.status}`}
+                        {' · '}
+                        {check.fallback.ms} ms
+                      </small>
+                      {check.fallback.rayId && (
+                        <small className="muted">Ray ID: {check.fallback.rayId}</small>
+                      )}
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <p className="muted">{t('healthRefreshHint')}</p>
+        {error && (
+          <p role="alert" className="text-destructive">
+            {error}
+          </p>
+        )}
+        {onCheck && (
+          <Button
+            variant="outline"
+            disabled={pending}
+            aria-busy={pending}
+            aria-label={t('health')}
+            onClick={() => void check()}
+          >
+            <RefreshCw
+              data-icon="inline-start"
+              className={pending ? 'animate-spin' : undefined}
+              aria-hidden="true"
+            />
+            {t(pending ? 'loading' : 'healthCheck')}
+          </Button>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

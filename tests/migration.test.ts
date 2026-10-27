@@ -234,9 +234,9 @@ describe('legacy migration integrity', () => {
       lang: 'zh',
       autoQueryCurrentMatch: false,
       replayAudio: 'off',
-      replayQuality: 240,
+      replayQuality: 720,
       replayFps: 60,
-      replayBitrateMbps: 3,
+      replayBitrateMbps: 5,
       multiAccountBond: false,
     });
     expect(db.config().panelOrder.slice(0, 4)).toEqual(['players', 'decks', 'bans', 'archive']);
@@ -314,16 +314,12 @@ describe('legacy migration integrity', () => {
     },
   );
 
-  it('ignores retired telemetry files and preserves malformed JSON for repair', async () => {
+  it('preserves malformed JSON for repair', async () => {
     const broken = Buffer.from('{ incomplete');
     await writeFile(join(dir, 'players-db.json'), broken);
-    await writeFile(join(dir, 'heartbeat-uid.txt'), ' \r\n');
     const status = await migrateLegacy(db, dir);
     expect(status.completed).toBe(false);
     expect(status.warnings).toHaveLength(1);
-    expect(status.imported).not.toHaveProperty('heartbeat-uid.txt');
-    expect(db.state('heartbeatId', null)).toBeNull();
-    expect(await readFile(join(dir, 'heartbeat-uid.txt'), 'utf8')).toBe(' \r\n');
     expect(rows('legacy_imports')).toBe(0);
     expect(await readFile(join(status.backupDir!, 'players-db.json'))).toEqual(broken);
     expect(await readFile(join(dir, 'players-db.json'))).toEqual(broken);
@@ -707,7 +703,7 @@ describe('legacy migration integrity', () => {
       theme: 'dark',
       replayQuality: 720,
       replayFps: 30,
-      replayBitrateMbps: 3,
+      replayBitrateMbps: 5,
     });
     expect(rawImport('settings.json')?.raw).toBe(bytes.toString());
     expect(await migrateLegacy(db, dir)).toEqual(status);

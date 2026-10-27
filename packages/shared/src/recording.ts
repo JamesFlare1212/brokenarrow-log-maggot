@@ -1,15 +1,24 @@
-export const QUALITIES = [240, 360, 480, 720, 1080] as const;
+import { RECORDING_QUALITIES, RECORDING_FPS, RECORDING_BITRATE_MBPS } from '@ba/contracts';
+
+export const QUALITIES = RECORDING_QUALITIES;
 export function normalizeQuality(value: unknown): (typeof QUALITIES)[number] {
   const n = Number(value);
-  return QUALITIES.find((q) => q === n) ?? 720;
+  return QUALITIES.find((q) => q === n) ?? QUALITIES[0];
 }
 export function normalizeFps(value: unknown): number {
   const n = Number(value);
-  return Number.isFinite(n) ? Math.min(60, Math.max(30, Math.round(n))) : 30;
+  return Number.isFinite(n)
+    ? Math.min(
+        RECORDING_FPS.max,
+        Math.max(RECORDING_FPS.min, Math.round(n / RECORDING_FPS.step) * RECORDING_FPS.step),
+      )
+    : RECORDING_FPS.default;
 }
 export function normalizeBitrate(value: unknown): number {
   const n = Number(value);
-  return Number.isFinite(n) ? Math.min(10, Math.max(3, Math.round(n))) : 5;
+  return Number.isFinite(n)
+    ? Math.min(RECORDING_BITRATE_MBPS.max, Math.max(RECORDING_BITRATE_MBPS.min, Math.round(n)))
+    : RECORDING_BITRATE_MBPS.default;
 }
 export function canvasSize(
   quality: unknown,

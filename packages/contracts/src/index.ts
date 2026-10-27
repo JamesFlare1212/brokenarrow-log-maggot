@@ -4,6 +4,7 @@ export * from './cache';
 export * from './updates';
 export * from './batrace';
 export * from './apm';
-export * from './telemetry';
+export * from './analytics';
 export * from './titles';
 export * from './score-labels';
+export * from './recording';

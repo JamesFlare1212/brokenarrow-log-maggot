@@ -1,11 +1,23 @@
-import { useEffect } from 'react';
+import { Separator } from '@/components/ui/separator';
 import {
-  faVideo,
-  faPlay,
-  faFolderOpen,
-  faArrowsRotate,
-  faSliders,
-} from '@fortawesome/free-solid-svg-icons';
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+  InputGroupButton,
+} from '@/components/ui/input-group';
+import { useEffect, useState, type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+import { Card as ReplayCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  Video as faVideo,
+  Play as faPlay,
+  FolderOpen as faFolderOpen,
+  RefreshCw as faArrowsRotate,
+  SlidersHorizontal as faSliders,
+  LayoutGrid,
+  List,
+} from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import { TooltipButton } from '../../components/Tooltip';
 import type { Replay } from '@ba/contracts';
@@ -14,12 +26,43 @@ import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Toggle, Notice, Loading, Empty, Badge, Menu } from '../../components/ui';
+import {
+  Card,
+  Button,
+  Toggle,
+  Notice,
+  Loading,
+  Empty,
+  Badge,
+  Menu,
+  Field,
+} from '../../components/ui';
+function ReplaySurface({
+  view,
+  title,
+  children,
+}: {
+  view: 'grid' | 'list';
+  title: string;
+  children: ReactNode;
+}) {
+  return view === 'grid' ? (
+    <ReplayCard className="replay-grid-card">
+      <CardHeader className="sr-only">
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="replay-grid-content">{children}</CardContent>
+    </ReplayCard>
+  ) : (
+    <>{children}</>
+  );
+}
 export function ReplaysPanel() {
   const confirm = useConfirmation();
   const { api, state, openModal, patchConfig, notify } = useApp(),
     { t, locale } = useI18n(),
     request = useRequest<Replay[]>();
+  const [view, setView] = useState<'grid' | 'list'>('grid');
   const refresh = () => void request.load(() => api.invoke('replays.list', null), true);
   useEffect(() => {
     refresh();
@@ -29,191 +72,254 @@ export function ReplaysPanel() {
     recording = state.recording;
   return (
     <div className="replays-panel">
-      <div className="recording-controls">
-        <Toggle
-          id="auto-record"
-          label={t('autoRecord')}
-          labelClickable={false}
-          checked={state.config.replayEnabled}
-          onChange={(value) => void patchConfig({ replayEnabled: value }).catch(() => {})}
-        />
-        <div className="recording-state" role="status">
-          <Badge
-            tone={
-              recording.phase === 'recording'
-                ? 'danger'
-                : recording.phase === 'error'
-                  ? 'warning'
-                  : 'muted'
-            }
-          >
-            {recording.phase === 'recording'
-              ? t('recording')
-              : recording.phase === 'starting'
-                ? t('starting')
-                : recording.phase === 'stopping'
-                  ? t('stopping')
-                  : state.config.replayEnabled
-                    ? t('waiting')
-                    : t('recordingOff')}
-          </Badge>
-          {recording.phase === 'recording' && (
-            <span>
-              {formatDuration(recording.seconds)} · {recording.sourceId}
-            </span>
-          )}
-        </div>
-        <Button onClick={() => openModal({ type: 'recordingSettings' })}>
-          <Icon icon={faSliders} size={16} aria-hidden="true" />
-          {t('recordingSettings')}
-        </Button>
-      </div>
       {recording.error && <Notice error>{recording.error}</Notice>}
-      <figure className="recording-preview">
-        <div className="recording-preview-media">
-          {state.preview && recording.phase === 'recording' ? (
-            <img src={state.preview.dataUrl} alt={t('preview')} />
-          ) : (
-            <span className="muted">
-              {t(
-                recording.phase === 'recording' || recording.phase === 'starting'
-                  ? 'previewWaiting'
-                  : recording.phase === 'stopping'
-                    ? 'stopping'
-                    : recording.phase === 'error'
-                      ? 'previewUnavailable'
-                      : state.config.replayEnabled
-                        ? 'previewIdle'
-                        : 'recordingOff',
+      <div className="replay-workspace">
+        <Card
+          title={t('preview')}
+          className="replay-preview-card"
+          description={
+            state.preview && recording.phase === 'recording'
+              ? t(state.preview.hasAudio ? 'audio' : 'audioOff')
+              : undefined
+          }
+        >
+          <figure className="recording-preview">
+            <div className="recording-preview-media">
+              {state.preview && recording.phase === 'recording' ? (
+                <img src={state.preview.dataUrl} alt={t('preview')} />
+              ) : (
+                <Empty
+                  icon={<Icon icon={faVideo} />}
+                  iconSize="lg"
+                  description={t('recordingHint')}
+                >
+                  {t(
+                    recording.phase === 'recording' || recording.phase === 'starting'
+                      ? 'previewWaiting'
+                      : recording.phase === 'stopping'
+                        ? 'stopping'
+                        : recording.phase === 'error'
+                          ? 'previewUnavailable'
+                          : state.config.replayEnabled
+                            ? 'previewIdle'
+                            : 'recordingOff',
+                  )}
+                </Empty>
               )}
-            </span>
-          )}
-        </div>
-        <figcaption>
-          {t('preview')}
-          {state.preview && recording.phase === 'recording' && (
-            <> · {t(state.preview.hasAudio ? 'audio' : 'audioOff')}</>
-          )}
-        </figcaption>
-      </figure>
-      <section className="replay-library" aria-labelledby="replay-library-title">
-        <div className="section-heading">
-          <h2 id="replay-library-title">
-            {t('recordingLibrary')} <Badge>{list.length}</Badge>
-            <small>
-              {' '}
-              · {t('storageUsed')} {formatSize(total)}
-            </small>
-          </h2>
-          <div className="actions">
-            <Button
-              onClick={() =>
-                void api.invoke('replays.open', null).catch((e) => notify(String(e), true))
-              }
-            >
-              <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
-              {t('folder')}
-            </Button>
-            <Button onClick={refresh} disabled={request.pending}>
-              <Icon icon={faArrowsRotate} size={16} spin={request.pending} aria-hidden="true" />
-              {t('refresh')}
-            </Button>
-            <Menu>
-              <Button
-                variant="danger"
-                onClick={async () => {
-                  if (
-                    await confirm({
-                      title: t('cleanAll'),
-                      description: t('confirmation.deleteHint'),
-                      confirmLabel: t('cleanAll'),
-                    })
-                  )
-                    void api
-                      .invoke('replays.clean', { days: 0 })
-                      .then(() => refresh())
-                      .catch((e) => notify(String(e), true));
-                }}
+            </div>
+          </figure>
+        </Card>
+        <Card title={t('recordingBehavior')} className="recording-status-card">
+          <div className="recording-controls">
+            <Toggle
+              id="auto-record"
+              label={t('autoRecord')}
+              labelClickable={false}
+              checked={state.config.replayEnabled}
+              onChange={(value) => void patchConfig({ replayEnabled: value }).catch(() => {})}
+            />
+            <div className="recording-state" role="status">
+              <Badge
+                tone={
+                  recording.phase === 'recording'
+                    ? 'danger'
+                    : recording.phase === 'error'
+                      ? 'warning'
+                      : 'muted'
+                }
               >
-                {t('cleanAll')}
-              </Button>
-              <Button
-                variant="danger"
-                onClick={async () => {
-                  if (
-                    await confirm({
-                      title: t('clean30'),
-                      description: t('confirmation.deleteHint'),
-                      confirmLabel: t('clean30'),
-                    })
-                  )
-                    void api
-                      .invoke('replays.clean', { days: 30 })
-                      .then(() => refresh())
-                      .catch((e) => notify(String(e), true));
-                }}
-              >
-                {t('clean30')}
-              </Button>
-            </Menu>
+                {recording.phase === 'recording'
+                  ? t('recording')
+                  : recording.phase === 'starting'
+                    ? t('starting')
+                    : recording.phase === 'stopping'
+                      ? t('stopping')
+                      : state.config.replayEnabled
+                        ? t('waiting')
+                        : t('recordingOff')}
+              </Badge>
+              {recording.phase === 'recording' && (
+                <span>
+                  {formatDuration(recording.seconds)} · {recording.sourceId}
+                </span>
+              )}
+            </div>
+            <Button onClick={() => openModal({ type: 'recordingSettings' })}>
+              <Icon icon={faSliders} size={16} aria-hidden="true" />
+              {t('recordingSettings')}
+            </Button>
           </div>
-        </div>
+          <Separator />
+          <footer className="replay-directory">
+            <Field id="replay-dir-readonly" label={t('saveDirectory')}>
+              <InputGroup>
+                <InputGroupInput
+                  id="replay-dir-readonly"
+                  value={state.config.replaySaveDir || t('defaultDirectory')}
+                  readOnly
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    size="icon-sm"
+                    aria-label={t('folder')}
+                    onClick={() =>
+                      void api
+                        .invoke('replays.open', null)
+                        .catch((error) => notify(String(error), true))
+                    }
+                  >
+                    <Icon icon={faFolderOpen} />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
+            </Field>
+          </footer>
+        </Card>
+      </div>
+      <Card
+        title={t('recordingLibrary')}
+        className="replay-library"
+        description={t('storageUsed') + ' ' + formatSize(total)}
+        actions={
+          <>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              aria-label={t('replayView')}
+              value={view}
+              onValueChange={(value) => {
+                if (value === 'grid' || value === 'list') setView(value);
+              }}
+            >
+              <ToggleGroupItem value="grid" aria-label={t('gridView')}>
+                <LayoutGrid aria-hidden="true" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label={t('listView')}>
+                <List aria-hidden="true" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Badge>{list.length}</Badge>
+            <div className="actions">
+              <Button
+                onClick={() =>
+                  void api.invoke('replays.open', null).catch((e) => notify(String(e), true))
+                }
+              >
+                <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
+                {t('folder')}
+              </Button>
+              <Button onClick={refresh} disabled={request.pending}>
+                <Icon icon={faArrowsRotate} size={16} spin={request.pending} aria-hidden="true" />
+                {t('refresh')}
+              </Button>
+              <Menu>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: t('cleanAll'),
+                        description: t('confirmation.deleteHint'),
+                        confirmLabel: t('cleanAll'),
+                      })
+                    )
+                      void api
+                        .invoke('replays.clean', { days: 0 })
+                        .then(() => refresh())
+                        .catch((e) => notify(String(e), true));
+                  }}
+                >
+                  {t('cleanAll')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: t('clean30'),
+                        description: t('confirmation.deleteHint'),
+                        confirmLabel: t('clean30'),
+                      })
+                    )
+                      void api
+                        .invoke('replays.clean', { days: 30 })
+                        .then(() => refresh())
+                        .catch((e) => notify(String(e), true));
+                  }}
+                >
+                  {t('clean30')}
+                </Button>
+              </Menu>
+            </div>
+          </>
+        }
+      >
         {request.pending && !request.data && <Loading />}
         {request.error && <Notice error>{request.error}</Notice>}
         {list.length ? (
-          <ul className="replay-list">
+          <ul
+            className={cn('replay-list', view === 'grid' && 'replay-grid')}
+            aria-label={t('recordingLibrary')}
+          >
             {list.map((r) => (
-              <li className="replay-row" key={r.id}>
-                <TooltipButton
-                  className="replay-play"
-                  aria-label={`${t('play')}: ${r.map || r.uploaderName}`}
-                  onClick={() =>
-                    openModal({ type: 'replay', id: r.id, title: r.map || r.uploaderName })
-                  }
-                >
-                  <span className="replay-thumbnail" aria-hidden="true">
-                    <Icon icon={faPlay} size={18} />
-                    <span className="replay-duration">{formatDuration(r.durationSec)}</span>
-                  </span>
-                  <span className="replay-description">
-                    <strong>
-                      {r.map || '#' + (r.fid || '—')}
-                      {r.test && <Badge>{t('recordingTest')}</Badge>}
-                    </strong>
-                    <small>
-                      {r.uploaderName} · {formatTime(r.createdAt, locale)} · {formatSize(r.size)}
-                    </small>
-                  </span>
-                </TooltipButton>
-                <Menu label={`${t('actions')}: ${r.map || r.id}`}>
-                  {r.fid && (
-                    <Button onClick={() => openModal({ type: 'match', fid: r.fid || '' })}>
-                      {t('matchDetail')}
-                    </Button>
-                  )}
-                  <Button onClick={() => void api.invoke('replays.open', null)}>
-                    {t('folder')}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={async () => {
-                      if (
-                        await confirm({
-                          title: t('confirmation.deleteReplay'),
-                          description: t('confirmation.deleteHint'),
-                          detail: `${r.map || r.uploaderName} · ${r.id}`,
-                          confirmLabel: t('delete'),
-                        })
-                      )
-                        void api
-                          .invoke('replays.delete', { name: r.id })
-                          .then(() => refresh())
-                          .catch((e) => notify(String(e), true));
-                    }}
+              <li className={cn('replay-row', view === 'grid' && 'replay-grid-item')} key={r.id}>
+                <ReplaySurface view={view} title={r.map || r.uploaderName}>
+                  <TooltipButton
+                    variant="ghost"
+                    className="replay-play"
+                    aria-label={`${t('play')}: ${r.map || r.uploaderName}`}
+                    onClick={() =>
+                      openModal({ type: 'replay', id: r.id, title: r.map || r.uploaderName })
+                    }
                   >
-                    {t('delete')}
-                  </Button>
-                </Menu>
+                    <span className="replay-thumbnail" aria-hidden="true">
+                      <Icon icon={faPlay} size={18} />
+                      <span className="replay-duration">{formatDuration(r.durationSec)}</span>
+                    </span>
+                    <span className="replay-description">
+                      <strong>
+                        <span className="truncate">{r.map || '#' + (r.fid || '—')}</span>
+                        {r.test && <Badge>{t('testReplay')}</Badge>}
+                      </strong>
+                      <small className="replay-metadata">
+                        <span className="replay-uploader">{r.uploaderName}</span>
+                        <span className="replay-created">{formatTime(r.createdAt, locale)}</span>
+                        <span className="replay-file-size">{formatSize(r.size)}</span>
+                      </small>
+                    </span>
+                  </TooltipButton>
+                  <div className="replay-actions">
+                    <Menu label={`${t('actions')}: ${r.map || r.id}`}>
+                      {r.fid && (
+                        <Button onClick={() => openModal({ type: 'match', fid: r.fid || '' })}>
+                          {t('matchDetail')}
+                        </Button>
+                      )}
+                      <Button onClick={() => void api.invoke('replays.open', null)}>
+                        {t('folder')}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={async () => {
+                          if (
+                            await confirm({
+                              title: t('confirmation.deleteReplay'),
+                              description: t('confirmation.deleteHint'),
+                              detail: `${r.map || r.uploaderName} · ${r.id}`,
+                              confirmLabel: t('delete'),
+                            })
+                          )
+                            void api
+                              .invoke('replays.delete', { name: r.id })
+                              .then(() => refresh())
+                              .catch((e) => notify(String(e), true));
+                        }}
+                      >
+                        {t('delete')}
+                      </Button>
+                    </Menu>
+                  </div>
+                </ReplaySurface>
               </li>
             ))}
           </ul>
@@ -232,15 +338,7 @@ export function ReplaysPanel() {
             </Empty>
           )
         )}
-      </section>
-      <footer className="replay-directory">
-        <label htmlFor="replay-dir-readonly">{t('saveDirectory')}</label>
-        <input
-          id="replay-dir-readonly"
-          value={state.config.replaySaveDir || t('defaultDirectory')}
-          readOnly
-        />
-      </footer>
+      </Card>
     </div>
   );
 }

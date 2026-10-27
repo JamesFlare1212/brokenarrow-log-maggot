@@ -1,6 +1,15 @@
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from '@/components/ui/table';
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect, useMemo, useState } from 'react';
-import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { RefreshCw as faArrowsRotate } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { Match, Replay } from '@ba/contracts';
 import {
@@ -132,8 +141,10 @@ export function MatchDialog({ fid }: { fid: string }) {
                     <span className="muted">{t('playersCount', { n: players.length })}</span>
                   </div>
                   <div className="table-wrap match-team-table">
-                    <table>
-                      <caption className="sr-only">{teamLabel(team as 0 | 1 | 100 | null)}</caption>
+                    <Table>
+                      <TableCaption className="sr-only">
+                        {teamLabel(team as 0 | 1 | 100 | null)}
+                      </TableCaption>
                       <colgroup>
                         <col className="match-player-column" />
                         <col className="match-rating-column" />
@@ -141,25 +152,26 @@ export function MatchDialog({ fid }: { fid: string }) {
                           <col key={column} />
                         ))}
                       </colgroup>
-                      <thead>
-                        <tr>
+                      <TableHeader>
+                        <TableRow>
                           {columns.map((k) => (
-                            <th
+                            <TableHead
                               scope="col"
                               key={k}
                               className={k === 'ELO' ? 'elo-column' : undefined}
                             >
                               {t(k)}
-                            </th>
+                            </TableHead>
                           ))}
-                        </tr>
-                      </thead>
-                      <tbody>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {players.map((p) => (
-                          <tr key={p.id}>
-                            <td className="match-player-cell">
+                          <TableRow key={p.id}>
+                            <TableCell className="match-player-cell">
                               <div className="match-player-heading">
                                 <TooltipButton
+                                  variant="link"
                                   className="player-name-button match-player-name"
                                   tooltip={`${p.name} · #${p.id}`}
                                   onClick={() =>
@@ -177,8 +189,8 @@ export function MatchDialog({ fid }: { fid: string }) {
                                 />
                               </div>
                               <small className="player-id muted">#{p.id}</small>
-                            </td>
-                            <td className="elo-column">
+                            </TableCell>
+                            <TableCell className="elo-column">
                               {formatMetric(p.newRating)}{' '}
                               <small className="muted">
                                 (
@@ -189,7 +201,7 @@ export function MatchDialog({ fid }: { fid: string }) {
                                 )}
                                 )
                               </small>
-                            </td>
+                            </TableCell>
                             {[
                               p.destructionScore,
                               p.lossesScore,
@@ -202,12 +214,12 @@ export function MatchDialog({ fid }: { fid: string }) {
                               p.exp,
                               p.medals,
                             ].map((value, i) => (
-                              <td key={i}>{formatMetric(value, i === 6 ? 2 : 0)}</td>
+                              <TableCell key={i}>{formatMetric(value, i === 6 ? 2 : 0)}</TableCell>
                             ))}
-                          </tr>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </section>
               );

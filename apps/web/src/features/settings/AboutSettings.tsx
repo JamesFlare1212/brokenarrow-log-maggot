@@ -1,4 +1,4 @@
-import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import { ExternalLink as faArrowUpRightFromSquare } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import { BrandLogo } from '../../components/BrandLogo';
 import { BATRACE_ORIGIN } from '@ba/contracts';
@@ -6,15 +6,20 @@ import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Button, Notice } from '../../components/ui';
 import { UpdatePanel } from './UpdatePanel';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 export function AboutSettings() {
   const { api, state, notify } = useApp(),
     { t } = useI18n();
   return (
-    <section className="settings-section" aria-labelledby="settings-about-title">
-      <h3 id="settings-about-title">{t('about')}</h3>
-      <div className="settings-card settings-about">
+    <Card role="region" aria-labelledby="settings-about-title">
+      <CardHeader>
+        <CardTitle id="settings-about-title">{t('about')}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-5">
         <UpdatePanel />
+        <Separator />
         <div className="settings-about-row">
           <div className="settings-about-copy">
             <div className="settings-about-title">
@@ -42,17 +47,17 @@ export function AboutSettings() {
             ))}
           </div>
         </div>
-      </div>
-      {state.migration.warnings.length > 0 && (
-        <Notice error>
-          <strong>{t('migrationWarnings')}</strong>
-          <ul>
-            {state.migration.warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </Notice>
-      )}
-    </section>
+        {state.migration.warnings.length > 0 && (
+          <Notice error>
+            <strong>{t('migrationWarnings')}</strong>
+            <ul>
+              {state.migration.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </Notice>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -39,33 +39,33 @@ deduplication uses a set of match IDs.
 
 公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout / settings；布局、配色与组件状态约定见[视觉规范](../design-system/broken-arrow/MASTER.md)。
 
-## Optional usage and diagnostic telemetry
+## Optional anonymous analytics
 
-The main process sends explicit PostHog events after the user accepts disclosure
-version 3. This includes installation and version transitions, minute presence
-heartbeats, selected feature results and numeric durations, classified exceptions,
-and application performance samples. Older disclosure versions must confirm the
-expanded disclosure; saved refusals remain disabled without another prompt.
+The main process sends explicit Aptabase events after the user saves an enabled
+analytics choice. Collection includes startup/first-open/version observations,
+live match starts, selected feature results and durations, classified errors,
+update outcomes, and foreground-active performance samples.
 
-The identity is the SHA-256 hash of the local numeric game account identified by
-the log parser, with an application-specific namespace. An installation UUID is
-stored locally and hashed for installation counting and as the fallback user ID.
-The last recognized account hash is persisted; raw account IDs and names are not
-included in telemetry. Each queued event freezes its identity at capture time.
-Account switches do not merge profiles or reattribute earlier events. No person
-profiles, browser tracker, cookies, or session replay are enabled.
+`analyticsEnabled` defaults to false; `analyticsChoiceSaved` records the consent
+dialog decision. Development, fixtures, smoke tests, offline mode, and
+`BA_DISABLE_ANALYTICS=1` disable collection.
 
-Requests use Electron's network stack, bounded batches and finite retries with
-three-second request timeouts. Up to 50 critical events are stored locally for
-seven days; shutdown performs a bounded flush before closing SQLite. UUIDv7
-PostHog sessions, foreground/active presence, restarted update-attempt confirmation,
-unclean-exit recovery and complete long-task aggregates improve metric accuracy.
-Opt-out clears pending work and aborts requests. Unpackaged development,
-browser fixtures, offline mode, smoke tests, and BA_DISABLE_TELEMETRY=1 disable
-collection. Optional identity or delivery failures must not affect the app.
+A random session exists only in memory and rotates after an idle hour, clock
+rollback, UTC date change, restart, or opt-out. Game-account detection is independent
+of analytics. App/OS versions and locale use Aptabase system properties; event
+dimensions contain explicit feature names, results, durations, and public code positions.
 
-See [telemetry events and metric definitions](telemetry.md) for event fields,
-privacy boundaries, error and performance coverage, and PostHog queries.
+At most 200 events queue in memory for five minutes, with three delivery attempts
+and 20 events per request. Opt-out cancels requests and empties the queue. Shutdown
+allows a bounded flush and discards the remainder. Resource samples require
+foreground activity; long-task aggregates are also cleared on blur/hide.
+
+Local app-version markers and pending update versions/stage support first-open,
+version-change, and update-outcome events. `analytics:appVersion` and
+`analytics:pendingUpdate` contain no session or user identifier. The update store
+exposes only `load()` and `save()`.
+
+See [anonymous analytics](analytics.md) for event definitions and counting limits.
 
 ## Temporary QUIC workaround
 

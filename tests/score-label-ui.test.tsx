@@ -18,20 +18,28 @@ afterEach(() => {
   vi.useRealTimers();
 });
 const evidenceCases: Array<[MatchScoreLabelId, MatchScoreLabelEvidence, string]> = [
-  ['destruction', { destructionValue: 6965, killed: 52 }, '击杀价值 6,965 点，击杀 52 个单位。'],
-  ['damage', { damageDealt: 1471, damageReceived: 767 }, '造成伤害 1,471 点，承受伤害 767 点。'],
+  [
+    'destruction',
+    { destructionValue: 6965, killed: 52 },
+    '本局击杀价值 6,965 点，击杀 52 个单位。',
+  ],
+  [
+    'damage',
+    { damageDealt: 1471, damageReceived: 767 },
+    '本局造成伤害 1,471 点，承受伤害 767 点。',
+  ],
   [
     'dlRatio',
     { destructionValue: 6965, lossValue: 3445, dlRatio: 6965 / 3445 },
-    '击杀价值 6,965 点，损失价值 3,445 点，价值战损比 2.02。',
+    '本局击杀价值 6,965 点，损失价值 3,445 点，价值战损比 2.02。',
   ],
   [
     'efficiency',
     { investment: 11575, refunded: 5315, destructionValue: 6685, roi: 0.19 },
-    '出兵价值 11,575 点，退款 5,315 点，击杀价值 6,685 点；资源回报率 19%。',
+    '本局出兵价值 11,575 点，退款 5,315 点，击杀价值 6,685 点；资源回报率 19%。',
   ],
-  ['objectives', { objectivesCaptured: 4 }, '占领 4 个目标点。'],
-  ['supply', { supplyProvided: 6385 }, '队友使用其提供的补给 6,385 点。'],
+  ['objectives', { objectivesCaptured: 4 }, '本局占领 4 个目标点。'],
+  ['supply', { supplyProvided: 6385 }, '本局队友使用其提供的补给 6,385 点。'],
 ];
 const labels: MatchScoreLabel[] = evidenceCases.map(([id, evidence]) => ({
   id,
@@ -46,6 +54,55 @@ const titles: MatchTitle[] = [
 ];
 
 describe('two score labels plus two match titles', () => {
+  it.each([
+    ['carry', 'good', 'success', 'text-success'],
+    ['blame', 'bad', 'destructive', 'text-destructive'],
+    ['refund', 'neutral', 'secondary', 'text-foreground'],
+    ['damage', null, 'info', 'text-info'],
+  ] as const)(
+    'gives %s the same colored badge details on hover and click',
+    async (id, kind, variant, color) => {
+      vi.useFakeTimers();
+      render(
+        <MatchAwards
+          titles={kind ? [{ id, kind, params: { d: 6000, l: 1000, net: 5000, p: 65 } }] : []}
+          scoreLabels={
+            kind
+              ? []
+              : [
+                  {
+                    id: 'damage',
+                    score: 100,
+                    threshold: 100,
+                    evidence: { damageDealt: 1471, damageReceived: 767 },
+                  },
+                ]
+          }
+        />,
+      );
+      const button = screen.getByRole('button');
+      expect(button.getAttribute('data-slot')).toBe('badge');
+      expect(button.getAttribute('data-variant')).toBe(variant);
+      fireEvent.pointerMove(button, { pointerType: 'mouse' });
+      await act(async () => vi.advanceTimersByTime(400));
+      const tooltip = explanation();
+      const content = tooltip.firstElementChild?.innerHTML;
+      const heading = tooltip.querySelector('.match-award-tooltip-name');
+      expect(heading?.textContent).toBe(button.textContent);
+      expect(heading?.classList.contains(color)).toBe(true);
+      expect(tooltip.querySelectorAll('h3, h4')).toHaveLength(2);
+      expect(tooltip.textContent).not.toMatch(/本局依据|本局称号|评分标签/);
+      fireEvent.click(button);
+      fireEvent.pointerLeave(button);
+      await act(async () => vi.advanceTimersByTime(200));
+      const pinned = explanation();
+      expect(pinned.getAttribute('data-slot')).toBe('popover-content');
+      expect(pinned.firstElementChild?.innerHTML).toBe(content);
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
+    },
+  );
+
   it.each(evidenceCases)(
     'shows raw %s combat values instead of normalized scores',
     (id, evidence, expected) => {
@@ -53,14 +110,11 @@ describe('two score labels plus two match titles', () => {
         <MatchAwards titles={[]} scoreLabels={[{ id, score: 100, threshold: 100, evidence }]} />,
       );
       fireEvent.click(screen.getByRole('button', { name: translate('zh', `scoreLabel.${id}`) }));
-      const evidenceElement = screen
-        .getByRole('tooltip', { hidden: true })
-        .querySelector('.match-title-detail');
+      const evidenceElement = explanation().querySelector('.match-award-evidence');
       expect(evidenceElement?.textContent).toBe(expected);
-      expect(
-        screen.getByRole('tooltip', { hidden: true }).querySelector('.match-award-tooltip-name')
-          ?.textContent,
-      ).toBe(translate('zh', `scoreLabel.${id}`));
+      expect(explanation().querySelector('.match-award-tooltip-name')?.textContent).toBe(
+        translate('zh', `scoreLabel.${id}`),
+      );
       expect(evidenceElement?.textContent).not.toMatch(/评分|\/ 100|获奖分数/);
     },
   );
@@ -69,14 +123,14 @@ describe('two score labels plus two match titles', () => {
       <MatchAwards titles={[]} scoreLabels={[{ id: 'damage', score: 100, threshold: 100 }]} />,
     );
     fireEvent.click(screen.getByRole('button', { name: '火力投送' }));
-    expect(screen.getByText('未记录本局的相关战斗数值。')).toBeTruthy();
+    expect(screen.getByText('本局未记录相关战斗数值。')).toBeTruthy();
     rerender(
       <MatchAwards
         titles={[]}
         scoreLabels={[{ id: 'damage', score: 100, threshold: 100, evidence: { damageDealt: 0 } }]}
       />,
     );
-    expect(screen.getByText('造成伤害 0 点，承受伤害 — 点。')).toBeTruthy();
+    expect(screen.getByText('本局造成伤害 0 点，承受伤害 — 点。')).toBeTruthy();
   });
   it.each([
     [1200, '∞'],
@@ -98,10 +152,9 @@ describe('two score labels plus two match titles', () => {
         />,
       );
       fireEvent.click(screen.getByRole('button', { name: '爱兵如子' }));
-      expect(
-        screen.getByRole('tooltip', { hidden: true }).querySelector('.match-title-detail')
-          ?.textContent,
-      ).toContain(`价值战损比 ${ratio}。`);
+      expect(explanation().querySelector('.match-award-evidence')?.textContent).toContain(
+        `价值战损比 ${ratio}。`,
+      );
     },
   );
   it('keeps both award groups directly beside the player name without visible captions', () => {
@@ -148,9 +201,9 @@ describe('two score labels plus two match titles', () => {
     vi.useFakeTimers();
     render(<MatchAwards titles={titles} scoreLabels={labels} />);
     const button = screen.getByRole('button', { name: '击杀王' });
-    fireEvent.pointerEnter(button, { pointerType: 'mouse' });
+    fireEvent.pointerMove(button, { pointerType: 'mouse' });
     await act(async () => vi.advanceTimersByTime(400));
-    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    const tooltip = explanation();
     expect(tooltip.textContent).toContain('完整终局，两队合评');
     expect(tooltip.textContent).toContain('摧毁评分最高且 > 0 者获评');
     expect(tooltip.textContent).toContain('并列取战报首位');
@@ -163,14 +216,15 @@ describe('two score labels plus two match titles', () => {
     fireEvent.pointerLeave(button);
     await act(async () => vi.advanceTimersByTime(200));
     expect(button.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('tooltip', { hidden: true })).toBe(tooltip);
-    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(explanation().getAttribute('data-slot')).toBe('popover-content');
+    expect(explanation().textContent).toContain('击杀价值 6,965 点，击杀 52 个单位');
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
   });
 
   it('shows full names in tooltips on focus and click while keeping accessible badge names', async () => {
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <LocaleContext.Provider value="en">
         <div style={{ width: 96 }}>
           <MatchAwards titles={titles} scoreLabels={labels} />
@@ -179,18 +233,15 @@ describe('two score labels plus two match titles', () => {
     );
     await user.tab();
     expect(document.activeElement?.textContent).toBe(translate('en', 'title.refund'));
-    expect(
-      screen.getByRole('tooltip', { hidden: true }).querySelector('.match-award-tooltip-name')
-        ?.textContent,
-    ).toBe(translate('en', 'title.refund'));
+    expect(explanation().querySelector('.match-award-tooltip-name')?.textContent).toBe(
+      translate('en', 'title.refund'),
+    );
     await user.keyboard('{Escape}');
     const score = screen.getByRole('button', { name: translate('en', 'scoreLabel.destruction') });
     await user.click(score);
-    expect(
-      screen.getByRole('tooltip', { hidden: true }).querySelector('.match-award-tooltip-name')
-        ?.textContent,
-    ).toBe(translate('en', 'scoreLabel.destruction'));
-    expect(container.querySelectorAll('.match-award-label')).toHaveLength(4);
+    expect(explanation().querySelector('.match-award-tooltip-name')?.textContent).toBe(
+      translate('en', 'scoreLabel.destruction'),
+    );
     expect(screen.getAllByRole('button')).toHaveLength(4);
   });
 
@@ -236,6 +287,10 @@ describe('two score labels plus two match titles', () => {
       ]) {
         expect(translate(locale, key, vars)).not.toBe(key);
         expect(translate(locale, key, vars)).not.toMatch(/\{\w+\}/);
+        if (key.endsWith('.evidence') || key === 'scoreLabel.evidence.unavailable')
+          expect(
+            translate(locale, key, vars).startsWith(locale === 'zh' ? '本局' : 'This match:'),
+          ).toBe(true);
       }
       for (const id of MATCH_SCORE_LABEL_IDS) {
         render(
@@ -246,17 +301,15 @@ describe('two score labels plus two match titles', () => {
         fireEvent.click(
           screen.getByRole('button', { name: translate(locale, `scoreLabel.${id}`) }),
         );
-        const tooltip = screen.getByRole('tooltip', { hidden: true });
+        const tooltip = explanation();
         expect(tooltip.textContent).toContain(translate(locale, `scoreLabel.${id}.metric`));
         expect(tooltip.textContent).not.toContain('该项');
         expect(tooltip.textContent).not.toMatch(/\{\w+\}/);
         expect(tooltip.querySelector('.match-award-tooltip-name')?.textContent).toBe(
           translate(locale, `scoreLabel.${id}`),
         );
-        expect(
-          tooltip.firstElementChild?.querySelector('.match-award-tooltip-category')?.textContent,
-        ).toBe(translate(locale, 'scoreLabels'));
-        expect(tooltip.querySelector('.match-title-rule-heading')?.textContent).toBe(
+        expect(tooltip.querySelector('.match-award-tooltip-category')).toBeNull();
+        expect(tooltip.querySelector('.match-award-rule-heading')?.textContent).toBe(
           translate(locale, 'title.condition.heading'),
         );
         cleanup();
@@ -270,3 +323,10 @@ describe('two score labels plus two match titles', () => {
     },
   );
 });
+
+function explanation() {
+  return (
+    document.querySelector<HTMLElement>('[data-slot="popover-content"]') ??
+    screen.getByRole('tooltip', { hidden: true })
+  );
+}

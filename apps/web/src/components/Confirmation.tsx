@@ -1,4 +1,13 @@
-import * as RadixDialog from '@radix-ui/react-dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from './ui/alert-dialog';
 import {
   createContext,
   useCallback,
@@ -8,9 +17,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { faArrowRightArrowLeft, faTrashCan } from '@fortawesome/free-solid-svg-icons';
-import { Icon } from './Icon';
-import { Button } from './ui';
 import { useI18n } from '../hooks/useI18n';
 
 interface ConfirmationOptions {
@@ -57,50 +63,45 @@ export function ConfirmationProvider({ children }: { children: ReactNode }) {
   return (
     <ConfirmationContext.Provider value={confirm}>
       {children}
-      <RadixDialog.Root open={options !== null} onOpenChange={(open) => !open && finish(false)}>
-        <RadixDialog.Portal>
-          <RadixDialog.Overlay className="dialog-overlay confirmation-overlay" />
-          <RadixDialog.Content
-            role="alertdialog"
-            className={`dialog confirmation-dialog confirmation-${variant}`}
-            onPointerDownOutside={(event) => event.preventDefault()}
-            onInteractOutside={(event) => event.preventDefault()}
-            onOpenAutoFocus={(event) => {
-              event.preventDefault();
-              cancel.current?.focus();
-            }}
-            onCloseAutoFocus={(event) => {
-              event.preventDefault();
-              const target = opener.current;
-              queueMicrotask(() => {
-                if (pending.current) return;
-                (target?.isConnected ? target : document.getElementById('main-content'))?.focus({
-                  preventScroll: true,
-                });
+      <AlertDialog open={options !== null} onOpenChange={(open) => !open && finish(false)}>
+        <AlertDialogContent
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            cancel.current?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            const target = opener.current;
+            queueMicrotask(() => {
+              if (pending.current) return;
+              (target?.isConnected ? target : document.getElementById('main-content'))?.focus({
+                preventScroll: true,
               });
-            }}
-          >
-            <div className="confirmation-content">
-              <span className="confirmation-icon" aria-hidden="true">
-                <Icon icon={variant === 'danger' ? faTrashCan : faArrowRightArrowLeft} size={22} />
-              </span>
-              <div className="confirmation-copy">
-                <RadixDialog.Title>{options?.title}</RadixDialog.Title>
-                <RadixDialog.Description>{options?.description}</RadixDialog.Description>
-              </div>
-              {options?.detail && <div className="confirmation-detail">{options.detail}</div>}
-            </div>
-            <div className="confirmation-actions">
-              <Button ref={cancel} onClick={() => finish(false)}>
-                {t('cancel')}
-              </Button>
-              <Button variant={variant} onClick={() => finish(true)}>
-                {options?.confirmLabel ?? t('confirm')}
-              </Button>
-            </div>
-          </RadixDialog.Content>
-        </RadixDialog.Portal>
-      </RadixDialog.Root>
+            });
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>{options?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{options?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          {options?.detail && (
+            <p className="max-h-40 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap wrap-anywhere">
+              {options.detail}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel ref={cancel} onClick={() => finish(false)}>
+              {t('cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant={variant === 'danger' ? 'destructive' : 'default'}
+              onClick={() => finish(true)}
+            >
+              {options?.confirmLabel ?? t('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ConfirmationContext.Provider>
   );
 }

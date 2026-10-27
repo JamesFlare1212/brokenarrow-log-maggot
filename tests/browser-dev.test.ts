@@ -36,7 +36,7 @@ describe('browser development with repository fixtures', () => {
       currentVersion: '4.3.0',
       mode: 'disabled',
     });
-  });
+  }, 30000);
 
   // Importing the complete recorded corpus into two SQLite profiles can exceed ten seconds.
   it('cleans cache only in the writable browser profile and preserves match history', async () => {
@@ -119,5 +119,5 @@ describe('browser development with repository fixtures', () => {
       apm: { status: 'unavailable' },
       updates: { mode: 'disabled' },
     });
-  });
+  }, 30000);
 });

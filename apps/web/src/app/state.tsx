@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from 'react';
-import { faXmark } from '@fortawesome/free-solid-svg-icons';
-import { Icon } from '../components/Icon';
-import { TooltipButton } from '../components/Tooltip';
+import { toast } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Loading, Notice } from '../components/ui';
 import { ConfirmationProvider } from '../components/Confirmation';
 import type {
   AppEvent,
@@ -160,8 +161,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       settingsTabFromHash(location.hash),
     ),
     [modalStack, setModalStack] = useState<NonNullable<ModalRoute>[]>([]),
-    [error, setError] = useState<string | null>(null),
-    [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
+    [error, setError] = useState<string | null>(null);
   const [maggot, setMaggot] = useState<AppContextValue['maggot']>({
       busy: false,
       requestId: null,
@@ -228,7 +228,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       dispatch({ type: 'event', event });
       if (event.type === 'bans' && event.newly.length)
         openModal({ type: 'banAlert', players: event.newly });
-      if (event.type === 'error') setToast({ message: event.message, error: true });
+      if (event.type === 'error') toast.error(event.message);
     };
     const unsubscribe = api.subscribe((event) => {
       if (!active) return;
@@ -253,11 +253,6 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       unsubscribe();
     };
   }, [api]);
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 4500);
-    return () => clearTimeout(timer);
-  }, [toast]);
   useAppearance(settings.draft ?? state?.config);
   useEffect(() => {
     if (!state) return;
@@ -266,12 +261,20 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
   }, [state?.config.lang]);
   if (error)
     return (
-      <div className="startup-error" role="alert">
-        {error}
+      <div className="startup-error">
+        <Notice error>{error}</Notice>
       </div>
     );
-  if (!state) return <div className="startup">Loading…</div>;
-  const notify = (message: string, error = false) => setToast({ message, error });
+  if (!state)
+    return (
+      <div className="startup">
+        <Loading />
+      </div>
+    );
+  const notify = (message: string, error = false) => {
+    if (error) toast.error(message);
+    else toast.success(message);
+  };
   const value: AppContextValue = {
     api,
     state,
@@ -314,21 +317,10 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
   return (
     <Context.Provider value={value}>
       <LocaleContext.Provider value={state.config.lang}>
-        <ConfirmationProvider>{children}</ConfirmationProvider>
-        {toast && (
-          <div
-            className={`toast ${toast.error ? 'toast-error' : ''}`}
-            role={toast.error ? 'alert' : 'status'}
-          >
-            {toast.message}
-            <TooltipButton
-              aria-label={translate(state.config.lang, 'close')}
-              onClick={() => setToast(null)}
-            >
-              <Icon icon={faXmark} size={18} />
-            </TooltipButton>
-          </div>
-        )}
+        <TooltipProvider>
+          <ConfirmationProvider>{children}</ConfirmationProvider>
+          <Toaster closeButton theme={(settings.draft ?? state.config).themeMode} />
+        </TooltipProvider>
       </LocaleContext.Provider>
     </Context.Provider>
   );

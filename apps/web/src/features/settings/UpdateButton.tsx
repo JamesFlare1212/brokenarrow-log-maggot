@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRotateRight, faArrowsRotate, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { Download, RefreshCw, RotateCw } from 'lucide-react';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { Button } from '../../components/ui';
+import { Progress } from '@/components/ui/progress';
+import { Spinner } from '@/components/ui/spinner';
+import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 
 export function UpdateButton({ inline = false }: { inline?: boolean }) {
   const { api, state, notify } = useApp(),
@@ -43,27 +45,8 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
         : available
           ? `${t('update.available', { version: update.availableVersion || '' })}. ${t(update.mode === 'portable' ? 'updatePortable' : 'updateManualInstall')}`
           : update.error || label;
-  const visualStatus = active
-    ? update.status
-    : pending
-      ? ready
-        ? 'installing'
-        : available
-          ? 'downloading'
-          : 'checking'
-      : available
-        ? 'available'
-        : update.status;
-  const downloadIcon = ['available', 'downloading'].includes(visualStatus);
-  const icon = downloadIcon
-    ? faDownload
-    : ready || visualStatus === 'installing'
-      ? faArrowRotateRight
-      : faArrowsRotate;
-  const spinning = ['checking', 'installing'].includes(visualStatus);
-  const iconClass = `update-icon update-icon-${downloadIcon ? 'download' : 'refresh'}`;
-  const progress = Math.min(100, Math.max(0, update.downloadPercent ?? 0));
-
+  const UpdateIcon =
+    available || update.status === 'downloading' ? Download : ready ? RotateCw : RefreshCw;
   async function activate() {
     if (busy || blocked || update.mode === 'disabled') return;
     setPending(true);
@@ -84,55 +67,51 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
       setPending(false);
     }
   }
-
-  return (
-    <div className={inline ? 'settings-update-action' : 'sidebar-update'}>
+  const icon =
+    busy && update.status !== 'downloading' ? (
+      <Spinner data-icon="inline-start" />
+    ) : (
+      <UpdateIcon data-icon="inline-start" />
+    );
+  if (inline)
+    return (
       <Button
-        className={inline ? 'settings-update-button' : 'update-button button-borderless'}
+        tooltip={`${detail} · v${update.currentVersion}`}
         aria-label={label}
-        tooltip={
-          <>
-            <strong className="button-tooltip-label">{label}</strong>
-            {detail !== label && <span className="button-tooltip-detail">{detail}</span>}
-            <span className="button-tooltip-detail">v{update.currentVersion}</span>
-          </>
-        }
         aria-busy={busy}
         disabled={busy || blocked || update.mode === 'disabled'}
         onClick={() => void activate()}
       >
-        {inline ? (
-          <FontAwesomeIcon icon={icon} spin={spinning} className={iconClass} aria-hidden="true" />
-        ) : (
-          <span className="update-glyph" data-state={visualStatus} aria-hidden="true">
-            <svg className="update-ring" viewBox="0 0 36 36" fill="none">
-              <circle className="update-ring-track" cx="18" cy="18" r="15.5" />
-              <circle
-                className={`update-ring-progress${visualStatus === 'downloading' && update.downloadPercent === null ? ' update-ring-indeterminate fa-spin' : ''}`}
-                cx="18"
-                cy="18"
-                r="15.5"
-                pathLength="100"
-                strokeDasharray="100"
-                strokeDashoffset={visualStatus === 'available' ? 0 : 100 - progress}
-              />
-            </svg>
-            <span className="update-symbol">
-              <FontAwesomeIcon icon={icon} spin={spinning} className={iconClass} />
-            </span>
-          </span>
-        )}
-        {inline && <span>{actionLabel}</span>}
-        {!inline && (available || ready) && <span className="update-dot" aria-hidden="true" />}
+        {icon}
+        {actionLabel}
       </Button>
-      {!inline && (
-        <span className="sr-only" role="status">
-          {t('update.' + update.status, {
-            version: update.availableVersion || '',
-            percent: update.downloadPercent ?? 0,
-          })}
-        </span>
+    );
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        size="workspace"
+        tooltip={`${detail} · v${update.currentVersion}`}
+        aria-label={label}
+        aria-busy={busy}
+        disabled={busy || blocked || update.mode === 'disabled'}
+        onClick={() => void activate()}
+      >
+        {icon}
+        <span>{label}</span>
+      </SidebarMenuButton>
+      {update.status === 'downloading' && (
+        <Progress
+          className="mt-2 group-data-[collapsible=icon]:hidden"
+          value={update.downloadPercent}
+          aria-label={t('updateProgress')}
+        />
       )}
-    </div>
+      <span className="sr-only" role="status">
+        {t('update.' + update.status, {
+          version: update.availableVersion || '',
+          percent: update.downloadPercent ?? 0,
+        })}
+      </span>
+    </SidebarMenuItem>
   );
 }

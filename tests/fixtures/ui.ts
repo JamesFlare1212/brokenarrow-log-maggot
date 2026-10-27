@@ -82,9 +82,8 @@ export const fixtureBootstrap: Bootstrap = {
   config: configSchema.parse({
     ...data.preferences,
     logDir: 'test-profile/GameLogs',
-    telemetryEnabled: false,
-    telemetryConsentConfirmed: true,
-    telemetryConsentVersion: 3,
+    analyticsEnabled: false,
+    analyticsChoiceSaved: true,
   }),
   session: {
     generation: 1,

@@ -35,9 +35,8 @@ const methods = new Set<RpcMethod>([
   'api.health',
 ]);
 const preferences = new Set([
-  'telemetryEnabled',
-  'telemetryConsentConfirmed',
-  'telemetryConsentVersion',
+  'analyticsEnabled',
+  'analyticsChoiceSaved',
   'theme',
   'themeMode',
   'lightTheme',

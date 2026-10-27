@@ -1,24 +1,41 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { TELEMETRY_CONSENT_VERSION } from '@ba/contracts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  faArrowUp,
-  faArrowDown,
-  faFolderOpen,
-  faPalette,
-  faSliders,
-  faList,
-  faPlug,
-  faUsers,
-  faArrowLeft,
-  faCheck,
-  faSpinner,
-  faVideo,
-  faDatabase,
-  faArrowsRotate,
-  faMagnifyingGlass,
-  faWaveSquare,
-  faShieldHalved,
-} from '@fortawesome/free-solid-svg-icons';
+  FieldGroup,
+  FieldDescription,
+  Field as FormField,
+  FieldLabel,
+} from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+  InputGroupButton,
+} from '@/components/ui/input-group';
+import { Item, ItemContent, ItemTitle, ItemActions } from '@/components/ui/item';
+import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  ArrowUp as faArrowUp,
+  ArrowDown as faArrowDown,
+  FolderOpen as faFolderOpen,
+  Palette as faPalette,
+  SlidersHorizontal as faSliders,
+  List as faList,
+  Plug as faPlug,
+  Users as faUsers,
+  ArrowLeft as faArrowLeft,
+  Check as faCheck,
+  LoaderCircle as faSpinner,
+  Video as faVideo,
+  Database as faDatabase,
+  RefreshCw as faArrowsRotate,
+  Search as faMagnifyingGlass,
+  Activity as faWaveSquare,
+  ShieldCheck as faShieldHalved,
+} from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import { BrandLogo } from '../../components/BrandLogo';
 import type { Account, PublicConfig } from '@ba/contracts';
@@ -26,6 +43,7 @@ import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { Button, Dialog, Field, Toggle, Notice, Empty } from '../../components/ui';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { PageToolbar } from '../../components/PageToolbar';
 import {
   Sidebar,
@@ -33,7 +51,7 @@ import {
   SidebarHeader,
   SidebarHeading,
   SidebarItem,
-  SidebarNavigation,
+  SidebarToggle,
 } from '../../components/Sidebar';
 import { AboutSettings } from './AboutSettings';
 import { AppearanceSettings } from './AppearanceSettings';
@@ -112,7 +130,11 @@ export function SettingsPage() {
   const collapsed = draft.sidebarCollapsed;
   const flush = settings.flush;
   const saveStatus = tab === 'recording' ? recordingStatus : settings.status;
-  const setTab = openSettings;
+  const sidebar = useSidebar();
+  const setTab: typeof openSettings = (value) => {
+    openSettings(value);
+    sidebar.setOpenMobile(false);
+  };
   const back = async () => {
     setReturning(true);
     if (await flush()) closeSettings();
@@ -234,58 +256,38 @@ export function SettingsPage() {
   };
   const currentTab = tabs.find((item) => item.id === tab)!;
   return (
-    <section
-      className={`settings-page ${collapsed ? 'settings-page-collapsed' : ''}`}
+    <Tabs
+      orientation="vertical"
+      value={tab ?? 'appearance'}
+      onValueChange={(value) => setTab(value as typeof currentTab.id)}
+      className="settings-page"
       aria-labelledby="settings-title"
     >
-      <Sidebar id="settings-sidebar" className="settings-sidebar" collapsed={collapsed}>
-        <SidebarHeader
-          collapsed={collapsed}
-          controls="settings-sidebar"
-          onToggle={() => settings.change({ sidebarCollapsed: !collapsed })}
-        >
+      <Sidebar id="settings-sidebar" className="settings-sidebar" label={t('settings')}>
+        <SidebarHeader>
           <SidebarHeading className="settings-brand" icon={<BrandLogo />}>
-            <h1 id="settings-title">{t('settings')}</h1>
+            <h1 id="settings-title" className="text-base font-semibold">
+              {t('settings')}
+            </h1>
+            <span className="truncate text-xs text-muted-foreground">{t('brand')}</span>
           </SidebarHeading>
         </SidebarHeader>
-        <SidebarNavigation
-          as="div"
-          className="settings-tabs"
-          role="tablist"
-          aria-label={t('settings')}
-        >
-          {tabs.map(({ id, label, icon }, index) => (
-            <SidebarItem
+        <TabsList variant="navigation" className="settings-tabs" aria-label={t('settings')}>
+          {tabs.map(({ id, label, icon: TabIcon }) => (
+            <TabsTrigger
+              value={id}
               key={id}
-              icon={<Icon icon={icon} size={18} />}
-              label={t(label)}
-              selected={tab === id}
-              role="tab"
+              onClick={() => setTab(id)}
               id={'settings-tab-' + id}
               aria-controls={'settings-panel-' + id}
-              aria-selected={tab === id}
-              tabIndex={tab === id ? 0 : -1}
-              className="settings-tab"
-              title={collapsed ? t(label) : undefined}
               aria-label={t(label)}
-              onClick={() => setTab(id)}
-              onKeyDown={(event) => {
-                let next = index;
-                if (event.key === 'ArrowDown' || event.key === 'ArrowRight')
-                  next = (index + 1) % tabs.length;
-                else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft')
-                  next = (index - 1 + tabs.length) % tabs.length;
-                else if (event.key === 'Home') next = 0;
-                else if (event.key === 'End') next = tabs.length - 1;
-                else return;
-                event.preventDefault();
-                const target = tabs[next]!;
-                setTab(target.id);
-                document.getElementById('settings-tab-' + target.id)?.focus();
-              }}
-            />
+              title={collapsed ? t(label) : undefined}
+            >
+              <TabIcon aria-hidden="true" />
+              <span className="group-data-[collapsible=icon]:hidden">{t(label)}</span>
+            </TabsTrigger>
           ))}
-        </SidebarNavigation>
+        </TabsList>
         <SidebarFooter>
           <SidebarItem
             className="settings-back"
@@ -305,7 +307,7 @@ export function SettingsPage() {
           <UpdateButton />
         </SidebarFooter>
       </Sidebar>
-      <main
+      <SidebarInset
         className="settings-main"
         id="settings-content"
         aria-label={t('settings')}
@@ -313,9 +315,27 @@ export function SettingsPage() {
       >
         <PageToolbar className="settings-page-toolbar">
           <div className="settings-breadcrumb">
-            <span>{t('settings')}</span>
-            <span>/</span>
-            <h2>{t(currentTab.label)}</h2>
+            {sidebar.isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('settingsBack')}
+                disabled={returning}
+                onClick={() => void back()}
+              >
+                <Icon icon={faArrowLeft} />
+              </Button>
+            )}
+            <SidebarToggle controls="settings-sidebar" />
+            <Separator
+              orientation="vertical"
+              className="mx-2 data-vertical:h-4 data-vertical:self-center"
+            />
+            <span className="hidden text-muted-foreground sm:inline">{t('settings')}</span>
+            <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+              /
+            </span>
+            <h2 className="truncate">{t(currentTab.label)}</h2>
           </div>
           <div className="settings-save-state" role="status" aria-live="polite">
             {saveStatus === 'saved' ? (
@@ -341,259 +361,327 @@ export function SettingsPage() {
             )}
           </div>
         )}
-        {tabs.map(({ id, label }) => (
-          <div
+        {tabs.map(({ id }) => (
+          <TabsContent
+            value={id}
+            forceMount
             key={id}
-            role="tabpanel"
             id={'settings-panel-' + id}
             aria-labelledby={'settings-tab-' + id}
             hidden={tab !== id}
             tabIndex={0}
             className="settings-content"
           >
-            <div className="settings-page-heading">
-              <h2>{t(label)}</h2>
-              <p>{t('settingsHint.' + id)}</p>
-            </div>
             {id === 'appearance' && <AppearanceSettings draft={draft} change={settings.change} />}
             {id === 'cache' && tab === 'cache' && <CacheSettings />}
             {id === 'general' && (
               <>
-                <section className="settings-section settings-card settings-language-row">
-                  <label htmlFor="settings-language">{t('language')}</label>
-                  <select
-                    id="settings-language"
-                    value={draft.lang}
-                    onChange={(e) => set('lang', e.target.value as PublicConfig['lang'])}
-                  >
-                    <option value="zh">中文</option>
-                    <option value="en">English</option>
-                  </select>
-                </section>
-                <section
-                  className="settings-section settings-card"
-                  aria-labelledby="telemetry-heading"
-                >
-                  <h3 id="telemetry-heading">{t('telemetry')}</h3>
-                  <p id="telemetry-description">{t('telemetryDescription')}</p>
-                  <Toggle
-                    id="setting-telemetryEnabled"
-                    label={t('telemetryEnabled')}
-                    aria-describedby="telemetry-description telemetry-privacy"
-                    checked={draft.telemetryEnabled}
-                    onChange={(value) =>
-                      settings.change({
-                        telemetryEnabled: value,
-                        telemetryConsentConfirmed: true,
-                        telemetryConsentVersion: TELEMETRY_CONSENT_VERSION,
-                      })
-                    }
-                  />
-                  <p id="telemetry-privacy">{t('telemetryPrivacy')}</p>
-                </section>
+                <Card>
+                  <CardHeader className="sr-only">
+                    <CardTitle>{t('language')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Field id="settings-language" label={t('language')} orientation="horizontal">
+                      <NativeSelect
+                        className="w-44"
+                        id="settings-language"
+                        value={draft.lang}
+                        onChange={(e) => set('lang', e.target.value as PublicConfig['lang'])}
+                      >
+                        <NativeSelectOption value="zh">中文</NativeSelectOption>
+                        <NativeSelectOption value="en">English</NativeSelectOption>
+                      </NativeSelect>
+                    </Field>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle id="analytics-heading">{t('analytics')}</CardTitle>
+                    <CardDescription id="analytics-description">
+                      {t('analyticsDescription')}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <FieldGroup>
+                      <Toggle
+                        id="setting-analyticsEnabled"
+                        label={t('analyticsEnabled')}
+                        aria-describedby="analytics-description analytics-privacy"
+                        checked={draft.analyticsEnabled}
+                        onChange={(value) =>
+                          settings.change({
+                            analyticsEnabled: value,
+                            analyticsChoiceSaved: true,
+                          })
+                        }
+                      />
+                      <FieldDescription id="analytics-privacy">
+                        {t('analyticsPrivacy')}
+                      </FieldDescription>
+                    </FieldGroup>
+                  </CardContent>
+                </Card>
                 <AboutSettings />
               </>
             )}
             {id === 'connection' && (
               <>
-                <section className="settings-section settings-card settings-directories">
-                  <Field id="settings-log" label={t('logDirectory')}>
-                    <div className="input-action">
-                      <input
-                        id="settings-log"
-                        value={draft.logDir}
-                        onChange={(e) => set('logDir', e.target.value, 500)}
-                        onBlur={() => void flush()}
-                        aria-describedby={logFeedback ? 'settings-log-feedback' : undefined}
-                      />
-                      <Button className="directory-select" onClick={() => void choose('logs')}>
-                        <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
-                        {t('select')}
-                      </Button>
-                      <Button
-                        className="directory-detect"
-                        disabled={detecting}
-                        aria-busy={detecting}
-                        onClick={() => void detect()}
-                      >
-                        {t(detecting ? 'detectingLogs' : 'detect')}
-                      </Button>
-                    </div>
-                    {logFeedback && (
-                      <div id="settings-log-feedback">
-                        <Notice error={logFeedback.error}>
-                          <span role={logFeedback.error ? undefined : 'status'}>
-                            {t(logFeedback.key)}
-                          </span>
-                        </Notice>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('gameConnection')}</CardTitle>
+                    <CardDescription>{t('settingsHint.connection')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <FieldGroup>
+                      <Field id="settings-log" label={t('logDirectory')}>
+                        <InputGroup>
+                          <InputGroupInput
+                            id="settings-log"
+                            value={draft.logDir}
+                            onChange={(e) => set('logDir', e.target.value, 500)}
+                            onBlur={() => void flush()}
+                            aria-describedby={logFeedback ? 'settings-log-feedback' : undefined}
+                          />
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupButton onClick={() => void choose('logs')}>
+                              <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
+                              {t('select')}
+                            </InputGroupButton>
+                            <InputGroupButton
+                              disabled={detecting}
+                              aria-busy={detecting}
+                              onClick={() => void detect()}
+                            >
+                              {t(detecting ? 'detectingLogs' : 'detect')}
+                            </InputGroupButton>
+                          </InputGroupAddon>
+                        </InputGroup>
+                        {logFeedback && (
+                          <div id="settings-log-feedback">
+                            <Notice error={logFeedback.error}>
+                              <span role={logFeedback.error ? undefined : 'status'}>
+                                {t(logFeedback.key)}
+                              </span>
+                            </Notice>
+                          </div>
+                        )}
+                      </Field>
+                      <Field id="settings-decks" label={t('decksDirectory')}>
+                        <InputGroup>
+                          <InputGroupInput
+                            id="settings-decks"
+                            value={draft.decksDir || defaultDecksDir}
+                            onChange={(e) => set('decksDir', e.target.value, 500)}
+                            onBlur={() => void flush()}
+                            placeholder={t('defaultDirectory')}
+                          />
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupButton onClick={() => void choose('decks')}>
+                              <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
+                              {t('select')}
+                            </InputGroupButton>
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </Field>
+                    </FieldGroup>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('health')}</CardTitle>
+                    <CardDescription>{t('healthHint')}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
+                    <div className="settings-health-summary">
+                      <span className="settings-feature-icon" aria-hidden="true">
+                        <Icon icon={faWaveSquare} size={18} />
+                      </span>
+                      <div className="settings-health-copy">
+                        <div
+                          className="settings-health-feedback"
+                          role={healthError ? 'alert' : 'status'}
+                        >
+                          {healthError || (healthPending ? t('loading') : '')}
+                        </div>
                       </div>
-                    )}
-                  </Field>
-                  <Field id="settings-decks" label={t('decksDirectory')}>
-                    <div className="input-action">
-                      <input
-                        id="settings-decks"
-                        value={draft.decksDir || defaultDecksDir}
-                        onChange={(e) => set('decksDir', e.target.value, 500)}
-                        onBlur={() => void flush()}
-                        placeholder={t('defaultDirectory')}
-                      />
-                      <Button className="directory-select" onClick={() => void choose('decks')}>
-                        <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
-                        {t('select')}
-                      </Button>
                     </div>
-                  </Field>
-                </section>
-                <div className="settings-health settings-card">
-                  <div className="settings-health-summary">
-                    <span className="settings-feature-icon" aria-hidden="true">
-                      <Icon icon={faWaveSquare} size={18} />
-                    </span>
-                    <div className="settings-health-copy">
-                      <h3>{t('health')}</h3>
-                      <p>{t('healthHint')}</p>
-                      <div
-                        className="settings-health-feedback"
-                        role={healthError ? 'alert' : 'status'}
-                      >
-                        {healthError || (healthPending ? t('loading') : '')}
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    disabled={healthPending}
-                    aria-busy={healthPending}
-                    onClick={() => void checkHealth()}
-                  >
-                    <Icon icon={faWaveSquare} size={16} spin={healthPending} aria-hidden="true" />
-                    {t('healthCheck')}
-                  </Button>
-                </div>
+                    <Button
+                      disabled={healthPending}
+                      aria-busy={healthPending}
+                      onClick={() => void checkHealth()}
+                    >
+                      <Icon icon={faWaveSquare} size={16} spin={healthPending} aria-hidden="true" />
+                      {t('healthCheck')}
+                    </Button>
+                  </CardContent>
+                </Card>
               </>
             )}
             {id === 'automation' && (
               <section className="settings-automation" aria-label={t('automation')}>
-                {flags.map(([key, label, icon]) => (
-                  <div className="settings-automation-item settings-card" key={key}>
-                    <span className="settings-feature-icon" aria-hidden="true">
-                      <Icon icon={icon} size={18} />
-                    </span>
-                    <Toggle
-                      id={'setting-' + key}
-                      label={t(label)}
-                      checked={draft[key]}
-                      onChange={(value) => set(key, value)}
-                    />
-                  </div>
-                ))}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('automation')}</CardTitle>
+                    <CardDescription>{t('settingsHint.automation')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <FieldGroup className="automation-options">
+                      {flags.map(([key, label, icon], index) => (
+                        <div key={key} className="automation-option">
+                          <FormField orientation="horizontal">
+                            <FieldLabel htmlFor={'setting-' + key}>
+                              <Icon icon={icon} aria-hidden="true" />
+                              {t(label)}
+                            </FieldLabel>
+                            <Switch
+                              id={'setting-' + key}
+                              checked={draft[key]}
+                              onCheckedChange={(value) => set(key, value)}
+                            />
+                          </FormField>
+                          {index < flags.length - 1 && <Separator />}
+                        </div>
+                      ))}
+                    </FieldGroup>
+                  </CardContent>
+                </Card>
               </section>
             )}
             {id === 'recording' && tab === id && (
               <RecordingSettings inline onStatusChange={setRecordingStatus} />
             )}
             {id === 'navigation' && (
-              <section className="settings-section">
-                <h3>{t('panelOrder')}</h3>
-                <ol className="panel-order" ref={orderList}>
-                  {draft.panelOrder.map((panel, index) => (
-                    <li
-                      key={panel}
-                      data-panel={panel}
-                      data-hidden={draft.hiddenPanels.includes(panel)}
-                    >
-                      <span className="panel-order-label">
-                        <small>{String(index + 1).padStart(2, '0')}</small>
-                        {t(panel)}
-                      </span>
-                      <div className="actions panel-order-actions">
-                        <Toggle
-                          id={`navigation-visible-${panel}`}
-                          label={t(
-                            draft.hiddenPanels.includes(panel) ? 'pageHidden' : 'pageVisible',
-                          )}
-                          aria-label={t('showInNavigation') + ' ' + t(panel)}
-                          checked={!draft.hiddenPanels.includes(panel)}
-                          onChange={(visible) =>
-                            set(
-                              'hiddenPanels',
-                              visible
-                                ? draft.hiddenPanels.filter((hidden) => hidden !== panel)
-                                : [...draft.hiddenPanels, panel],
-                            )
-                          }
-                        />
-                        <Button
-                          disabled={index === 0}
-                          aria-label={t('moveUp') + ' ' + t(panel)}
-                          onClick={() => move(index, -1)}
+              <section
+                className="settings-section settings-navigation"
+                aria-labelledby="navigation-order-heading"
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle id="navigation-order-heading">{t('panelOrder')}</CardTitle>
+                    <CardDescription>{t('settingsHint.navigation')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ol className="panel-order" ref={orderList}>
+                      {draft.panelOrder.map((panel, index) => (
+                        <li
+                          key={panel}
+                          data-panel={panel}
+                          data-hidden={draft.hiddenPanels.includes(panel)}
                         >
-                          <Icon icon={faArrowUp} size={16} />
-                        </Button>
-                        <Button
-                          disabled={index === draft.panelOrder.length - 1}
-                          aria-label={t('moveDown') + ' ' + t(panel)}
-                          onClick={() => move(index, 1)}
-                        >
-                          <Icon icon={faArrowDown} size={16} />
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
+                          <Item className="panel-order-row" size="sm">
+                            <ItemContent>
+                              <ItemTitle>
+                                <span className="panel-order-label">
+                                  <small>{String(index + 1).padStart(2, '0')}</small>
+                                  {t(panel)}
+                                </span>
+                              </ItemTitle>
+                            </ItemContent>
+                            <ItemActions>
+                              <div className="panel-order-actions">
+                                <Switch
+                                  id={`navigation-visible-${panel}`}
+                                  aria-label={t('showInNavigation') + ' ' + t(panel)}
+                                  checked={!draft.hiddenPanels.includes(panel)}
+                                  onCheckedChange={(visible) =>
+                                    set(
+                                      'hiddenPanels',
+                                      visible
+                                        ? draft.hiddenPanels.filter((hidden) => hidden !== panel)
+                                        : [...draft.hiddenPanels, panel],
+                                    )
+                                  }
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  disabled={index === 0}
+                                  aria-label={t('moveUp') + ' ' + t(panel)}
+                                  onClick={() => move(index, -1)}
+                                >
+                                  <Icon icon={faArrowUp} size={16} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  disabled={index === draft.panelOrder.length - 1}
+                                  aria-label={t('moveDown') + ' ' + t(panel)}
+                                  onClick={() => move(index, 1)}
+                                >
+                                  <Icon icon={faArrowDown} size={16} />
+                                </Button>
+                              </div>
+                            </ItemActions>
+                          </Item>
+                          {index < draft.panelOrder.length - 1 && <Separator />}
+                        </li>
+                      ))}
+                    </ol>
+                  </CardContent>
+                </Card>
               </section>
             )}
             {id === 'accounts' && (
               <section className="settings-section" aria-busy={accountsLoading}>
-                {accountsLoading ? (
-                  <p role="status">{t('loading')}</p>
-                ) : accounts.length === 0 ? (
-                  <Empty
-                    icon={<Icon icon={faUsers} size={26} aria-hidden="true" />}
-                    description={t('accountsEmptyHint')}
-                  >
-                    {t('accountsEmpty')}
-                  </Empty>
-                ) : (
-                  <div className="account-list settings-card">
-                    {accounts.map((account) => (
-                      <div className="account-row" key={account.id}>
-                        <span>
-                          {account.name}
-                          <small>
-                            #{account.id} · {account.matchCount}
-                          </small>
-                        </span>
-                        <Button
-                          variant="danger"
-                          onClick={async () => {
-                            if (
-                              !(await confirm({
-                                title: t('confirmation.deleteAccount'),
-                                description: t('confirmation.deleteAccountHint'),
-                                detail: `${account.name} · #${account.id}`,
-                                confirmLabel: t('delete'),
-                              }))
-                            )
-                              return;
-                            void api
-                              .invoke('accounts.delete', { id: account.id })
-                              .then(() => api.invoke('accounts.list', null))
-                              .then(setAccounts)
-                              .catch((e) => setError(String(e)));
-                          }}
-                        >
-                          {t('delete')}
-                        </Button>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('recognizedAccounts')}</CardTitle>
+                    <CardDescription>{t('settingsHint.accounts')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {accountsLoading ? (
+                      <p role="status">{t('loading')}</p>
+                    ) : accounts.length === 0 ? (
+                      <Empty
+                        icon={<Icon icon={faUsers} size={26} aria-hidden="true" />}
+                        description={t('accountsEmptyHint')}
+                      >
+                        {t('accountsEmpty')}
+                      </Empty>
+                    ) : (
+                      <div className="account-list">
+                        {accounts.map((account) => (
+                          <Item variant="outline" key={account.id}>
+                            <ItemContent>
+                              <ItemTitle>{account.name}</ItemTitle>
+                              <p className="muted">
+                                #{account.id} · {t('accountMatches', { count: account.matchCount })}
+                              </p>
+                            </ItemContent>
+                            <ItemActions>
+                              <Button
+                                variant="destructive"
+                                onClick={async () => {
+                                  if (
+                                    !(await confirm({
+                                      title: t('confirmation.deleteAccount'),
+                                      description: t('confirmation.deleteAccountHint'),
+                                      detail: `${account.name} · #${account.id}`,
+                                      confirmLabel: t('delete'),
+                                    }))
+                                  )
+                                    return;
+                                  void api
+                                    .invoke('accounts.delete', { id: account.id })
+                                    .then(() => api.invoke('accounts.list', null))
+                                    .then(setAccounts)
+                                    .catch((e) => setError(String(e)));
+                                }}
+                              >
+                                {t('delete')}
+                              </Button>
+                            </ItemActions>
+                          </Item>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
+                  </CardContent>
+                </Card>
               </section>
             )}
-          </div>
+          </TabsContent>
         ))}
-      </main>
+      </SidebarInset>
       <Dialog
         open={confirmLeaving}
         onClose={() => setConfirmLeaving(false)}
@@ -607,11 +695,15 @@ export function SettingsPage() {
           <Button disabled={returning} onClick={() => setConfirmLeaving(false)}>
             {t('settingsKeepEditing')}
           </Button>
-          <Button variant="danger" disabled={returning} onClick={() => void discardAndReturn()}>
+          <Button
+            variant="destructive"
+            disabled={returning}
+            onClick={() => void discardAndReturn()}
+          >
             {t('settingsDiscard')}
           </Button>
         </div>
       </Dialog>
-    </section>
+    </Tabs>
   );
 }

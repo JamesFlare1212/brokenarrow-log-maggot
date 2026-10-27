@@ -1,13 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { browserFixtures } from './dev/fixtures.ts';
 export default defineConfig(({ mode }) => ({
   root: fileURLToPath(new URL('.', import.meta.url)),
   base: './',
-  plugins: [react(), ...(mode === 'fixtures' ? [browserFixtures()] : [])],
+  plugins: [react(), tailwindcss(), ...(mode === 'fixtures' ? [browserFixtures()] : [])],
   resolve: {
     alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@ba/contracts': fileURLToPath(
         new URL('../../packages/contracts/src/index.ts', import.meta.url),
       ),
@@ -18,7 +20,6 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: true,
     rollupOptions: {
       input: {
         app: fileURLToPath(new URL('./index.html', import.meta.url)),

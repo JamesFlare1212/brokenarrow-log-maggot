@@ -51,7 +51,12 @@ async function start() {
     if (stopRequested) return;
     const video = document.getElementById('capture') as HTMLVideoElement;
     const constraints = {
-      mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: config.sourceId },
+      mandatory: {
+        chromeMediaSource: 'desktop',
+        chromeMediaSourceId: config.sourceId,
+        maxFrameRate: config.fps,
+      },
+      optional: [{ minFrameRate: config.fps }],
     } as unknown as MediaTrackConstraints;
     if (config.audio === 'default') {
       try {

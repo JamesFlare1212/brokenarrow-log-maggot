@@ -1,14 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { config as fontAwesomeConfig } from '@fortawesome/fontawesome-svg-core';
-import '@fortawesome/fontawesome-svg-core/styles.css';
 import type { Bridge } from '@ba/contracts';
 import { App } from './app/App';
 import { AppProvider } from './app/state';
 import { attachRendererDiagnostics, reportRendererError } from './app/diagnostics';
 import './styles/index.css';
 
-fontAwesomeConfig.autoAddCss = false;
 declare global {
   interface Window {
     assistant?: Bridge;
@@ -48,5 +45,13 @@ else {
       </StrictMode>,
     );
   if (native) render(native);
-  else void import('./dev/bridge').then((module) => render(module.createFixtureBridge()));
+  else if (fixtures)
+    void Promise.all([import('./dev/bridge'), import('./dev/DevelopmentApp')]).then(
+      ([bridge, module]) =>
+        root.render(
+          <StrictMode>
+            <module.DevelopmentApp api={bridge.createFixtureBridge()} />
+          </StrictMode>,
+        ),
+    );
 }

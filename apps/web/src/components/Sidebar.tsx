@@ -1,104 +1,171 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { faAnglesLeft, faAnglesRight } from '@fortawesome/free-solid-svg-icons';
+import { X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useI18n } from '../hooks/useI18n';
-import { Icon } from './Icon';
-import { Tooltip } from './Tooltip';
-import { Button } from './ui';
+import { Tooltip, TooltipButton } from './Tooltip';
+import {
+  Sidebar as PrimitiveSidebar,
+  SidebarContent,
+  SidebarFooter as PrimitiveFooter,
+  SidebarHeader as PrimitiveHeader,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+  useSidebar,
+} from './ui/sidebar';
 
 export function Sidebar({
-  collapsed,
-  className = '',
+  hidden,
+  className,
+  label,
   ...props
-}: ComponentPropsWithoutRef<'aside'> & { collapsed: boolean }) {
-  return <aside {...props} className={`app-sidebar ${className}`} data-collapsed={collapsed} />;
+}: ComponentPropsWithoutRef<'div'> & { label?: string }) {
+  const { t } = useI18n();
+  if (hidden) return null;
+  return (
+    <PrimitiveSidebar
+      {...props}
+      variant="inset"
+      collapsible="offcanvas"
+      className={className}
+      label={label ?? t('workspaceNav')}
+    />
+  );
 }
 
-export function SidebarHeader({
-  children,
-  collapsed,
-  controls,
-  onToggle,
-}: {
-  children: ReactNode;
-  collapsed: boolean;
-  controls: string;
-  onToggle: () => void;
-}) {
+export function SidebarHeader({ children }: { children: ReactNode }) {
   const { t } = useI18n();
+  const { isMobile, setOpenMobile } = useSidebar();
   return (
-    <div className="sidebar-header">
-      {children}
-      <Button
-        className="sidebar-collapse-toggle button-borderless"
-        aria-label={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
-        title={t(collapsed ? 'expandSidebar' : 'collapseSidebar')}
-        aria-expanded={!collapsed}
+    <PrimitiveHeader className="min-h-16 justify-center">
+      <div className="flex min-h-12 items-center gap-2">
+        <div className="min-w-0 flex-1">{children}</div>
+        {isMobile && (
+          <TooltipButton
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t('closeNavigation')}
+            onClick={() => setOpenMobile(false)}
+          >
+            <X />
+          </TooltipButton>
+        )}
+      </div>
+    </PrimitiveHeader>
+  );
+}
+
+export function SidebarToggle({ controls }: { controls: string }) {
+  const { t } = useI18n();
+  const { isMobile, openMobile, open } = useSidebar();
+  const label = t(
+    isMobile
+      ? openMobile
+        ? 'closeNavigation'
+        : 'openNavigation'
+      : open
+        ? 'collapseSidebar'
+        : 'expandSidebar',
+  );
+  return (
+    <Tooltip content={label} side="bottom">
+      <SidebarTrigger
+        className="-ml-1 shrink-0"
+        aria-label={label}
+        aria-expanded={isMobile ? openMobile : open}
         aria-controls={controls}
-        onClick={onToggle}
-      >
-        <Icon icon={collapsed ? faAnglesRight : faAnglesLeft} size={16} />
-      </Button>
-    </div>
+      />
+    </Tooltip>
   );
 }
 
 export function SidebarHeading({
   icon,
   children,
-  className = '',
+  className,
 }: {
   icon: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
   return (
-    <div className={`sidebar-heading ${className}`}>
-      <span className="sidebar-heading-icon" aria-hidden="true">
+    <div
+      className={cn(
+        'flex min-w-0 items-center gap-3 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
+        className,
+      )}
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
         {icon}
       </span>
-      <div className="sidebar-heading-label">{children}</div>
+      <div className="flex min-w-0 flex-col gap-0.5 truncate group-data-[collapsible=icon]:hidden">
+        {children}
+      </div>
     </div>
   );
 }
 
 export function SidebarNavigation({
   as: Element = 'nav',
-  className = '',
+  className,
+  heading,
   ...props
-}: ComponentPropsWithoutRef<'nav'> & { as?: 'nav' | 'div' }) {
-  return <Element {...props} className={`sidebar-navigation ${className}`} />;
+}: ComponentPropsWithoutRef<'nav'> & { as?: 'nav' | 'div'; heading?: string }) {
+  return (
+    <SidebarContent className="group-data-[collapsible=icon]:overflow-auto">
+      <Element {...props} className={cn('py-2', className)}>
+        <SidebarGroup>
+          {heading && <SidebarGroupLabel>{heading}</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1 group-data-[collapsible=icon]:items-center">
+              {props.children}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </Element>
+    </SidebarContent>
+  );
 }
 
 export function SidebarItem({
   icon,
   label,
   selected = false,
-  className = '',
+  className,
   title,
   ...props
 }: ComponentPropsWithoutRef<'button'> & { icon: ReactNode; label: string; selected?: boolean }) {
-  const button = (
-    <button
-      type="button"
-      {...props}
-      className={`sidebar-item ${className}`}
-      data-selected={selected}
-    >
-      <span className="sidebar-item-icon" aria-hidden="true">
+  const { isMobile, setOpenMobile } = useSidebar();
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        {...props}
+        size="workspace"
+        onClick={(event) => {
+          props.onClick?.(event);
+          if (isMobile) setOpenMobile(false);
+        }}
+        className={className}
+        isActive={selected}
+        tooltip={title || label}
+      >
         {icon}
-      </span>
-      <span className="sidebar-item-label">{label}</span>
-    </button>
-  );
-  return title ? (
-    <Tooltip content={title} side="right">
-      {button}
-    </Tooltip>
-  ) : (
-    button
+        <span>{label}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 }
 
-export function SidebarFooter({ className = '', ...props }: ComponentPropsWithoutRef<'div'>) {
-  return <div {...props} className={`app-sidebar-footer ${className}`} />;
+export function SidebarFooter(props: ComponentPropsWithoutRef<'div'>) {
+  return (
+    <PrimitiveFooter {...props}>
+      <SidebarMenu className="gap-1 group-data-[collapsible=icon]:items-center">
+        {props.children}
+      </SidebarMenu>
+    </PrimitiveFooter>
+  );
 }

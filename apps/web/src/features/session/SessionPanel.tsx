@@ -1,21 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  faArrowsRotate,
-  faLocationDot,
-  faCopy,
-  faClockRotateLeft,
-  faClock,
-  faUsers,
-  faCrosshairs,
-} from '@fortawesome/free-solid-svg-icons';
+  RefreshCw as faArrowsRotate,
+  MapPin as faLocationDot,
+  Copy as faCopy,
+  History as faClockRotateLeft,
+  Clock as faClock,
+  Users as faUsers,
+  Radar as faSatelliteDish,
+  Layers,
+} from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import { TooltipButton } from '../../components/Tooltip';
 import type { Match, Player } from '@ba/contracts';
 import { formatDuration, formatMetric, teamLabel, matchTitles } from '@ba/shared';
 import { useApp } from '../../app/state';
-import { Card, Button, Empty, Badge } from '../../components/ui';
+import { Card, Button, Empty } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 import { MatchAwards } from '../matches/MatchAwards';
+import { Item, ItemContent, ItemActions } from '@/components/ui/item';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { useRosterHeight } from './useRosterHeight';
 export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const { state, api, openModal, notify } = useApp(),
     { t } = useI18n();
@@ -59,6 +64,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
         ? previous?.players || []
         : (state.session.current?.players ?? state.session.lobbyPlayers),
     match = view === 'previous' ? previous : state.session.current;
+  const { layout, reservedHeight } = useRosterHeight(players.length > 0, !standalone);
   const titles = useMemo(
     () => (match?.endedAt ? (match.titles ?? matchTitles(match)) : {}),
     [match],
@@ -100,7 +106,8 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
     }
   };
   const rows = state.rosters[view].rows;
-  const localTeam = players.find((p) => p.id === state.session.localPlayerId)?.teamId;
+  const localPlayerId = state.session.localPlayerId ?? match?.localPlayerId;
+  const localTeam = players.find((p) => p.id === localPlayerId)?.teamId;
   const rating = (p: Player) =>
     rows[p.id]?.info?.elo ?? match?.players.find((player) => player.id === p.id)?.oldRating ?? null;
   const elapsed =
@@ -120,7 +127,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
         {view === 'previous' ? t('back') : t('previous')}
       </Button>
       <Button
-        variant="primary"
+        variant="default"
         disabled={pending || !players.length}
         aria-busy={pending}
         onClick={() => void query(view)}
@@ -133,65 +140,69 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const content = (
     <>
       <div className="session-banner">
-        <div className="session-banner-content">
-          <div className="session-kicker">
-            <span
-              className={`status-dot ${view === 'current' && state.session.phase === 'match' ? 'status-success' : ''}`}
-              aria-hidden="true"
-            />
-            {t(
-              view === 'previous'
-                ? 'previous'
-                : state.session.phase === 'match'
-                  ? 'liveMatch'
-                  : 'waiting',
-            )}
-            {match?.fid && <span className="match-id">#{match.fid}</span>}
-          </div>
-          <h3>{match?.map || t('sessionOverview')}</h3>
-          <div className="match-meta">
-            {match && (
+        {players.length > 0 && (
+          <div className="session-banner-content">
+            <div className="session-kicker">
+              {t(
+                view === 'previous'
+                  ? 'previous'
+                  : state.session.phase === 'match'
+                    ? 'liveMatch'
+                    : 'waiting',
+              )}
+              {match?.fid && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="match-id"
+                  aria-label={`${t('copy')} ${t('matchId')}: ${match.fid}`}
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(match.fid!)
+                      .then(() => notify(t('copied')))
+                      .catch((error) => notify(String(error), true))
+                  }
+                >
+                  #{match.fid}
+                </Button>
+              )}
+            </div>
+            <h2>{match?.map || t('sessionOverview')}</h2>
+            <div className="match-meta">
+              {match && (
+                <span>
+                  <Icon icon={faLocationDot} size={13} aria-hidden="true" />
+                  {t(match.mode)}
+                </span>
+              )}
               <span>
-                <Icon icon={faLocationDot} size={13} aria-hidden="true" />
-                {t(match.mode)}
+                <Icon icon={faUsers} size={13} aria-hidden="true" />
+                {t('playersCount', { n: players.length })}
               </span>
-            )}
-            <span>
-              <Icon icon={faUsers} size={13} aria-hidden="true" />
-              {t('playersCount', { n: players.length })}
-            </span>
-            {elapsed !== null && (
-              <span>
-                <Icon icon={faClock} size={13} aria-hidden="true" />
-                {formatDuration(elapsed)}
-              </span>
-            )}
-            {(match?.localDeck || state.session.localDeck) && (
-              <span>{match?.localDeck || state.session.localDeck}</span>
-            )}
+              {elapsed !== null && (
+                <span>
+                  <Icon icon={faClock} size={13} aria-hidden="true" />
+                  {formatDuration(elapsed)}
+                </span>
+              )}
+              {(match?.localDeck || state.session.localDeck) && (
+                <span>
+                  <Layers size={13} aria-hidden="true" />
+                  {match?.localDeck || state.session.localDeck}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <svg className="terrain-art" viewBox="0 0 260 140" fill="none" aria-hidden="true">
-          <path
-            d="M-20 95C40 120 10 30 70 50S110 125 160 90 170 15 250 30M-15 108C45 135 20 45 70 62S118 143 169 105 182 30 270 42M-5 80C35 95 4 15 62 37S106 107 145 76 168-5 250 15M-10 65C35 74 3-5 57 20S98 91 137 61 165-18 240 0M-20 120C45 150 29 58 72 77S128 160 180 117 196 45 275 58"
-            stroke="currentColor"
-            opacity=".22"
-          />
-          <path
-            d="M72 98 114 64 176 78 219 44"
-            stroke="currentColor"
-            strokeDasharray="3 5"
-            opacity=".55"
-          />
-          <circle cx="176" cy="78" r="18" stroke="currentColor" opacity=".3" />
-          <circle cx="176" cy="78" r="6" stroke="currentColor" />
-          <circle cx="176" cy="78" r="2" fill="currentColor" />
-          <circle cx="72" cy="98" r="3" fill="currentColor" opacity=".55" />
-          <circle cx="219" cy="44" r="3" fill="currentColor" opacity=".55" />
-        </svg>
+        )}
+        <div className="session-actions">{actions}</div>
       </div>
+      {players.length > 0 && <Separator />}
       {!players.length ? (
-        <Empty icon={<Icon icon={faCrosshairs} size={28} />} description={t('waitingHint')}>
+        <Empty
+          icon={<Icon icon={faSatelliteDish} size={28} />}
+          iconSize="lg"
+          description={t('waitingHint')}
+        >
           {t('waiting')}
         </Empty>
       ) : (
@@ -203,7 +214,9 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
               <div className={`team-column team-${team}`} key={String(team)}>
                 <div className="team-title">
                   <h3>
-                    <span className="team-indicator" aria-hidden="true" />
+                    {(team === 0 || team === 1) && (
+                      <span className="team-indicator" aria-hidden="true" />
+                    )}
                     {teamLabel(team)}{' '}
                     <small>
                       {team === 0 || team === 1
@@ -230,6 +243,8 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                     </strong>
                   </div>
                   <Button
+                    variant="ghost"
+                    size="icon"
                     aria-label={t('copy') + ' ' + teamLabel(team)}
                     onClick={() =>
                       void navigator.clipboard
@@ -243,7 +258,6 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                         .then(() => notify(t('copied')))
                         .catch((e) => notify(String(e), true))
                     }
-                    className="text-button icon-button"
                   >
                     <Icon icon={faCopy} size={14} aria-hidden="true" />
                   </Button>
@@ -260,15 +274,18 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                         </>
                       ));
                   return (
-                    <div
-                      className={`player-card ${p.id === state.session.localPlayerId ? 'is-you' : ''}`}
+                    <Item
+                      variant={p.id === localPlayerId ? 'muted' : 'default'}
+                      size="xs"
+                      className="player-card"
                       key={p.id}
                     >
-                      <div className="player-main">
+                      <ItemContent>
                         <div className="player-identity">
                           <div className="player-heading">
                             <TooltipButton
-                              className="player-name-button"
+                              variant="link"
+                              className="player-name-button h-auto px-0 py-0"
                               tooltip={
                                 <>
                                   <span className="button-tooltip-label">
@@ -283,9 +300,6 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                             >
                               <span className="player-name">{p.name}</span>
                             </TooltipButton>
-                            {p.id === state.session.localPlayerId && (
-                              <Badge tone="success">{t('you')}</Badge>
-                            )}
                             <MatchAwards
                               key={`${match?.id}:${p.id}`}
                               titles={titles[p.id] ?? []}
@@ -312,12 +326,14 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                             </small>
                           </div>
                         </div>
-                      </div>
-                      <span className="player-rating">
-                        <strong>{formatMetric(rating(p), 0)}</strong>
-                        <small>ELO</small>
-                      </span>
-                    </div>
+                      </ItemContent>
+                      <ItemActions>
+                        <span className="player-rating">
+                          <strong>{formatMetric(rating(p), 0)}</strong>
+                          <small>ELO</small>
+                        </span>
+                      </ItemActions>
+                    </Item>
                   );
                 })}
               </div>
@@ -325,33 +341,29 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
           })}
         </div>
       )}
-      {standalone && (
-        <div className="session-footnote">
-          <span className="status-dot status-success" aria-hidden="true" />
-          {state.session.localName ? `${t('account')}: ${state.session.localName}` : t('noAccount')}
-        </div>
-      )}
     </>
   );
   if (standalone) {
     return (
       <section className="session-panel session-roster" aria-label={title}>
-        <header className="session-toolbar">
-          <h2>{title}</h2>
-          <div className="actions">{actions}</div>
-        </header>
         {content}
       </section>
     );
   }
   return (
     <Card
-      className="session-card session-roster"
+      className={cn('session-card session-roster', players.length === 0 && 'session-empty')}
+      contentClassName="session-content"
       title={title}
-      icon={<Icon icon={faCrosshairs} size={19} />}
-      actions={actions}
+      showHeader={false}
     >
-      {content}
+      <div
+        ref={layout}
+        className="session-layout"
+        style={{ minHeight: players.length === 0 ? (reservedHeight ?? undefined) : undefined }}
+      >
+        {content}
+      </div>
     </Card>
   );
 }

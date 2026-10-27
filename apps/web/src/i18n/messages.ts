@@ -1,4 +1,64 @@
 export const messages: Record<string, readonly [string, string]> = {
+  lastEncounterTime: ['最近相遇', 'Last encounter'],
+  banFirstSeen: ['封禁记录时间', 'Ban first seen'],
+  encounterTimeUnknown: ['未记录时间', 'Time not recorded'],
+  healthEndpointNotChecked: ['未检查', 'Not checked'],
+  replayView: ['录像视图', 'Replay view'],
+  gridView: ['网格视图', 'Grid view'],
+  listView: ['列表视图', 'List view'],
+  testReplay: ['测试录像', 'Test recording'],
+  goToPage: ['第 {page} 页', 'Page {page}'],
+  devMoveTools: ['移动开发工具', 'Move development tools'],
+  devMoveToolsHint: [
+    '拖动移动；方向键微调，Shift 加速，Home 复位。',
+    'Drag to move; use arrow keys to adjust, Shift for larger steps, and Home to reset.',
+  ],
+  banPlayer: ['玩家', 'Player'],
+  filterPlayers: ['筛选名字或 ID', 'Filter by name or ID'],
+  devTools: ['开发工具', 'Dev tools'],
+  devToolsHint: [
+    '在当前标签页预览状态，不读写真实游戏数据。',
+    'Preview states in this tab without changing real game data.',
+  ],
+  devScene: ['数据场景', 'Data scene'],
+  'devMode.captured': ['仓库样本', 'Fixtures'],
+  'devMode.empty': ['空数据', 'Empty'],
+  'devMode.demo': ['模拟数据', 'Demo'],
+  'devModeHint.captured': [
+    '使用仓库中的离线样本。选择空数据或模拟数据以测试录像和 APM。',
+    'Uses repository fixtures. Select Empty or Demo to test recordings and APM.',
+  ],
+  'devModeHint.empty': [
+    '所有列表从空状态开始，可独立模拟录制与 APM。',
+    'Lists start empty. Recording and APM states can be simulated independently.',
+  ],
+  'devModeHint.demo': [
+    '已载入对局、玩家、录像、封禁和 APM 示例。',
+    'Matches, players, recordings, bans and APM examples are loaded.',
+  ],
+  devRecording: ['录制状态', 'Recording state'],
+  'devRecording.idle': ['空闲', 'Idle'],
+  'devRecording.recording': ['录制中（模拟）', 'Recording (simulated)'],
+  'devRecording.error': ['录制失败（模拟）', 'Recording error (simulated)'],
+  devApm: ['APM 状态', 'APM state'],
+  'devApm.empty': ['暂无记录', 'No captures'],
+  'devApm.active': ['实时统计（模拟）', 'Live capture (simulated)'],
+  'devApm.complete': ['已完成记录', 'Completed capture'],
+  devReset: ['重置当前场景', 'Reset current scene'],
+  recognizedAccounts: ['已识别的账号', 'Recognized accounts'],
+  accountMatches: ['{count} 场对局', '{count} matches'],
+  appearanceColorScheme: ['配色模式', 'Color scheme'],
+  appearanceThemes: ['主题', 'Theme'],
+  appearanceThemeVariants: ['{theme}浅色与深色配色', '{theme} light and dark palettes'],
+  appearanceUseMode: ['仅用于{mode}模式', 'Use for {mode} mode only'],
+  clearSearch: ['清除搜索', 'Clear search'],
+  searchingPlayers: ['正在查找玩家…', 'Searching for players…'],
+  searchResultSummary: ['“{query}” · {count} 位玩家', '“{query}” · {count} players'],
+  matchIdHint: [
+    '输入 BATrace 对局页面中的数字 ID。',
+    'Enter the numeric ID from the BATrace match page.',
+  ],
+  matchIdInvalid: ['对局 ID 只能包含数字。', 'Match IDs can only contain digits.'],
   cache: ['缓存', 'Cache'],
   'settingsHint.cache': [
     '查看缓存使用情况，管理本地保存的查询数据。',
@@ -40,29 +100,29 @@ export const messages: Record<string, readonly [string, string]> = {
   ],
   cacheClearing: ['正在清理…', 'Clearing…'],
   cacheCleared: ['已清理 {count} 条缓存。', 'Removed {count} cached entries.'],
-  telemetryConsentTitle: [
+  analyticsConsentTitle: [
     '是否允许使用情况与诊断统计？',
     'Allow usage and diagnostics statistics?',
   ],
-  telemetryConsentPrompt: [
-    '请阅读下面的采集说明。仅在同意后开始发送统计；关键事件的本地暂存、会话与前台活跃状态、改进的错误和性能诊断需要确认此更新说明。',
-    'Read the collection details below. Nothing is sent before consent. Confirm this updated notice for local buffering of critical events, sessions and foreground activity, and improved error and performance diagnostics.',
+  analyticsConsentPrompt: [
+    '请阅读下面的匿名使用统计说明。仅在同意后向 Aptabase 发送事件；不上传账号哈希或持久化用户标识。',
+    'Read the anonymous usage statistics details below. Events are sent to Aptabase only after consent; account hashes and persistent user identifiers are not sent.',
   ],
-  telemetryConsentChangeLater: [
+  analyticsConsentChangeLater: [
     '不同意不影响应用功能。之后可在“设置 → 常规”中随时修改。',
     'Declining does not affect app features. Change your choice at any time in Settings → General.',
   ],
-  telemetryConsentAccept: ['同意使用与诊断统计', 'Allow usage and diagnostics'],
-  telemetryConsentDecline: ['不同意', 'Decline'],
-  telemetry: ['使用统计与隐私', 'Usage statistics and privacy'],
-  telemetryEnabled: ['发送可选使用统计', 'Send optional usage statistics'],
-  telemetryDescription: [
-    '同意后向 posthog.jamesflare.com 发送安装与启动、实时对局开始次数、版本与更新结果、每分钟在线心跳与前台活跃状态、功能使用结果和耗时、分类错误，以及主进程和渲染进程的 CPU、内存、界面就绪和卡顿汇总。通过 PostHog 会话标识关联同一账号的一次使用。安装、对局开始、更新与异常等关键事件可在本机暂存最多 7 天并有限重试；关闭统计会停止发送并清空待发送数据。',
-    'After consent, sends installation/startup, live match start counts, versions and update results, minute presence and foreground activity, feature results/timings, classified errors, main/renderer CPU and memory, UI-ready timings, and long-task summaries to posthog.jamesflare.com. PostHog session IDs link one account’s usage session. Critical installation, match start, update, and error events may be buffered locally for up to 7 days with bounded retries. Turning statistics off stops sending and clears pending data.',
+  analyticsConsentAccept: ['同意使用与诊断统计', 'Allow usage and diagnostics'],
+  analyticsConsentDecline: ['不同意', 'Decline'],
+  analytics: ['使用统计与隐私', 'Usage statistics and privacy'],
+  analyticsEnabled: ['发送可选使用统计', 'Send optional usage statistics'],
+  analyticsDescription: [
+    '同意后向 aptabase.jamesflare.com 发送启动、首次打开与版本变化、实时对局开始次数、更新结果、功能使用和耗时、分类错误、界面启动与前台卡顿汇总，以及前台活跃时的 CPU 和内存采样。系统版本、应用版本和语言作为事件环境信息发送。仅使用短期随机会话；空闲一小时、跨 UTC 日期、重启或关闭统计后会话失效。事件仅在内存中短暂排队并有限重试，不写入持久化队列；关闭统计会取消请求并清空队列。',
+    'After consent, sends startup, first open and version changes, live match start counts, update outcomes, feature usage/timings, classified errors, UI startup and foreground long-task summaries, and foreground-active CPU/memory samples to aptabase.jamesflare.com. System/app versions and language accompany events. Random sessions expire after an idle hour, a UTC date change, restart, or opt-out. Events use a short-lived memory queue with bounded retries and are never stored in a durable queue. Turning statistics off cancels requests and clears the queue.',
   ],
-  telemetryPrivacy: [
-    '使用日志识别到的本机数字账号的 SHA-256 哈希关联跨次使用；尚未识别账号时使用本地随机安装标识的哈希。这些稳定标识可关联使用记录，不上传原始账号、昵称、其他玩家标识、搜索内容、日志、路径、卡组、录像或按键。错误仅发送类型、代码、来源和应用代码位置，不发送原始消息或完整堆栈。不创建人员档案。服务器接收来源 IP，可能用于地理统计。开发、离线和测试模式不发送。',
-    'A SHA-256 hash of the local numeric account identified in game logs links usage across launches; until an account is known, a hash of a local random installation ID is used. These stable IDs link usage records. Raw accounts, names, other players, searches, logs, paths, decks, recordings, and keystrokes are not sent. Errors include only type, code, source, and app code locations, without raw messages or full stacks. No person profiles are created. The server receives your source IP and may derive geographic statistics. Development, offline, and test modes do not send data.',
+  analyticsPrivacy: [
+    '不上传原始账号、账号哈希、安装或设备标识、昵称、其他玩家标识、搜索内容、日志、路径、卡组、录像或按键。错误仅发送类型、代码、来源和应用代码位置，不发送原始消息或完整堆栈。首次打开和版本变化仅在本机保存版本与是否已上报的标记，待确认的更新仅保存版本与阶段，不包含关联标识。服务器会接收来源 IP，并按 Aptabase 的匿名机制生成短期统计和地理信息。开发、离线和测试模式不发送。',
+    'Raw accounts, account hashes, installation/device identifiers, names, other players, searches, logs, paths, decks, recordings, and keystrokes are not sent. Errors include only type, code, source, and app code locations, without raw messages or full stacks. Local first-open/version markers store versions and reporting status only; pending updates store versions and stage without correlation identifiers. The server receives the source IP and uses Aptabase anonymous analytics and geographic processing. Development, offline, and test modes do not send data.',
   ],
   paginationRange: ['第 {start}–{end} 条，共 {total} 条', 'Showing {start}–{end} of {total}'],
   version: ['版本', 'Version'],
@@ -115,7 +175,7 @@ export const messages: Record<string, readonly [string, string]> = {
     '录像只保存在本地，录制所选显示器的完整画面。',
     'Recordings stay local and capture the entire selected display.',
   ],
-  brand: ['断箭蛐工具', 'Broken Arrow Log Assistant'],
+  brand: ['断箭蛐工具', 'BARadar'],
   overview: ['总览', 'Overview'],
   radar: ['蛐雷达', 'Player radar'],
   radarDescription: [
@@ -212,6 +272,16 @@ export const messages: Record<string, readonly [string, string]> = {
   ],
   searchPlaceholder: ['搜索玩家名字或 ID…', 'Search player name or ID…'],
   currentRoomPlayers: ['当前房间的玩家', 'Players in your room'],
+  searchResults: ['查询结果', 'Search results'],
+  selectPlayer: ['选择一位玩家', 'Select a player'],
+  selectPlayerHint: [
+    '从查询结果中选择玩家，查看战绩与详细报告。',
+    'Select a player from the results to view their match history and detailed report.',
+  ],
+  playerReportHint: [
+    '查询玩家战绩、常用单位与相遇记录。',
+    'Explore match history, favourite units and previous encounters.',
+  ],
   searchEmpty: ['没有找到匹配的玩家', 'No matching players'],
   searchEmptyHint: [
     '试试完整的玩家名字，或使用数字 ID。',
@@ -276,7 +346,7 @@ export const messages: Record<string, readonly [string, string]> = {
   colorScheme: ['配色方案', 'Color palette'],
   selectPalettePair: ['选择整组配色', 'Select palette pair'],
   colorSchemeHint: [
-    '点击卡片选择整组配色，或单独选择浅色、深色配色。当前主题模式保持不变。',
+    '选择整组配色，或分别设置浅色与深色配色。当前主题模式保持不变。',
     'Choose a matching pair or individual light and dark palettes. Your theme mode stays the same.',
   ],
   languageHint: [

@@ -37,7 +37,18 @@ const electron = vi.hoisted(() => {
   const handle =
     vi.fn<(scheme: string, callback: (request: Request) => Promise<Response>) => void>();
   const unhandle = vi.fn<(scheme: string) => void>();
-  return { BrowserWindow: FakeBrowserWindow, windows, getSources, loadFile, handle, unhandle };
+  const getAllDisplays = vi.fn(() => [
+    { id: 1, label: 'Primary', bounds: { width: 1_920, height: 1_080 }, scaleFactor: 1 },
+  ]);
+  return {
+    BrowserWindow: FakeBrowserWindow,
+    windows,
+    getSources,
+    loadFile,
+    handle,
+    unhandle,
+    getAllDisplays,
+  };
 });
 vi.mock('electron', () => ({
   BrowserWindow: electron.BrowserWindow,
@@ -45,7 +56,7 @@ vi.mock('electron', () => ({
   screen: {
     getCursorScreenPoint: () => ({ x: 0, y: 0 }),
     getDisplayNearestPoint: () => ({ id: 1 }),
-    getAllDisplays: () => [{ id: 1, label: 'Primary', bounds: { width: 1_920, height: 1_080 } }],
+    getAllDisplays: electron.getAllDisplays,
   },
   protocol: { handle: electron.handle, unhandle: electron.unhandle },
 }));
@@ -131,6 +142,10 @@ beforeEach(() => {
   electron.loadFile.mockResolvedValue();
   electron.handle.mockClear();
   electron.unhandle.mockClear();
+  electron.getAllDisplays.mockReset();
+  electron.getAllDisplays.mockReturnValue([
+    { id: 1, label: 'Primary', bounds: { width: 1_920, height: 1_080 }, scaleFactor: 1 },
+  ]);
 });
 afterEach(async () => {
   for (const value of controllers.splice(0)) await value.abort();
@@ -141,6 +156,57 @@ afterEach(async () => {
     assertChild(entry.root, target);
     await rm(target, { recursive: true, force: true });
   }
+});
+
+describe('recording display discovery', () => {
+  it.each([
+    { width: 1_920, height: 1_080, scaleFactor: 1, resolution: '1920×1080' },
+    { width: 2_560, height: 1_440, scaleFactor: 1.5, resolution: '3840×2160' },
+    { width: 1_536, height: 864, scaleFactor: 1.25, resolution: '1920×1080' },
+    { width: 1_080, height: 1_920, scaleFactor: 2, resolution: '2160×3840' },
+  ])('labels physical pixels at $scaleFactor scale ($resolution)', async (display) => {
+    electron.getAllDisplays.mockReturnValue([
+      {
+        id: 1,
+        label: 'Primary',
+        bounds: { width: display.width, height: display.height },
+        scaleFactor: display.scaleFactor,
+      },
+    ]);
+    const { value } = await controller();
+
+    expect(await value.displays()).toEqual([
+      {
+        id: source.id,
+        label: 'Primary · ' + display.resolution,
+        thumbnail: source.thumbnail.toDataURL(),
+      },
+    ]);
+  });
+
+  it('uses each matched monitor scale when capture sources have a different order', async () => {
+    electron.getAllDisplays.mockReturnValue([
+      { id: 2, label: '4K', bounds: { width: 1_920, height: 1_080 }, scaleFactor: 2 },
+      { id: 1, label: 'Secondary', bounds: { width: 1_920, height: 1_080 }, scaleFactor: 1 },
+    ]);
+    electron.getSources.mockResolvedValue([
+      source,
+      { ...source, id: 'screen:2:0', display_id: '2' },
+    ]);
+    const { value } = await controller();
+
+    expect((await value.displays()).map((display) => display.label)).toEqual([
+      'Secondary · 1920×1080',
+      '4K · 3840×2160',
+    ]);
+  });
+
+  it('retains the capture source name when no monitor metadata is available', async () => {
+    electron.getAllDisplays.mockReturnValue([]);
+    const { value } = await controller();
+
+    expect((await value.displays())[0]?.label).toBe(source.name);
+  });
 });
 
 describe('recording lifecycle and IPC ownership', () => {

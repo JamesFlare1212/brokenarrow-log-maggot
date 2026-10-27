@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { faArrowsRotate, faBroom, faTrashCan } from '@fortawesome/free-solid-svg-icons';
+import {
+  RefreshCw as faArrowsRotate,
+  BrushCleaning as faBroom,
+  Trash2 as faTrashCan,
+} from 'lucide-react';
 import type { CacheClearMode, CacheStats } from '@ba/contracts';
 import { errorMessage, formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -8,6 +12,8 @@ import { Icon } from '../../components/Icon';
 import { Button, Loading, Notice, Stats } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Item, ItemContent, ItemTitle, ItemDescription, ItemActions } from '@/components/ui/item';
 
 export function CacheSettings() {
   const { api } = useApp(),
@@ -77,45 +83,47 @@ export function CacheSettings() {
         {request.error && <Notice error>{request.error}</Notice>}
         {stats && (
           <>
-            <div className="settings-card cache-summary">
-              <Stats
-                items={[
-                  { label: t('cacheEntries'), value: count(entries) },
-                  { label: t('cacheExpired'), value: count(expired) },
-                  {
-                    label: t('cacheDataSize'),
-                    value: formatSize(stats.api.bytes + stats.snapshots.bytes),
-                  },
-                ]}
-              />
-            </div>
-            <div className="settings-card cache-categories">
+            <Stats
+              items={[
+                { label: t('cacheEntries'), value: count(entries) },
+                { label: t('cacheExpired'), value: count(expired) },
+                {
+                  label: t('cacheDataSize'),
+                  value: formatSize(stats.api.bytes + stats.snapshots.bytes),
+                },
+              ]}
+            />
+            <div className="cache-category-grid">
               {(['api', 'snapshots'] as const).map((category) => (
-                <div className="cache-category" key={category}>
-                  <div>
-                    <strong>{t('cacheCategory.' + category)}</strong>
-                    <p>{t('cacheCategoryHint.' + category)}</p>
-                  </div>
-                  <div className="cache-category-usage">
-                    <strong>{formatSize(stats[category].bytes)}</strong>
-                    <span>
-                      {t('cacheEntrySummary', {
-                        entries: count(stats[category].entries),
-                        expired: count(stats[category].expired),
-                      })}
-                    </span>
-                  </div>
-                </div>
+                <Item variant="outline" className="cache-category" key={category}>
+                  <ItemContent>
+                    <ItemTitle>{t('cacheCategory.' + category)}</ItemTitle>
+                    <ItemDescription>{t('cacheCategoryHint.' + category)}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <div className="cache-category-usage">
+                      <strong>{formatSize(stats[category].bytes)}</strong>
+                      <span>
+                        {t('cacheEntrySummary', {
+                          entries: count(stats[category].entries),
+                          expired: count(stats[category].expired),
+                        })}
+                      </span>
+                    </div>
+                  </ItemActions>
+                </Item>
               ))}
             </div>
             <p>{t('cacheSizeHint')}</p>
           </>
         )}
       </section>
-      <section className="settings-section" aria-labelledby="cache-cleanup-heading">
-        <h3 id="cache-cleanup-heading">{t('cacheCleanup')}</h3>
-        <div className="settings-card settings-section">
-          <p>{t('cacheCleanupHint')}</p>
+      <Card aria-labelledby="cache-cleanup-heading">
+        <CardHeader>
+          <CardTitle id="cache-cleanup-heading">{t('cacheCleanup')}</CardTitle>
+          <CardDescription>{t('cacheCleanupHint')}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
           <p>{t('cachePreserved')}</p>
           <div className="actions cache-actions">
             <Button
@@ -127,7 +135,7 @@ export function CacheSettings() {
               {t(clearing === 'expired' ? 'cacheClearing' : 'cacheClearExpired')}
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               disabled={busy || !stats || entries === 0}
               aria-busy={clearing === 'all'}
               onClick={() => void clear('all')}
@@ -138,8 +146,8 @@ export function CacheSettings() {
           </div>
           {error && <Notice error>{error}</Notice>}
           {removed !== null && <p role="status">{t('cacheCleared', { count: count(removed) })}</p>}
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </>
   );
 }

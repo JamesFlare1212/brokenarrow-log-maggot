@@ -1,12 +1,15 @@
-import { useEffect, useId, useState } from 'react';
-import { faWaveSquare } from '@fortawesome/free-solid-svg-icons';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { lazy, Suspense, useEffect, useId, useState } from 'react';
+import { Activity as faWaveSquare } from 'lucide-react';
 import type { ApmState } from '@ba/contracts';
 import { Icon } from '../../components/Icon';
 import { formatDuration, formatMetric, formatTime } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
-import { Button, Card, Empty, Stats, Notice, Badge } from '../../components/ui';
-import { ApmChart } from './ApmChart';
+import { Button, Card, Empty, Stats, Notice, Badge, Field } from '../../components/ui';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const ApmChart = lazy(() => import('./ApmChart').then((module) => ({ default: module.ApmChart })));
 
 function ApmMetrics({ apm }: { apm: ApmState }) {
   const { t } = useI18n(),
@@ -56,41 +59,18 @@ function ApmMetrics({ apm }: { apm: ApmState }) {
       )}
       {counts.length > 0 && (
         <>
-          <ApmChart
-            key={apm.captureId}
-            counts={counts}
-            bucketSec={windowSec}
-            durationSec={apm.durationSec}
-            title={t(legacy ? 'apmBucketsLegacy' : 'apmBuckets')}
-          />
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+            <ApmChart
+              key={apm.captureId}
+              counts={counts}
+              bucketSec={windowSec}
+              durationSec={apm.durationSec}
+              title={t(legacy ? 'apmBucketsLegacy' : 'apmBuckets')}
+            />
+          </Suspense>
           {counts.some((_, index) => bucketSeconds(index) < windowSec) && (
             <p className="muted">{t('apmPartialBucket')}</p>
           )}
-          <details>
-            <summary>{t('apmBucketTable')}</summary>
-            <table>
-              <thead>
-                <tr>
-                  <th>{t('time')}</th>
-                  <th>{t('apmCaptureDuration')}</th>
-                  <th>{t('totalActions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {counts.map((value, index) => (
-                  <tr key={index}>
-                    <td>
-                      {formatDuration(index * windowSec)}–
-                      {formatDuration(index * windowSec + bucketSeconds(index))}
-                      {bucketSeconds(index) < windowSec ? ' *' : ''}
-                    </td>
-                    <td>{formatDuration(bucketSeconds(index))}</td>
-                    <td>{value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </details>
         </>
       )}
       <div className="apm-notes">
@@ -137,23 +117,24 @@ export function ApmPanel({ standalone = false }: { standalone?: boolean }) {
       )}
       {history.length > 0 && (
         <div className="apm-history">
-          <label htmlFor={historyId}>{t('apmHistory')}</label>
-          <select
-            id={historyId}
-            value={selected}
-            onChange={(event) => setSelected(event.target.value)}
-          >
-            <option value="">{t('apmLatest')}</option>
-            {history
-              .filter((capture) => capture.captureId !== state.apm.captureId)
-              .map((capture) => (
-                <option value={capture.captureId!} key={capture.captureId}>
-                  {formatTime(capture.startedAt, locale)} · {capture.map || '—'}
-                  {capture.fid ? ` · #${capture.fid}` : ''}
-                  {capture.partial ? ` · ${t('apmPartialLabel')}` : ''}
-                </option>
-              ))}
-          </select>
+          <Field id={historyId} label={t('apmHistory')}>
+            <NativeSelect
+              id={historyId}
+              value={selected}
+              onChange={(event) => setSelected(event.target.value)}
+            >
+              <NativeSelectOption value="">{t('apmLatest')}</NativeSelectOption>
+              {history
+                .filter((capture) => capture.captureId !== state.apm.captureId)
+                .map((capture) => (
+                  <NativeSelectOption value={capture.captureId!} key={capture.captureId}>
+                    {formatTime(capture.startedAt, locale)} · {capture.map || '—'}
+                    {capture.fid ? ` · #${capture.fid}` : ''}
+                    {capture.partial ? ` · ${t('apmPartialLabel')}` : ''}
+                  </NativeSelectOption>
+                ))}
+            </NativeSelect>
+          </Field>
         </div>
       )}
       {apm.captureId ? (
@@ -163,7 +144,7 @@ export function ApmPanel({ standalone = false }: { standalone?: boolean }) {
           icon={<Icon icon={faWaveSquare} size={30} />}
           description={t('apmDescription')}
           action={
-            <Button variant="primary" onClick={() => openSettings('automation')}>
+            <Button variant="default" onClick={() => openSettings('automation')}>
               {t('settings')}
             </Button>
           }
@@ -180,7 +161,9 @@ export function ApmPanel({ standalone = false }: { standalone?: boolean }) {
   if (standalone) {
     return (
       <section className="apm-panel" aria-label={t('apm')}>
-        {content}
+        <Card title={t('apm')} showHeader={false}>
+          {content}
+        </Card>
       </section>
     );
   }

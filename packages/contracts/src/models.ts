@@ -1,3 +1,5 @@
+import type { RecordingQuality } from './recording';
+
 export type Id = string;
 export type Metric = number | null;
 export type TeamId = 0 | 1 | 100 | null;
@@ -176,6 +178,7 @@ export interface Ban {
   firstSeenAt: number;
   lastSeenAt: number;
   encountered: boolean;
+  lastEncounterAt?: number | null;
 }
 export interface PlayerProfile {
   id: Id;
@@ -284,9 +287,8 @@ export interface MigrationStatus {
   backupDir: string | null;
 }
 export interface PublicConfig {
-  telemetryEnabled: boolean;
-  telemetryConsentConfirmed: boolean;
-  telemetryConsentVersion: number;
+  analyticsEnabled: boolean;
+  analyticsChoiceSaved: boolean;
   logDir: string;
   decksDir: string;
   autoQueryCurrentMatch: boolean;
@@ -306,7 +308,7 @@ export interface PublicConfig {
   collapsedPanels: Panel[];
   replayEnabled: boolean;
   replayDisplayId: string;
-  replayQuality: 240 | 360 | 480 | 720 | 1080;
+  replayQuality: RecordingQuality;
   replayFps: number;
   replayBitrateMbps: number;
   replayAudio: 'default' | 'off';

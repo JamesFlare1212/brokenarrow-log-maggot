@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { configSchema, rpcSchemas, type PublicConfig } from '@ba/contracts';
 import { Database } from '../apps/server/src/storage/database';
 import { projectConfig, projectConfigSchema } from '../apps/server/src/config';
+import { canvasSize, estimateRecordingBytes } from '@ba/shared';
 
 describe('project configuration', () => {
   it('accepts zero offset and retry delay while keeping positive timeouts and intervals', () => {
@@ -46,13 +47,15 @@ describe('configuration patches', () => {
     { hiddenPanels: [] },
     { inputHookEnabled: true },
     { inputHookEnabled: false },
-    { telemetryEnabled: true },
-    { telemetryEnabled: false },
-    { telemetryConsentConfirmed: false },
-    { telemetryEnabled: true, telemetryConsentConfirmed: true },
+    { analyticsEnabled: true },
+    { analyticsEnabled: false },
+    { analyticsChoiceSaved: false },
+    { analyticsEnabled: true, analyticsChoiceSaved: true },
     { replayEnabled: false },
     { replayMicrophone: false },
     { replayQuality: 1080, replayFps: 60, replaySaveDir: 'custom-recordings' },
+    { replayQuality: 1440, replayFps: 90, replayBitrateMbps: 15 },
+    { replayQuality: 2160, replayFps: 120, replayBitrateMbps: 20 },
   ])('keeps omitted fields absent when validating %j', (patch) => {
     expect(rpcSchemas['config.update'].parse(patch)).toEqual(patch);
   });
@@ -68,10 +71,15 @@ describe('configuration patches', () => {
       { darkTheme: 'invalid' },
       { logDir: null },
       { replayFps: 10 },
-      { replayQuality: 1440 },
+      { replayQuality: 480 },
+      { replayQuality: 4320 },
+      { replayFps: 121 },
+      { replayFps: 45 },
+      { replayBitrateMbps: 4 },
+      { replayBitrateMbps: 21 },
       { replayMicrophone: 'false' },
-      { telemetryEnabled: 'true' },
-      { telemetryConsentConfirmed: 'true' },
+      { analyticsEnabled: 'true' },
+      { analyticsChoiceSaved: 'true' },
       { panelOrder: ['invalid'] },
       { hiddenPanels: ['invalid'] },
       { hiddenPanels: ['about'] },
@@ -82,8 +90,8 @@ describe('configuration patches', () => {
     expect(configSchema.parse({}).theme).toBe('dark');
     expect(configSchema.parse({}).inputHookEnabled).toBe(true);
     expect(configSchema.parse({ inputHookEnabled: false }).inputHookEnabled).toBe(false);
-    expect(configSchema.parse({}).telemetryEnabled).toBe(true);
-    expect(configSchema.parse({}).telemetryConsentConfirmed).toBe(false);
+    expect(configSchema.parse({}).analyticsEnabled).toBe(false);
+    expect(configSchema.parse({}).analyticsChoiceSaved).toBe(false);
     expect(configSchema.parse({}).themeMode).toBe('system');
     expect(configSchema.parse({}).hiddenPanels).toEqual([]);
     expect(configSchema.parse({ replayAudio: 'default' }).replayMicrophone).toBe(true);
@@ -101,8 +109,8 @@ describe('configuration patches', () => {
       expect(db.updateConfig({ lang: 'en' }).themeMode).toBe('system');
       const initial = db.updateConfig({
         inputHookEnabled: false,
-        telemetryEnabled: true,
-        telemetryConsentConfirmed: true,
+        analyticsEnabled: true,
+        analyticsChoiceSaved: true,
         logDir: 'custom-logs',
         decksDir: 'custom-decks',
         theme: 'forest',
@@ -233,4 +241,50 @@ describe('configuration patches', () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+});
+
+describe('recording configuration ranges', () => {
+  it('starts with 720p, 30fps and 5Mbps and sizes the highest recording quality correctly', () => {
+    expect(configSchema.parse({})).toMatchObject({
+      replayQuality: 720,
+      replayFps: 30,
+      replayBitrateMbps: 5,
+    });
+    expect(canvasSize(2160, 3840, 2160)).toEqual({ width: 3840, height: 2160 });
+    expect(estimateRecordingBytes(45, 20, true)).toBe(6_793_200_000);
+  });
+
+  it.each([240, 360, 480])(
+    'upgrades saved %ip and 3Mbps without losing other preferences',
+    (quality) => {
+      const db = new Database(':memory:');
+      try {
+        db.sql.prepare('INSERT INTO settings VALUES(?,?)').run(
+          'public',
+          JSON.stringify({
+            replayQuality: quality,
+            replayFps: 45,
+            replayBitrateMbps: 3,
+            lang: 'en',
+            replaySaveDir: 'custom-recordings',
+          }),
+        );
+        expect(db.config()).toMatchObject({
+          replayQuality: 720,
+          replayFps: 50,
+          replayBitrateMbps: 5,
+          lang: 'en',
+          replaySaveDir: 'custom-recordings',
+        });
+        expect(db.updateConfig({ replayFps: 120 })).toMatchObject({
+          replayQuality: 720,
+          replayFps: 120,
+          replayBitrateMbps: 5,
+          lang: 'en',
+        });
+      } finally {
+        db.close();
+      }
+    },
+  );
 });

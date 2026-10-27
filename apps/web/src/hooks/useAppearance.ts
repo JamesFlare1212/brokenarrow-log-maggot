@@ -1,5 +1,25 @@
-import { useEffect } from 'react';
-import type { PublicConfig } from '@ba/contracts';
+import { useLayoutEffect } from 'react';
+import type { PublicConfig, WindowThemeColors } from '@ba/contracts';
+
+function readWindowThemeColors(): WindowThemeColors | undefined {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) return;
+  const styles = getComputedStyle(document.body);
+  const toHex = (color: string) => {
+    context.fillStyle = color;
+    context.fillRect(0, 0, 1, 1);
+    return (
+      '#' +
+      Array.from(context.getImageData(0, 0, 1, 1).data)
+        .slice(0, 3)
+        .map((channel) => channel.toString(16).padStart(2, '0'))
+        .join('')
+    );
+  };
+  return { background: toHex(styles.backgroundColor), foreground: toHex(styles.color) };
+}
 
 /** Used for both saved preferences and the settings draft, including live OS changes. */
 export type Appearance = Pick<PublicConfig, 'theme' | 'themeMode' | 'lightTheme' | 'darkTheme'>;
@@ -14,7 +34,7 @@ export function useAppearance(appearance: Appearance | undefined) {
     themeMode = appearance?.themeMode,
     lightTheme = appearance?.lightTheme,
     darkTheme = appearance?.darkTheme;
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!theme || !themeMode) return;
     const root = document.documentElement;
     const media = window.matchMedia?.('(prefers-color-scheme: dark)');
@@ -22,6 +42,14 @@ export function useAppearance(appearance: Appearance | undefined) {
       const mode = themeMode === 'system' ? (media?.matches ? 'dark' : 'light') : themeMode;
       root.dataset.theme = colorSchemeFor({ theme, themeMode, lightTheme, darkTheme }, mode);
       root.dataset.mode = mode;
+      root.classList.toggle('dark', mode === 'dark');
+      root.style.colorScheme = mode;
+      root.dataset.windowControlsOverlay = String(Boolean(window.assistant?.setWindowTheme));
+      const setWindowTheme = window.assistant?.setWindowTheme;
+      if (setWindowTheme) {
+        const colors = readWindowThemeColors();
+        void (colors ? setWindowTheme(mode, colors) : setWindowTheme(mode)).catch(() => {});
+      }
     };
     apply();
     if (themeMode === 'system') media?.addEventListener('change', apply);

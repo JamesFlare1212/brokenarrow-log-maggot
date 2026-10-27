@@ -1,6 +1,26 @@
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from '@tanstack/react-table';
+import { DataTable } from '../../components/DataTable';
+import { Input } from '@/components/ui/input';
+import {
+  Field as FormField,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
+import { Spinner } from '@/components/ui/spinner';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { BATRACE_ORIGIN } from '@ba/contracts';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { faBoxArchive, faPlus, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Archive as faBoxArchive, Plus as faPlus, RefreshCw as faArrowsRotate } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, formatDuration, outcomeTone } from '@ba/shared';
@@ -8,7 +28,7 @@ import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Badge, Field, Loading, Notice, Empty, Menu, Toggle } from '../../components/ui';
+import { Button, Badge, Field, Notice, Empty, Menu, Toggle, Dialog } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
@@ -20,11 +40,16 @@ export function MatchArchive() {
     [account, setAccount] = useState(''),
     [fid, setFid] = useState(''),
     [adding, setAdding] = useState(false),
+    [addError, setAddError] = useState<string | null>(null),
+    [addDialog, setAddDialog] = useState(false),
     [scanning, setScanning] = useState(false),
     [hideUnknown, setHideUnknown] = useState(false),
     [page, setPage] = useState(1),
+    [sorting, setSorting] = useState<SortingState>([{ id: 'time', desc: true }]),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
   const table = useRef<HTMLDivElement>(null);
+  const validFid = /^\d+$/.test(fid.trim());
+  const fidError = addError || (fid.trim() && !validFid ? t('matchIdInvalid') : null);
   const filtered = useMemo(
     () =>
       [...(matches.data || [])]
@@ -40,8 +65,7 @@ export function MatchArchive() {
   const currentPage = Math.min(page, pages);
   useLayoutEffect(() => {
     if (table.current) table.current.scrollTop = 0;
-  }, [currentPage, account, outcome, hideUnknown]);
-  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [currentPage, account, outcome, hideUnknown, sorting]);
   const refresh = () =>
     void matches.load(
       () => api.invoke('matches.list', account ? { accountId: account } : {}),
@@ -65,87 +89,210 @@ export function MatchArchive() {
       .then(setAccounts)
       .catch((e) => notify(String(e), true));
   }, [api, state.matchesRevision, account]);
+  const columns = useMemo<ColumnDef<Match>[]>(
+    () => [
+      {
+        id: 'result',
+        accessorKey: 'outcome',
+        header: t('result'),
+        size: 76,
+        cell: ({ row }) => (
+          <Badge tone={outcomeTone(row.original.outcome)}>
+            {row.original.restarted ? t('restarted') : t(row.original.outcome)}
+          </Badge>
+        ),
+      },
+      {
+        id: 'mode',
+        accessorKey: 'mode',
+        header: t('mode'),
+        size: 84,
+        cell: ({ row }) => <Badge>{t(row.original.mode)}</Badge>,
+      },
+      {
+        id: 'map',
+        accessorKey: 'map',
+        header: t('map'),
+        size: 160,
+        cell: ({ row }) => (
+          <Button
+            variant="link"
+            size="sm"
+            className="archive-open-match"
+            onClick={() =>
+              row.original.fid
+                ? openModal({ type: 'match', fid: row.original.fid })
+                : notify(t('offline'))
+            }
+          >
+            {row.original.map || '#' + row.original.id}
+          </Button>
+        ),
+      },
+      {
+        id: 'eloDelta',
+        accessorFn: (match) =>
+          match.eloAfter !== null && match.eloBefore !== null
+            ? match.eloAfter - match.eloBefore
+            : undefined,
+        header: t('eloDelta'),
+        size: 110,
+        meta: { align: 'right' },
+        sortUndefined: 'last',
+        cell: ({ row }) => {
+          const match = row.original,
+            delta =
+              match.eloAfter !== null && match.eloBefore !== null
+                ? match.eloAfter - match.eloBefore
+                : null;
+          return (
+            <span
+              className={delta === null ? undefined : delta >= 0 ? 'text-success' : 'text-danger'}
+            >
+              {formatDelta(delta)}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'duration',
+        accessorKey: 'durationSec',
+        header: t('duration'),
+        size: 100,
+        cell: ({ row }) => formatDuration(row.original.durationSec),
+      },
+      {
+        id: 'time',
+        accessorFn: (match) => match.endedAt ?? match.startedAt ?? 0,
+        header: t('time'),
+        size: 160,
+        cell: ({ row }) => formatTime(row.original.endedAt ?? row.original.startedAt, locale),
+      },
+      {
+        id: 'account',
+        accessorKey: 'localPersona',
+        header: t('account'),
+        size: 150,
+        cell: ({ row }) => row.original.localPersona || '—',
+      },
+      {
+        id: 'actions',
+        header: t('actions'),
+        size: 64,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const match = row.original;
+          return (
+            <Menu label={`${t('actions')}: #${match.fid || match.id}`}>
+              {match.fid && (
+                <>
+                  <Button
+                    onClick={() =>
+                      void api
+                        .invoke('matches.detail', { fid: match.fid || '', force: true })
+                        .then(() => refresh())
+                        .catch((error) => notify(String(error), true))
+                    }
+                  >
+                    {t('refresh')}
+                  </Button>
+                  <Button
+                    onClick={() =>
+                      void api
+                        .invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${match.fid}` })
+                        .catch((error) => notify(String(error), true))
+                    }
+                  >
+                    {t('openBatrace')}
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (
+                    await confirm({
+                      title: t('confirmation.deleteMatch'),
+                      description: t('confirmation.deleteHint'),
+                      detail: `${match.map} · #${match.fid || match.id}`,
+                      confirmLabel: t('delete'),
+                    })
+                  )
+                    void api
+                      .invoke('matches.delete', { id: match.id })
+                      .then(() => refresh())
+                      .catch((error) => notify(String(error), true));
+                }}
+              >
+                {t('delete')}
+              </Button>
+            </Menu>
+          );
+        },
+      },
+    ],
+    [api, account, locale, openModal, notify, confirm, matches.load],
+  );
+  const dataTable = useReactTable({
+    data: filtered,
+    columns,
+    getRowId: (match) => match.id,
+    state: { sorting, pagination: { pageIndex: currentPage - 1, pageSize: PAGE_SIZE } },
+    onSortingChange: (updater) => {
+      setSorting(updater);
+      setPage(1);
+    },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === 'function'
+          ? updater({ pageIndex: currentPage - 1, pageSize: PAGE_SIZE })
+          : updater;
+      setPage(next.pageIndex + 1);
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
+  });
   return (
     <section className="archive-panel" aria-label={t('archive')}>
       <div className="archive-toolbar">
-        <form
-          className="search-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!/^\d+$/.test(fid)) return;
-            setAdding(true);
-            void api
-              .invoke('matches.add', { fid })
-              .then(() => {
-                setFid('');
-                notify(t('success'));
-                refresh();
-              })
-              .catch((e) => notify(String(e), true))
-              .finally(() => setAdding(false));
-          }}
-        >
-          <Field id="match-id" label={t('matchId')}>
-            <input
-              id="match-id"
-              inputMode="numeric"
-              placeholder="8050000"
-              pattern="[0-9]+"
-              value={fid}
-              onChange={(e) => setFid(e.target.value)}
-              maxLength={32}
-            />
-          </Field>
-          <Button variant="primary" type="submit" disabled={adding || !/^\d+$/.test(fid)}>
-            <Icon icon={faPlus} size={16} aria-hidden="true" />
-            {t(adding ? 'loading' : 'addMatch')}
-          </Button>
-        </form>
-        <Field id="archive-account" label={t('account')}>
-          <select
-            id="archive-account"
-            value={account}
-            onChange={(e) => {
-              setAccount(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">{t('allAccounts')}</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} · #{a.id}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <div className="filter-row">
         <div className="archive-filters">
-          <div
-            className="sliding-filter"
-            role="group"
+          <Field id="archive-account" label={t('account')} labelHidden>
+            <NativeSelect
+              id="archive-account"
+              value={account}
+              onChange={(e) => {
+                setAccount(e.target.value);
+                setPage(1);
+              }}
+            >
+              <NativeSelectOption value="">{t('allAccounts')}</NativeSelectOption>
+              {accounts.map((a) => (
+                <NativeSelectOption key={a.id} value={a.id}>
+                  {a.name} · #{a.id}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </Field>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            value={outcome}
+            onValueChange={(value) => {
+              if (value) {
+                setOutcome(value as typeof outcome);
+                setPage(1);
+              }
+            }}
             aria-label={t('result')}
-            style={
-              {
-                '--segment-count': 3,
-                '--segment-index': ['all', 'win', 'loss'].indexOf(outcome),
-              } as CSSProperties
-            }
           >
             {(['all', 'win', 'loss'] as const).map((value) => (
-              <button
-                type="button"
-                key={value}
-                aria-pressed={outcome === value}
-                onClick={() => {
-                  setOutcome(value);
-                  setPage(1);
-                }}
-              >
+              <ToggleGroupItem value={value} key={value}>
                 {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
           <Toggle
             id="archive-hide-unknown"
             label={t('hideUnknownResults')}
@@ -173,141 +320,21 @@ export function MatchArchive() {
             />
             {t(scanning ? 'scanningLogs' : 'refresh')}
           </Button>
+          <Button variant="default" onClick={() => setAddDialog(true)}>
+            <Icon icon={faPlus} />
+            {t('addMatch')}
+          </Button>
         </div>
       </div>
       {matches.error && <Notice error>{matches.error}</Notice>}
-      <div className="results-viewport archive-results-viewport" aria-busy={matches.pending}>
-        {matches.pending && (
-          <div className="results-loading">
-            <Loading />
-          </div>
-        )}
-        {filtered.length ? (
-          <div className="table-wrap archive-table" ref={table}>
-            <table>
-              <caption className="sr-only">{t('archive')}</caption>
-              <colgroup>
-                <col style={{ width: 72 }} />
-                <col style={{ width: 84 }} />
-                <col style={{ width: 160 }} />
-                <col style={{ width: 110 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 160 }} />
-                <col />
-                <col style={{ width: 80 }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  {[
-                    'result',
-                    'mode',
-                    'map',
-                    'eloDelta',
-                    'duration',
-                    'time',
-                    'account',
-                    'actions',
-                  ].map((k) => (
-                    <th key={k} className={k === 'eloDelta' ? 'elo-column' : undefined}>
-                      {t(k)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((m) => (
-                  <tr key={m.id}>
-                    <td>
-                      <Badge tone={outcomeTone(m.outcome)}>
-                        {m.restarted ? t('restarted') : t(m.outcome)}
-                      </Badge>
-                    </td>
-                    <td>
-                      <Badge>{t(m.mode)}</Badge>
-                    </td>
-                    <td>
-                      <Button
-                        className="archive-open-match"
-                        onClick={() =>
-                          m.fid ? openModal({ type: 'match', fid: m.fid }) : notify(t('offline'))
-                        }
-                      >
-                        {m.map || '#' + m.id}
-                      </Button>
-                    </td>
-                    <td className="elo-column">
-                      <span
-                        className={
-                          m.eloAfter !== null && m.eloBefore !== null
-                            ? m.eloAfter >= m.eloBefore
-                              ? 'text-success'
-                              : 'text-danger'
-                            : ''
-                        }
-                      >
-                        {formatDelta(
-                          m.eloAfter !== null && m.eloBefore !== null
-                            ? m.eloAfter - m.eloBefore
-                            : null,
-                        )}
-                      </span>
-                    </td>
-                    <td>{formatDuration(m.durationSec)}</td>
-                    <td>{formatTime(m.endedAt ?? m.startedAt, locale)}</td>
-                    <td>{m.localPersona || '—'}</td>
-                    <td>
-                      <Menu label={`${t('actions')}: #${m.fid || m.id}`}>
-                        {m.fid && (
-                          <>
-                            <Button
-                              onClick={() =>
-                                void api
-                                  .invoke('matches.detail', { fid: m.fid || '', force: true })
-                                  .then(() => refresh())
-                                  .catch((e) => notify(String(e), true))
-                              }
-                            >
-                              {t('refresh')}
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                void api.invoke('external.open', {
-                                  url: `${BATRACE_ORIGIN}/match/${m.fid}`,
-                                })
-                              }
-                            >
-                              {t('openBatrace')}
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="danger"
-                          onClick={async () => {
-                            if (
-                              await confirm({
-                                title: t('confirmation.deleteMatch'),
-                                description: t('confirmation.deleteHint'),
-                                detail: `${m.map} · #${m.fid || m.id}`,
-                                confirmLabel: t('delete'),
-                              })
-                            )
-                              void api
-                                .invoke('matches.delete', { id: m.id })
-                                .then(() => refresh())
-                                .catch((e) => notify(String(e), true));
-                          }}
-                        >
-                          {t('delete')}
-                        </Button>
-                      </Menu>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          !matches.pending && (
+      <div className="data-table-surface">
+        <DataTable
+          table={dataTable}
+          label={t('archive')}
+          pending={matches.pending}
+          scrollRef={table}
+          className="archive-table"
+          empty={
             <Empty
               icon={<Icon icon={faBoxArchive} size={26} />}
               description={t('noMatchesHint')}
@@ -328,17 +355,105 @@ export function MatchArchive() {
             >
               {t(outcome !== 'all' || account || hideUnknown ? 'noFilteredMatches' : 'empty')}
             </Empty>
-          )
-        )}
+          }
+        />
       </div>
-      <Pagination
-        page={currentPage}
-        pageSize={PAGE_SIZE}
-        total={filtered.length}
-        label={t('archivePagination')}
-        onPageChange={setPage}
-        showSinglePage
-      />
+      <div className="results-pagination">
+        <Pagination
+          page={currentPage}
+          pageSize={PAGE_SIZE}
+          total={filtered.length}
+          label={t('archivePagination')}
+          onPageChange={(value) => dataTable.setPageIndex(value - 1)}
+          showSinglePage
+        />
+      </div>
+      <Dialog
+        open={addDialog}
+        title={t('addMatch')}
+        dismissible={!adding}
+        onClose={() => {
+          if (!adding) {
+            setAddDialog(false);
+            setAddError(null);
+          }
+        }}
+      >
+        <form
+          className="add-match-form"
+          aria-busy={adding}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (adding || !validFid) return;
+            setAdding(true);
+            setAddError(null);
+            void api
+              .invoke('matches.add', { fid: fid.trim() })
+              .then(() => {
+                setFid('');
+                setAddDialog(false);
+                notify(t('success'));
+                refresh();
+              })
+              .catch((e) => setAddError(String(e)))
+              .finally(() => setAdding(false));
+          }}
+        >
+          <FieldGroup>
+            <FormField
+              data-invalid={Boolean(fidError) || undefined}
+              data-disabled={adding || undefined}
+            >
+              <FieldLabel htmlFor="match-id">{t('matchId')}</FieldLabel>
+              <Input
+                id="match-id"
+                autoFocus
+                autoComplete="off"
+                disabled={adding}
+                inputMode="numeric"
+                placeholder="8050000"
+                value={fid}
+                onChange={(e) => {
+                  setFid(e.target.value);
+                  setAddError(null);
+                }}
+                maxLength={32}
+                aria-invalid={Boolean(fidError) || undefined}
+                aria-describedby={fidError ? 'match-id-error' : 'match-id-hint'}
+              />
+              {fidError ? (
+                <FieldError id="match-id-error">{fidError}</FieldError>
+              ) : (
+                <FieldDescription id="match-id-hint">{t('matchIdHint')}</FieldDescription>
+              )}
+            </FormField>
+          </FieldGroup>
+          <div className="actions">
+            <Button
+              variant="default"
+              type="submit"
+              disabled={adding || !validFid}
+              aria-busy={adding}
+            >
+              {adding ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <Icon icon={faPlus} data-icon="inline-start" />
+              )}
+              {t(adding ? 'loading' : 'addMatch')}
+            </Button>
+            <Button
+              disabled={adding}
+              onClick={() => {
+                setAddDialog(false);
+                setAddError(null);
+              }}
+            >
+              {t('cancel')}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </section>
   );
 }

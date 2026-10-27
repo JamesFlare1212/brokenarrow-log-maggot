@@ -1,6 +1,5 @@
 import { join, resolve } from 'node:path';
 import { stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import type {
   AppEvent,
@@ -19,8 +18,7 @@ import {
   rpcSchemas,
   initialUpdateState,
   UPDATE_RELEASES_URL,
-  TELEMETRY_CONSENT_VERSION,
-  hasTelemetryConsent,
+  hasAnalyticsChoice,
 } from '@ba/contracts';
 import { array, object, text, number, errorMessage, MAP_NAMES } from '@ba/shared';
 import { Database } from './storage/database';
@@ -36,12 +34,8 @@ import { DeckService } from './decks/service';
 import { ReplayFiles } from './replays/files';
 import { projectConfig } from './config';
 import type { Platform } from './ports';
-import {
-  TelemetryService,
-  type InstallationState,
-  type TelemetryIdentity,
-  type ErrorSource,
-} from './telemetry';
+import { AnalyticsService, type AppVersionMarker, type ErrorSource } from './analytics';
+import { appVersionMarkerSchema } from './aptabase';
 type EventInput = AppEvent extends infer E
   ? E extends AppEvent
     ? Omit<E, 'revision'>
@@ -82,54 +76,31 @@ export class Application {
     backupDir: null,
   };
   private handlers: Handlers;
-  private telemetry: TelemetryService;
-  private existingInstallation: boolean;
+  private analytics: AnalyticsService;
   private apmTasks = Promise.resolve();
   private lastApmStatus: ApmState['status'] | null = null;
   private apmCheckpointAt = -Infinity;
-  private telemetryPersona = '';
-  private telemetryApmActive = false;
-  private telemetryRecordingActive = false;
+  private analyticsApmActive = false;
+  private analyticsRecordingActive = false;
   constructor(
     private dir: string,
     private platform: Platform,
     private broadcast: (event: AppEvent) => void,
     private network = true,
   ) {
-    this.existingInstallation = existsSync(join(dir, 'assistant.sqlite'));
     this.db = new Database(join(dir, 'assistant.sqlite'));
-    let identity: TelemetryIdentity | undefined;
-    if (platform.telemetry?.enabled && network && !platform.http.offline) {
-      try {
-        const saved = this.db.state<TelemetryIdentity | null>('telemetryIdentity', null);
-        identity =
-          saved && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(saved.installationId)
-            ? saved
-            : { installationId: randomUUID() };
-        this.db.setState('telemetryIdentity', identity);
-      } catch {
-        /* Optional telemetry identity must not prevent startup. */
-      }
-    }
-    this.telemetry = new TelemetryService({
-      allowed: !!platform.telemetry?.enabled && network && !platform.http.offline,
+    this.analytics = new AnalyticsService({
+      allowed: !!platform.analytics?.enabled && network && !platform.http.offline,
       fetch: platform.http.fetch,
       version: platform.version,
-      distribution: platform.telemetry?.distribution ?? 'installed',
-      identity,
-      persistence: {
-        read: (key) => this.db.state(`telemetry:${key}:v1`, null),
-        write: (key, value) => {
-          if (!this.disposed) this.db.setState(`telemetry:${key}:v1`, value);
+      distribution: platform.analytics?.distribution ?? 'installed',
+      pendingUpdates: {
+        load: () => this.db.state('analytics:pendingUpdate', null),
+        save: (value) => {
+          if (!this.disposed) this.db.setState('analytics:pendingUpdate', value);
         },
       },
-      sampleRuntime: platform.telemetry?.sampleRuntime,
-      saveAccountHash: (hash) => {
-        if (identity && !this.closing && !this.disposed) {
-          identity = { ...identity, accountHash: hash };
-          this.db.setState('telemetryIdentity', identity);
-        }
-      },
+      sampleRuntime: platform.analytics?.sampleRuntime,
     });
     this.db.recoverApmCaptures();
     this.files = new ReplayFiles(this.db, dir);
@@ -158,17 +129,11 @@ export class Application {
     this.archive = new LogArchive(this.db, () => this.event({ type: 'matches' }));
     this.handlers = {
       'diagnostics.report': (input) => {
-        if (input.type === 'feature') this.telemetry.feature(input.feature);
+        if (input.type === 'feature') this.analytics.feature(input.feature);
         else if (input.type === 'error')
-          this.telemetry.error(
-            input.source,
-            { name: input.errorType },
-            undefined,
-            input.frames,
-            input.releaseId,
-          );
-        else if (input.type === 'long_tasks') this.telemetry.longTasks(input);
-        else this.telemetry.performance(input.metric, input.durationMs);
+          this.analytics.error(input.source, { name: input.errorType }, undefined, input.frames);
+        else if (input.type === 'long_tasks') this.analytics.longTasks(input);
+        else this.analytics.performance(input.metric, input.durationMs);
         return null;
       },
       'apm.history': () => this.db.apmHistory(),
@@ -206,15 +171,14 @@ export class Application {
         const before = this.db.config(),
           next = this.db.updateConfig({
             ...patch,
-            ...(typeof patch.telemetryEnabled === 'boolean'
+            ...(typeof patch.analyticsEnabled === 'boolean'
               ? {
-                  telemetryConsentConfirmed: true,
-                  telemetryConsentVersion: TELEMETRY_CONSENT_VERSION,
+                  analyticsChoiceSaved: true,
                 }
               : {}),
           });
-        this.telemetry.configure(next.telemetryEnabled && hasTelemetryConsent(next), next.lang);
-        if (platform.updates) this.telemetry.observeUpdate(platform.updates.status());
+        this.analytics.configure(next.analyticsEnabled && hasAnalyticsChoice(next), next.lang);
+        if (platform.updates) this.analytics.observeUpdate(platform.updates.status());
         this.event({ type: 'config', config: next });
         if (before.logDir !== next.logDir) {
           await this.queueApm(() => this.finishApm(true));
@@ -413,23 +377,23 @@ export class Application {
     if (!this.disposed && !this.closing) {
       if (event.type === 'apm') {
         const active = event.apm.status === 'active';
-        if (active !== this.telemetryApmActive)
-          this.telemetry.feature('apm', active ? 'start' : 'stop');
-        this.telemetryApmActive = active;
+        if (active !== this.analyticsApmActive)
+          this.analytics.feature('apm', active ? 'start' : 'stop');
+        this.analyticsApmActive = active;
       }
       if (event.type === 'recording') {
         const active = event.recording.phase === 'recording';
-        if (active !== this.telemetryRecordingActive)
-          this.telemetry.feature('replays', active ? 'start' : 'stop');
-        this.telemetryRecordingActive = active;
+        if (active !== this.analyticsRecordingActive)
+          this.analytics.feature('replays', active ? 'start' : 'stop');
+        this.analyticsRecordingActive = active;
       }
-      if (event.type === 'updates') this.telemetry.observeUpdate(event.updates);
-      if (event.type === 'error') this.telemetry.error('background', cause ?? new Error());
+      if (event.type === 'updates') this.analytics.observeUpdate(event.updates);
+      if (event.type === 'error') this.analytics.error('background', cause ?? new Error());
       if (event.type === 'watcher' && event.watcher.error)
-        this.telemetry.error('watcher', new Error());
+        this.analytics.error('watcher', new Error());
       if (event.type === 'recording' && event.recording.error)
-        this.telemetry.error('recording', new Error());
-      if (event.type === 'apm' && event.apm.error) this.telemetry.error('apm', new Error());
+        this.analytics.error('recording', new Error());
+      if (event.type === 'apm' && event.apm.error) this.analytics.error('apm', new Error());
     }
     if (!this.disposed && !this.closing)
       this.broadcast({ ...event, revision: ++this.revision } as AppEvent);
@@ -438,18 +402,18 @@ export class Application {
     try {
       if (source === 'startup' && !this.disposed && !this.closing) {
         const config = this.db.config();
-        this.telemetry.configure(
-          config.telemetryEnabled && hasTelemetryConsent(config),
+        this.analytics.configure(
+          config.analyticsEnabled && hasAnalyticsChoice(config),
           config.lang,
         );
       }
-      this.telemetry.error(source, error);
+      this.analytics.error(source, error);
     } catch {
       // Diagnostic reporting must never replace the original application failure.
     }
   }
-  samplePresence(): void {
-    this.telemetry.samplePresence();
+  sampleResources(): void {
+    this.analytics.sampleResources();
   }
   private fire(task: Promise<unknown>): void {
     this.tasks.add(task);
@@ -479,7 +443,7 @@ export class Application {
       handler = this.handlers[method] as (
         input: RpcInputs[K],
       ) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
-    const completed = this.telemetry.beginOperation(method);
+    const completed = this.analytics.beginOperation(method);
     const task = Promise.resolve().then(() => handler(parsed));
     this.tasks.add(task);
     void task.then(
@@ -503,39 +467,34 @@ export class Application {
   async start(): Promise<void> {
     const startedAt = performance.now();
     this.migration = await migrateLegacy(this.db, this.dir);
-    if (this.platform.telemetry?.enabled && this.network && !this.platform.http.offline) {
+    if (this.platform.analytics?.enabled && this.network && !this.platform.http.offline) {
       try {
-        const previous = this.db.state<InstallationState | null>('telemetryInstallation', null);
-        const observed: InstallationState =
+        let stored: unknown;
+        try {
+          stored = this.db.state('analytics:appVersion', null);
+        } catch {}
+        const saved = appVersionMarkerSchema.safeParse(stored);
+        const previous = saved.success ? saved.data : null;
+        const observed: AppVersionMarker =
           previous?.version === this.platform.version
             ? previous
             : {
                 version: this.platform.version,
-                kind: previous
-                  ? 'version_change'
-                  : this.existingInstallation || Object.keys(this.migration.imported).length
-                    ? 'existing_profile'
-                    : 'first_run',
                 ...(previous ? { previousVersion: previous.version } : {}),
                 reported: false,
               };
-        const installation: InstallationState = {
-          ...observed,
-          eventId: observed.eventId ?? randomUUID(),
-          updateEventId: observed.updateEventId ?? randomUUID(),
-        };
-        this.db.setState('telemetryInstallation', installation);
-        this.telemetry.observeInstallation(installation, () => {
+        this.db.setState('analytics:appVersion', observed);
+        this.analytics.observeAppVersion(observed, () => {
           if (!this.disposed)
-            this.db.setState('telemetryInstallation', { ...installation, reported: true });
+            this.db.setState('analytics:appVersion', { ...observed, reported: true });
         });
       } catch {
-        // Optional telemetry state must not prevent the application from starting.
+        // Optional analytics state must not prevent the application from starting.
       }
     }
     const config = this.db.config();
-    this.telemetry.configure(config.telemetryEnabled && hasTelemetryConsent(config), config.lang);
-    if (this.platform.updates) this.telemetry.observeUpdate(this.platform.updates.status());
+    this.analytics.configure(config.analyticsEnabled && hasAnalyticsChoice(config), config.lang);
+    if (this.platform.updates) this.analytics.observeUpdate(this.platform.updates.status());
     for (const row of this.db.sql.prepare('SELECT id,name FROM map_names').all())
       MAP_NAMES[Number(row.id)] = String(row.name);
     this.watcher.start(this.db.config().logDir);
@@ -570,7 +529,7 @@ export class Application {
       this.fire(this.probeHealth());
       this.fire(this.syncBackground());
     }
-    this.telemetry.performance('service_startup', performance.now() - startedAt);
+    this.analytics.performance('service_startup', performance.now() - startedAt);
   }
   private scanArchive(dir: string): void {
     this.fire(
@@ -614,17 +573,6 @@ export class Application {
     if (this.disposed || this.closing) return;
     if (event.type === 'session') {
       const session = event.session;
-      if (session.localPlayerId) {
-        this.telemetryPersona = session.localName;
-        this.telemetry.identifyAccount(session.localPlayerId);
-      } else if (
-        session.localName &&
-        this.telemetryPersona &&
-        session.localName !== this.telemetryPersona
-      ) {
-        this.telemetryPersona = session.localName;
-        this.telemetry.identifyAccount(null);
-      }
       if (session.current) {
         const match = session.current;
         void this.queueApm(async () => {
@@ -650,7 +598,7 @@ export class Application {
           .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e));
     }
     if (event.type === 'started' && !event.recovering) {
-      this.telemetry.matchStarted(event.match.sessionId);
+      this.analytics.matchStarted(event.match.sessionId);
       const config = this.db.config();
       if (config.inputHookEnabled) void this.queueApm(() => this.startApm(event.match));
       this.fire(
@@ -857,8 +805,8 @@ export class Application {
   private async stopInternal(): Promise<void> {
     if (this.disposed) return;
     this.closing = true;
-    await this.telemetry.flush();
-    this.telemetry.close();
+    await this.analytics.flush();
+    this.analytics.close();
     const match = this.parser.snapshot().current;
     for (const timer of this.timers) clearInterval(timer);
     this.timers = [];
