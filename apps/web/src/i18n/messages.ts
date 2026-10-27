@@ -100,27 +100,27 @@ export const messages: Record<string, readonly [string, string]> = {
   ],
   cacheClearing: ['正在清理…', 'Clearing…'],
   cacheCleared: ['已清理 {count} 条缓存。', 'Removed {count} cached entries.'],
-  telemetryConsentTitle: [
+  analyticsConsentTitle: [
     '是否允许使用情况与诊断统计？',
     'Allow usage and diagnostics statistics?',
   ],
-  telemetryConsentPrompt: [
+  analyticsConsentPrompt: [
     '请阅读下面的匿名使用统计说明。仅在同意后向 Aptabase 发送事件；不上传账号哈希或持久化用户标识。',
     'Read the anonymous usage statistics details below. Events are sent to Aptabase only after consent; account hashes and persistent user identifiers are not sent.',
   ],
-  telemetryConsentChangeLater: [
+  analyticsConsentChangeLater: [
     '不同意不影响应用功能。之后可在“设置 → 常规”中随时修改。',
     'Declining does not affect app features. Change your choice at any time in Settings → General.',
   ],
-  telemetryConsentAccept: ['同意使用与诊断统计', 'Allow usage and diagnostics'],
-  telemetryConsentDecline: ['不同意', 'Decline'],
-  telemetry: ['使用统计与隐私', 'Usage statistics and privacy'],
-  telemetryEnabled: ['发送可选使用统计', 'Send optional usage statistics'],
-  telemetryDescription: [
-    '同意后向 aptabase.jamesflare.com 发送启动、首次打开与版本变化、实时对局开始次数、更新结果、功能使用和耗时、分类错误，以及前台活跃时的 CPU、内存和界面性能汇总。系统版本、应用版本和语言作为事件环境信息发送。仅使用短期随机会话；空闲一小时、跨 UTC 日期、重启或关闭统计后会话失效。事件仅在内存中短暂排队并有限重试，不写入持久化队列；关闭统计会取消请求并清空队列。',
-    'After consent, sends startup, first open and version changes, live match start counts, update outcomes, feature usage/timings, classified errors, and foreground-active CPU, memory, and UI performance summaries to aptabase.jamesflare.com. System/app versions and language accompany events. Random sessions expire after an idle hour, a UTC date change, restart, or opt-out. Events use a short-lived memory queue with bounded retries and are never stored in a durable queue. Turning statistics off cancels requests and clears the queue.',
+  analyticsConsentAccept: ['同意使用与诊断统计', 'Allow usage and diagnostics'],
+  analyticsConsentDecline: ['不同意', 'Decline'],
+  analytics: ['使用统计与隐私', 'Usage statistics and privacy'],
+  analyticsEnabled: ['发送可选使用统计', 'Send optional usage statistics'],
+  analyticsDescription: [
+    '同意后向 aptabase.jamesflare.com 发送启动、首次打开与版本变化、实时对局开始次数、更新结果、功能使用和耗时、分类错误、界面启动与前台卡顿汇总，以及前台活跃时的 CPU 和内存采样。系统版本、应用版本和语言作为事件环境信息发送。仅使用短期随机会话；空闲一小时、跨 UTC 日期、重启或关闭统计后会话失效。事件仅在内存中短暂排队并有限重试，不写入持久化队列；关闭统计会取消请求并清空队列。',
+    'After consent, sends startup, first open and version changes, live match start counts, update outcomes, feature usage/timings, classified errors, UI startup and foreground long-task summaries, and foreground-active CPU/memory samples to aptabase.jamesflare.com. System/app versions and language accompany events. Random sessions expire after an idle hour, a UTC date change, restart, or opt-out. Events use a short-lived memory queue with bounded retries and are never stored in a durable queue. Turning statistics off cancels requests and clears the queue.',
   ],
-  telemetryPrivacy: [
+  analyticsPrivacy: [
     '不上传原始账号、账号哈希、安装或设备标识、昵称、其他玩家标识、搜索内容、日志、路径、卡组、录像或按键。错误仅发送类型、代码、来源和应用代码位置，不发送原始消息或完整堆栈。首次打开和版本变化仅在本机保存版本与是否已上报的标记，待确认的更新仅保存版本与阶段，不包含关联标识。服务器会接收来源 IP，并按 Aptabase 的匿名机制生成短期统计和地理信息。开发、离线和测试模式不发送。',
     'Raw accounts, account hashes, installation/device identifiers, names, other players, searches, logs, paths, decks, recordings, and keystrokes are not sent. Errors include only type, code, source, and app code locations, without raw messages or full stacks. Local first-open/version markers store versions and reporting status only; pending updates store versions and stage without correlation identifiers. The server receives the source IP and uses Aptabase anonymous analytics and geographic processing. Development, offline, and test modes do not send data.',
   ],

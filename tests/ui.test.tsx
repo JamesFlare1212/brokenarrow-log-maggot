@@ -688,80 +688,54 @@ describe('application updates', () => {
   });
 });
 
-describe('first-launch telemetry consent', () => {
-  it('asks existing opted-in users to confirm the Aptabase provider change', async () => {
-    const initial = bootstrapForApp();
-    initial.config.telemetryEnabled = true;
-    initial.config.telemetryConsentConfirmed = true;
-    initial.config.telemetryConsentVersion = 3;
-    const native = nativeFixture(initial);
-    render(<App />, { wrapper: wrapper(native.api) });
-    const dialog = await screen.findByRole('dialog', {
-      name: translate('zh', 'telemetryConsentTitle'),
-    });
-    fireEvent.click(
-      within(dialog).getByRole('button', { name: translate('zh', 'telemetryConsentDecline') }),
-    );
-    await waitFor(() =>
-      expect(native.backend.config).toMatchObject({
-        telemetryEnabled: false,
-        telemetryConsentVersion: 4,
-      }),
-    );
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
-      ).toBeNull(),
-    );
-  });
-
+describe('first-launch analytics consent', () => {
   it.each([true, false])(
     'persists an explicit %s decision and does not prompt again',
     async (enabled) => {
       const initial = bootstrapForApp();
-      initial.config.telemetryEnabled = true;
-      initial.config.telemetryConsentConfirmed = false;
+      initial.config.analyticsEnabled = true;
+      initial.config.analyticsChoiceSaved = false;
       const native = nativeFixture(initial);
       const mounted = render(<App />, { wrapper: wrapper(native.api) });
       const dialog = await screen.findByRole('dialog', {
-        name: translate('zh', 'telemetryConsentTitle'),
+        name: translate('zh', 'analyticsConsentTitle'),
       });
-      expect(within(dialog).getByText(translate('zh', 'telemetryConsentPrompt'))).toBeTruthy();
+      expect(within(dialog).getByText(translate('zh', 'analyticsConsentPrompt'))).toBeTruthy();
       expect(within(dialog).queryByRole('button', { name: translate('zh', 'close') })).toBeNull();
       await userEvent.setup().keyboard('{Escape}');
       expect(
-        screen.getByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+        screen.getByRole('dialog', { name: translate('zh', 'analyticsConsentTitle') }),
       ).toBeTruthy();
       expect(native.calls.filter((call) => call.method === 'config.update')).toHaveLength(0);
       fireEvent.click(
         within(dialog).getByRole('button', {
-          name: translate('zh', enabled ? 'telemetryConsentAccept' : 'telemetryConsentDecline'),
+          name: translate('zh', enabled ? 'analyticsConsentAccept' : 'analyticsConsentDecline'),
         }),
       );
       await waitFor(() =>
         expect(native.backend.config).toMatchObject({
-          telemetryEnabled: enabled,
-          telemetryConsentConfirmed: true,
+          analyticsEnabled: enabled,
+          analyticsChoiceSaved: true,
         }),
       );
       await waitFor(() =>
         expect(
-          screen.queryByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+          screen.queryByRole('dialog', { name: translate('zh', 'analyticsConsentTitle') }),
         ).toBeNull(),
       );
       mounted.unmount();
       render(<App />, { wrapper: wrapper(native.api) });
       await screen.findByText('监听中');
       expect(
-        screen.queryByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+        screen.queryByRole('dialog', { name: translate('zh', 'analyticsConsentTitle') }),
       ).toBeNull();
     },
   );
 
   it('keeps the consent dialog open after a failed save and allows retrying the same choice', async () => {
     const initial = bootstrapForApp();
-    initial.config.telemetryEnabled = true;
-    initial.config.telemetryConsentConfirmed = false;
+    initial.config.analyticsEnabled = true;
+    initial.config.analyticsChoiceSaved = false;
     let fail = true;
     const native = nativeFixture(initial, {
       'config.update': async (patch) => {
@@ -776,20 +750,20 @@ describe('first-launch telemetry consent', () => {
     });
     render(<App />, { wrapper: wrapper(native.api) });
     const dialog = within(
-      await screen.findByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+      await screen.findByRole('dialog', { name: translate('zh', 'analyticsConsentTitle') }),
     );
     fireEvent.click(
-      dialog.getByRole('button', { name: translate('zh', 'telemetryConsentAccept') }),
+      dialog.getByRole('button', { name: translate('zh', 'analyticsConsentAccept') }),
     );
     expect((await dialog.findByRole('alert')).textContent).toContain('Disk is busy');
-    expect(native.backend.config.telemetryConsentConfirmed).toBe(false);
+    expect(native.backend.config.analyticsChoiceSaved).toBe(false);
     fireEvent.click(
-      dialog.getByRole('button', { name: translate('zh', 'telemetryConsentAccept') }),
+      dialog.getByRole('button', { name: translate('zh', 'analyticsConsentAccept') }),
     );
-    await waitFor(() => expect(native.backend.config.telemetryConsentConfirmed).toBe(true));
+    await waitFor(() => expect(native.backend.config.analyticsChoiceSaved).toBe(true));
     await waitFor(() =>
       expect(
-        screen.queryByRole('dialog', { name: translate('zh', 'telemetryConsentTitle') }),
+        screen.queryByRole('dialog', { name: translate('zh', 'analyticsConsentTitle') }),
       ).toBeNull(),
     );
   });
@@ -1372,28 +1346,28 @@ describe('settings pages and automatic saving', () => {
     );
   });
 
-  it('keeps telemetry opt-in and saves keyboard changes without changing other preferences', async () => {
+  it('keeps analytics opt-in and saves keyboard changes without changing other preferences', async () => {
     history.replaceState(null, '', '#settings/general');
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
     const page = within(await screen.findByRole('main', { name: '设置' }));
     const checkbox = page.getByRole('switch', {
-      name: translate('zh', 'telemetryEnabled'),
+      name: translate('zh', 'analyticsEnabled'),
     }) as HTMLInputElement;
     expect(checkbox.getAttribute('aria-checked') === 'true').toBe(false);
     expect(checkbox.getAttribute('aria-describedby')).toBe(
-      'telemetry-description telemetry-privacy',
+      'analytics-description analytics-privacy',
     );
-    expect(page.getByText(translate('zh', 'telemetryDescription')).textContent).toContain(
+    expect(page.getByText(translate('zh', 'analyticsDescription')).textContent).toContain(
       'aptabase.jamesflare.com',
     );
     const before = structuredClone(native.backend.config);
     checkbox.focus();
     await userEvent.setup().keyboard(' ');
-    await waitFor(() => expect(native.backend.config.telemetryEnabled).toBe(true));
-    expect(native.backend.config).toEqual({ ...before, telemetryEnabled: true });
+    await waitFor(() => expect(native.backend.config.analyticsEnabled).toBe(true));
+    expect(native.backend.config).toEqual({ ...before, analyticsEnabled: true });
     fireEvent.click(checkbox);
-    await waitFor(() => expect(native.backend.config.telemetryEnabled).toBe(false));
+    await waitFor(() => expect(native.backend.config.analyticsEnabled).toBe(false));
     expect(native.backend.config).toEqual(before);
   });
 
@@ -2545,7 +2519,9 @@ describe('user interaction regressions', () => {
     window.history.replaceState(null, '', '#settings/navigation');
     render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByRole('main', { name: '设置' });
-    const restoredPlayers = screen.getByRole('switch', { name: '在导航中显示 玩家查询' });
+    const restoredPlayers = screen.getByRole('switch', {
+      name: '在导航中显示 玩家查询',
+    });
     expect(restoredPlayers.getAttribute('aria-checked') === 'true').toBe(false);
     fireEvent.click(restoredPlayers);
     fireEvent.click(screen.getByRole('switch', { name: '在导航中显示 卡组工具' }));

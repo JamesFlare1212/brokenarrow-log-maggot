@@ -16,7 +16,6 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'node22',
     minify: false,
-    sourcemap: true,
     lib: {
       entry: {
         main: fileURLToPath(new URL('./src/main.ts', import.meta.url)),

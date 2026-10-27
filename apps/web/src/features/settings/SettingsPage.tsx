@@ -17,7 +17,6 @@ import { Item, ItemContent, ItemTitle, ItemActions } from '@/components/ui/item'
 import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { TELEMETRY_CONSENT_VERSION } from '@ba/contracts';
 import {
   ArrowUp as faArrowUp,
   ArrowDown as faArrowDown,
@@ -397,28 +396,27 @@ export function SettingsPage() {
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle id="telemetry-heading">{t('telemetry')}</CardTitle>
-                    <CardDescription id="telemetry-description">
-                      {t('telemetryDescription')}
+                    <CardTitle id="analytics-heading">{t('analytics')}</CardTitle>
+                    <CardDescription id="analytics-description">
+                      {t('analyticsDescription')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <FieldGroup>
                       <Toggle
-                        id="setting-telemetryEnabled"
-                        label={t('telemetryEnabled')}
-                        aria-describedby="telemetry-description telemetry-privacy"
-                        checked={draft.telemetryEnabled}
+                        id="setting-analyticsEnabled"
+                        label={t('analyticsEnabled')}
+                        aria-describedby="analytics-description analytics-privacy"
+                        checked={draft.analyticsEnabled}
                         onChange={(value) =>
                           settings.change({
-                            telemetryEnabled: value,
-                            telemetryConsentConfirmed: true,
-                            telemetryConsentVersion: TELEMETRY_CONSENT_VERSION,
+                            analyticsEnabled: value,
+                            analyticsChoiceSaved: true,
                           })
                         }
                       />
-                      <FieldDescription id="telemetry-privacy">
-                        {t('telemetryPrivacy')}
+                      <FieldDescription id="analytics-privacy">
+                        {t('analyticsPrivacy')}
                       </FieldDescription>
                     </FieldGroup>
                   </CardContent>

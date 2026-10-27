@@ -108,6 +108,19 @@ Temporary workaround: the desktop app disables Chromium QUIC/HTTP/3 to avoid obs
 
 APM 和录像默认关闭。APM 仅统计进行中对局、游戏在前台时的真实输入；录像捕获所选显示器完整画面。
 
+## Optional anonymous analytics
+
+Packaged online desktop builds can send optional usage and diagnostic events to
+Aptabase after consent. Analytics uses temporary sessions without account hashes,
+installation identifiers, or persistent user tags. Events queue only in memory;
+turning statistics off cancels requests and clears pending events. Resource and
+long-task samples require foreground activity. Development, browser fixtures,
+offline mode, and smoke tests do not send events; `BA_DISABLE_ANALYTICS=1` also
+disables collection in packaged builds.
+
+See [anonymous analytics](docs/analytics.md) for event definitions and approximate counting
+semantics. Analytics requires no CI upload credentials.
+
 ## English
 
 A local Broken Arrow assistant: match analysis, player history, deck backups, recordings, optional real-input APM, three appearance modes, six palette pairs and Chinese/English interfaces. Run `pnpm install` and `pnpm dev`; validate with `pnpm check`. Existing JSON is backed up and imported transactionally into SQLite without changing the original files. Recordings remain local and use range-based playback. BATrace data can be delayed.

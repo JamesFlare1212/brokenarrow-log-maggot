@@ -28,6 +28,13 @@ delay. Closing the client or aborting a request cancels its offset and retry wai
 Random offsets reduce simultaneous starts; they do not guarantee a minimum gap
 between requests or limit the total number of in-flight requests.
 
+## Analytics transport
+
+The network settings above apply to BATrace requests. Anonymous Aptabase analytics
+uses its own bounded memory queue, request timeout, and retry limits, described in
+[anonymous analytics](analytics.md). No analytics transport setting or administrative
+credential belongs in `app.config.json`.
+
 ## Cache
 
 - `ttlMs`: cache freshness durations in milliseconds for player information and

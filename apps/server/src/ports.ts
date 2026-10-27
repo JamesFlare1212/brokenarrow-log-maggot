@@ -4,14 +4,14 @@ import type {
   Match,
   PublicConfig,
   RecordingState,
-  TelemetryRuntimeSample,
+  AnalyticsRuntimeSample,
 } from '@ba/contracts';
 import type { HttpPort } from './network/client';
 export interface Platform {
-  telemetry?: {
+  analytics?: {
     enabled: boolean;
     distribution: 'installed' | 'portable';
-    sampleRuntime?: () => TelemetryRuntimeSample;
+    sampleRuntime?: () => AnalyticsRuntimeSample;
   };
   updates?: {
     status(): import('@ba/contracts').UpdateState;

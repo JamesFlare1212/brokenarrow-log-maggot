@@ -1,5 +1,4 @@
-export const TELEMETRY_CONSENT_VERSION = 4;
-export const TELEMETRY_FEATURES = [
+export const ANALYTICS_FEATURES = [
   'current',
   'radar',
   'players',
@@ -10,7 +9,7 @@ export const TELEMETRY_FEATURES = [
   'bans',
   'settings',
 ] as const;
-export type TelemetryFeature = (typeof TELEMETRY_FEATURES)[number];
+export type AnalyticsFeature = (typeof ANALYTICS_FEATURES)[number];
 export const DIAGNOSTIC_ERROR_TYPES = [
   'Error',
   'TypeError',
@@ -29,7 +28,7 @@ export interface DiagnosticFrame {
   lineno: number;
   colno: number;
 }
-export interface TelemetryRuntimeSample {
+export interface AnalyticsRuntimeSample {
   foreground: boolean;
   active: boolean;
   renderer_cpu_percent?: number;
@@ -73,13 +72,6 @@ export function diagnosticFrames(stack: unknown): DiagnosticFrame[] {
     .slice(0, 8);
   return frames;
 }
-export function hasTelemetryConsent(config: {
-  telemetryEnabled: boolean;
-  telemetryConsentConfirmed: boolean;
-  telemetryConsentVersion: number;
-}): boolean {
-  return (
-    config.telemetryConsentConfirmed &&
-    (!config.telemetryEnabled || config.telemetryConsentVersion >= TELEMETRY_CONSENT_VERSION)
-  );
+export function hasAnalyticsChoice(config: { analyticsChoiceSaved: boolean }): boolean {
+  return config.analyticsChoiceSaved;
 }

@@ -2,33 +2,33 @@ import {
   type Locale,
   type RpcMethod,
   type UpdateState,
-  type TelemetryFeature,
-  type TelemetryRuntimeSample,
+  type AnalyticsFeature,
+  type AnalyticsRuntimeSample,
   type DiagnosticFrame,
 } from '@ba/contracts';
 import { createHash } from 'node:crypto';
 import { release } from 'node:os';
 import {
-  MAX_QUEUE_EVENTS,
-  MAX_EVENT_AGE_MS,
+  MAX_PENDING_EVENTS,
+  EVENT_TTL_MS,
   SESSION_TIMEOUT_MS,
-  TELEMETRY_BATCH_SIZE,
+  APTABASE_BATCH_SIZE,
   retryDelay,
-  updateAttemptSchema,
+  pendingUpdateSchema,
   newSessionId,
   safeError,
   type ErrorSource,
-  type QueuedTelemetryEvent,
-  type TelemetryEnvelope,
-  type TelemetryEventName,
-  type TelemetryPersistence,
-  type UpdateAttempt,
-  type VersionObservation,
-} from './telemetry-protocol';
-export { type ErrorSource, type VersionObservation } from './telemetry-protocol';
-export const TELEMETRY_ENDPOINT = 'https://aptabase.jamesflare.com/api/v0/events';
+  type PendingAnalyticsEvent,
+  type AptabaseEvent,
+  type AnalyticsEventName,
+  type PendingUpdateStore,
+  type PendingUpdate,
+  type AppVersionMarker,
+} from './aptabase';
+export { type ErrorSource, type AppVersionMarker } from './aptabase';
+export const APTABASE_EVENTS_URL = 'https://aptabase.jamesflare.com/api/v0/events';
 // Public ingestion key, never an administrative credential.
-export const TELEMETRY_APP_KEY = 'A-SH-7889591672';
+export const APTABASE_APP_KEY = 'A-SH-7889591672';
 const operatingSystems: Record<NodeJS.Platform, string> = {
   aix: 'AIX',
   android: 'Android',
@@ -70,30 +70,30 @@ const operations: Partial<Record<RpcMethod, string>> = {
   'replays.clean': 'recording_clean',
   'replays.open': 'recording_open',
 };
-interface TelemetryOptions {
+interface AnalyticsOptions {
   allowed: boolean;
   fetch: typeof fetch;
   version: string;
   distribution: 'installed' | 'portable';
-  persistence?: TelemetryPersistence;
-  sampleRuntime?: () => TelemetryRuntimeSample;
+  pendingUpdates?: PendingUpdateStore;
+  sampleRuntime?: () => AnalyticsRuntimeSample;
 }
-interface ErrorAggregate {
-  payload: TelemetryEnvelope;
+interface ErrorCounter {
+  payload: AptabaseEvent;
   repeats: number;
   at: number;
 }
 
 /** Anonymous Aptabase events with consent gating and a short-lived memory queue. */
-export class TelemetryService {
+export class AnalyticsService {
   private enabled = false;
   private closed = false;
   private started = false;
-  private restored = false;
-  private language: Locale = 'en';
-  private queue: QueuedTelemetryEvent[] = [];
+  private updateOutcomeChecked = false;
+  private locale: Locale = 'en';
+  private queue: PendingAnalyticsEvent[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
-  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private resourceTimer: ReturnType<typeof setInterval> | null = null;
   private controller = new AbortController();
   private inFlight: Promise<void> | null = null;
   private generation = 0;
@@ -101,66 +101,65 @@ export class TelemetryService {
   private sessionStartedAt = 0;
   private lastEventAt = 0;
   private lastEventMono = -Infinity;
-  private lastHeartbeat = -Infinity;
+  private lastResourceSample = -Infinity;
   private lastCpu = process.cpuUsage();
   private lastCpuAt = performance.now();
-  private errors = new Map<string, ErrorAggregate>();
+  private errorCounts = new Map<string, ErrorCounter>();
   private diagnosticTimes = new Map<string, number>();
-  private updateKey = '';
-  private updateStartedAt = 0;
-  private updateAttempt: UpdateAttempt | null = null;
-  private notAppliedVersionReported: string | null = null;
-  private lastViewedFeature: TelemetryFeature | null = null;
+  private lastUpdateState = '';
+  private lastUpdateStateAt = 0;
+  private pendingUpdate: PendingUpdate | null = null;
+  private lastViewedFeature: AnalyticsFeature | null = null;
   private lastStartedMatch = '';
-  private versionObservation: { state: VersionObservation; delivered: () => void } | null = null;
-  private versionQueued = false;
+  private appVersionMarker: { state: AppVersionMarker; delivered: () => void } | null = null;
+  private appVersionQueued = false;
 
-  constructor(private options: TelemetryOptions) {}
-  private writeUpdate(value: UpdateAttempt | null): void {
+  constructor(private options: AnalyticsOptions) {}
+  private savePendingUpdate(value: PendingUpdate | null): void {
     try {
-      this.options.persistence?.write('update', value);
+      this.options.pendingUpdates?.save(value);
     } catch {
       // Optional analytics storage must not affect application behavior.
     }
   }
-  configure(consent: boolean, language: Locale): void {
-    this.language = language;
+  configure(optedIn: boolean, locale: Locale): void {
+    this.locale = locale;
     const before = this.enabled;
-    this.enabled = !this.closed && this.options.allowed && consent;
+    this.enabled = !this.closed && this.options.allowed && optedIn;
     if (before !== this.enabled) this.generation++;
     if (!this.enabled) {
       this.cancelTimers();
       this.controller.abort();
       this.controller = new AbortController();
       this.queue = [];
-      this.errors.clear();
+      this.errorCounts.clear();
       this.diagnosticTimes.clear();
-      this.versionQueued = false;
+      this.appVersionQueued = false;
       this.lastViewedFeature = null;
-      this.updateKey = '';
+      this.lastUpdateState = '';
       this.sessionId = '';
       this.lastEventMono = -Infinity;
-      if (!consent && !this.closed) {
-        this.writeUpdate(null);
-        this.restored = false;
-        this.updateAttempt = null;
+      if (!optedIn && !this.closed) {
+        this.savePendingUpdate(null);
+        this.updateOutcomeChecked = false;
+        this.pendingUpdate = null;
       }
       return;
     }
-    // Start the native anonymous session before version observations and recovery results.
+    // Start the anonymous session before app version and update outcome events.
     if (!this.started) {
       this.started = true;
       this.track('app_started', {});
     }
-    if (!this.restored) {
-      this.restored = true;
+    if (!this.updateOutcomeChecked) {
+      this.updateOutcomeChecked = true;
       let saved: unknown;
       try {
-        saved = this.options.persistence?.read('update');
+        saved = this.options.pendingUpdates?.load();
       } catch {}
-      const attempt = updateAttemptSchema.safeParse(saved);
-      if (attempt.success) {
-        const value = attempt.data;
+      const pending = pendingUpdateSchema.safeParse(saved);
+      if (pending.success) {
+        const value = pending.data;
         const outcome =
           value.stage !== 'installing'
             ? 'interrupted'
@@ -169,37 +168,37 @@ export class TelemetryService {
               : this.options.version === value.fromVersion
                 ? 'not_applied'
                 : 'other_version';
-        this.track('update_attempt_result', {
+        this.track('update_outcome', {
           from_version: value.fromVersion,
           target_version: value.targetVersion,
-          last_stage: value.stage,
+          stage: value.stage,
           outcome,
         });
-        this.writeUpdate(null);
-      } else if (saved != null) this.writeUpdate(null);
+        this.savePendingUpdate(null);
+      } else if (saved != null) this.savePendingUpdate(null);
     }
-    this.reportVersion();
-    if (!this.heartbeatTimer) {
+    this.reportAppVersion();
+    if (!this.resourceTimer) {
       this.lastCpuAt = performance.now();
       this.lastCpu = process.cpuUsage();
-      this.heartbeatTimer = setInterval(() => this.samplePresence(), 60000);
-      this.heartbeatTimer.unref?.();
+      this.resourceTimer = setInterval(() => this.sampleResources(), 60000);
+      this.resourceTimer.unref?.();
     }
     this.schedule();
   }
-  private runtime(): TelemetryRuntimeSample {
+  private runtime(): AnalyticsRuntimeSample {
     try {
       return this.options.sampleRuntime?.() ?? { foreground: false, active: false };
     } catch {
       return { foreground: false, active: false };
     }
   }
-  samplePresence(): void {
+  sampleResources(): void {
     if (!this.enabled) return;
-    this.flushErrors();
+    this.flushErrorCounts();
     const now = performance.now(),
       runtime = this.runtime();
-    if (!runtime.foreground || !runtime.active || now - this.lastHeartbeat < 60000) return;
+    if (!runtime.foreground || !runtime.active || now - this.lastResourceSample < 60000) return;
     const elapsed = Math.max(1, now - this.lastCpuAt),
       cpu = process.cpuUsage(this.lastCpu),
       memory = process.memoryUsage();
@@ -211,15 +210,15 @@ export class TelemetryService {
       if (typeof value === 'number' && Number.isFinite(value) && value >= 0)
         resources[key] = Math.round(value * 100) / 100;
     }
-    this.track('app_heartbeat', {
+    this.track('resource_sample', {
       rss_mb: Math.round(memory.rss / 1048576),
       heap_used_mb: Math.round(memory.heapUsed / 1048576),
       cpu_percent: Math.round(((cpu.user + cpu.system) / (elapsed * 10)) * 100) / 100,
       ...resources,
     });
-    this.lastHeartbeat = now;
+    this.lastResourceSample = now;
   }
-  feature(feature: TelemetryFeature, action: 'view' | 'start' | 'stop' = 'view'): void {
+  feature(feature: AnalyticsFeature, action: 'view' | 'start' | 'stop' = 'view'): void {
     if (!this.enabled) return;
     if (action === 'view') {
       if (this.lastViewedFeature === feature) return;
@@ -227,10 +226,7 @@ export class TelemetryService {
     }
     this.track('feature_used', { feature, action });
   }
-  performance(
-    metric: 'service_startup' | 'renderer_startup' | 'renderer_long_task',
-    durationMs: number,
-  ): void {
+  performance(metric: 'service_startup' | 'renderer_startup', durationMs: number): void {
     if (!this.enabled || !Number.isFinite(durationMs) || durationMs < 0) return;
     if (performance.now() - (this.diagnosticTimes.get(metric) ?? -Infinity) < 60000) return;
     this.diagnosticTimes.set(metric, performance.now());
@@ -246,6 +242,9 @@ export class TelemetryService {
     blockingMs: number;
     windowMs: number;
   }): void {
+    if (!this.enabled) return;
+    const runtime = this.runtime();
+    if (!runtime.foreground || !runtime.active) return;
     this.track('performance_sample', {
       metric: 'renderer_long_tasks',
       duration_ms: Math.round(sample.maxMs),
@@ -262,7 +261,7 @@ export class TelemetryService {
     suppliedFrames?: DiagnosticFrame[],
   ): void {
     if (!this.enabled) return;
-    this.flushErrors();
+    this.flushErrorCounts();
     const value = safeError(error, suppliedFrames),
       context = operation ?? source;
     const fingerprint = createHash('sha256')
@@ -277,12 +276,12 @@ export class TelemetryService {
         ]),
       )
       .digest('hex');
-    const existing = this.errors.get(fingerprint);
+    const existing = this.errorCounts.get(fingerprint);
     if (existing) {
       existing.repeats++;
       return;
     }
-    if (this.errors.size >= 100) {
+    if (this.errorCounts.size >= 100) {
       return;
     }
     const fatal = source === 'main' || source === 'renderer_crash' || source === 'startup';
@@ -303,42 +302,42 @@ export class TelemetryService {
       error_fingerprint: fingerprint,
       ...frames,
     });
-    if (payload) this.errors.set(fingerprint, { payload, repeats: 0, at: performance.now() });
+    if (payload) this.errorCounts.set(fingerprint, { payload, repeats: 0, at: performance.now() });
   }
-  private flushErrors(force = false): void {
+  private flushErrorCounts(force = false): void {
     if (!this.enabled) return;
-    for (const [key, item] of this.errors) {
+    for (const [key, item] of this.errorCounts) {
       if (!force && performance.now() - item.at < 60000) continue;
       if (item.repeats)
         this.enqueue({
           ...item.payload,
-          eventName: 'exception_summary',
+          eventName: 'error_summary',
           timestamp: item.payload.timestamp,
           props: { ...item.payload.props, occurrences: item.repeats },
         });
-      this.errors.delete(key);
+      this.errorCounts.delete(key);
     }
   }
   observeUpdate(state: UpdateState): void {
     if (!this.enabled || state.mode === 'disabled') return;
-    const key = `${state.status}:${state.availableVersion}:${state.errorContext}:${state.notAppliedVersion}`;
-    if (key === this.updateKey) return;
+    const key = `${state.status}:${state.availableVersion}:${state.errorContext}`;
+    if (key === this.lastUpdateState) return;
     const now = performance.now();
-    const duration = this.updateStartedAt
-      ? Math.max(0, Math.round(now - this.updateStartedAt))
+    const duration = this.lastUpdateStateAt
+      ? Math.max(0, Math.round(now - this.lastUpdateStateAt))
       : undefined;
-    this.updateKey = key;
-    this.updateStartedAt = now;
+    this.lastUpdateState = key;
+    this.lastUpdateStateAt = now;
     if (
       state.availableVersion &&
       ['available', 'downloading', 'downloaded', 'installing'].includes(state.status)
     ) {
-      this.updateAttempt = {
+      this.pendingUpdate = {
         fromVersion: this.options.version,
         targetVersion: state.availableVersion,
-        stage: state.status as UpdateAttempt['stage'],
+        stage: state.status as PendingUpdate['stage'],
       };
-      this.writeUpdate(this.updateAttempt);
+      this.savePendingUpdate(this.pendingUpdate);
     }
     if (['available', 'downloading', 'downloaded', 'installing', 'error'].includes(state.status))
       this.track('update_state_changed', {
@@ -348,15 +347,15 @@ export class TelemetryService {
         duration_ms: duration,
       });
     if (state.error) {
-      if (this.updateAttempt && state.errorContext !== 'check') {
-        this.track('update_attempt_result', {
-          from_version: this.updateAttempt.fromVersion,
-          target_version: this.updateAttempt.targetVersion,
-          last_stage: state.errorContext,
+      if (this.pendingUpdate && state.errorContext !== 'check') {
+        this.track('update_outcome', {
+          from_version: this.pendingUpdate.fromVersion,
+          target_version: this.pendingUpdate.targetVersion,
+          stage: state.errorContext,
           outcome: 'failed',
         });
-        this.updateAttempt = null;
-        this.writeUpdate(null);
+        this.pendingUpdate = null;
+        this.savePendingUpdate(null);
       }
       this.error(
         'update',
@@ -368,34 +367,29 @@ export class TelemetryService {
             : 'updates.check',
       );
     }
-    if (state.notAppliedVersion && state.notAppliedVersion !== this.notAppliedVersionReported) {
-      this.notAppliedVersionReported = state.notAppliedVersion;
-      this.track('update_not_applied', { target_version: state.notAppliedVersion });
-    }
   }
-  observeVersion(state: VersionObservation, delivered: () => void): void {
+
+  observeAppVersion(state: AppVersionMarker, delivered: () => void): void {
     if (state.reported) return;
-    this.versionObservation = { state, delivered };
-    this.reportVersion();
+    this.appVersionMarker = { state, delivered };
+    this.reportAppVersion();
   }
-  private reportVersion(): void {
-    const observation = this.versionObservation;
-    if (!this.enabled || !observation || this.versionQueued) return;
+  private reportAppVersion(): void {
+    const observation = this.appVersionMarker;
+    if (!this.enabled || !observation || this.appVersionQueued) return;
     const state = observation.state;
-    this.versionQueued = !!this.track(
-      state.kind === 'version_change' ? 'app_updated' : 'app_first_open',
-      state.kind === 'version_change'
-        ? { previous_version: state.previousVersion }
-        : { kind: state.kind },
+    this.appVersionQueued = !!this.track(
+      state.previousVersion ? 'app_updated' : 'app_first_open',
+      state.previousVersion ? { previous_version: state.previousVersion } : {},
       () => {
         observation.delivered();
-        if (this.versionObservation === observation) this.versionObservation = null;
+        if (this.appVersionMarker === observation) this.appVersionMarker = null;
       },
     );
   }
   matchStarted(sessionId: string): void {
     if (!sessionId || sessionId === this.lastStartedMatch) return;
-    // Keep the local match key out of telemetry and suppress repeated start notifications.
+    // Keep the local match key out of analytics and suppress repeated start notifications.
     this.lastStartedMatch = sessionId;
     this.track('match_started', {});
   }
@@ -420,11 +414,11 @@ export class TelemetryService {
     });
   }
   private track(
-    name: TelemetryEventName,
+    name: AnalyticsEventName,
     data: Record<string, unknown>,
     delivered?: () => void,
-  ): TelemetryEnvelope | null {
-    if (!this.enabled || this.queue.length >= MAX_QUEUE_EVENTS) return null;
+  ): AptabaseEvent | null {
+    if (!this.enabled || this.queue.length >= MAX_PENDING_EVENTS) return null;
     const now = Date.now(),
       mono = performance.now();
     if (
@@ -439,13 +433,13 @@ export class TelemetryService {
     }
     this.lastEventAt = now;
     this.lastEventMono = mono;
-    const props: TelemetryEnvelope['props'] = { distribution: this.options.distribution };
+    const props: AptabaseEvent['props'] = { distribution: this.options.distribution };
     for (const [key, value] of Object.entries(data)) {
       if (key.length > 40) continue;
       if (typeof value === 'string') props[key] = value.slice(0, 180);
       else if (typeof value === 'number' && Number.isFinite(value)) props[key] = value;
     }
-    const payload: TelemetryEnvelope = {
+    const payload: AptabaseEvent = {
       eventName: name,
       sessionId: this.sessionId,
       timestamp: new Date(now).toISOString(),
@@ -453,24 +447,24 @@ export class TelemetryService {
         isDebug: false,
         osName: operatingSystems[process.platform],
         osVersion: release(),
-        locale: this.language,
+        locale: this.locale,
         appVersion: this.options.version,
         engineName: process.versions.electron ? 'Electron' : 'Node.js',
         engineVersion: process.versions.electron ?? process.versions.node,
-        sdkVersion: 'baradar-aptabase@2',
+        sdkVersion: `baradar-aptabase@${this.options.version}`,
       },
       props,
     };
     this.enqueue(payload, delivered);
     return payload;
   }
-  private enqueue(payload: TelemetryEnvelope, delivered?: () => void): void {
-    if (this.queue.length >= MAX_QUEUE_EVENTS) return;
+  private enqueue(payload: AptabaseEvent, delivered?: () => void): void {
+    if (this.queue.length >= MAX_PENDING_EVENTS) return;
     this.queue.push({
       payload,
       attempts: 0,
       nextAttemptAt: Date.now(),
-      expiresAt: Date.now() + MAX_EVENT_AGE_MS,
+      expiresAt: Date.now() + EVENT_TTL_MS,
       delivered,
     });
     this.schedule();
@@ -508,15 +502,15 @@ export class TelemetryService {
     );
     const batch = this.queue
       .filter((item) => item.nextAttemptAt <= now)
-      .slice(0, TELEMETRY_BATCH_SIZE);
+      .slice(0, APTABASE_BATCH_SIZE);
     if (!batch.length) return;
     let accepted = false,
       retryable = true,
       retryAfter: string | null = null;
     try {
-      const response = await this.options.fetch(TELEMETRY_ENDPOINT, {
+      const response = await this.options.fetch(APTABASE_EVENTS_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'App-Key': TELEMETRY_APP_KEY },
+        headers: { 'Content-Type': 'application/json', 'App-Key': APTABASE_APP_KEY },
         credentials: 'omit',
         redirect: 'error',
         signal: AbortSignal.any([this.controller.signal, AbortSignal.timeout(3000)]),
@@ -546,7 +540,7 @@ export class TelemetryService {
   }
   async flush(timeoutMs = 1500): Promise<void> {
     if (!this.enabled) return;
-    this.flushErrors(true);
+    this.flushErrorCounts(true);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const drain = async () => {
       while (
@@ -569,9 +563,9 @@ export class TelemetryService {
   }
   private cancelTimers(): void {
     if (this.timer) clearTimeout(this.timer);
-    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    if (this.resourceTimer) clearInterval(this.resourceTimer);
     this.timer = null;
-    this.heartbeatTimer = null;
+    this.resourceTimer = null;
   }
   close(): void {
     if (this.closed) return;
@@ -581,6 +575,6 @@ export class TelemetryService {
     this.cancelTimers();
     this.controller.abort();
     this.queue = [];
-    this.errors.clear();
+    this.errorCounts.clear();
   }
 }

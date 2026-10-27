@@ -1,26 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  hasTelemetryConsent,
-  initialUpdateState,
-  rpcSchemas,
-  TELEMETRY_CONSENT_VERSION,
-} from '@ba/contracts';
-import { TelemetryService } from '../apps/server/src/telemetry';
+import { initialUpdateState, rpcSchemas } from '@ba/contracts';
+import { AnalyticsService } from '../apps/server/src/analytics';
 import { diagnosticErrorType, LongTaskAggregate } from '../apps/web/src/app/diagnostics';
 
-const services: TelemetryService[] = [];
+const services: AnalyticsService[] = [];
 function setup() {
   const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
-  const telemetry = new TelemetryService({
+  const analytics = new AnalyticsService({
     allowed: true,
     fetch: fetchImpl,
     version: '4.1.8',
     distribution: 'installed',
     sampleRuntime: () => ({ foreground: true, active: true }),
   });
-  services.push(telemetry);
+  services.push(analytics);
   return {
-    telemetry,
+    analytics,
     fetchImpl,
     events: () => fetchImpl.mock.calls.flatMap(([, init]) => JSON.parse(String(init?.body))),
   };
@@ -30,23 +25,23 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('anonymous diagnostics telemetry', () => {
+describe('anonymous diagnostics analytics', () => {
   it('separates errors at different app code positions and preserves occurrence totals when deduplicating', async () => {
     vi.useFakeTimers();
-    const { telemetry, events } = setup();
-    telemetry.configure(true, 'en');
+    const { analytics, events } = setup();
+    analytics.configure(true, 'en');
     const error = new TypeError('secret name');
     error.stack = 'TypeError: secret name\n    at fn (C:\\private\\app.ts:10:2)';
-    telemetry.error('rpc', error, 'players.report');
-    telemetry.error('rpc', error, 'players.report');
-    telemetry.error('rpc', error, 'players.report');
+    analytics.error('rpc', error, 'players.report');
+    analytics.error('rpc', error, 'players.report');
+    analytics.error('rpc', error, 'players.report');
     error.stack = 'TypeError: secret name\n    at fn (C:\\private\\app.ts:20:2)';
-    telemetry.error('rpc', error, 'players.report');
+    analytics.error('rpc', error, 'players.report');
     await vi.advanceTimersByTimeAsync(61000);
     const errors = events().filter((event) => event.eventName === 'app_error');
     expect(errors).toHaveLength(2);
     expect(errors[0].props.error_fingerprint).not.toBe(errors[1].props.error_fingerprint);
-    const summary = events().filter((event) => event.eventName === 'exception_summary');
+    const summary = events().filter((event) => event.eventName === 'error_summary');
     expect(summary).toHaveLength(1);
     expect(summary[0].props.occurrences).toBe(2);
     expect(JSON.stringify(events())).not.toMatch(/secret name|private/);
@@ -66,12 +61,12 @@ describe('anonymous diagnostics telemetry', () => {
 
   it('tracks explicit feature views and capture transitions without duplicate page renders', async () => {
     vi.useFakeTimers();
-    const { telemetry, events } = setup();
-    telemetry.configure(true, 'en');
-    telemetry.feature('archive');
-    telemetry.feature('archive');
-    telemetry.feature('decks');
-    telemetry.feature('replays', 'start');
+    const { analytics, events } = setup();
+    analytics.configure(true, 'en');
+    analytics.feature('archive');
+    analytics.feature('archive');
+    analytics.feature('decks');
+    analytics.feature('replays', 'start');
     await vi.advanceTimersByTimeAsync(5000);
     expect(
       events()
@@ -84,20 +79,20 @@ describe('anonymous diagnostics telemetry', () => {
     ]);
   });
 
-  it('sends periodic presence and resource metrics only during a consented session', async () => {
+  it('sends resource metrics only during a consented active session', async () => {
     vi.useFakeTimers();
-    const { telemetry, fetchImpl, events } = setup();
+    const { analytics, fetchImpl, events } = setup();
     await vi.advanceTimersByTimeAsync(61000);
     expect(fetchImpl).not.toHaveBeenCalled();
-    telemetry.configure(true, 'en');
+    analytics.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(61000);
-    const heartbeat = events().find((event) => event.eventName === 'app_heartbeat');
-    expect(heartbeat.props).toMatchObject({
+    const resource = events().find((event) => event.eventName === 'resource_sample');
+    expect(resource.props).toMatchObject({
       rss_mb: expect.any(Number),
       heap_used_mb: expect.any(Number),
       cpu_percent: expect.any(Number),
     });
-    telemetry.configure(false, 'en');
+    analytics.configure(false, 'en');
     const count = events().length;
     await vi.advanceTimersByTimeAsync(180000);
     expect(events()).toHaveLength(count);
@@ -105,16 +100,16 @@ describe('anonymous diagnostics telemetry', () => {
 
   it('reports flat Aptabase error events without raw messages, paths, names, or external stack frames', async () => {
     vi.useFakeTimers();
-    const { telemetry, events } = setup();
-    telemetry.configure(true, 'en');
+    const { analytics, events } = setup();
+    analytics.configure(true, 'en');
     const error = Object.assign(
       new TypeError('PrivatePlayer 918273645 https://secret.example/token'),
       { code: 'ENOENT', status: 503 },
     );
     error.stack =
       'TypeError: PrivatePlayer\n    at run (C:\\Users\\PrivatePlayer\\app.ts:25:4)\n    at PrivatePlayer (C:\\Users\\PrivatePlayer\\private.js:12:2)';
-    telemetry.error('rpc', error, 'players.report');
-    telemetry.error('rpc', error, 'players.report');
+    analytics.error('rpc', error, 'players.report');
+    analytics.error('rpc', error, 'players.report');
     await vi.advanceTimersByTimeAsync(3000);
     const exceptions = events().filter((event) => event.eventName === 'app_error');
     expect(exceptions).toHaveLength(1);
@@ -132,27 +127,27 @@ describe('anonymous diagnostics telemetry', () => {
     expect(JSON.stringify(events())).not.toMatch(
       /PrivatePlayer|918273645|secret\.example|private\.js|Users/,
     );
-    telemetry.configure(false, 'en');
-    telemetry.error('main', error);
+    analytics.configure(false, 'en');
+    analytics.error('main', error);
     await vi.advanceTimersByTimeAsync(2000);
     expect(events().filter((event) => event.eventName === 'app_error')).toHaveLength(1);
   });
 
   it('records numeric performance and updater transitions while suppressing progress duplicates', async () => {
     vi.useFakeTimers();
-    const { telemetry, events } = setup();
-    telemetry.configure(true, 'en');
-    telemetry.performance('renderer_startup', 351.6);
-    telemetry.performance('renderer_startup', 400);
-    telemetry.performance('renderer_long_task', Infinity);
+    const { analytics, events } = setup();
+    analytics.configure(true, 'en');
+    analytics.performance('renderer_startup', 351.6);
+    analytics.performance('renderer_startup', 400);
+    analytics.performance('renderer_startup', Infinity);
     const state = {
       ...initialUpdateState('4.1.8', 'installed'),
       availableVersion: '4.1.9',
       status: 'downloading' as const,
     };
-    telemetry.observeUpdate(state);
-    telemetry.observeUpdate({ ...state, downloadPercent: 60 });
-    telemetry.observeUpdate({ ...state, status: 'downloaded', downloadPercent: 100 });
+    analytics.observeUpdate(state);
+    analytics.observeUpdate({ ...state, downloadPercent: 60 });
+    analytics.observeUpdate({ ...state, status: 'downloaded', downloadPercent: 100 });
     await vi.advanceTimersByTimeAsync(5000);
     expect(
       events()
@@ -166,28 +161,7 @@ describe('anonymous diagnostics telemetry', () => {
     ).toEqual(['downloading', 'downloaded']);
   });
 
-  it('requires revised consent for old opt-ins and validates renderer diagnostics without accepting raw content', () => {
-    expect(
-      hasTelemetryConsent({
-        telemetryEnabled: true,
-        telemetryConsentConfirmed: true,
-        telemetryConsentVersion: 0,
-      }),
-    ).toBe(false);
-    expect(
-      hasTelemetryConsent({
-        telemetryEnabled: false,
-        telemetryConsentConfirmed: true,
-        telemetryConsentVersion: 0,
-      }),
-    ).toBe(true);
-    expect(
-      hasTelemetryConsent({
-        telemetryEnabled: true,
-        telemetryConsentConfirmed: true,
-        telemetryConsentVersion: TELEMETRY_CONSENT_VERSION,
-      }),
-    ).toBe(true);
+  it('validates renderer diagnostics without accepting raw content', () => {
     expect(
       rpcSchemas['diagnostics.report'].safeParse({
         type: 'error',

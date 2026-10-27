@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DIAGNOSTIC_ERROR_TYPES, TELEMETRY_FEATURES, isDiagnosticFilename } from './telemetry';
+import { DIAGNOSTIC_ERROR_TYPES, ANALYTICS_FEATURES, isDiagnosticFilename } from './analytics';
 import { RECORDING_QUALITIES, RECORDING_FPS, RECORDING_BITRATE_MBPS } from './recording';
 import type {
   Account,
@@ -46,9 +46,8 @@ export function legacyThemeMode(theme: unknown): ThemeMode {
   return ['light', 'cyan', 'orange'].includes(String(theme)) ? 'light' : 'dark';
 }
 export const configSchema = z.object({
-  telemetryEnabled: z.boolean().default(true),
-  telemetryConsentConfirmed: z.boolean().default(false),
-  telemetryConsentVersion: z.number().int().min(0).default(0),
+  analyticsEnabled: z.boolean().default(false),
+  analyticsChoiceSaved: z.boolean().default(false),
   logDir: z.string().max(4096).default(''),
   decksDir: z.string().max(4096).default(''),
   autoQueryCurrentMatch: z.boolean().default(true),
@@ -112,7 +111,7 @@ const roster = z
   .max(100);
 export const rpcSchemas = {
   'diagnostics.report': z.discriminatedUnion('type', [
-    z.object({ type: z.literal('feature'), feature: z.enum(TELEMETRY_FEATURES) }).strict(),
+    z.object({ type: z.literal('feature'), feature: z.enum(ANALYTICS_FEATURES) }).strict(),
     z
       .object({
         type: z.literal('error'),
@@ -135,7 +134,7 @@ export const rpcSchemas = {
     z
       .object({
         type: z.literal('performance'),
-        metric: z.enum(['renderer_startup', 'renderer_long_task']),
+        metric: z.literal('renderer_startup'),
         durationMs: z.number().finite().min(0).max(600000),
       })
       .strict(),

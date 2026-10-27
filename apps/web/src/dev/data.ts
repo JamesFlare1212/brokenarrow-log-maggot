@@ -1,4 +1,4 @@
-import { initialApmState, TELEMETRY_CONSENT_VERSION } from '@ba/contracts';
+import { initialApmState } from '@ba/contracts';
 import type {
   Account,
   ApmState,
@@ -186,9 +186,8 @@ export function createDevelopmentData(
   bootstrap.revision = 0;
   bootstrap.config = {
     ...bootstrap.config,
-    telemetryEnabled: false,
-    telemetryConsentConfirmed: true,
-    telemetryConsentVersion: TELEMETRY_CONSENT_VERSION,
+    analyticsEnabled: false,
+    analyticsChoiceSaved: true,
     inputHookEnabled: !empty,
     autoQueryCurrentMatch: !empty,
     replayEnabled: !empty,

@@ -46,15 +46,12 @@ export function attachRendererDiagnostics(api: Bridge): () => void {
     cleanups.forEach((cleanup) => cleanup());
   };
   view.addEventListener('pagehide', dispose, { once: true });
-  const sendPerformance = (
-    metric: 'renderer_startup' | 'renderer_long_task',
-    durationMs: number,
-  ) => {
+  const sendStartup = (durationMs: number) => {
     if (Number.isFinite(durationMs) && durationMs >= 0)
       void api
         .invoke('diagnostics.report', {
           type: 'performance',
-          metric,
+          metric: 'renderer_startup',
           durationMs: Math.min(600000, durationMs),
         })
         .catch(() => {});
@@ -66,7 +63,7 @@ export function attachRendererDiagnostics(api: Bridge): () => void {
     readiness.disconnect();
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        if (!disposed) sendPerformance('renderer_startup', performance.now());
+        if (!disposed) sendStartup(performance.now());
       }),
     );
   };
@@ -79,20 +76,38 @@ export function attachRendererDiagnostics(api: Bridge): () => void {
     PerformanceObserver.supportedEntryTypes?.includes('longtask')
   ) {
     const aggregate = new LongTaskAggregate();
+    const isForeground = () =>
+      rendererDocument.visibilityState === 'visible' && rendererDocument.hasFocus();
+    let activeSince = isForeground() ? performance.now() : Infinity;
+    const reset = () => {
+      aggregate.flush();
+      activeSince = isForeground() ? performance.now() : Infinity;
+    };
+    rendererDocument.addEventListener('visibilitychange', reset);
+    view.addEventListener('focus', reset);
+    view.addEventListener('blur', reset);
     const flush = () => {
       const sample = aggregate.flush();
-      if (sample)
+      if (sample && !disposed && isForeground())
         void api.invoke('diagnostics.report', { type: 'long_tasks', ...sample }).catch(() => {});
     };
-    const observer = new PerformanceObserver((list) =>
-      aggregate.add(list.getEntries().map((entry) => entry.duration)),
-    );
+    const observer = new PerformanceObserver((list) => {
+      if (disposed || !isForeground()) return;
+      aggregate.add(
+        list
+          .getEntries()
+          .filter((entry) => entry.startTime >= activeSince)
+          .map((entry) => entry.duration),
+      );
+    });
     observer.observe({ type: 'longtask' });
     const timer = setInterval(flush, 60000);
     cleanups.push(() => {
       observer.disconnect();
       clearInterval(timer);
-      flush();
+      rendererDocument.removeEventListener('visibilitychange', reset);
+      view.removeEventListener('focus', reset);
+      view.removeEventListener('blur', reset);
     });
   }
   return dispose;

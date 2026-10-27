@@ -7,24 +7,23 @@ import {
   type DiagnosticFrame,
 } from '@ba/contracts';
 
-export const MAX_QUEUE_EVENTS = 200;
-export const MAX_EVENT_AGE_MS = 5 * 60 * 1000;
+export const MAX_PENDING_EVENTS = 200;
+export const EVENT_TTL_MS = 5 * 60 * 1000;
 export const SESSION_TIMEOUT_MS = 60 * 60 * 1000;
-export const TELEMETRY_BATCH_SIZE = 20;
-export type TelemetryEventName =
+export const APTABASE_BATCH_SIZE = 20;
+export type AnalyticsEventName =
   | 'app_first_open'
   | 'app_updated'
   | 'app_started'
-  | 'app_heartbeat'
+  | 'resource_sample'
   | 'match_started'
   | 'feature_used'
   | 'operation_completed'
   | 'app_error'
-  | 'exception_summary'
+  | 'error_summary'
   | 'performance_sample'
   | 'update_state_changed'
-  | 'update_not_applied'
-  | 'update_attempt_result';
+  | 'update_outcome';
 export type ErrorSource =
   | 'rpc'
   | 'background'
@@ -38,8 +37,8 @@ export type ErrorSource =
   | 'renderer_crash'
   | 'main'
   | 'startup';
-export interface TelemetryEnvelope {
-  eventName: TelemetryEventName;
+export interface AptabaseEvent {
+  eventName: AnalyticsEventName;
   sessionId: string;
   timestamp: string;
   systemProps: {
@@ -54,39 +53,38 @@ export interface TelemetryEnvelope {
   };
   props: Record<string, string | number>;
 }
-export interface QueuedTelemetryEvent {
-  payload: TelemetryEnvelope;
+export interface PendingAnalyticsEvent {
+  payload: AptabaseEvent;
   attempts: number;
   nextAttemptAt: number;
   expiresAt: number;
   delivered?: () => void;
 }
 /** Only anonymous update outcome metadata survives a restart. Event payloads never do. */
-export interface TelemetryPersistence {
-  read(key: 'update'): unknown;
-  write(key: 'update', value: unknown): void;
+export interface PendingUpdateStore {
+  load(): unknown;
+  save(value: PendingUpdate | null): void;
 }
 export const versionSchema = z
   .string()
   .max(50)
   .regex(/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/);
-export const versionObservationSchema = z
+export const appVersionMarkerSchema = z
   .object({
     version: versionSchema,
-    kind: z.enum(['first_run', 'existing_profile', 'version_change']),
     previousVersion: versionSchema.optional(),
     reported: z.boolean(),
   })
   .strict();
-export type VersionObservation = z.infer<typeof versionObservationSchema>;
-export const updateAttemptSchema = z
+export type AppVersionMarker = z.infer<typeof appVersionMarkerSchema>;
+export const pendingUpdateSchema = z
   .object({
     fromVersion: versionSchema,
     targetVersion: versionSchema,
     stage: z.enum(['available', 'downloading', 'downloaded', 'installing']),
   })
   .strict();
-export type UpdateAttempt = z.infer<typeof updateAttemptSchema>;
+export type PendingUpdate = z.infer<typeof pendingUpdateSchema>;
 /** Match the Electron SDK's timestamp plus random eight-digit anonymous session format. */
 export function newSessionId(now: number): string {
   return `${Math.floor(now / 1000)}${randomInt(100000000).toString().padStart(8, '0')}`;

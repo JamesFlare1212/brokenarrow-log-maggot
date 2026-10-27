@@ -83,7 +83,7 @@ describe('browser development scenes', () => {
     const api = runtime.api;
     const bootstrap = await api.invoke('app.bootstrap', null);
     expect(bootstrap.session.lobbyPlayers).toEqual([]);
-    expect(bootstrap.config.telemetryEnabled).toBe(false);
+    expect(bootstrap.config.analyticsEnabled).toBe(false);
     expect(await api.invoke('matches.list', {})).toEqual([]);
     expect(await api.invoke('replays.list', null)).toEqual([]);
     expect(await api.invoke('accounts.list', null)).toEqual([]);

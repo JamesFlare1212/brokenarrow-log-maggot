@@ -46,8 +46,8 @@ import { DecksPanel } from '../features/decks/DecksPanel';
 import { ApmPanel } from '../features/apm/ApmPanel';
 import { ReplaysPanel } from '../features/replays/ReplaysPanel';
 import { UpdateButton } from '../features/settings/UpdateButton';
-import { TelemetryConsentDialog } from '../features/settings/TelemetryConsentDialog';
-import { hasTelemetryConsent } from '@ba/contracts';
+import { AnalyticsConsentDialog } from '../features/settings/AnalyticsConsentDialog';
+import { hasAnalyticsChoice } from '@ba/contracts';
 import { cn } from '@/lib/utils';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import {
@@ -155,20 +155,13 @@ export function App() {
   useEffect(() => {
     if (
       window.assistant === api &&
-      state.config.telemetryEnabled &&
-      hasTelemetryConsent(state.config)
+      state.config.analyticsEnabled &&
+      hasAnalyticsChoice(state.config)
     )
       void api
         .invoke('diagnostics.report', { type: 'feature', feature: settingsTab ? 'settings' : page })
         .catch(() => {});
-  }, [
-    api,
-    page,
-    settingsTab,
-    state.config.telemetryEnabled,
-    state.config.telemetryConsentConfirmed,
-    state.config.telemetryConsentVersion,
-  ]);
+  }, [api, page, settingsTab, state.config.analyticsEnabled, state.config.analyticsChoiceSaved]);
   const main = useRef<HTMLDivElement>(null),
     workspaceScroll = useRef<HTMLDivElement>(null),
     scrollPositions = useRef(new Map<string, number>()),
@@ -338,9 +331,9 @@ export function App() {
           </div>
         }
       >
-        {hasTelemetryConsent(state.config) && <ModalRouter />}
+        {hasAnalyticsChoice(state.config) && <ModalRouter />}
       </Suspense>
-      <TelemetryConsentDialog />
+      <AnalyticsConsentDialog />
       {settings.error && !settingsTab && (
         <div className="settings-save-alert">
           <Notice error>

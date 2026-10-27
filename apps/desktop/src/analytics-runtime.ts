@@ -1,15 +1,15 @@
 import { app, powerMonitor, type BrowserWindow } from 'electron';
-import type { TelemetryRuntimeSample } from '@ba/contracts';
+import type { AnalyticsRuntimeSample } from '@ba/contracts';
 
-/** Capture aggregate process resources and presence flags, never window titles or input details. */
-export function sampleTelemetryRuntime(window: BrowserWindow | null): TelemetryRuntimeSample {
+/** Capture aggregate resources and foreground/activity gates, never titles or input details. */
+export function sampleAnalyticsRuntime(window: BrowserWindow | null): AnalyticsRuntimeSample {
   const foreground =
     !!window &&
     !window.isDestroyed() &&
     window.isVisible() &&
     !window.isMinimized() &&
     window.isFocused();
-  const result: TelemetryRuntimeSample = {
+  const result: AnalyticsRuntimeSample = {
     foreground,
     active: foreground && powerMonitor.getSystemIdleTime() < 60,
   };

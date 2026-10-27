@@ -47,10 +47,10 @@ describe('configuration patches', () => {
     { hiddenPanels: [] },
     { inputHookEnabled: true },
     { inputHookEnabled: false },
-    { telemetryEnabled: true },
-    { telemetryEnabled: false },
-    { telemetryConsentConfirmed: false },
-    { telemetryEnabled: true, telemetryConsentConfirmed: true },
+    { analyticsEnabled: true },
+    { analyticsEnabled: false },
+    { analyticsChoiceSaved: false },
+    { analyticsEnabled: true, analyticsChoiceSaved: true },
     { replayEnabled: false },
     { replayMicrophone: false },
     { replayQuality: 1080, replayFps: 60, replaySaveDir: 'custom-recordings' },
@@ -78,8 +78,8 @@ describe('configuration patches', () => {
       { replayBitrateMbps: 4 },
       { replayBitrateMbps: 21 },
       { replayMicrophone: 'false' },
-      { telemetryEnabled: 'true' },
-      { telemetryConsentConfirmed: 'true' },
+      { analyticsEnabled: 'true' },
+      { analyticsChoiceSaved: 'true' },
       { panelOrder: ['invalid'] },
       { hiddenPanels: ['invalid'] },
       { hiddenPanels: ['about'] },
@@ -90,8 +90,8 @@ describe('configuration patches', () => {
     expect(configSchema.parse({}).theme).toBe('dark');
     expect(configSchema.parse({}).inputHookEnabled).toBe(true);
     expect(configSchema.parse({ inputHookEnabled: false }).inputHookEnabled).toBe(false);
-    expect(configSchema.parse({}).telemetryEnabled).toBe(true);
-    expect(configSchema.parse({}).telemetryConsentConfirmed).toBe(false);
+    expect(configSchema.parse({}).analyticsEnabled).toBe(false);
+    expect(configSchema.parse({}).analyticsChoiceSaved).toBe(false);
     expect(configSchema.parse({}).themeMode).toBe('system');
     expect(configSchema.parse({}).hiddenPanels).toEqual([]);
     expect(configSchema.parse({ replayAudio: 'default' }).replayMicrophone).toBe(true);
@@ -109,8 +109,8 @@ describe('configuration patches', () => {
       expect(db.updateConfig({ lang: 'en' }).themeMode).toBe('system');
       const initial = db.updateConfig({
         inputHookEnabled: false,
-        telemetryEnabled: true,
-        telemetryConsentConfirmed: true,
+        analyticsEnabled: true,
+        analyticsChoiceSaved: true,
         logDir: 'custom-logs',
         decksDir: 'custom-decks',
         theme: 'forest',

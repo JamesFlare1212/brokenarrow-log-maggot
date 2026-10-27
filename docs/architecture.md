@@ -39,35 +39,33 @@ deduplication uses a set of match IDs.
 
 公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout / settings；布局、配色与组件状态约定见[视觉规范](../design-system/broken-arrow/MASTER.md)。
 
-## Optional anonymous telemetry
+## Optional anonymous analytics
 
-The main process sends explicit Aptabase events after disclosure version 4 consent.
-Collection includes startup/first-open/version observations, live match starts,
-selected feature results and durations, classified errors, update outcomes, and
-foreground-active resource samples. Saved refusals remain disabled. Development,
-fixtures, smoke tests, offline mode, and `BA_DISABLE_TELEMETRY=1` send nothing.
+The main process sends explicit Aptabase events after the user saves an enabled
+analytics choice. Collection includes startup/first-open/version observations,
+live match starts, selected feature results and durations, classified errors,
+update outcomes, and foreground-active performance samples.
 
-A short-lived random Aptabase session exists only in memory. It rotates after an
-hour without events, clock rollback, a UTC date change, restart, or opt-out.
-No account hashes, installation/device IDs, run/event/update correlation IDs, or
-persistent user tags are uploaded. Local game-account detection never reaches
-analytics. Version and locale use native system properties. Custom dimensions
-are explicit feature names, result categories, durations, and sanitized code locations.
+`analyticsEnabled` defaults to false; `analyticsChoiceSaved` records the consent
+dialog decision. Development, fixtures, smoke tests, offline mode, and
+`BA_DISABLE_ANALYTICS=1` disable collection.
 
-Events queue only in memory: at most 200 events, five minutes, three attempts,
-and 20 events per request. Opt-out aborts requests and clears the queue. Shutdown
-allows a bounded flush and discards remaining events. Resource samples are
-limited to once per minute while foreground-active. Native user and session counts
-retain Aptabase's anonymous semantics and cannot measure cross-day account retention.
+A random session exists only in memory and rotates after an idle hour, clock
+rollback, UTC date change, restart, or opt-out. Game-account detection is independent
+of analytics. App/OS versions and locale use Aptabase system properties; event
+dimensions contain explicit feature names, results, durations, and public code positions.
 
-Only non-identifying first-open/version flags and update version/stage metadata
-survive locally. Startup removes retired identity, outbox, and run/update records;
-legacy payloads never replay. The direct ingestion adapter preserves abortable
-Electron networking and the existing replay-protocol registration. Optional
-telemetry/storage errors must not prevent startup or enter the application UI.
+At most 200 events queue in memory for five minutes, with three delivery attempts
+and 20 events per request. Opt-out cancels requests and empties the queue. Shutdown
+allows a bounded flush and discards the remainder. Resource samples require
+foreground activity; long-task aggregates are also cleared on blur/hide.
 
-See [anonymous telemetry](telemetry.md) for event definitions, delivery limits,
-migration, and the distinction between anonymous usage and game-account metrics.
+Local app-version markers and pending update versions/stage support first-open,
+version-change, and update-outcome events. `analytics:appVersion` and
+`analytics:pendingUpdate` contain no session or user identifier. The update store
+exposes only `load()` and `save()`.
+
+See [anonymous analytics](analytics.md) for event definitions and counting limits.
 
 ## Temporary QUIC workaround
 

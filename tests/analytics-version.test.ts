@@ -6,12 +6,12 @@ import { initialApmState } from '@ba/contracts';
 import { Application } from '../apps/server/src/app';
 import { Database } from '../apps/server/src/storage/database';
 import type { Platform } from '../apps/server/src/ports';
-import type { VersionObservation } from '../apps/server/src/telemetry';
+import type { AppVersionMarker } from '../apps/server/src/analytics';
 
 const directories: string[] = [];
 const applications: Application[] = [];
 async function directory() {
-  const path = await mkdtemp(join(tmpdir(), 'ba-installation-'));
+  const path = await mkdtemp(join(tmpdir(), 'ba-analytics-'));
   directories.push(path);
   return path;
 }
@@ -23,7 +23,7 @@ async function launch(
   offline = false,
 ) {
   const platform: Platform = {
-    telemetry: { enabled, distribution: 'installed' },
+    analytics: { enabled, distribution: 'installed' },
     version,
     http: { fetch: fetchImpl, offline },
     selectDirectory: async () => null,
@@ -66,8 +66,8 @@ async function launch(
   await app.start();
   return { app, fetchImpl };
 }
-function installation(app: Application) {
-  return app.db.state<VersionObservation | null>('telemetryVersion', null);
+function appVersionMarker(app: Application) {
+  return app.db.state<AppVersionMarker | null>('analytics:appVersion', null);
 }
 function events(fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>) {
   return fetchImpl.mock.calls
@@ -80,63 +80,29 @@ afterEach(async () => {
   for (const path of directories.splice(0)) await rm(path, { recursive: true, force: true });
 });
 
-describe('anonymous version observations and legacy cleanup', () => {
+describe('anonymous app version reporting', () => {
   it('waits for consent before first-open and startup events', async () => {
     const path = await directory();
     const db = new Database(join(path, 'assistant.sqlite'));
     db.updateConfig({
-      telemetryEnabled: true,
-      telemetryConsentConfirmed: true,
-      telemetryConsentVersion: 3,
+      analyticsEnabled: true,
+      analyticsChoiceSaved: false,
     });
     db.close();
     vi.useFakeTimers();
     const { app, fetchImpl } = await launch(path, '4.4.3');
     await vi.advanceTimersByTimeAsync(61000);
     expect(fetchImpl).not.toHaveBeenCalled();
-    await app.invoke('config.update', { telemetryEnabled: true });
+    await app.invoke('config.update', { analyticsEnabled: true });
     await vi.advanceTimersByTimeAsync(2000);
     expect(events(fetchImpl).map((event) => event.eventName)).toEqual([
       'app_started',
       'app_first_open',
     ]);
-    expect(installation(app)?.reported).toBe(true);
-    expect(Object.keys(installation(app)!).sort()).toEqual(['kind', 'reported', 'version']);
+    expect(appVersionMarker(app)?.reported).toBe(true);
+    expect(Object.keys(appVersionMarker(app)!).sort()).toEqual(['reported', 'version']);
   });
-  it.each(['online', 'offline', 'disabled'] as const)(
-    'deletes legacy identities and queued payloads on a %s launch without sending them',
-    async (mode) => {
-      const path = await directory();
-      const db = new Database(join(path, 'assistant.sqlite'));
-      const retired = [
-        'telemetryIdentity',
-        'telemetryInstallation',
-        'telemetry:outbox:v1',
-        'telemetry:run:v1',
-        'telemetry:update:v1',
-      ];
-      for (const key of retired)
-        db.sql.prepare('INSERT INTO app_state VALUES (?, ?)').run(key, 'invalid JSON');
-      db.updateConfig({
-        telemetryEnabled: false,
-        telemetryConsentConfirmed: true,
-        telemetryConsentVersion: 4,
-      });
-      db.close();
-      vi.useFakeTimers();
-      const { app, fetchImpl } = await launch(
-        path,
-        '4.4.3',
-        undefined,
-        mode !== 'disabled',
-        mode === 'offline',
-      );
-      for (const key of retired) expect(app.db.state(key, null)).toBeNull();
-      await vi.advanceTimersByTimeAsync(61000);
-      expect(fetchImpl).not.toHaveBeenCalled();
-    },
-  );
-  it('never derives telemetry identity from game accounts and starts a fresh session after restart', async () => {
+  it('never derives analytics identity from game accounts and starts a fresh session after restart', async () => {
     const path = await directory();
     vi.useFakeTimers();
     const first = await launch(path, '4.4.3');
@@ -150,14 +116,11 @@ describe('anonymous version observations and legacy cleanup', () => {
       ],
       true,
     );
-    await first.app.invoke('config.update', { telemetryEnabled: true });
+    await first.app.invoke('config.update', { analyticsEnabled: true });
     await vi.advanceTimersByTimeAsync(2000);
-    expect(first.app.db.state('telemetryIdentity', null)).toBeNull();
     const firstEvents = events(first.fetchImpl);
-    expect(firstEvents.some((event) => event.eventName === 'user_identified')).toBe(false);
-    expect(JSON.stringify(firstEvents)).not.toMatch(
-      /918273645|55443322|LocalOwner|OtherPlayer|identity_hash|installation_id|event_id|app_session_id/,
-    );
+    expect(firstEvents.map((event) => event.eventName)).toEqual(['app_started', 'app_first_open']);
+    expect(JSON.stringify(firstEvents)).not.toMatch(/918273645|55443322|LocalOwner|OtherPlayer/);
     await first.app.stop();
     const restarted = await launch(path, '4.4.3');
     await vi.advanceTimersByTimeAsync(2000);
@@ -168,7 +131,7 @@ describe('anonymous version observations and legacy cleanup', () => {
     const path = await directory();
     vi.useFakeTimers();
     const first = await launch(path, '4.4.3');
-    await first.app.invoke('config.update', { telemetryEnabled: true });
+    await first.app.invoke('config.update', { analyticsEnabled: true });
     await vi.advanceTimersByTimeAsync(2000);
     expect(events(first.fetchImpl).map((event) => event.eventName)).toEqual([
       'app_started',
@@ -189,10 +152,9 @@ describe('anonymous version observations and legacy cleanup', () => {
       distribution: 'installed',
       previous_version: '4.4.3',
     });
-    expect(installation(updated.app)).toEqual({
+    expect(appVersionMarker(updated.app)).toEqual({
       version: '4.4.4',
       previousVersion: '4.4.3',
-      kind: 'version_change',
       reported: true,
     });
   });
@@ -200,41 +162,42 @@ describe('anonymous version observations and legacy cleanup', () => {
     const path = await directory();
     vi.useFakeTimers();
     const first = await launch(path, '4.4.3');
-    await first.app.invoke('config.update', { telemetryEnabled: false });
+    await first.app.invoke('config.update', { analyticsEnabled: false });
     await first.app.stop();
     const restart = await launch(path, '4.4.4');
     await vi.advanceTimersByTimeAsync(61000);
     expect(restart.fetchImpl).not.toHaveBeenCalled();
     expect(restart.app.db.config()).toMatchObject({
-      telemetryEnabled: false,
-      telemetryConsentConfirmed: true,
+      analyticsEnabled: false,
+      analyticsChoiceSaved: true,
     });
   });
   it('starts normally when the optional version marker is corrupt', async () => {
     const path = await directory();
     const db = new Database(join(path, 'assistant.sqlite'));
-    db.sql.prepare('INSERT INTO app_state VALUES (?, ?)').run('telemetryVersion', 'invalid JSON');
+    db.sql
+      .prepare('INSERT INTO app_state VALUES (?, ?)')
+      .run('analytics:appVersion', 'invalid JSON');
     db.close();
     vi.useFakeTimers();
     const { app, fetchImpl } = await launch(path, '4.4.3');
-    await app.invoke('config.update', { telemetryEnabled: true });
+    await app.invoke('config.update', { analyticsEnabled: true });
     await vi.advanceTimersByTimeAsync(2000);
-    expect(events(fetchImpl).find((event) => event.eventName === 'app_first_open').props.kind).toBe(
-      'existing_profile',
-    );
+    expect(events(fetchImpl).find((event) => event.eventName === 'app_first_open')?.props).toEqual({
+      distribution: 'installed',
+    });
   });
   it('does not persist failed payloads; a later launch observes an unconfirmed first open anew', async () => {
     const path = await directory();
     vi.useFakeTimers();
     const failedFetch = vi.fn<typeof fetch>(async () => new Response(null, { status: 500 }));
     const first = await launch(path, '4.4.3', failedFetch);
-    await first.app.invoke('config.update', { telemetryEnabled: true });
+    await first.app.invoke('config.update', { analyticsEnabled: true });
     await vi.advanceTimersByTimeAsync(20000);
     expect(
       events(failedFetch).filter((event) => event.eventName === 'app_first_open'),
     ).toHaveLength(3);
-    expect(installation(first.app)?.reported).toBe(false);
-    expect(first.app.db.state('telemetry:outbox:v1', null)).toBeNull();
+    expect(appVersionMarker(first.app)?.reported).toBe(false);
     const session = events(failedFetch)[0].sessionId;
     await first.app.stop();
     const restart = await launch(path, '4.4.3');
