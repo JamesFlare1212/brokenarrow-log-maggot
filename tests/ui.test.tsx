@@ -689,11 +689,11 @@ describe('application updates', () => {
 });
 
 describe('first-launch telemetry consent', () => {
-  it('asks existing opted-in users to confirm the expanded collection notice', async () => {
+  it('asks existing opted-in users to confirm the Aptabase provider change', async () => {
     const initial = bootstrapForApp();
     initial.config.telemetryEnabled = true;
     initial.config.telemetryConsentConfirmed = true;
-    initial.config.telemetryConsentVersion = 0;
+    initial.config.telemetryConsentVersion = 3;
     const native = nativeFixture(initial);
     render(<App />, { wrapper: wrapper(native.api) });
     const dialog = await screen.findByRole('dialog', {
@@ -705,7 +705,7 @@ describe('first-launch telemetry consent', () => {
     await waitFor(() =>
       expect(native.backend.config).toMatchObject({
         telemetryEnabled: false,
-        telemetryConsentVersion: 3,
+        telemetryConsentVersion: 4,
       }),
     );
     await waitFor(() =>
@@ -1384,7 +1384,7 @@ describe('settings pages and automatic saving', () => {
       'telemetry-description telemetry-privacy',
     );
     expect(page.getByText(translate('zh', 'telemetryDescription')).textContent).toContain(
-      'posthog.jamesflare.com',
+      'aptabase.jamesflare.com',
     );
     const before = structuredClone(native.backend.config);
     checkbox.focus();

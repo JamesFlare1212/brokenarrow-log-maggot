@@ -105,8 +105,8 @@ export const messages: Record<string, readonly [string, string]> = {
     'Allow usage and diagnostics statistics?',
   ],
   telemetryConsentPrompt: [
-    '请阅读下面的采集说明。仅在同意后开始发送统计；关键事件的本地暂存、会话与前台活跃状态、改进的错误和性能诊断需要确认此更新说明。',
-    'Read the collection details below. Nothing is sent before consent. Confirm this updated notice for local buffering of critical events, sessions and foreground activity, and improved error and performance diagnostics.',
+    '统计服务已改为 Aptabase，请阅读下面更新后的采集说明。仅在同意后向新服务发送统计；此前的同意需要重新确认。',
+    'Analytics now uses Aptabase. Read the updated collection details below. Nothing is sent to the new service before consent; previous opt-ins require confirmation.',
   ],
   telemetryConsentChangeLater: [
     '不同意不影响应用功能。之后可在“设置 → 常规”中随时修改。',
@@ -117,8 +117,8 @@ export const messages: Record<string, readonly [string, string]> = {
   telemetry: ['使用统计与隐私', 'Usage statistics and privacy'],
   telemetryEnabled: ['发送可选使用统计', 'Send optional usage statistics'],
   telemetryDescription: [
-    '同意后向 posthog.jamesflare.com 发送安装与启动、实时对局开始次数、版本与更新结果、每分钟在线心跳与前台活跃状态、功能使用结果和耗时、分类错误，以及主进程和渲染进程的 CPU、内存、界面就绪和卡顿汇总。通过 PostHog 会话标识关联同一账号的一次使用。安装、对局开始、更新与异常等关键事件可在本机暂存最多 7 天并有限重试；关闭统计会停止发送并清空待发送数据。',
-    'After consent, sends installation/startup, live match start counts, versions and update results, minute presence and foreground activity, feature results/timings, classified errors, main/renderer CPU and memory, UI-ready timings, and long-task summaries to posthog.jamesflare.com. PostHog session IDs link one account’s usage session. Critical installation, match start, update, and error events may be buffered locally for up to 7 days with bounded retries. Turning statistics off stops sending and clears pending data.',
+    '同意后向 aptabase.jamesflare.com 发送安装与启动、实时对局开始次数、版本与更新结果、每分钟在线心跳与前台活跃状态、功能使用结果和耗时、分类错误，以及主进程和渲染进程的 CPU、内存、界面就绪和卡顿汇总。通过 Aptabase 会话标识关联一次使用。安装、对局开始、更新与异常等关键事件可在本机暂存最多 23 小时并有限重试；关闭统计会停止发送并清空待发送数据。',
+    'After consent, sends installation/startup, live match start counts, versions and update results, minute presence and foreground activity, feature results/timings, classified errors, main/renderer CPU and memory, UI-ready timings, and long-task summaries to aptabase.jamesflare.com. Aptabase session IDs link a usage session. Critical installation, match start, update, and error events may be buffered locally for up to 23 hours with bounded retries. Turning statistics off stops sending and clears pending data.',
   ],
   telemetryPrivacy: [
     '使用日志识别到的本机数字账号的 SHA-256 哈希关联跨次使用；尚未识别账号时使用本地随机安装标识的哈希。这些稳定标识可关联使用记录，不上传原始账号、昵称、其他玩家标识、搜索内容、日志、路径、卡组、录像或按键。错误仅发送类型、代码、来源和应用代码位置，不发送原始消息或完整堆栈。不创建人员档案。服务器接收来源 IP，可能用于地理统计。开发、离线和测试模式不发送。',

@@ -8,7 +8,8 @@ import {
 } from '@ba/contracts';
 
 export const TELEMETRY_APP = 'brokenarrow.desktop';
-export const MAX_OUTBOX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+// Aptabase rejects events older than 24 hours. Leave room for network delivery.
+export const MAX_OUTBOX_AGE_MS = 23 * 60 * 60 * 1000;
 export const MAX_OUTBOX_EVENTS = 50;
 export const MAX_QUEUE_EVENTS = 200;
 export const TELEMETRY_BATCH_SIZE = 20;
@@ -21,7 +22,7 @@ export const TELEMETRY_EVENTS = [
   'match_started',
   'feature_used',
   'operation_completed',
-  '$exception',
+  'app_error',
   'exception_summary',
   'performance_sample',
   'update_state_changed',
@@ -45,11 +46,20 @@ export type ErrorSource =
   | 'main'
   | 'startup';
 export interface TelemetryEnvelope {
-  uuid: string;
-  event: TelemetryEventName;
-  distinct_id: string;
+  eventName: TelemetryEventName;
+  sessionId: string;
   timestamp: string;
-  properties: Record<string, unknown>;
+  systemProps: {
+    isDebug: boolean;
+    osName: string;
+    osVersion: string;
+    locale: string;
+    appVersion: string;
+    engineName: string;
+    engineVersion: string;
+    sdkVersion: string;
+  };
+  props: Record<string, string | number>;
 }
 export interface QueuedTelemetryEvent {
   payload: TelemetryEnvelope;
@@ -91,11 +101,34 @@ export const updateAttemptSchema = z
 export type UpdateAttempt = z.infer<typeof updateAttemptSchema>;
 const envelopeSchema = z
   .object({
-    uuid: z.string().uuid(),
-    event: z.enum(TELEMETRY_EVENTS),
-    distinct_id: hashSchema,
+    eventName: z.enum(TELEMETRY_EVENTS),
+    sessionId: z.string().uuid(),
     timestamp: z.iso.datetime(),
-    properties: z.record(z.string(), z.unknown()),
+    systemProps: z
+      .object({
+        isDebug: z.literal(false),
+        osName: z.enum([
+          'Windows',
+          'macOS',
+          'Linux',
+          'AIX',
+          'FreeBSD',
+          'OpenBSD',
+          'SunOS',
+          'Android',
+          'Cygwin',
+          'Haiku',
+          'NetBSD',
+        ]),
+        osVersion: z.string().max(100),
+        locale: z.enum(['zh', 'en', 'ja', 'ru']),
+        appVersion: versionSchema,
+        engineName: z.enum(['Electron', 'Node.js']),
+        engineVersion: z.string().max(30),
+        sdkVersion: z.literal('baradar-aptabase@1'),
+      })
+      .strict(),
+    props: z.record(z.string().max(40), z.union([z.string().max(180), z.number().finite()])),
   })
   .strict();
 const queuedSchema = z
@@ -118,18 +151,22 @@ const privateKeys = new Set([
   'url',
 ]);
 const publicFrame = z
-  .object({
-    filename: z.string().refine(isDiagnosticFilename),
-    lineno: z.number().int().positive().max(10000000),
-    colno: z.number().int().positive().max(10000000),
-    chunk_id: z.string().uuid().optional(),
-    platform: z.enum(['node:javascript', 'web:javascript']),
-    function: z.literal('<app>'),
-    in_app: z.literal(true),
-  })
-  .strict();
+  .string()
+  .max(180)
+  .refine((value) => {
+    const match = /^([^:]+):(\d+):(\d+)$/.exec(value);
+    return (
+      !!match &&
+      isDiagnosticFilename(match[1]!) &&
+      Number(match[2]) > 0 &&
+      Number(match[2]) <= 10000000 &&
+      Number(match[3]) > 0 &&
+      Number(match[3]) <= 10000000
+    );
+  });
 const baseProperties = z.object({
-  $process_person_profile: z.literal(false),
+  event_id: z.string().uuid(),
+  identity_hash: hashSchema,
   app: z.literal(TELEMETRY_APP),
   version: versionSchema,
   distribution: z.enum(['installed', 'portable']),
@@ -137,12 +174,24 @@ const baseProperties = z.object({
   language: z.enum(['zh', 'en', 'ja', 'ru']),
   installation_id: hashSchema,
   app_session_id: z.string().uuid(),
-  $session_id: z.string().uuid().optional(),
+  session_id: z.string().uuid().optional(),
   identity_source: z.enum(['game_account', 'installation']),
   identity_confidence: z.enum(['confirmed', 'cached', 'installation']),
-  platform: z.enum(['aix', 'darwin', 'freebsd', 'linux', 'openbsd', 'sunos', 'win32', 'android']),
+  platform: z.enum([
+    'aix',
+    'darwin',
+    'freebsd',
+    'linux',
+    'openbsd',
+    'sunos',
+    'win32',
+    'android',
+    'cygwin',
+    'haiku',
+    'netbsd',
+  ]),
   arch: z.string().regex(/^[a-z0-9_]{1,20}$/),
-  telemetry_schema: z.literal(3),
+  telemetry_schema: z.literal(4),
 });
 const exceptionProperties = baseProperties
   .extend({
@@ -169,27 +218,16 @@ const exceptionProperties = baseProperties
     error_code: z.string().regex(/^(?:UNKNOWN|ABORT_ERR|E[A-Z_]{1,40}|SQLITE_[A-Z_]{1,40})$/),
     http_status: z.number().int().min(400).max(599).optional(),
     occurrences: z.number().int().positive().max(1000000000),
-    $exception_level: z.enum(['fatal', 'error']),
-    $exception_fingerprint: hashSchema,
-    $release_id: z.string().uuid().optional(),
-    $exception_list: z
-      .array(
-        z
-          .object({
-            type: z.enum(DIAGNOSTIC_ERROR_TYPES),
-            value: z
-              .string()
-              .max(150)
-              .regex(/^[A-Za-z_.]+: (?:UNKNOWN|ABORT_ERR|E[A-Z_]+|SQLITE_[A-Z_]+|HTTP [45]\d\d)$/),
-            mechanism: z.object({ handled: z.boolean(), synthetic: z.literal(true) }).strict(),
-            stacktrace: z
-              .object({ type: z.literal('raw'), frames: z.array(publicFrame).max(8) })
-              .strict()
-              .optional(),
-          })
-          .strict(),
-      )
-      .length(1),
+    error_level: z.enum(['fatal', 'error']),
+    error_fingerprint: hashSchema,
+    error_frame_1: publicFrame.optional(),
+    error_frame_2: publicFrame.optional(),
+    error_frame_3: publicFrame.optional(),
+    error_frame_4: publicFrame.optional(),
+    error_frame_5: publicFrame.optional(),
+    error_frame_6: publicFrame.optional(),
+    error_frame_7: publicFrame.optional(),
+    error_frame_8: publicFrame.optional(),
   })
   .strict();
 const propertySchemas: Partial<Record<TelemetryEventName, z.ZodType>> = {
@@ -208,13 +246,13 @@ const propertySchemas: Partial<Record<TelemetryEventName, z.ZodType>> = {
     })
     .strict(),
   app_updated: baseProperties.extend({ previous_version: versionSchema.optional() }).strict(),
-  $exception: exceptionProperties,
+  app_error: exceptionProperties,
   exception_summary: exceptionProperties,
   update_state_changed: baseProperties
     .extend({
       status: z.enum(['available', 'downloading', 'downloaded', 'installing', 'error']),
-      target_version: versionSchema.nullable(),
-      error_context: z.enum(['check', 'download', 'install']).nullable(),
+      target_version: versionSchema.optional(),
+      error_context: z.enum(['check', 'download', 'install']).optional(),
       duration_ms: z.number().finite().nonnegative().optional(),
       update_attempt_id: z.string().uuid().optional(),
     })
@@ -255,22 +293,25 @@ export function restoreOutbox(
     const parsed = queuedSchema.safeParse(item);
     if (!parsed.success) return [];
     const event = parsed.data;
-    if (!propertySchemas[event.payload.event]?.safeParse(event.payload.properties).success)
+    if (!propertySchemas[event.payload.eventName]?.safeParse(event.payload.props).success)
       return [];
     if (
       event.expiresAt <= now ||
       event.expiresAt > now + MAX_OUTBOX_AGE_MS ||
+      Date.parse(event.payload.timestamp) < now - MAX_OUTBOX_AGE_MS ||
+      Date.parse(event.payload.timestamp) > now ||
       JSON.stringify(event).length > 16384 ||
-      event.payload.properties.app !== TELEMETRY_APP ||
-      event.payload.properties.installation_id !== installationId ||
-      !versionSchema.safeParse(event.payload.properties.version).success ||
-      Object.keys(event.payload.properties).some((key) => privateKeys.has(key))
+      event.payload.props.app !== TELEMETRY_APP ||
+      event.payload.props.installation_id !== installationId ||
+      event.payload.systemProps.appVersion !== event.payload.props.version ||
+      !versionSchema.safeParse(event.payload.props.version).success ||
+      Object.keys(event.payload.props).some((key) => privateKeys.has(key))
     )
       return [];
     return [{ ...event, attempts: 0, nextAttemptAt: now }];
   });
 }
-/** UUIDv7 with the capture time embedded, as required by PostHog session aggregation. */
+/** Time-ordered session UUID with the capture time embedded. */
 export function uuid7(timestamp = Date.now()): string {
   const bytes = randomBytes(16);
   bytes.writeUIntBE(Math.max(0, Math.min(0xffffffffffff, Math.floor(timestamp))), 0, 6);

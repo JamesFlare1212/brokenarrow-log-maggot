@@ -16,7 +16,7 @@ function stateStore() {
   return { values, persistence };
 }
 function launch(store: ReturnType<typeof stateStore>, version = '4.1.8', allowed = true) {
-  const sent: { event: string; uuid: string; properties: Record<string, unknown> }[] = [];
+  const sent: { eventName: string; props: Record<string, unknown> }[] = [];
   const telemetry = new TelemetryService({
     allowed,
     version,
@@ -24,8 +24,8 @@ function launch(store: ReturnType<typeof stateStore>, version = '4.1.8', allowed
     identity: { installationId: '4f1351be-985f-4ec0-b1b5-6b48d507e346' },
     persistence: store.persistence,
     fetch: async (_url, init) => {
-      sent.push(...JSON.parse(String(init?.body)).batch);
-      return Response.json({ status: 'Ok' });
+      sent.push(...JSON.parse(String(init?.body)));
+      return Response.json({});
     },
   });
   services.push(telemetry);
@@ -61,7 +61,7 @@ describe('telemetry restart recovery', () => {
     next.telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(1000);
     expect(
-      next.sent.find((event) => event.event === 'update_attempt_result')?.properties,
+      next.sent.find((event) => event.eventName === 'update_attempt_result')?.props,
     ).toMatchObject({
       update_attempt_id: attempt.id,
       target_version: '4.1.9',
@@ -71,14 +71,14 @@ describe('telemetry restart recovery', () => {
     });
     expect(
       next.sent
-        .filter((event) => event.event === 'update_state_changed')
-        .every((event) => event.properties.update_attempt_id === attempt.id),
+        .filter((event) => event.eventName === 'update_state_changed')
+        .every((event) => event.props.update_attempt_id === attempt.id),
     ).toBe(true);
     next.telemetry.close();
     const third = launch(store, version);
     third.telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(1000);
-    expect(third.sent.some((event) => event.event === 'update_attempt_result')).toBe(false);
+    expect(third.sent.some((event) => event.eventName === 'update_attempt_result')).toBe(false);
   });
   it('reports interrupted downloads separately from update application failures', async () => {
     vi.useFakeTimers();
@@ -95,7 +95,7 @@ describe('telemetry restart recovery', () => {
     next.telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(1000);
     expect(
-      next.sent.find((event) => event.event === 'update_attempt_result')?.properties,
+      next.sent.find((event) => event.eventName === 'update_attempt_result')?.props,
     ).toMatchObject({ outcome: 'interrupted', last_stage: 'downloaded' });
   });
   it('backfills an unclean exit without claiming that every unclean exit was a crash', async () => {
@@ -109,7 +109,7 @@ describe('telemetry restart recovery', () => {
     const next = launch(store);
     next.telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(1000);
-    expect(next.sent.find((event) => event.event === 'previous_run_exit')?.properties.reason).toBe(
+    expect(next.sent.find((event) => event.eventName === 'previous_run_exit')?.props.reason).toBe(
       'unclean_exit',
     );
   });
@@ -136,15 +136,44 @@ describe('telemetry restart recovery', () => {
     first.telemetry.error('main', new Error());
     first.telemetry.close();
     const queue = (structuredClone(store.values.get('outbox')) as QueuedTelemetryEvent[]).filter(
-      (item) => item.payload.event === '$exception',
+      (item) => item.payload.eventName === 'app_error',
     );
-    const id = String(queue[0]!.payload.properties.installation_id);
+    const id = String(queue[0]!.payload.props.installation_id);
     expect(restoreOutbox(queue, Date.now(), id)).toHaveLength(1);
     expect(restoreOutbox(queue, Date.now(), 'f'.repeat(64))).toHaveLength(0);
-    queue[0]!.payload.properties.private_value = 'secret';
+    queue[0]!.payload.props.private_value = 'secret';
     expect(restoreOutbox(queue, Date.now(), id)).toHaveLength(0);
-    delete queue[0]!.payload.properties.private_value;
+    delete queue[0]!.payload.props.private_value;
     queue[0]!.expiresAt = Date.now() - 1;
     expect(restoreOutbox(queue, Date.now(), id)).toHaveLength(0);
+  });
+  it('drops legacy provider envelopes and stale capture times even when the local expiry is valid', () => {
+    const store = stateStore();
+    const first = launch(store);
+    first.telemetry.configure(true, 'en');
+    first.telemetry.matchStarted('local-match');
+    first.telemetry.close();
+    const event = (store.values.get('outbox') as QueuedTelemetryEvent[]).find(
+      (item) => item.payload.eventName === 'match_started',
+    )!;
+    const installationId = String(event.payload.props.installation_id);
+    expect(restoreOutbox([event], Date.now(), installationId)).toHaveLength(1);
+    const stale = structuredClone(event);
+    stale.payload.timestamp = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    expect(restoreOutbox([stale], Date.now(), installationId)).toEqual([]);
+    const legacy = {
+      ...event,
+      payload: {
+        event: 'match_started',
+        uuid: event.payload.props.event_id,
+        distinct_id: event.payload.props.identity_hash,
+        timestamp: event.payload.timestamp,
+        properties: { ...event.payload.props, telemetry_schema: 3 },
+      },
+    };
+    expect(restoreOutbox([legacy], Date.now(), installationId)).toEqual([]);
+    const privateFrame = structuredClone(event);
+    privateFrame.payload.systemProps.osVersion = 'x'.repeat(101);
+    expect(restoreOutbox([privateFrame], Date.now(), installationId)).toEqual([]);
   });
 });

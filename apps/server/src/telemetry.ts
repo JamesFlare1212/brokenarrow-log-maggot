@@ -7,6 +7,7 @@ import {
   type DiagnosticFrame,
 } from '@ba/contracts';
 import { createHash, randomUUID } from 'node:crypto';
+import { release } from 'node:os';
 import {
   MAX_OUTBOX_AGE_MS,
   MAX_OUTBOX_EVENTS,
@@ -27,9 +28,22 @@ import {
   type UpdateAttempt,
 } from './telemetry-protocol';
 export { TELEMETRY_APP, type ErrorSource } from './telemetry-protocol';
-export const TELEMETRY_ENDPOINT = 'https://posthog.jamesflare.com/batch/';
-// Public collection token. Administrative upload credentials never enter the application.
-export const TELEMETRY_PROJECT_TOKEN = 'phc_mNx5yuniKkMk4jrN828wJpvjNDtkaAuBRTPVw7UbrNGQ';
+export const TELEMETRY_ENDPOINT = 'https://aptabase.jamesflare.com/api/v0/events';
+// Public collection key. Administrative credentials never enter the application.
+export const TELEMETRY_APP_KEY = 'A-SH-7889591672';
+const operatingSystems: Record<NodeJS.Platform, string> = {
+  aix: 'AIX',
+  android: 'Android',
+  cygwin: 'Cygwin',
+  darwin: 'macOS',
+  freebsd: 'FreeBSD',
+  linux: 'Linux',
+  haiku: 'Haiku',
+  netbsd: 'NetBSD',
+  openbsd: 'OpenBSD',
+  sunos: 'SunOS',
+  win32: 'Windows',
+};
 const operations: Partial<Record<RpcMethod, string>> = {
   'players.report': 'player_report',
   'players.maggot': 'maggot_report',
@@ -92,7 +106,7 @@ const criticalEvents = new Set<TelemetryEventName>([
   'app_installed',
   'app_updated',
   'match_started',
-  '$exception',
+  'app_error',
   'exception_summary',
   'update_state_changed',
   'update_not_applied',
@@ -373,7 +387,6 @@ export class TelemetryService {
     error: unknown,
     operation?: RpcMethod,
     suppliedFrames?: DiagnosticFrame[],
-    releaseId = (globalThis as { _posthogReleaseId?: string })._posthogReleaseId,
   ): void {
     if (!this.enabled) return;
     this.flushErrors();
@@ -406,36 +419,22 @@ export class TelemetryService {
       this.run.fatal = true;
       this.write('run', this.run);
     }
-    const platform =
-      source === 'renderer' || source === 'renderer_rejection' || source === 'react'
-        ? 'web:javascript'
-        : 'node:javascript';
-    const frames = value.frames.map((frame) => ({
-      ...frame,
-      platform,
-      function: '<app>',
-      in_app: true,
-    }));
-    const payload = this.track('$exception', {
+    const frames = Object.fromEntries(
+      value.frames.map((frame, index) => [
+        `error_frame_${index + 1}`,
+        `${frame.filename}:${frame.lineno}:${frame.colno}`,
+      ]),
+    );
+    const payload = this.track('app_error', {
       source,
       operation,
       error_type: value.type,
       error_code: value.code,
       http_status: value.status,
       occurrences: 1,
-      $exception_level: fatal ? 'fatal' : 'error',
-      $exception_fingerprint: fingerprint,
-      ...(/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(releaseId ?? '')
-        ? { $release_id: releaseId }
-        : {}),
-      $exception_list: [
-        {
-          type: value.type,
-          value: `${context}: ${value.status ? `HTTP ${value.status}` : value.code}`,
-          mechanism: { handled: !fatal, synthetic: true },
-          ...(frames.length ? { stacktrace: { type: 'raw', frames } } : {}),
-        },
-      ],
+      error_level: fatal ? 'fatal' : 'error',
+      error_fingerprint: fingerprint,
+      ...frames,
     });
     if (payload) this.errors.set(key, { payload, repeats: 0, at: performance.now() });
   }
@@ -446,10 +445,9 @@ export class TelemetryService {
       if (item.repeats)
         this.enqueue({
           ...item.payload,
-          event: 'exception_summary',
-          uuid: randomUUID(),
+          eventName: 'exception_summary',
           timestamp: item.payload.timestamp,
-          properties: { ...item.payload.properties, occurrences: item.repeats },
+          props: { ...item.payload.props, event_id: randomUUID(), occurrences: item.repeats },
         });
       this.errors.delete(key);
     }
@@ -594,60 +592,79 @@ export class TelemetryService {
     eventId: string = randomUUID(),
   ): TelemetryEnvelope | null {
     if (!this.enabled) return null;
-    const duplicate = this.queue.find((item) => item.payload.uuid === eventId);
+    const duplicate = this.queue.find((item) => item.payload.props.event_id === eventId);
     if (duplicate) return duplicate.payload;
     const now = Date.now(),
       mono = performance.now();
-    if (activity) {
-      if (
-        !this.sessionId ||
-        mono - this.lastActivityAt >= 30 * 60 * 1000 ||
-        now - this.sessionStartedAt >= 24 * 60 * 60 * 1000 - 60000 ||
-        now < this.sessionStartedAt
-      ) {
-        this.sessionId = uuid7(now);
-        this.sessionStartedAt = now;
-      }
-      this.lastActivityAt = mono;
+    if (
+      !this.sessionId ||
+      (activity &&
+        Number.isFinite(this.lastActivityAt) &&
+        mono - this.lastActivityAt >= 30 * 60 * 1000) ||
+      now - this.sessionStartedAt >= 24 * 60 * 60 * 1000 - 60000 ||
+      now < this.sessionStartedAt
+    ) {
+      this.sessionId = uuid7(now);
+      this.sessionStartedAt = now;
     }
+    if (activity) this.lastActivityAt = mono;
     const hasSession =
       this.sessionId &&
       mono - this.lastActivityAt < 30 * 60 * 1000 &&
       now >= this.sessionStartedAt &&
       now - this.sessionStartedAt < 24 * 60 * 60 * 1000;
+    const properties: Record<string, unknown> = {
+      event_id: eventId,
+      identity_hash: this.accountHash ?? this.installationId,
+      app: TELEMETRY_APP,
+      version: this.options.version,
+      distribution: this.options.distribution,
+      language: this.language,
+      installation_id: this.installationId,
+      app_session_id: this.runId,
+      ...(hasSession ? { session_id: this.sessionId } : {}),
+      identity_source: this.accountHash ? 'game_account' : 'installation',
+      identity_confidence: this.accountHash
+        ? this.accountConfirmed
+          ? 'confirmed'
+          : 'cached'
+        : 'installation',
+      platform: process.platform,
+      arch: process.arch,
+      telemetry_schema: 4,
+      ...data,
+    };
+    // Aptabase supports flat strings/numbers. Omit absent values and encode booleans as 0/1.
+    const props: TelemetryEnvelope['props'] = {};
+    for (const [key, value] of Object.entries(properties)) {
+      if (typeof value === 'boolean') props[key] = value ? 1 : 0;
+      else if (typeof value === 'string') props[key] = value.slice(0, 180);
+      else if (typeof value === 'number' && Number.isFinite(value)) props[key] = value;
+    }
     const payload: TelemetryEnvelope = {
-      event: name,
-      uuid: eventId,
-      distinct_id: this.accountHash ?? this.installationId,
+      eventName: name,
+      sessionId: this.sessionId,
       timestamp: new Date(now).toISOString(),
-      properties: {
-        $process_person_profile: false,
-        app: TELEMETRY_APP,
-        version: this.options.version,
-        distribution: this.options.distribution,
-        language: this.language,
-        installation_id: this.installationId,
-        app_session_id: this.runId,
-        ...(hasSession ? { $session_id: this.sessionId } : {}),
-        identity_source: this.accountHash ? 'game_account' : 'installation',
-        identity_confidence: this.accountHash
-          ? this.accountConfirmed
-            ? 'confirmed'
-            : 'cached'
-          : 'installation',
-        platform: process.platform,
-        arch: process.arch,
-        telemetry_schema: 3,
-        ...data,
+      systemProps: {
+        isDebug: false,
+        osName: operatingSystems[process.platform],
+        osVersion: release(),
+        locale: this.language,
+        appVersion: this.options.version,
+        engineName: process.versions.electron ? 'Electron' : 'Node.js',
+        engineVersion: process.versions.electron ?? process.versions.node,
+        sdkVersion: 'baradar-aptabase@1',
       },
+      props,
     };
     return this.enqueue(payload) ? payload : null;
   }
   private enqueue(payload: TelemetryEnvelope): boolean {
-    const critical = criticalEvents.has(payload.event);
+    const critical = criticalEvents.has(payload.eventName);
     if (critical && this.queue.filter((item) => item.critical).length >= MAX_OUTBOX_EVENTS) {
       const victim = this.queue.findIndex(
-        (item) => item.payload.event === '$exception' || item.payload.event === 'exception_summary',
+        (item) =>
+          item.payload.eventName === 'app_error' || item.payload.eventName === 'exception_summary',
       );
       if (victim < 0) {
         this.dropped++;
@@ -722,23 +739,18 @@ export class TelemetryService {
     try {
       const response = await this.options.fetch(TELEMETRY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'App-Key': TELEMETRY_APP_KEY },
         credentials: 'omit',
         redirect: 'error',
         signal: AbortSignal.any([this.controller.signal, AbortSignal.timeout(3000)]),
-        body: JSON.stringify({
-          api_key: TELEMETRY_PROJECT_TOKEN,
-          batch: batch.map((item) => item.payload),
-        }),
+        body: JSON.stringify(batch.map((item) => item.payload)),
       });
       retryAfter = response.headers.get('Retry-After');
       retryable =
         response.ok || response.status === 408 || response.status === 429 || response.status >= 500;
-      if (response.ok) {
-        const value: unknown = await response.json();
-        accepted =
-          !!value && typeof value === 'object' && 'status' in value && value.status === 'Ok';
-      } else await response.body?.cancel();
+      // Aptabase acknowledges successful ingestion with an empty JSON object.
+      accepted = response.ok;
+      await response.body?.cancel();
     } catch {
       /* Delivery failures never enter the application's error UI. */
     }
@@ -748,11 +760,11 @@ export class TelemetryService {
       if (accepted) {
         this.queue.splice(this.queue.indexOf(item), 1);
         try {
-          this.acknowledgements.get(item.payload.uuid)?.();
+          this.acknowledgements.get(String(item.payload.props.event_id))?.();
         } catch {
           this.persistenceFailures++;
         }
-        this.acknowledgements.delete(item.payload.uuid);
+        this.acknowledgements.delete(String(item.payload.props.event_id));
       } else {
         item.attempts++;
         if (!retryable || (!item.critical && item.attempts >= 5)) {

@@ -1,4 +1,4 @@
-export const TELEMETRY_CONSENT_VERSION = 3;
+export const TELEMETRY_CONSENT_VERSION = 4;
 export const TELEMETRY_FEATURES = [
   'current',
   'radar',
@@ -28,7 +28,6 @@ export interface DiagnosticFrame {
   filename: string;
   lineno: number;
   colno: number;
-  chunk_id?: string;
 }
 export interface TelemetryRuntimeSample {
   foreground: boolean;
@@ -72,19 +71,6 @@ export function diagnosticFrames(stack: unknown): DiagnosticFrame[] {
         : [];
     })
     .slice(0, 8);
-  const chunks = (globalThis as { _posthogChunkIds?: Record<string, string> })._posthogChunkIds;
-  if (chunks && typeof chunks === 'object') {
-    for (const [trace, id] of Object.entries(chunks).slice(0, 500)) {
-      if (!/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(id)) continue;
-      const owner = trace
-        .split('\n')
-        .slice(1)
-        .map((line) => /[\\/]([^\\/():]+\.(?:ts|cjs|js)):(\d+):(\d+)\)?$/.exec(line.trim()))
-        .find((match) => match && isDiagnosticFilename(match[1]!));
-      for (const frame of frames)
-        if (frame.filename === owner?.[1]) (frame as DiagnosticFrame).chunk_id = id;
-    }
-  }
   return frames;
 }
 export function hasTelemetryConsent(config: {

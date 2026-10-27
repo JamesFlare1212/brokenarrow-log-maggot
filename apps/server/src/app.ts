@@ -160,13 +160,7 @@ export class Application {
       'diagnostics.report': (input) => {
         if (input.type === 'feature') this.telemetry.feature(input.feature);
         else if (input.type === 'error')
-          this.telemetry.error(
-            input.source,
-            { name: input.errorType },
-            undefined,
-            input.frames,
-            input.releaseId,
-          );
+          this.telemetry.error(input.source, { name: input.errorType }, undefined, input.frames);
         else if (input.type === 'long_tasks') this.telemetry.longTasks(input);
         else this.telemetry.performance(input.metric, input.durationMs);
         return null;

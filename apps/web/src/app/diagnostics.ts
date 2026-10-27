@@ -23,7 +23,6 @@ export function reportRendererError(
       frames: diagnosticFrames(
         error && typeof error === 'object' && 'stack' in error ? error.stack : undefined,
       ),
-      releaseId: (globalThis as { _posthogReleaseId?: string })._posthogReleaseId,
     })
     .catch(() => {});
 }

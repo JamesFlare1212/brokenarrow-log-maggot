@@ -246,7 +246,7 @@ describe('application cache management', () => {
 describe('application telemetry', () => {
   it('counts live match starts while excluding recovered logs, metadata, and repeated room notifications', async () => {
     vi.useFakeTimers();
-    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
     const p = platform(fetchImpl);
     p.telemetry = { enabled: true, distribution: 'installed' };
     const app = application(p, [], true);
@@ -270,8 +270,8 @@ describe('application telemetry', () => {
       ]);
       await vi.advanceTimersByTimeAsync(1000);
       const matches = fetchImpl.mock.calls
-        .flatMap(([, init]) => JSON.parse(String(init?.body)).batch)
-        .filter((event) => event.event === 'match_started');
+        .flatMap(([, init]) => JSON.parse(String(init?.body)))
+        .filter((event) => event.eventName === 'match_started');
       expect(matches).toHaveLength(2);
       expect(JSON.stringify(matches)).not.toMatch(/private-game|9227650|9227651|Dam|Test/);
       app.parser.reset('private-game.log');
@@ -282,8 +282,8 @@ describe('application telemetry', () => {
       await vi.advanceTimersByTimeAsync(1000);
       expect(
         fetchImpl.mock.calls
-          .flatMap(([, init]) => JSON.parse(String(init?.body)).batch)
-          .filter((event) => event.event === 'match_started'),
+          .flatMap(([, init]) => JSON.parse(String(init?.body)))
+          .filter((event) => event.eventName === 'match_started'),
       ).toHaveLength(2);
     } finally {
       vi.useRealTimers();
@@ -293,24 +293,24 @@ describe('application telemetry', () => {
   it.each([true, false])(
     'captures startup failures before service start only with saved consent: %s',
     async (consent) => {
-      const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+      const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
       const p = platform(fetchImpl);
       p.telemetry = { enabled: true, distribution: 'installed' };
       const app = application(p, [], true);
       app.db.updateConfig({
         telemetryEnabled: consent,
         telemetryConsentConfirmed: true,
-        telemetryConsentVersion: 3,
+        telemetryConsentVersion: 4,
       });
       app.reportError('startup', new TypeError('private startup detail'));
       const outbox = app.db.state<
-        { payload: { event: string; properties: Record<string, unknown> } }[]
+        { payload: { eventName: string; props: Record<string, unknown> } }[]
       >('telemetry:outbox:v1', []);
-      expect(outbox.some((item) => item.payload.event === '$exception')).toBe(consent);
+      expect(outbox.some((item) => item.payload.eventName === 'app_error')).toBe(consent);
       if (consent) {
         expect(
-          outbox.find((item) => item.payload.event === '$exception')?.payload.properties,
-        ).toMatchObject({ source: 'startup', $exception_level: 'fatal' });
+          outbox.find((item) => item.payload.eventName === 'app_error')?.payload.props,
+        ).toMatchObject({ source: 'startup', error_level: 'fatal' });
         expect(app.db.state<{ fatal?: boolean }>('telemetry:run:v1', {}).fatal).toBe(true);
       }
       expect(JSON.stringify(outbox)).not.toContain('private startup detail');
@@ -340,7 +340,7 @@ describe('application telemetry', () => {
 
   it('applies consent immediately and keeps raw RPC inputs and error messages private', async () => {
     vi.useFakeTimers();
-    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
     const p = platform(fetchImpl);
     p.telemetry = { enabled: true, distribution: 'installed' };
     const app = application(p, [], true);
@@ -352,7 +352,7 @@ describe('application telemetry', () => {
       await vi.advanceTimersByTimeAsync(2000);
       expect(fetchImpl).toHaveBeenCalledTimes(1);
       const bodies = fetchImpl.mock.calls.flatMap(([, init]) =>
-        JSON.parse(String(init?.body)).batch.map((event: unknown) => JSON.stringify(event)),
+        JSON.parse(String(init?.body)).map((event: unknown) => JSON.stringify(event)),
       );
       expect(bodies[0]).toContain('"language":"en"');
       expect(bodies[1]).toContain('"operation":"recording_play"');

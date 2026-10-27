@@ -84,7 +84,7 @@ export const fixtureBootstrap: Bootstrap = {
     logDir: 'test-profile/GameLogs',
     telemetryEnabled: false,
     telemetryConsentConfirmed: true,
-    telemetryConsentVersion: 3,
+    telemetryConsentVersion: 4,
   }),
   session: {
     generation: 1,

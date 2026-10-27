@@ -118,7 +118,6 @@ export const rpcSchemas = {
         type: z.literal('error'),
         source: z.enum(['renderer', 'renderer_rejection', 'react']),
         errorType: z.enum(DIAGNOSTIC_ERROR_TYPES),
-        releaseId: z.string().uuid().optional(),
         frames: z
           .array(
             z
@@ -126,7 +125,6 @@ export const rpcSchemas = {
                 filename: z.string().refine(isDiagnosticFilename),
                 lineno: z.number().int().positive().max(10000000),
                 colno: z.number().int().positive().max(10000000),
-                chunk_id: z.string().uuid().optional(),
               })
               .strict(),
           )

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   TelemetryService,
   TELEMETRY_ENDPOINT,
-  TELEMETRY_PROJECT_TOKEN,
+  TELEMETRY_APP_KEY,
   type TelemetryIdentity,
 } from '../apps/server/src/telemetry';
 import type { TelemetryPersistence } from '../apps/server/src/telemetry-protocol';
@@ -25,9 +25,7 @@ function setup(
     version?: string;
   } = {},
 ) {
-  const fetchImpl = vi.fn<typeof fetch>(
-    options.fetch ?? (async () => Response.json({ status: 'Ok' })),
-  );
+  const fetchImpl = vi.fn<typeof fetch>(options.fetch ?? (async () => Response.json({})));
   const telemetry = new TelemetryService({
     allowed: options.allowed ?? true,
     fetch: fetchImpl,
@@ -40,7 +38,7 @@ function setup(
   return {
     telemetry,
     fetchImpl,
-    events: () => fetchImpl.mock.calls.flatMap(([, init]) => JSON.parse(String(init?.body)).batch),
+    events: () => fetchImpl.mock.calls.flatMap(([, init]) => JSON.parse(String(init?.body))),
   };
 }
 afterEach(() => {
@@ -48,7 +46,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
-describe('consented reliable PostHog delivery', () => {
+describe('consented reliable Aptabase delivery', () => {
   it('counts each live match start once without sending its local identifier', async () => {
     vi.useFakeTimers();
     const { telemetry, events } = setup();
@@ -62,15 +60,15 @@ describe('consented reliable PostHog delivery', () => {
     telemetry.matchStarted('private-match-session-1');
     telemetry.matchStarted('private-match-session-2');
     await vi.advanceTimersByTimeAsync(1000);
-    const matches = events().filter((event) => event.event === 'match_started');
+    const matches = events().filter((event) => event.eventName === 'match_started');
     expect(matches).toHaveLength(2);
-    expect(new Set(matches.map((event) => event.uuid)).size).toBe(2);
-    expect(matches[0].properties.$session_id).toBeTruthy();
+    expect(new Set(matches.map((event) => event.props.event_id)).size).toBe(2);
+    expect(matches[0].props.session_id).toBeTruthy();
     expect(JSON.stringify(matches)).not.toMatch(/private-match|before-consent|918273645/);
     telemetry.configure(false, 'en');
     telemetry.matchStarted('after-opt-out');
     await vi.advanceTimersByTimeAsync(1000);
-    expect(events().filter((event) => event.event === 'match_started')).toHaveLength(2);
+    expect(events().filter((event) => event.eventName === 'match_started')).toHaveLength(2);
   });
 
   it('persists match starts and replays the original envelope after restart', async () => {
@@ -80,14 +78,14 @@ describe('consented reliable PostHog delivery', () => {
     first.telemetry.configure(true, 'en');
     first.telemetry.matchStarted('private-match-session');
     first.telemetry.close();
-    const saved = (persistence.values.get('outbox') as { payload: { event: string } }[]).find(
-      (item) => item.payload.event === 'match_started',
+    const saved = (persistence.values.get('outbox') as { payload: { eventName: string } }[]).find(
+      (item) => item.payload.eventName === 'match_started',
     )!;
     expect(saved).toBeDefined();
     const second = setup({ persistence: persistence.persistence, version: '4.2.0' });
     second.telemetry.configure(true, 'zh');
     await vi.advanceTimersByTimeAsync(1000);
-    expect(second.events().filter((event) => event.event === 'match_started')).toEqual([
+    expect(second.events().filter((event) => event.eventName === 'match_started')).toEqual([
       saved.payload,
     ]);
     expect(persistence.values.get('outbox')).toEqual([]);
@@ -122,27 +120,72 @@ describe('consented reliable PostHog delivery', () => {
     expect(url).toBe(TELEMETRY_ENDPOINT);
     expect(init).toMatchObject({ method: 'POST', credentials: 'omit', redirect: 'error' });
     expect(new Headers(init?.headers).has('Authorization')).toBe(false);
-    expect(JSON.parse(String(init?.body)).api_key).toBe(TELEMETRY_PROJECT_TOKEN);
-    expect(events().map((event) => event.event)).toEqual([
+    expect(new Headers(init?.headers).get('App-Key')).toBe(TELEMETRY_APP_KEY);
+    expect(Array.isArray(JSON.parse(String(init?.body)))).toBe(true);
+    expect(Object.keys(events()[0]).sort()).toEqual([
+      'eventName',
+      'props',
+      'sessionId',
+      'systemProps',
+      'timestamp',
+    ]);
+    expect(events()[0].systemProps).toMatchObject({
+      isDebug: false,
+      appVersion: '4.1.8',
+      locale: 'zh',
+      osName: expect.any(String),
+      osVersion: expect.any(String),
+      engineName: 'Node.js',
+      engineVersion: process.versions.node,
+      sdkVersion: 'baradar-aptabase@1',
+    });
+    expect(events().map((event) => event.eventName)).toEqual([
       'app_started',
       'operation_completed',
       'operation_completed',
     ]);
-    expect(events()[1].properties).toMatchObject({
+    expect(events()[1].props).toMatchObject({
       version: '4.1.8',
       language: 'zh',
       distribution: 'portable',
       operation: 'deck_backup',
       duration_ms: 1200,
       result: 'success',
-      $process_person_profile: false,
       identity_confidence: 'installation',
     });
-    expect(events()[2].properties.duration_ms).toBe(15000);
-    expect(new Set(events().map((event) => event.uuid)).size).toBe(3);
-    expect(events()[0].properties.$session_id).toMatch(
+    expect(events()[2].props.duration_ms).toBe(15000);
+    expect(new Set(events().map((event) => event.props.event_id)).size).toBe(3);
+    expect(events()[0].props.session_id).toMatch(
       /^[\da-f]{8}-[\da-f]{4}-7[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/,
     );
+  });
+  it('acknowledges an empty 204 response and shares one native session across installation and startup', async () => {
+    vi.useFakeTimers();
+    const persistence = store();
+    const { telemetry, fetchImpl, events } = setup({
+      persistence: persistence.persistence,
+      fetch: async () => new Response(null, { status: 204 }),
+    });
+    const delivered = vi.fn();
+    telemetry.observeInstallation(
+      { version: '4.1.8', kind: 'first_run', reported: false },
+      delivered,
+    );
+    telemetry.configure(true, 'en');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(delivered).toHaveBeenCalledTimes(1);
+    expect(persistence.values.get('outbox')).toEqual([]);
+    expect(events().map((event) => event.eventName)).toEqual(['app_installed', 'app_started']);
+    expect(new Set(events().map((event) => event.sessionId)).size).toBe(1);
+    await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+    expect(events().at(-1).eventName).toBe('app_heartbeat');
+    expect(events().at(-1).props.session_id).toBeUndefined();
+    expect(events().at(-1).sessionId).toBe(events()[0].sessionId);
+    expect(events().at(-1).props.foreground).toBe(0);
+    expect(events().at(-1).props.active).toBe(0);
+    expect(
+      fetchImpl.mock.calls.every(([, init]) => JSON.parse(String(init?.body)).length <= 20),
+    ).toBe(true);
   });
   it('excludes operations spanning consent boundaries and permanently stops after close', async () => {
     vi.useFakeTimers();
@@ -158,8 +201,8 @@ describe('consented reliable PostHog delivery', () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(
       events()
-        .filter((event) => event.event === 'operation_completed')
-        .map((event) => event.properties.operation),
+        .filter((event) => event.eventName === 'operation_completed')
+        .map((event) => event.props.operation),
     ).toEqual(['deck_backup']);
     telemetry.close();
     const count = events().length;
@@ -190,7 +233,7 @@ describe('consented reliable PostHog delivery', () => {
     telemetry.configure(false, 'en');
     expect(signal.aborted).toBe(true);
     expect(persistence.values.get('outbox')).toEqual([]);
-    resolve(Response.json({ status: 'Ok' }));
+    resolve(Response.json({}));
     await vi.advanceTimersByTimeAsync(5000);
     expect(delivered).not.toHaveBeenCalled();
     expect(persistence.values.get('outbox')).toEqual([]);
@@ -202,15 +245,15 @@ describe('consented reliable PostHog delivery', () => {
     const { telemetry, fetchImpl } = setup({
       fetch: async () => {
         if (++attempts === 1) throw new Error('Offline');
-        return Response.json({ status: 'Ok' });
+        return Response.json({});
       },
     });
     telemetry.configure(true, 'en');
     telemetry.operation('decks.backup', true, 20);
     await vi.advanceTimersByTimeAsync(2000);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(String(fetchImpl.mock.calls[1]![1]!.body)).batch).toEqual(
-      JSON.parse(String(fetchImpl.mock.calls[0]![1]!.body)).batch,
+    expect(JSON.parse(String(fetchImpl.mock.calls[1]![1]!.body))).toEqual(
+      JSON.parse(String(fetchImpl.mock.calls[0]![1]!.body)),
     );
   });
   it('honors Retry-After and does not retry permanent HTTP failures', async () => {
@@ -220,7 +263,7 @@ describe('consented reliable PostHog delivery', () => {
       fetch: async () =>
         ++count === 1
           ? new Response('{}', { status: 429, headers: { 'Retry-After': '4' } })
-          : Response.json({ status: 'Ok' }),
+          : Response.json({}),
     });
     limited.telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(4999);
@@ -255,7 +298,7 @@ describe('consented reliable PostHog delivery', () => {
     });
     second.telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(1000);
-    expect(second.events().find((event) => event.uuid === state.eventId)).toEqual(
+    expect(second.events().find((event) => event.props.event_id === state.eventId)).toEqual(
       saved[0]!.payload,
     );
     expect(persistence.values.get('outbox')).toEqual([]);
@@ -266,9 +309,9 @@ describe('consented reliable PostHog delivery', () => {
     telemetry.configure(true, 'en');
     for (let i = 0; i < 1000; i++) telemetry.operation('decks.backup', true, 10);
     await vi.advanceTimersByTimeAsync(61000);
-    expect(events().filter((event) => event.event === 'operation_completed')).toHaveLength(199);
+    expect(events().filter((event) => event.eventName === 'operation_completed')).toHaveLength(199);
     expect(
-      events().find((event) => event.event === 'app_heartbeat').properties.delivery_dropped_total,
+      events().find((event) => event.eventName === 'app_heartbeat').props.delivery_dropped_total,
     ).toBe(801);
   });
   it('bounds shutdown flush time while preserving critical events for the next launch', async () => {
@@ -286,8 +329,8 @@ describe('consented reliable PostHog delivery', () => {
     telemetry.close();
     expect(fetchImpl.mock.calls[0]![1]!.signal!.aborted).toBe(true);
     expect(
-      (persistence.values.get('outbox') as { payload: { event: string } }[]).filter(
-        (item) => item.payload.event === '$exception',
+      (persistence.values.get('outbox') as { payload: { eventName: string } }[]).filter(
+        (item) => item.payload.eventName === 'app_error',
       ),
     ).toHaveLength(1);
   });
@@ -296,24 +339,24 @@ describe('consented reliable PostHog delivery', () => {
     const { telemetry, events } = setup();
     telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(1000);
-    const first = events()[0].properties.$session_id;
+    const first = events()[0].props.session_id;
     const epoch = Date.now();
     const uuidTime = Number.parseInt(first.replaceAll('-', '').slice(0, 12), 16);
     expect(uuidTime).toBeLessThanOrEqual(Date.parse(events()[0].timestamp));
     await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
     telemetry.feature('decks');
     await vi.advanceTimersByTimeAsync(1000);
-    const second = events().at(-1).properties.$session_id;
+    const second = events().at(-1).props.session_id;
     expect(second).not.toBe(first);
     vi.setSystemTime(epoch - 1000);
     telemetry.feature('archive');
     await vi.advanceTimersByTimeAsync(1000);
-    const third = events().at(-1).properties.$session_id;
+    const third = events().at(-1).props.session_id;
     expect(third).not.toBe(second);
     vi.setSystemTime(epoch + 25 * 60 * 60 * 1000);
     telemetry.feature('players');
     await vi.advanceTimersByTimeAsync(1000);
-    expect(events().at(-1).properties.$session_id).not.toBe(third);
+    expect(events().at(-1).props.session_id).not.toBe(third);
   });
   it('keeps the same installation ID but uses a new run ID after restart', async () => {
     vi.useFakeTimers();
@@ -324,9 +367,9 @@ describe('consented reliable PostHog delivery', () => {
     const second = setup();
     second.telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(1000);
-    expect(second.events()[0].distinct_id).toBe(first.events()[0].distinct_id);
-    expect(second.events()[0].properties.app_session_id).not.toBe(
-      first.events()[0].properties.app_session_id,
+    expect(second.events()[0].props.identity_hash).toBe(first.events()[0].props.identity_hash);
+    expect(second.events()[0].props.app_session_id).not.toBe(
+      first.events()[0].props.app_session_id,
     );
   });
 });

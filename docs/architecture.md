@@ -41,8 +41,8 @@ deduplication uses a set of match IDs.
 
 ## Optional usage and diagnostic telemetry
 
-The main process sends explicit PostHog events after the user accepts disclosure
-version 3. This includes installation and version transitions, minute presence
+The main process sends explicit Aptabase events after the user accepts disclosure
+version 4. This includes installation and version transitions, minute presence
 heartbeats, selected feature results and numeric durations, classified exceptions,
 and application performance samples. Older disclosure versions must confirm the
 expanded disclosure; saved refusals remain disabled without another prompt.
@@ -52,20 +52,25 @@ the log parser, with an application-specific namespace. An installation UUID is
 stored locally and hashed for installation counting and as the fallback user ID.
 The last recognized account hash is persisted; raw account IDs and names are not
 included in telemetry. Each queued event freezes its identity at capture time.
-Account switches do not merge profiles or reattribute earlier events. No person
-profiles, browser tracker, cookies, or session replay are enabled.
+Account switches do not merge profiles or reattribute earlier events. Identity
+hashes are custom properties; Aptabase native users retain its anonymous counting
+semantics. No person profiles, browser tracker, cookies, or session replay
+are enabled.
 
 Requests use Electron's network stack, bounded batches and finite retries with
 three-second request timeouts. Up to 50 critical events are stored locally for
-seven days; shutdown performs a bounded flush before closing SQLite. UUIDv7
-PostHog sessions, foreground/active presence, restarted update-attempt confirmation,
+23 hours; shutdown performs a bounded flush before closing SQLite. UUIDv7
+interaction sessions, foreground/active presence, restarted update-attempt confirmation,
 unclean-exit recovery and complete long-task aggregates improve metric accuracy.
 Opt-out clears pending work and aborts requests. Unpackaged development,
 browser fixtures, offline mode, smoke tests, and BA_DISABLE_TELEMETRY=1 disable
-collection. Optional identity or delivery failures must not affect the app.
+collection. The service uses Aptabase batch ingestion directly so requests remain
+abortable and critical capture timestamps survive retries. The old provider
+outbox is discarded, and prior opt-ins must confirm the provider change.
+Optional identity or delivery failures must not affect the app.
 
 See [telemetry events and metric definitions](telemetry.md) for event fields,
-privacy boundaries, error and performance coverage, and PostHog queries.
+privacy boundaries, error and performance coverage, and Aptabase metric limits.
 
 ## Temporary QUIC workaround
 

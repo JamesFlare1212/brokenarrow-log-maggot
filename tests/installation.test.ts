@@ -19,7 +19,7 @@ async function directory() {
 async function launch(
   path: string,
   version: string,
-  fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' })),
+  fetchImpl = vi.fn<typeof fetch>(async () => Response.json({})),
   enabled = true,
   offline = false,
 ) {
@@ -72,8 +72,8 @@ function installation(app: Application) {
 }
 function events(fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>) {
   return fetchImpl.mock.calls
-    .flatMap(([, init]) => JSON.parse(String(init?.body)).batch)
-    .filter((event) => event.event !== 'performance_sample');
+    .flatMap(([, init]) => JSON.parse(String(init?.body)))
+    .filter((event) => event.eventName !== 'performance_sample');
 }
 afterEach(async () => {
   for (const app of applications.splice(0)) await app.stop();
@@ -82,13 +82,13 @@ afterEach(async () => {
 });
 
 describe('installation telemetry across real SQLite profiles', () => {
-  it('requires confirmation of expanded collection before resuming an older confirmed opt-in', async () => {
+  it('requires confirmation of the Aptabase provider before resuming an older confirmed opt-in', async () => {
     const path = await directory();
     const db = new Database(join(path, 'assistant.sqlite'));
     db.updateConfig({
       telemetryEnabled: true,
       telemetryConsentConfirmed: true,
-      telemetryConsentVersion: 0,
+      telemetryConsentVersion: 3,
     });
     db.close();
     vi.useFakeTimers();
@@ -96,9 +96,12 @@ describe('installation telemetry across real SQLite profiles', () => {
     await vi.advanceTimersByTimeAsync(61000);
     expect(fetchImpl).not.toHaveBeenCalled();
     await app.invoke('config.update', { telemetryEnabled: true });
-    expect(app.db.config().telemetryConsentVersion).toBe(3);
+    expect(app.db.config().telemetryConsentVersion).toBe(4);
     await vi.advanceTimersByTimeAsync(2000);
-    expect(events(fetchImpl).map((event) => event.event)).toEqual(['app_installed', 'app_started']);
+    expect(events(fetchImpl).map((event) => event.eventName)).toEqual([
+      'app_installed',
+      'app_started',
+    ]);
   });
 
   it('identifies only the local account from recovered logs and preserves its hash and installation across restarts', async () => {
@@ -120,7 +123,7 @@ describe('installation telemetry across real SQLite profiles', () => {
     const expected = createHash('sha256')
       .update('brokenarrow.desktop:account:918273645')
       .digest('hex');
-    expect(events(first.fetchImpl)[0].distinct_id).toBe(expected);
+    expect(events(first.fetchImpl)[0].props.identity_hash).toBe(expected);
     expect(JSON.stringify(events(first.fetchImpl))).not.toMatch(
       /918273645|55443322|LocalOwner|OtherPlayer/,
     );
@@ -132,7 +135,7 @@ describe('installation telemetry across real SQLite profiles', () => {
     await first.app.stop();
     const restarted = await launch(path, '4.1.8');
     await vi.advanceTimersByTimeAsync(2000);
-    expect(events(restarted.fetchImpl)[0].distinct_id).toBe(expected);
+    expect(events(restarted.fetchImpl)[0].props.identity_hash).toBe(expected);
     expect(restarted.app.db.state('telemetryIdentity', null)).toEqual(state);
   });
 
@@ -147,7 +150,7 @@ describe('installation telemetry across real SQLite profiles', () => {
     const { app, fetchImpl } = await launch(path, '4.1.8');
     await app.invoke('config.update', { telemetryEnabled: true });
     await vi.advanceTimersByTimeAsync(2000);
-    expect(events(fetchImpl).map((event) => event.event)).toEqual(['app_started']);
+    expect(events(fetchImpl).map((event) => event.eventName)).toEqual(['app_started']);
   });
 
   it('waits for consent, confirms a new installation once, and reports a changed version after restart', async () => {
@@ -173,22 +176,22 @@ describe('installation telemetry across real SQLite profiles', () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(events(first.fetchImpl)).toHaveLength(2);
     expect(events(first.fetchImpl)[0]).toMatchObject({
-      event: 'app_installed',
-      properties: { version: '4.1.8', kind: 'first_run', distribution: 'installed' },
+      eventName: 'app_installed',
+      props: { version: '4.1.8', kind: 'first_run', distribution: 'installed' },
     });
     expect(installation(first.app)?.reported).toBe(true);
     await first.app.stop();
 
     const restart = await launch(path, '4.1.8');
     await vi.advanceTimersByTimeAsync(2000);
-    expect(events(restart.fetchImpl).map((event) => event.event)).toEqual(['app_started']);
+    expect(events(restart.fetchImpl).map((event) => event.eventName)).toEqual(['app_started']);
     await restart.app.stop();
 
     const updated = await launch(path, '4.1.9');
     await vi.advanceTimersByTimeAsync(2000);
     expect(events(updated.fetchImpl)[0]).toMatchObject({
-      event: 'app_installed',
-      properties: { version: '4.1.9', kind: 'version_change', previous_version: '4.1.8' },
+      eventName: 'app_installed',
+      props: { version: '4.1.9', kind: 'version_change', previous_version: '4.1.8' },
     });
     expect(installation(updated.app)?.reported).toBe(true);
   });
@@ -214,7 +217,7 @@ describe('installation telemetry across real SQLite profiles', () => {
     expect(restarted.fetchImpl).not.toHaveBeenCalled();
     await restarted.app.invoke('config.update', { telemetryEnabled: true });
     await vi.advanceTimersByTimeAsync(3000);
-    expect(events(restarted.fetchImpl).map((event) => event.event)).toEqual([
+    expect(events(restarted.fetchImpl).map((event) => event.eventName)).toEqual([
       'app_installed',
       'app_updated',
       'app_started',
@@ -238,7 +241,7 @@ describe('installation telemetry across real SQLite profiles', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
     await app.invoke('config.update', { telemetryEnabled: true });
     await vi.advanceTimersByTimeAsync(2000);
-    expect(events(fetchImpl)[0].properties.kind).toBe('existing_profile');
+    expect(events(fetchImpl)[0].props.kind).toBe('existing_profile');
   });
 
   it.each(['database', 'legacy'] as const)(
@@ -252,7 +255,7 @@ describe('installation telemetry across real SQLite profiles', () => {
       expect(installation(app)?.kind).toBe('existing_profile');
       await app.invoke('config.update', { telemetryEnabled: true });
       await vi.advanceTimersByTimeAsync(2000);
-      expect(events(fetchImpl)[0].properties.kind).toBe('existing_profile');
+      expect(events(fetchImpl)[0].props.kind).toBe('existing_profile');
     },
   );
 
@@ -275,29 +278,29 @@ describe('installation telemetry across real SQLite profiles', () => {
     },
   );
 
-  it.each(['rejected', 'unexpected-response', 'server-error', 'network-error'] as const)(
+  it.each(['rate-limit', 'timeout', 'server-error', 'network-error'] as const)(
     'keeps %s events unconfirmed with bounded retries and stable installation IDs after restart',
     async (failure) => {
       const path = await directory();
       vi.useFakeTimers();
       const fetchImpl = vi.fn<typeof fetch>(async () => {
         if (failure === 'network-error') throw new Error('Offline');
-        if (failure === 'rejected') return Response.json({ status: 0 });
-        if (failure === 'unexpected-response') return Response.json({ sessionId: 'test' });
-        return Response.json({ status: 'Ok' }, { status: 500 });
+        if (failure === 'rate-limit') return new Response(null, { status: 429 });
+        if (failure === 'timeout') return new Response(null, { status: 408 });
+        return Response.json({}, { status: 500 });
       });
       const first = await launch(path, '4.1.8', fetchImpl);
       await first.app.invoke('config.update', { telemetryEnabled: true });
       await vi.advanceTimersByTimeAsync(10000);
-      const attempts = events(fetchImpl).filter((event) => event.event === 'app_installed');
+      const attempts = events(fetchImpl).filter((event) => event.eventName === 'app_installed');
       expect(attempts.length).toBeGreaterThan(1);
       expect(attempts.length).toBeLessThanOrEqual(5);
-      expect(new Set(attempts.map((event) => event.uuid)).size).toBe(1);
+      expect(new Set(attempts.map((event) => event.props.event_id)).size).toBe(1);
       expect(installation(first.app)?.reported).toBe(false);
       await first.app.stop();
       const restart = await launch(path, '4.1.8');
       await vi.advanceTimersByTimeAsync(2000);
-      expect(events(restart.fetchImpl)[0].properties.kind).toBe('first_run');
+      expect(events(restart.fetchImpl)[0].props.kind).toBe('first_run');
       expect(installation(restart.app)?.reported).toBe(true);
     },
   );

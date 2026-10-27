@@ -11,7 +11,7 @@ import { diagnosticErrorType, LongTaskAggregate } from '../apps/web/src/app/diag
 
 const services: TelemetryService[] = [];
 function setup() {
-  const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ status: 'Ok' }));
+  const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({}));
   const saveAccountHash = vi.fn();
   const telemetry = new TelemetryService({
     allowed: true,
@@ -25,7 +25,7 @@ function setup() {
     telemetry,
     fetchImpl,
     saveAccountHash,
-    events: () => fetchImpl.mock.calls.flatMap(([, init]) => JSON.parse(String(init?.body)).batch),
+    events: () => fetchImpl.mock.calls.flatMap(([, init]) => JSON.parse(String(init?.body))),
   };
 }
 afterEach(() => {
@@ -46,14 +46,12 @@ describe('account identity and diagnostics telemetry', () => {
     error.stack = 'TypeError: secret name\n    at fn (C:\\private\\app.ts:20:2)';
     telemetry.error('rpc', error, 'players.report');
     await vi.advanceTimersByTimeAsync(61000);
-    const errors = events().filter((event) => event.event === '$exception');
+    const errors = events().filter((event) => event.eventName === 'app_error');
     expect(errors).toHaveLength(2);
-    expect(errors[0].properties.$exception_fingerprint).not.toBe(
-      errors[1].properties.$exception_fingerprint,
-    );
-    const summary = events().filter((event) => event.event === 'exception_summary');
+    expect(errors[0].props.error_fingerprint).not.toBe(errors[1].props.error_fingerprint);
+    const summary = events().filter((event) => event.eventName === 'exception_summary');
     expect(summary).toHaveLength(1);
-    expect(summary[0].properties.occurrences).toBe(2);
+    expect(summary[0].props.occurrences).toBe(2);
     expect(JSON.stringify(events())).not.toMatch(/secret name|private/);
   });
 
@@ -80,8 +78,8 @@ describe('account identity and diagnostics telemetry', () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(
       events()
-        .filter((event) => event.event === 'feature_used')
-        .map((event) => [event.properties.feature, event.properties.action]),
+        .filter((event) => event.eventName === 'feature_used')
+        .map((event) => [event.props.feature, event.props.action]),
     ).toEqual([
       ['archive', 'view'],
       ['decks', 'view'],
@@ -102,26 +100,26 @@ describe('account identity and diagnostics telemetry', () => {
     telemetry.identifyAccount('55443322');
     cancelled(true);
     await vi.advanceTimersByTimeAsync(5000);
-    expect(events().map((event) => event.event)).toEqual([
+    expect(events().map((event) => event.eventName)).toEqual([
       'app_started',
       'user_identified',
       'operation_completed',
       'user_identified',
     ]);
-    expect(events()[1].distinct_id).toBe(expected);
-    expect(events()[2].distinct_id).toBe(expected);
-    expect(events()[3].distinct_id).not.toBe(expected);
-    expect(events()[2].properties).toMatchObject({
+    expect(events()[1].props.identity_hash).toBe(expected);
+    expect(events()[2].props.identity_hash).toBe(expected);
+    expect(events()[3].props.identity_hash).not.toBe(expected);
+    expect(events()[2].props).toMatchObject({
       identity_source: 'game_account',
       operation: 'player_search',
       duration_ms: 42,
     });
-    expect(new Set(events().map((event) => event.properties.installation_id)).size).toBe(1);
+    expect(new Set(events().map((event) => event.props.installation_id)).size).toBe(1);
     expect(JSON.stringify(events())).not.toMatch(/918273645|55443322/);
     expect(saveAccountHash).toHaveBeenCalledWith(expected);
     telemetry.identifyAccount('A private nickname');
     await vi.advanceTimersByTimeAsync(1000);
-    expect(events().at(-1).properties.identity_source).toBe('installation');
+    expect(events().at(-1).props.identity_source).toBe('installation');
   });
 
   it('sends periodic presence and resource metrics only during a consented session', async () => {
@@ -131,8 +129,8 @@ describe('account identity and diagnostics telemetry', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
     telemetry.configure(true, 'en');
     await vi.advanceTimersByTimeAsync(61000);
-    const heartbeat = events().find((event) => event.event === 'app_heartbeat');
-    expect(heartbeat.properties).toMatchObject({
+    const heartbeat = events().find((event) => event.eventName === 'app_heartbeat');
+    expect(heartbeat.props).toMatchObject({
       version: '4.1.8',
       uptime_seconds: expect.any(Number),
       rss_mb: expect.any(Number),
@@ -146,7 +144,7 @@ describe('account identity and diagnostics telemetry', () => {
     expect(events()).toHaveLength(count);
   });
 
-  it('reports grouped native PostHog exceptions without raw messages, paths, names, or external stack frames', async () => {
+  it('reports flat Aptabase error events without raw messages, paths, names, or external stack frames', async () => {
     vi.useFakeTimers();
     const { telemetry, events } = setup();
     telemetry.configure(true, 'en');
@@ -159,41 +157,26 @@ describe('account identity and diagnostics telemetry', () => {
     telemetry.error('rpc', error, 'players.report');
     telemetry.error('rpc', error, 'players.report');
     await vi.advanceTimersByTimeAsync(3000);
-    const exceptions = events().filter((event) => event.event === '$exception');
+    const exceptions = events().filter((event) => event.eventName === 'app_error');
     expect(exceptions).toHaveLength(1);
-    expect(exceptions[0].properties).toMatchObject({
+    expect(exceptions[0].props).toMatchObject({
       error_type: 'TypeError',
       error_code: 'ENOENT',
       http_status: 503,
-      $exception_fingerprint: expect.any(String),
-      $exception_list: [
-        {
-          type: 'TypeError',
-          value: 'players.report: HTTP 503',
-          mechanism: { handled: true, synthetic: true },
-          stacktrace: {
-            type: 'raw',
-            frames: [
-              {
-                platform: 'node:javascript',
-                function: '<app>',
-                filename: 'app.ts',
-                lineno: 25,
-                colno: 4,
-                in_app: true,
-              },
-            ],
-          },
-        },
-      ],
+      error_fingerprint: expect.any(String),
+      error_level: 'error',
+      error_frame_1: 'app.ts:25:4',
     });
+    for (const value of Object.values(exceptions[0].props)) {
+      expect(['string', 'number']).toContain(typeof value);
+    }
     expect(JSON.stringify(events())).not.toMatch(
       /PrivatePlayer|918273645|secret\.example|private\.js|Users/,
     );
     telemetry.configure(false, 'en');
     telemetry.error('main', error);
     await vi.advanceTimersByTimeAsync(2000);
-    expect(events().filter((event) => event.event === '$exception')).toHaveLength(1);
+    expect(events().filter((event) => event.eventName === 'app_error')).toHaveLength(1);
   });
 
   it('records numeric performance and updater transitions while suppressing progress duplicates', async () => {
@@ -214,13 +197,13 @@ describe('account identity and diagnostics telemetry', () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(
       events()
-        .filter((event) => event.event === 'performance_sample')
-        .map((event) => event.properties.duration_ms),
+        .filter((event) => event.eventName === 'performance_sample')
+        .map((event) => event.props.duration_ms),
     ).toEqual([352]);
     expect(
       events()
-        .filter((event) => event.event === 'update_state_changed')
-        .map((event) => event.properties.status),
+        .filter((event) => event.eventName === 'update_state_changed')
+        .map((event) => event.props.status),
     ).toEqual(['downloading', 'downloaded']);
   });
 
