@@ -20,7 +20,6 @@ import { MatchAwards } from '../matches/MatchAwards';
 import { Item, ItemContent, ItemActions } from '@/components/ui/item';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { useRosterHeight } from './useRosterHeight';
 export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const { state, api, openModal, notify } = useApp(),
     { t } = useI18n();
@@ -64,7 +63,6 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
         ? previous?.players || []
         : (state.session.current?.players ?? state.session.lobbyPlayers),
     match = view === 'previous' ? previous : state.session.current;
-  const { layout, reservedHeight } = useRosterHeight(players.length > 0, !standalone);
   const titles = useMemo(
     () => (match?.endedAt ? (match.titles ?? matchTitles(match)) : {}),
     [match],
@@ -357,13 +355,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
       title={title}
       showHeader={false}
     >
-      <div
-        ref={layout}
-        className="session-layout"
-        style={{ minHeight: players.length === 0 ? (reservedHeight ?? undefined) : undefined }}
-      >
-        {content}
-      </div>
+      <div className="session-layout">{content}</div>
     </Card>
   );
 }
