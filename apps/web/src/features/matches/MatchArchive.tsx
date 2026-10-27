@@ -20,7 +20,13 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Archive as faBoxArchive, Plus as faPlus, RefreshCw as faArrowsRotate } from 'lucide-react';
+import {
+  Archive as faBoxArchive,
+  Plus as faPlus,
+  RefreshCw as faArrowsRotate,
+  LayoutGrid,
+  List,
+} from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, formatDuration, outcomeTone } from '@ba/shared';
@@ -28,8 +34,19 @@ import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Badge, Field, Notice, Empty, Menu, Toggle, Dialog } from '../../components/ui';
+import {
+  Button,
+  Badge,
+  Field,
+  Notice,
+  Empty,
+  Menu,
+  Toggle,
+  Dialog,
+  Loading,
+} from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
+import { MatchArchiveCard } from './MatchArchiveCard';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
   const confirm = useConfirmation();
@@ -44,6 +61,7 @@ export function MatchArchive() {
     [addDialog, setAddDialog] = useState(false),
     [scanning, setScanning] = useState(false),
     [hideUnknown, setHideUnknown] = useState(false),
+    [view, setView] = useState<'grid' | 'list'>('list'),
     [page, setPage] = useState(1),
     [sorting, setSorting] = useState<SortingState>([{ id: 'time', desc: true }]),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
@@ -65,7 +83,7 @@ export function MatchArchive() {
   const currentPage = Math.min(page, pages);
   useLayoutEffect(() => {
     if (table.current) table.current.scrollTop = 0;
-  }, [currentPage, account, outcome, hideUnknown, sorting]);
+  }, [currentPage, account, outcome, hideUnknown, sorting, view]);
   const refresh = () =>
     void matches.load(
       () => api.invoke('matches.list', account ? { accountId: account } : {}),
@@ -254,6 +272,28 @@ export function MatchArchive() {
     getPaginationRowModel: getPaginationRowModel(),
     autoResetPageIndex: false,
   });
+  const empty = (
+    <Empty
+      icon={<Icon icon={faBoxArchive} size={26} />}
+      description={t('noMatchesHint')}
+      action={
+        outcome !== 'all' || account || hideUnknown ? (
+          <Button
+            onClick={() => {
+              setOutcome('all');
+              setAccount('');
+              setHideUnknown(false);
+              setPage(1);
+            }}
+          >
+            {t('clearFilters')}
+          </Button>
+        ) : undefined
+      }
+    >
+      {t(outcome !== 'all' || account || hideUnknown ? 'noFilteredMatches' : 'empty')}
+    </Empty>
+  );
   return (
     <section className="archive-panel" aria-label={t('archive')}>
       <div className="archive-toolbar">
@@ -307,6 +347,22 @@ export function MatchArchive() {
           <small className="muted">
             {t('samples')}: {filtered.length}
           </small>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            aria-label={t('archiveView')}
+            value={view}
+            onValueChange={(value) => {
+              if (value === 'grid' || value === 'list') setView(value);
+            }}
+          >
+            <ToggleGroupItem value="grid" aria-label={t('gridView')}>
+              <LayoutGrid aria-hidden="true" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label={t('listView')}>
+              <List aria-hidden="true" />
+            </ToggleGroupItem>
+          </ToggleGroup>
           <Button
             disabled={matches.pending || scanning}
             onClick={() => void scan()}
@@ -327,37 +383,39 @@ export function MatchArchive() {
         </div>
       </div>
       {matches.error && <Notice error>{matches.error}</Notice>}
-      <div className="data-table-surface">
-        <DataTable
-          table={dataTable}
-          label={t('archive')}
-          pending={matches.pending}
-          scrollRef={table}
-          className="archive-table"
-          empty={
-            <Empty
-              icon={<Icon icon={faBoxArchive} size={26} />}
-              description={t('noMatchesHint')}
-              action={
-                outcome !== 'all' || account || hideUnknown ? (
-                  <Button
-                    onClick={() => {
-                      setOutcome('all');
-                      setAccount('');
-                      setHideUnknown(false);
-                      setPage(1);
-                    }}
-                  >
-                    {t('clearFilters')}
-                  </Button>
-                ) : undefined
-              }
-            >
-              {t(outcome !== 'all' || account || hideUnknown ? 'noFilteredMatches' : 'empty')}
-            </Empty>
-          }
-        />
-      </div>
+      {view === 'grid' ? (
+        <div
+          className="archive-grid-viewport scroll-fade scroll-fade-4"
+          ref={table}
+          tabIndex={0}
+          aria-busy={matches.pending}
+        >
+          {dataTable.getRowModel().rows.length ? (
+            <ul className="archive-grid" aria-label={t('archive')}>
+              {dataTable.getRowModel().rows.map((row) => (
+                <li key={row.id}>
+                  <MatchArchiveCard match={row.original} />
+                </li>
+              ))}
+            </ul>
+          ) : matches.pending ? (
+            <Loading />
+          ) : (
+            empty
+          )}
+        </div>
+      ) : (
+        <div className="data-table-surface">
+          <DataTable
+            table={dataTable}
+            label={t('archive')}
+            pending={matches.pending}
+            scrollRef={table}
+            className="archive-table"
+            empty={empty}
+          />
+        </div>
+      )}
       <div className="results-pagination">
         <Pagination
           page={currentPage}

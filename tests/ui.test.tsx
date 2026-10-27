@@ -2167,6 +2167,117 @@ describe('user interaction regressions', () => {
     expect(screen.getByRole('link', { name: '第 2 页' }).getAttribute('aria-current')).toBe('page');
   });
 
+  it('preserves archive sorting and pagination when switching views without reloading matches', async () => {
+    const rows = Array.from({ length: 55 }, (_, index) =>
+      matchFixture({
+        id: `grid-${index}`,
+        map: `Grid map ${index}`,
+        endedAt: 1_700_000_000_000 + 55 - index,
+        eloBefore: 1500,
+        eloAfter: 1500 + index,
+        outcome: index % 2 === 0 ? 'win' : 'loss',
+      }),
+    );
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => rows });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    await screen.findByRole('button', { name: 'Grid map 0' });
+    fireEvent.click(screen.getByRole('button', { name: 'ELO 变化' }));
+    fireEvent.click(screen.getByRole('link', { name: '下一页' }));
+    const gridToggle = screen.getByRole('radio', { name: '网格视图' });
+    fireEvent.click(gridToggle);
+    const grid = screen.getByRole('list', { name: '对局档案' });
+    expect(gridToggle.getAttribute('aria-checked')).toBe('true');
+    expect(screen.queryByRole('table', { name: '对局档案' })).toBeNull();
+    expect(grid.children).toHaveLength(5);
+    expect(grid.children[0]?.textContent).toContain('Grid map 4');
+    expect(screen.getByText('第 51–55 条，共 55 条')).toBeTruthy();
+    fireEvent.click(gridToggle);
+    expect(screen.getByRole('list', { name: '对局档案' })).toBe(grid);
+    fireEvent.click(screen.getByRole('radio', { name: '列表视图' }));
+    expect(
+      within(screen.getByRole('table', { name: '对局档案' })).getAllByRole('row')[1]?.textContent,
+    ).toContain('Grid map 4');
+    fireEvent.click(gridToggle);
+    const currentViewport = screen.getByRole('list', { name: '对局档案' }).parentElement!;
+    currentViewport.scrollTop = 150;
+    fireEvent.click(screen.getByRole('radio', { name: '胜利' }));
+    expect(currentViewport.scrollTop).toBe(0);
+    expect(screen.getByText('第 1–28 条，共 28 条')).toBeTruthy();
+    expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(1);
+    expect(native.calls.filter((call) => call.method === 'matches.detail')).toHaveLength(0);
+  });
+
+  it('shows archive team relationships, rating fallbacks and player navigation without querying details', async () => {
+    const players = matchFixture()
+      .players.slice(0, 4)
+      .map((player, index) => ({
+        ...player,
+        teamId: ([0, 1, 100, null] as const)[index] ?? null,
+        newRating: index === 0 ? 2056 : null,
+        oldRating: index === 1 ? 1876 : null,
+      }));
+    const match = matchFixture({ players, localPlayerId: players[1]!.id });
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [match] });
+    function ModalProbe() {
+      const { modal } = useApp();
+      return <output data-testid="archive-modal">{JSON.stringify(modal)}</output>;
+    }
+    render(
+      <>
+        <MatchArchive />
+        <ModalProbe />
+      </>,
+      { wrapper: wrapper(native.api) },
+    );
+    await screen.findByRole('button', { name: match.map });
+    fireEvent.click(screen.getByRole('radio', { name: '网格视图' }));
+    const grid = within(screen.getByRole('list', { name: '对局档案' }));
+    expect(grid.getByText('4 位玩家')).toBeTruthy();
+    expect(grid.getByRole('heading', { name: 'Alpha · 对方队伍' })).toBeTruthy();
+    expect(grid.getByRole('heading', { name: 'Bravo · 我方队伍' })).toBeTruthy();
+    expect(grid.getByRole('heading', { name: '观战' })).toBeTruthy();
+    expect(grid.getByRole('heading', { name: '未知' })).toBeTruthy();
+    expect(grid.getByText('2,056')).toBeTruthy();
+    expect(grid.getByText('1,876')).toBeTruthy();
+    expect(grid.getAllByText('—')).toHaveLength(2);
+    expect(grid.queryByRole('button', { name: /刷新/ })).toBeNull();
+    fireEvent.click(grid.getByRole('button', { name: match.map }));
+    expect(JSON.parse(screen.getByTestId('archive-modal').textContent!)).toEqual({
+      type: 'match',
+      fid: match.fid,
+    });
+    fireEvent.click(grid.getByRole('button', { name: players[0]!.name }));
+    expect(JSON.parse(screen.getByTestId('archive-modal').textContent!)).toEqual({
+      type: 'profile',
+      id: players[0]!.id,
+      name: players[0]!.name,
+    });
+    expect(native.calls.filter((call) => call.method === 'matches.detail')).toHaveLength(0);
+  });
+
+  it('shows archive grid loading, missing rosters and empty filters with a working reset', async () => {
+    const pending = deferred<RpcOutputs['matches.list']>();
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => pending.promise });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('radio', { name: '网格视图' }));
+    const viewport = document.querySelector<HTMLDivElement>('.archive-grid-viewport')!;
+    expect(viewport.getAttribute('aria-busy')).toBe('true');
+    expect(within(viewport).getByText(translate('zh', 'loading'))).toBeTruthy();
+    const match = matchFixture({ fid: null, map: '', players: [], outcome: 'unknown' });
+    await act(async () => pending.resolve([match]));
+    expect(viewport.getAttribute('aria-busy')).toBe('false');
+    expect(screen.getByRole('button', { name: '#' + match.id })).toBeTruthy();
+    expect(screen.getByText('暂无玩家数据')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /我方队伍|对方队伍/ })).toBeNull();
+    fireEvent.click(screen.getByRole('switch', { name: '隐藏未知结果' }));
+    expect(screen.queryByRole('list', { name: '对局档案' })).toBeNull();
+    expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '清除筛选' }));
+    expect(screen.getByRole('list', { name: '对局档案' })).toBeTruthy();
+    expect(screen.getByText('暂无玩家数据')).toBeTruthy();
+    expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(1);
+  });
+
   it('sorts the entire archive, resets the selected page and preserves sortable column semantics', async () => {
     const rows = Array.from({ length: 55 }, (_, index) =>
       matchFixture({
