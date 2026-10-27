@@ -56,6 +56,7 @@ import { UpdateButton } from '../apps/web/src/features/settings/UpdateButton';
 import { MatchArchive } from '../apps/web/src/features/matches/MatchArchive';
 import { BansPanel } from '../apps/web/src/features/bans/BansPanel';
 import { MatchDialog } from '../apps/web/src/features/matches/MatchDialog';
+import { DevelopmentApp } from '../apps/web/src/dev/DevelopmentApp';
 
 type Handler<K extends RpcMethod> = (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
 type Handlers = { [K in RpcMethod]: Handler<K> };
@@ -1998,6 +1999,101 @@ describe('request and native event ordering', () => {
 });
 
 describe('user interaction regressions', () => {
+  it.each(['current', 'radar'] as const)(
+    'shows pre-match party teammates and their stats on the %s page from development tools',
+    async (page) => {
+      history.replaceState(null, '', `#${page}`);
+      const bootstrap = bootstrapForApp();
+      bootstrap.config.panelOrder = [page];
+      const native = nativeFixture(bootstrap);
+      render(<DevelopmentApp api={native.api} />);
+      const tools = within(
+        document
+          .querySelector('[data-development-layer]')!
+          .shadowRoot!.querySelector<HTMLElement>('.development-tools-theme')!,
+      );
+      fireEvent.click(tools.getByRole('button', { name: '开发工具' }));
+      const lobby = within(await tools.findByRole('radiogroup', { name: '组队大厅人数' }));
+      expect(lobby.getByRole('radio', { name: '1' }).hasAttribute('disabled')).toBe(true);
+      fireEvent.click(tools.getByRole('radio', { name: '模拟数据' }));
+      await waitFor(() =>
+        expect(lobby.getByRole('radio', { name: '1' }).hasAttribute('disabled')).toBe(false),
+      );
+      for (const count of [1, 2, 3, 4, 5, 2, 5]) {
+        const option = lobby.getByRole('radio', { name: String(count) });
+        fireEvent.click(option);
+        await waitFor(() =>
+          expect(document.querySelectorAll(`.page-${page} .player-card`)).toHaveLength(count),
+        );
+        expect(option.getAttribute('aria-checked')).toBe('true');
+        const roster = document.querySelector<HTMLElement>(`.page-${page} .session-roster`)!;
+        expect(within(roster).getByRole('heading', { name: '组队大厅' })).toBeTruthy();
+        expect(within(roster).getByRole('heading', { name: /^Alpha/ })).toBeTruthy();
+        expect(within(roster).getByText('等待开局')).toBeTruthy();
+        expect(within(roster).queryByRole('heading', { name: 'Dam' })).toBeNull();
+        expect(within(roster).queryByText('Armored.deck')).toBeNull();
+        expect(roster.querySelectorAll('.team-column')).toHaveLength(1);
+        expect(roster.querySelectorAll('.team-0 .player-card')).toHaveLength(count);
+        expect(roster.querySelector('.team-1, .team-100, .team-null, .match-id')).toBeNull();
+        const localCard = within(roster)
+          .getByRole('button', { name: 'Raven' })
+          .closest('.player-card')!;
+        expect(localCard.querySelector('.player-analysis')?.textContent).toContain('58%');
+        expect(localCard.querySelector('.player-rating')?.textContent).toContain(
+          formatMetric(1520, 0),
+        );
+      }
+      fireEvent.click(lobby.getByRole('radio', { name: '5v5' }));
+      await waitFor(() =>
+        expect(document.querySelectorAll(`.page-${page} .player-card`)).toHaveLength(10),
+      );
+      expect(screen.getByRole('heading', { name: 'Dam' })).toBeTruthy();
+      expect(document.querySelectorAll(`.page-${page} .team-0 .player-card`)).toHaveLength(5);
+      expect(document.querySelectorAll(`.page-${page} .team-1 .player-card`)).toHaveLength(5);
+      expect(native.calls.filter((call) => call.method === 'config.update')).toHaveLength(0);
+      if (page === 'current') {
+        const toolsCard = document.querySelector<HTMLElement>('.quick-tools')!;
+        expect(within(toolsCard).queryByRole('heading', { name: '快捷工具' })).toBeNull();
+        expect(within(toolsCard).getByRole('button', { name: /玩家查询/ })).toBeTruthy();
+      }
+    },
+  );
+
+  it.each(['current', 'radar'] as const)(
+    'opens player details with pointer and keyboard from the %s roster',
+    async (page) => {
+      history.replaceState(null, '', `#${page}`);
+      const bootstrap = bootstrapForApp();
+      bootstrap.config.panelOrder = ['current', 'radar'];
+      const native = nativeFixture(bootstrap);
+      const user = userEvent.setup();
+      render(<App />, { wrapper: wrapper(native.api) });
+
+      for (const [player, key] of [
+        [localPlayer, null],
+        [secondPlayer, '{Enter}'],
+        [localPlayer, ' '],
+      ] as const) {
+        const trigger = await screen.findByRole('button', { name: player.name });
+        if (key) {
+          act(() => trigger.focus());
+          await user.keyboard(key);
+        } else {
+          await user.click(trigger);
+        }
+        const dialog = await screen.findByRole('dialog', { name: new RegExp(`#${player.id}$`) });
+        await within(dialog).findByRole('heading', { name: '玩家概览' });
+        expect(native.calls).toContainEqual({
+          method: 'players.profile',
+          input: { id: player.id, force: false },
+        });
+        await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+        await waitFor(() => expect(document.querySelector('.profile-dialog')).toBeNull());
+      }
+      expect(document.querySelector('button button')).toBeNull();
+    },
+  );
+
   it('highlights the saved local player when the current session has no login identity', async () => {
     const bootstrap = bootstrapForApp();
     const match = matchFixture({ localPlayerId: localPlayer.id });
@@ -2286,6 +2382,43 @@ describe('user interaction regressions', () => {
       name: players[0]!.name,
     });
     expect(native.calls.filter((call) => call.method === 'matches.detail')).toHaveLength(0);
+  });
+
+  it('shows ELO changes on archive cards with signed values and neutral missing ratings', async () => {
+    const cases = [
+      { before: 1500, after: 1520, value: '+20.00', color: 'elo-increase' },
+      { before: 1500, after: 1480, value: '-20.00', color: 'elo-decrease' },
+      { before: 1500, after: 1500, value: '0.00', color: null },
+      { before: null, after: 1520, value: '—', color: null },
+      { before: 1500, after: null, value: '—', color: null },
+    ];
+    const rows = cases.map((entry, index) =>
+      matchFixture({
+        id: `elo-grid-${index}`,
+        fid: String(9500000 + index),
+        map: `ELO map ${index}`,
+        outcome: 'win',
+        eloBefore: entry.before,
+        eloAfter: entry.after,
+      }),
+    );
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => rows });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('radio', { name: '网格视图' }));
+    await screen.findByRole('button', { name: 'ELO map 0' });
+    for (const [index, entry] of cases.entries()) {
+      const card = screen
+        .getByRole('button', { name: `ELO map ${index}` })
+        .closest('.archive-card')!;
+      const badge = within(card as HTMLElement).getByLabelText(`ELO 变化: ${entry.value}`);
+      expect(badge.textContent).toBe(entry.value);
+      expect(badge.firstElementChild?.classList.contains('elo-increase')).toBe(
+        entry.color === 'elo-increase',
+      );
+      expect(badge.firstElementChild?.classList.contains('elo-decrease')).toBe(
+        entry.color === 'elo-decrease',
+      );
+    }
   });
 
   it('shows archive grid loading, missing rosters and empty filters with a working reset', async () => {
@@ -2895,7 +3028,8 @@ describe('user interaction regressions', () => {
     expect(await screen.findByRole('button', { name: '击杀王' })).toBeTruthy();
     const playerHeading = screen
       .getByRole('button', { name: localPlayer.name })
-      .closest('.player-heading')!;
+      .closest('.player-card')!
+      .querySelector('.player-heading')!;
     expect(playerHeading.querySelector('[data-award-source="score"]')?.parentElement).toBe(
       playerHeading,
     );
@@ -3692,6 +3826,14 @@ describe('UX failure recovery', () => {
     const records = document.querySelector('.profile-records');
     await userEvent.setup().click(screen.getByRole('tab', { name: /^地图表现/ }));
     const refresh = screen.getByRole('button', { name: '刷新' });
+    const header = refresh.closest<HTMLElement>('[data-slot="dialog-header"]')!;
+    expect(header).toBeTruthy();
+    expect(Array.from(header.querySelectorAll('button')).slice(-2)).toEqual([
+      refresh,
+      screen.getByRole('button', { name: '关闭' }),
+    ]);
+    expect(refresh.textContent).toBe('');
+    expect(document.querySelector('.profile-toolbar')?.contains(refresh)).toBe(false);
     fireEvent.click(refresh);
     expect(report.isConnected).toBe(true);
     expect(document.querySelector('.profile-records')).toBe(records);
@@ -3922,6 +4064,12 @@ describe('APM capture presentation', () => {
     fireEvent.change(select, { target: { value: 'saved' } });
     expect(screen.getByText('Saved map')).toBeTruthy();
     expect(screen.getByText(translate('zh', 'apmStopped'))).toBeTruthy();
+    const toolbar = select.closest<HTMLElement>('.apm-toolbar')!;
+    expect(within(toolbar).getByText('Saved map')).toBeTruthy();
+    expect(within(toolbar).getByText(translate('zh', 'apmStopped'))).toBeTruthy();
+    expect(select.closest('[data-slot="field"]')?.getAttribute('data-orientation')).toBe(
+      'horizontal',
+    );
     expect(screen.getByText(translate('zh', 'apmLegacyData'))).toBeTruthy();
     expect(screen.getByText(translate('zh', 'apmCurrentLegacy'))).toBeTruthy();
     expect(screen.queryByText(translate('zh', 'apmCurrent'))).toBeNull();

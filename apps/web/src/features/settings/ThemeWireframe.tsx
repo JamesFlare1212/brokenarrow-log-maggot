@@ -96,7 +96,11 @@ function ThemeWireframePane({
               className="block aspect-square h-[26%] rounded-full"
               style={{
                 backgroundColor:
-                  row === 0 ? '#34d399' : row === 1 ? colors.messageAction : '#fbbf24',
+                  row === 0
+                    ? 'var(--success)'
+                    : row === 1
+                      ? colors.messageAction
+                      : 'var(--warning)',
                 opacity: 0.55,
               }}
             />

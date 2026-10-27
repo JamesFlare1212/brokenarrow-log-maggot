@@ -143,6 +143,7 @@ export function Dialog({
   showHeader = true,
   banner,
   onBack,
+  headerActions,
   dismissible = true,
 }: {
   open: boolean;
@@ -153,6 +154,7 @@ export function Dialog({
   showHeader?: boolean;
   banner?: ReactNode;
   onBack?: () => void;
+  headerActions?: ReactNode;
   dismissible?: boolean;
 }) {
   const { t } = useI18n();
@@ -216,6 +218,7 @@ export function Dialog({
             <DialogTitle className={cn('min-w-0 flex-1', !showHeader && 'sr-only')}>
               {title}
             </DialogTitle>
+            {headerActions}
             {dismissible && (
               <DialogClose asChild>
                 <PrimitiveButton

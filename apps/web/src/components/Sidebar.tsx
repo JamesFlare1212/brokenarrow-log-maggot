@@ -160,9 +160,9 @@ export function SidebarItem({
   );
 }
 
-export function SidebarFooter(props: ComponentPropsWithoutRef<'div'>) {
+export function SidebarFooter({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
   return (
-    <PrimitiveFooter {...props}>
+    <PrimitiveFooter {...props} className={cn('pb-4', className)}>
       <SidebarMenu className="gap-1 group-data-[collapsible=icon]:items-center">
         {props.children}
       </SidebarMenu>

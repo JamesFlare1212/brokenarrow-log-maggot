@@ -58,3 +58,7 @@ Use this release notes template, adjusting validation bullets to reflect the che
 - 优先使用shadcn/ui，只有在必要情况，询问用户后才可以不使用
 - 任务完成收尾时运行测试来验证改动
 - 除非用户说明，不然不要commit改动
+
+## 文档
+
+- 有改动的话检查文档有没有同步，特别是设计文档

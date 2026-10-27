@@ -1,5 +1,6 @@
 import type { Match } from '@ba/contracts';
-import { formatMetric, outcomeTone, teamLabel } from '@ba/shared';
+import { formatDelta, formatMetric, teamLabel } from '@ba/shared';
+import { eloChangeClass } from '@/lib/elo';
 import {
   Card,
   CardAction,
@@ -9,14 +10,17 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { useApp } from '../../app/state';
-import { Badge, Button } from '../../components/ui';
+import { Button } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 
 export function MatchArchiveCard({ match }: { match: Match }) {
   const { openModal, notify } = useApp();
   const { t } = useI18n();
   const localTeam = match.players.find((player) => player.id === match.localPlayerId)?.teamId;
+  const eloDelta =
+    match.eloBefore !== null && match.eloAfter !== null ? match.eloAfter - match.eloBefore : null;
 
   return (
     <Card className="archive-card">
@@ -40,8 +44,8 @@ export function MatchArchiveCard({ match }: { match: Match }) {
           <span>{t('playersCount', { n: match.players.length })}</span>
         </CardDescription>
         <CardAction>
-          <Badge tone={outcomeTone(match.outcome)}>
-            {t(match.restarted ? 'restarted' : match.outcome)}
+          <Badge variant="outline" aria-label={`${t('eloDelta')}: ${formatDelta(eloDelta)}`}>
+            <span className={eloChangeClass(eloDelta)}>{formatDelta(eloDelta)}</span>
           </Badge>
         </CardAction>
       </CardHeader>

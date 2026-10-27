@@ -27,13 +27,6 @@ function ApmMetrics({ apm }: { apm: ApmState }) {
       {apm.status === 'unavailable' && <Notice error>{t('apmUnavailable')}</Notice>}
       {apm.partial && <Notice>{t('apmPartial')}</Notice>}
       {apm.interrupted && <Notice>{t('apmInterrupted')}</Notice>}
-      <div className="actions apm-context">
-        <Badge tone={apm.status === 'active' && apm.focused ? 'success' : 'muted'}>
-          {t(apm.status === 'active' ? (apm.focused ? 'focused' : 'notFocused') : 'apmStopped')}
-        </Badge>
-        {apm.fid && <span>#{apm.fid}</span>}
-        {apm.map && <span>{apm.map}</span>}
-      </div>
       <Stats
         items={[
           { label: t('apmAverage'), value: formatMetric(apm.apm, 1) },
@@ -115,26 +108,41 @@ export function ApmPanel({ standalone = false }: { standalone?: boolean }) {
           <Button onClick={() => setReload((value) => value + 1)}>{t('retry')}</Button>
         </Notice>
       )}
-      {history.length > 0 && (
-        <div className="apm-history">
-          <Field id={historyId} label={t('apmHistory')}>
-            <NativeSelect
-              id={historyId}
-              value={selected}
-              onChange={(event) => setSelected(event.target.value)}
-            >
-              <NativeSelectOption value="">{t('apmLatest')}</NativeSelectOption>
-              {history
-                .filter((capture) => capture.captureId !== state.apm.captureId)
-                .map((capture) => (
-                  <NativeSelectOption value={capture.captureId!} key={capture.captureId}>
-                    {formatTime(capture.startedAt, locale)} · {capture.map || '—'}
-                    {capture.fid ? ` · #${capture.fid}` : ''}
-                    {capture.partial ? ` · ${t('apmPartialLabel')}` : ''}
-                  </NativeSelectOption>
-                ))}
-            </NativeSelect>
-          </Field>
+      {(history.length > 0 || apm.captureId) && (
+        <div className="apm-toolbar">
+          {history.length > 0 && (
+            <div className="apm-history">
+              <Field id={historyId} label={t('apmHistory')} orientation="horizontal">
+                <NativeSelect
+                  id={historyId}
+                  value={selected}
+                  onChange={(event) => setSelected(event.target.value)}
+                >
+                  <NativeSelectOption value="">{t('apmLatest')}</NativeSelectOption>
+                  {history
+                    .filter((capture) => capture.captureId !== state.apm.captureId)
+                    .map((capture) => (
+                      <NativeSelectOption value={capture.captureId!} key={capture.captureId}>
+                        {formatTime(capture.startedAt, locale)} · {capture.map || '—'}
+                        {capture.fid ? ` · #${capture.fid}` : ''}
+                        {capture.partial ? ` · ${t('apmPartialLabel')}` : ''}
+                      </NativeSelectOption>
+                    ))}
+                </NativeSelect>
+              </Field>
+            </div>
+          )}
+          {apm.captureId && (
+            <div className="actions apm-context">
+              <Badge tone={apm.status === 'active' && apm.focused ? 'success' : 'muted'}>
+                {t(
+                  apm.status === 'active' ? (apm.focused ? 'focused' : 'notFocused') : 'apmStopped',
+                )}
+              </Badge>
+              {apm.fid && <span>#{apm.fid}</span>}
+              {apm.map && <span className="truncate">{apm.map}</span>}
+            </div>
+          )}
         </div>
       )}
       {apm.captureId ? (

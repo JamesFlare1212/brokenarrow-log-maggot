@@ -125,7 +125,13 @@ export function Dashboard() {
         <Metric
           label={t('livePlayers')}
           value={roster.length}
-          detail={t(state.session.phase === 'match' ? 'liveMatch' : 'waiting')}
+          detail={t(
+            state.session.phase === 'match'
+              ? 'liveMatch'
+              : state.session.phase === 'lobby'
+                ? 'partyLobby'
+                : 'waiting',
+          )}
           icon={<Users size={16} aria-hidden="true" />}
         />
       </div>
@@ -194,7 +200,12 @@ export function Dashboard() {
           )}
         </Card>
         <aside className="dashboard-side" aria-label={t('quickTools')}>
-          <Card title={t('quickTools')} className="quick-tools" contentClassName="gap-2">
+          <Card
+            title={t('quickTools')}
+            showHeader={false}
+            className="quick-tools"
+            contentClassName="gap-2"
+          >
             <Item size="xs">
               <ItemMedia variant="icon">
                 <Video />

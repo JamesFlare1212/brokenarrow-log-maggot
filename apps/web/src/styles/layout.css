@@ -105,8 +105,8 @@ button:not(:disabled),
 }
 @media (min-width: 768px) {
   .app-shell:has([data-slot='sidebar'][data-state='expanded']) [data-slot='sidebar-inset'] {
-    border-start-start-radius: 1.25rem;
-    border-end-start-radius: 1.25rem;
+    border-start-start-radius: 16px;
+    border-end-start-radius: 16px;
   }
 }
 .settings-main {
@@ -295,6 +295,22 @@ button:not(:disabled),
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--content-gap);
 }
+.metrics-grid > [data-slot='card'] {
+  container: metric / inline-size;
+  min-width: 0;
+}
+.metric-content > strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.metric-content > p {
+  white-space: nowrap;
+}
+@container metric (max-width: 16rem) {
+  .metric-content > p {
+    display: none;
+  }
+}
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(17rem, 1fr);
@@ -419,10 +435,26 @@ button:not(:disabled),
   gap: 0.25rem;
 }
 .player-card {
+  position: relative;
   min-height: var(--session-player-height);
   flex-wrap: nowrap;
   padding-block: var(--session-player-padding);
   border-block-width: var(--session-player-border);
+}
+.player-card-trigger {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+.player-card > [data-slot='item-content'],
+.player-card > [data-slot='item-actions'] {
+  position: relative;
+  pointer-events: none;
+}
+.player-card .match-award-button {
+  pointer-events: auto;
 }
 .player-card > [data-slot='item-content'] {
   min-width: 0;
@@ -510,13 +542,14 @@ button:not(:disabled),
   min-width: 0;
   flex-direction: column;
   gap: var(--session-layout-gap);
-}
-.session-empty .session-layout {
   /* Reserve a standard 5v5 layout using the same dimensions as its rendered rows. */
   min-height: calc(
     var(--session-banner-height) + 2 * var(--session-layout-gap) + var(--session-separator-height) +
       var(--session-roster-height)
   );
+}
+.page-radar .session-layout > [data-slot='empty'] {
+  margin-top: 2rem;
 }
 .session-layout > [data-slot='separator'] {
   height: var(--session-separator-height);
@@ -714,12 +747,20 @@ button:not(:disabled),
 .bans-toolbar {
   justify-content: space-between;
 }
+.archive-filters {
+  min-width: 0;
+  max-width: 100%;
+}
 .archive-results-actions {
   flex-shrink: 0;
+  max-width: 100%;
   margin-left: auto;
 }
 .archive-filters > [data-slot='field-group'] {
+  /* Inline filters must contribute their content width to flex wrapping. */
+  container-type: normal;
   width: auto;
+  max-width: 100%;
   flex: 0 0 auto;
 }
 .archive-filters > [data-slot='field-group']:has(#archive-account) {
@@ -796,7 +837,6 @@ button:not(:disabled),
 }
 .archive-card {
   --card-spacing: 1.25rem;
-  border-radius: var(--radius-3xl);
 }
 .archive-card [data-slot='card-header'] {
   min-width: 0;
@@ -940,8 +980,30 @@ button:not(:disabled),
 .apm-panel > [data-slot='card'] [data-slot='empty'] {
   min-height: 15rem;
 }
+.apm-toolbar {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
 .apm-history {
-  width: min(100%, 24rem);
+  width: min(100%, 26rem);
+}
+.apm-history [data-slot='field-label'] {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.apm-history [data-slot='native-select-wrapper'] {
+  min-width: 0;
+  flex: 1;
+}
+.apm-context {
+  min-width: 0;
+}
+.apm-metrics > .stats {
+  gap: 0.75rem;
 }
 .ban-row {
   display: grid;
@@ -2236,7 +2298,7 @@ button:not(:disabled),
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0s !important;
     scroll-behavior: auto !important;
   }
 }

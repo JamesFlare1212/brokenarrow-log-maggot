@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { Activity, FlaskConical, GripVertical, RefreshCw, Video } from 'lucide-react';
+import { Activity, FlaskConical, GripVertical, RefreshCw, Users, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toolStyles from './tools.css?inline';
 import { useDevelopmentLayer, useDevelopmentTheme, useToolPosition } from './layer';
@@ -25,6 +25,8 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   createDevelopmentRuntime,
+  developmentLobbyPlayerCounts,
+  type DevelopmentLobbyPlayerCount,
   type DevelopmentRuntime,
   type DevelopmentSnapshot,
   type DevelopmentMode,
@@ -128,6 +130,43 @@ function DevelopmentTools({
                   </ToggleGroup>
                   <FieldDescription role="status">
                     {t(snapshot.pending ? 'loading' : 'devModeHint.' + snapshot.mode)}
+                  </FieldDescription>
+                </Field>
+                <Field data-disabled={snapshot.mode !== 'demo' || snapshot.pending}>
+                  <FieldLabel id="development-lobby-label">
+                    <Users aria-hidden="true" />
+                    {t('devLobbyPlayers')}
+                  </FieldLabel>
+                  <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    size="sm"
+                    className="grid w-full grid-cols-6"
+                    spacing={1}
+                    aria-labelledby="development-lobby-label"
+                    aria-describedby="development-lobby-hint"
+                    value={
+                      snapshot.lobbyPlayerCount === null
+                        ? 'match'
+                        : String(snapshot.lobbyPlayerCount)
+                    }
+                    disabled={snapshot.mode !== 'demo' || snapshot.pending}
+                    onValueChange={(value) => {
+                      if (value)
+                        runtime.controls.setLobbyPlayerCount(
+                          value === 'match' ? null : (Number(value) as DevelopmentLobbyPlayerCount),
+                        );
+                    }}
+                  >
+                    <ToggleGroupItem value="match">5v5</ToggleGroupItem>
+                    {developmentLobbyPlayerCounts.map((count) => (
+                      <ToggleGroupItem value={String(count)} key={count}>
+                        {count}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                  <FieldDescription id="development-lobby-hint">
+                    {t('devLobbyPlayersHint')}
                   </FieldDescription>
                 </Field>
                 <Field data-disabled={!local || snapshot.pending}>

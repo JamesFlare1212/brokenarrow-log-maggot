@@ -37,7 +37,14 @@ deduplication uses a set of match IDs.
 
 卡组 ZIP 校验路径、扩展名、CRC、边界和容量。压缩 / 解压使用异步线程池，写入临时文件后 rename，失败明确反馈。
 
-公共 Button、Card、Dialog、Menu、Field、Toggle、Badge、Stats 集中交互规则；Radix Portal 管理浮层和键盘，Dialog 恢复焦点。样式分 tokens / base / components / layout / settings；布局、配色与组件状态约定见[视觉规范](../design-system/broken-arrow/MASTER.md)。
+Shared shadcn primitives and the application Button, Card, Dialog, Menu, Field,
+Toggle, Badge, and Stats wrappers centralize interaction rules. Radix manages
+portals, keyboard behavior, and dialog focus restoration. Theme and glass tokens
+live in `apps/web/src/styles/index.css`; layout, scrollbars, and responsive rules
+live in `apps/web/src/styles/layout.css`. Card and full-size card choices share
+`cardSurfaceClasses` rather than copying surface styles into feature pages. See
+the [UI design system](../design-system/broken-arrow/MASTER.md) and
+[component audit](ui-audit.md) for the current rules and deliberate exceptions.
 
 ## Optional anonymous analytics
 

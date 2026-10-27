@@ -1,234 +1,215 @@
-# Broken Arrow UI design system
+# BARadar UI design system
 
-The desktop app and browser preview share one React interface. This document records the current visual and interaction rules. Keep it aligned with the implementation when changing navigation, settings, palettes or component states.
+BARadar (断箭蛐工具) uses one React interface for Electron and the isolated browser
+preview. This is the current design specification. It replaces the earlier flat
+surface, Font Awesome, split-stylesheet, and oversized dark-shadow guidance.
+The implementation files below are the source of token values and component APIs.
+
+## Sources of truth
+
+| Concern                                                                   | Implementation                                                                                                                   |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Theme primitives, semantic colors, glass tokens, typography, radius scale | [index.css](../../apps/web/src/styles/index.css)                                                                                 |
+| Layout, responsive rules, scrollbars, reduced motion                      | [layout.css](../../apps/web/src/styles/layout.css)                                                                               |
+| Shared glass surface and Card composition                                 | [card.tsx](../../apps/web/src/components/ui/card.tsx)                                                                            |
+| Card choices and compact toggles                                          | [toggle.tsx](../../apps/web/src/components/ui/toggle.tsx), [toggle-group.tsx](../../apps/web/src/components/ui/toggle-group.tsx) |
+| Application Card, Dialog, Field, Stats, and action wrappers               | [ui.tsx](../../apps/web/src/components/ui.tsx)                                                                                   |
+| Appearance resolution and native caption colors                           | [useAppearance.ts](../../apps/web/src/hooks/useAppearance.ts)                                                                    |
+| Mode, opacity, ELO colors, and palette controls                           | [AppearanceSettings.tsx](../../apps/web/src/features/settings/AppearanceSettings.tsx)                                            |
+| Valid preferences, palettes, and opacity limits                           | [rpc.ts](../../packages/contracts/src/rpc.ts)                                                                                    |
+| Latest component audit and deliberate exceptions                          | [UI audit](../../docs/ui-audit.md)                                                                                               |
 
 ## Visual direction
 
-Use a calm graphite workspace, subtle surface separation and restrained borders. Graphite uses neutral gray accents in both light and dark appearances. Green communicates successful or healthy states; it is not the graphite selection color. Other palettes use their own accent colors.
+Use flat, theme-colored workspace and sidebar backgrounds with quiet glass cards
+for persistent content. Cards have one uniform translucent fill, a fine border,
+a small shadow, and a restrained backdrop blur. Text, icons, charts, and controls
+remain fully opaque. Do not add gradients, sheen overlays, colored edge lighting,
+or a second card solely to create padding around an existing card or option group.
 
-Shared shadcn Card surfaces adapt the edge and backdrop parameters from [T3 Code's dialog-glass styles](https://github.com/pingdotgg/t3code/blob/36d4d711b79c73eb33131944f73ea4a8c6156484/apps/web/src/index.css#L426-L438) to the existing uniform theme-colored card fill. Dark mode uses a 1px border at 8% white, a 1px top inset highlight at 4% white, 16px backdrop blur, 1.08 saturation and a `0 24px 72px -20px` outer shadow at 90% black. Light mode uses a border at 10% foreground, 12px blur, 1.14 saturation and [T3 Code's composer shadow](https://github.com/pingdotgg/t3code/blob/36d4d711b79c73eb33131944f73ea4a8c6156484/apps/web/src/index.css#L194-L197): `0 1px 2px` at 5% black, keeping persistent cards close to the page surface. Card interiors remain uniform, with no gradients or broad sheen overlays. Workspace and Settings retain the original flat theme background, including the black background in dark mode; glass styling must not add page-wide gradients or lighting.
+Graphite is neutral in both light and dark modes. Other palettes tint the same
+semantic roles. Success, warning, information, and error colors describe state;
+selection and keyboard focus use the active theme's ring color.
 
-Settings → Appearance exposes Glass opacity from 40% to 100% in 5% slider steps, defaulting to 50% for new and existing installations. Its settings row places the label, reset-to-default action and description on the left, with a percentage badge and slider on the right; narrow layouts stack the controls below the description. Existing saved integer values remain valid. Changes preview immediately and save automatically; opacity affects card backgrounds while text and controls stay fully opaque. At 100% opacity, backdrop blur is disabled; lowering opacity restores the active theme's blur.
+## Tokens and glass parameters
 
-The settings reference is the T3 Code layout supplied for this project: a category sidebar, a dedicated content area, three appearance-mode previews and separate palette pairs. Keep the application's match data and workflows central to the design.
+The token chain is theme primitives (`--theme-*`), semantic roles (`--card`,
+`--foreground`, `--ring`), and shared glass tokens. Components consume tokens;
+feature pages arrange components without redefining their surface treatment.
 
-## Brand identity
+| Token or property   | Light                                                               | Dark                                  |
+| ------------------- | ------------------------------------------------------------------- | ------------------------------------- |
+| Fill                | `color-mix(in srgb, var(--card) var(--glass-opacity), transparent)` | Same formula with the dark card color |
+| Default opacity     | 50%                                                                 | 50%                                   |
+| Border              | 1px; foreground mixed at 10%                                        | 1px; white at 8%                      |
+| Backdrop blur       | 12px                                                                | 16px                                  |
+| Backdrop saturation | 1.14                                                                | 1.08                                  |
+| Outer shadow        | `0 1px 2px rgb(0 0 0 / 0.05)`                                       | `0 1px 2px rgb(0 0 0 / 0.16)`         |
+| Card radius         | `--radius-xl`, currently 14px                                       | Same token                            |
+| Card spacing        | 16px default; 12px for `size="sm"`                                  | Same sizes                            |
 
-The public asset `apps/web/public/logo.png` is the single source for the approved graphite and amber broken-arrow mark with open radar arcs on white. Use `BrandLogo` for workspace, mobile navigation, Settings and About branding. Keep the approved colors and white background in every appearance palette; do not recolor the mark with UI accent tokens. Render it at 28px in sidebar headings and 32px in About, with explicit dimensions, subtly rounded corners and decorative image semantics beside visible text. Collapsed sidebars retain their existing icon-rail behavior.
+The base radius is `--radius: 0.625rem`; the radius scale lives in `@theme inline`.
+Use component size variants rather than copying resolved pixel values into pages.
+Use `--card-spacing` for a deliberate card density adjustment. Density changes do
+not authorize a different border, radius, background, shadow, or blur.
 
-Both HTML entry points use the same source as their favicon. Every root build runs `scripts/prepare-icon.mjs` to refresh `build/icon.png` from this source before desktop development, smoke tests or packaging. The Electron window, installer and portable executable use the generated icon. Do not retain an alternative avatar or use a generic crosshair as the application logo. Functional crosshair icons in match tools retain their existing meaning.
+Glass opacity ranges from 40% to 100% in 5% slider steps, with 50% as the default.
+Previously saved integer values remain readable. `useAppearance` previews changes
+and turns `--glass-blur` off at 100%, then restores the active mode's blur below
+100%. Apply opacity to the mixed background color, never to the entire card.
 
-## Implementation sources
+## Shared Card and card choices
 
-| Concern                                   | Source                                                                                                                                                           |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Palette values and semantic tokens        | [tokens.css](../../apps/web/src/styles/tokens.css)                                                                                                               |
-| Application scrollbars                    | [scrollbars.css](../../apps/web/src/styles/scrollbars.css)                                                                                                       |
-| Workspace, overview and responsive layout | [layout.css](../../apps/web/src/styles/layout.css)                                                                                                               |
-| Shared buttons, cards and dialogs         | [components.css](../../apps/web/src/styles/components.css)                                                                                                       |
-| Font Awesome icons and shared sizing      | [Icon.tsx](../../apps/web/src/components/Icon.tsx), [main.tsx](../../apps/web/src/main.tsx)                                                                      |
-| Update action and progress states         | [UpdateButton.tsx](../../apps/web/src/features/settings/UpdateButton.tsx), [layout.css](../../apps/web/src/styles/layout.css)                                    |
-| Settings layout and palette controls      | [settings.css](../../apps/web/src/styles/settings.css)                                                                                                           |
-| Navigation and page composition           | [App.tsx](../../apps/web/src/app/App.tsx)                                                                                                                        |
-| Settings page and appearance controls     | [SettingsPage.tsx](../../apps/web/src/features/settings/SettingsPage.tsx), [AppearanceSettings.tsx](../../apps/web/src/features/settings/AppearanceSettings.tsx) |
-| Resolved appearance and automatic saving  | [useAppearance.ts](../../apps/web/src/hooks/useAppearance.ts), [useSettingsAutosave.ts](../../apps/web/src/hooks/useSettingsAutosave.ts)                         |
+`cardSurfaceClasses` in `components/ui/card.tsx` defines the shared radius, border,
+fill, foreground, shadow, blur, and saturation. Both `Card` and the Toggle
+`card` variant reuse it. Keep these values in one place.
 
-## Workspace and navigation
-
-The sidebar provides overview, 蛐雷达 (player radar), player search, APM, archives, recordings, decks and bans. About belongs in Settings → General. Configured navigation order remains authoritative. Existing configurations gain the radar entry after overview when that entry is available; an existing custom radar position is preserved. Remove the legacy About entry from saved navigation and collapsed-panel lists while preserving other preferences.
-
-- Overview keeps the current-room and previous-match tools. The radar page at `#radar` provides an additional copy of those tools, not a replacement. Each destination retains its own current/previous view while navigating.
-- The overview has four summary cards, the room roster, recording status, shortcuts and recent results. On wide screens, the roster spans three summary columns and the supporting tools occupy the fourth. The tool column must share both edges and width with the 房间玩家 summary above it; use the same four-column grid and 16px gap rather than a fixed sidebar width.
-- All four summary cards share the same neutral surface, border and typography. The recent ELO card has no gradient, accent border or accent-colored value/icon.
-- Optional APM follows the user's configuration. The full ban list belongs only on the dedicated bans page, even when an older configuration has `banCardVisible` enabled. Do not expose an overview ban-panel toggle.
-- Visited screens retain local state and scroll position. Hash routes support direct links and browser history.
-- Workspace and Settings use the shared `Sidebar`, `SidebarHeading`, `SidebarNavigation`, `SidebarItem` and `SidebarFooter` components from `components/Sidebar.tsx`, styled by `styles/sidebar.css`. Both sidebars use a 224px expanded width and a 76px icon rail, with shared tokens and the persisted `sidebarCollapsed` preference. Keep accessible names and hover titles for icon-only entries.
-- Use Settings' compact layout throughout: 42px navigation rows, 5px gaps, neutral selected backgrounds and accent-colored selected icons. Navigation and footer labels are 14px bold (700); heading labels are 17px bold. Both sides share padding, heading spacing and footer placement. Headings use 8px vertical and 12px horizontal padding with content-driven height. The workspace uses the approved brand mark and title without an additional icon container, English subtitle or section label.
-- Preserve workspace navigation landmarks and Settings tab semantics, roving focus and arrow/Home/End shortcuts. On small screens, workspace navigation opens in its existing dialog while Settings tabs form a horizontal scrollable row.
-
-## Header and page hierarchy
-
-The workspace topbar stays at the viewport top with a 56px minimum height and 8px vertical padding. Keep it above page content and below dialogs. The viewport-sized shell does not scroll: `.workspace-scroll` contains the main content and footer, starts immediately below the toolbar and owns workspace scrolling. Remember its scroll position independently for each route, including when returning from Settings.
-
-Keep the collapse control, breadcrumb, service status and account control in the topbar. The brand mark stays in the sidebar. Do not repeat it beside the breadcrumb, add a topbar language selector, or restore the uppercase `BROKEN ARROW / …` eyebrow above the page title. Language selection belongs in Settings → General. The sidebar footer contains a content-sized settings entry and a compact update button aligned to the right. Both use 18px icons, a 42px button height, an 8px corner radius and the same transparent resting and surface-highlight hover treatment. The update action checks for updates, changes to a download action when available and shows progress while downloading; see [Update action](#update-action) for its state and animation rules.
-
-Workspace and Settings reuse `PageToolbar` and `SidebarToggle` from `components/PageToolbar.tsx`. The shared toolbar owns the 56px minimum height, 8px vertical padding, responsive horizontal padding, background, stacking and 24px bottom fade based on `--bg`. Neither page overrides toolbar dimensions or uses a hard bottom divider. The fade overlaps the header by 1px, with a 25px total height and a solid first 2px, to avoid a seam at fractional display scaling. It stops `--scrollbar-size` before the right edge so the scrollbar stays fully visible. It never intercepts pointer events and is omitted in forced-colors mode. Both independently scrolling content areas use 32px scroll padding so focused elements clear the fade.
-
-The recordings page places its recording controls in a separate card above the library. Recording state belongs in that control card. Omit the page-heading log-listener status and the BATrace historical-data footer on this page so neither can be mistaken for recording activity.
-
-Show the workspace historical-data footer only on Overview, Radar and Player Search. Omit the entire footer, including its health-check action, on Recordings, Ban Tracking, Decks, Match Archives and APM.
-
-## Settings page and persistence
-
-Settings opens as a full page, not a modal. The initial category is Appearance. A visible Back control returns to the previous workspace page; returning preserves that page's state. Short windows scroll the category list while keeping Back available.
-
-| Category                   | Route                  | Content                                                                             |
-| -------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
-| 常规 / General             | `#settings/general`    | Interface language, About, version, update action, project links and import notices |
-| 外观 / Appearance          | `#settings/appearance` | Theme mode, glass opacity and palette pairs                                         |
-| 游戏连接 / Game connection | `#settings/connection` | Log and deck folders, log detection, API health                                     |
-| 自动化 / Automation        | `#settings/automation` | Automatic queries, input monitoring, ban polling, match sync, account linking       |
-| 导航 / Navigation          | `#settings/navigation` | Sidebar page order                                                                  |
-| 本机账号 / Local accounts  | `#settings/accounts`   | Detected accounts and account removal                                               |
-
-- `#settings` resolves to Appearance. Category changes replace the current settings history entry, so Back returns to the workspace rather than stepping through categories.
-- `#about`, `#settings/about` and `#settings/updates` redirect to General. About uses a compact card with a version/status row and a project-links row. Keep update actions beside the version, show recovery details only when needed, and omit the former large brand panel and feature introduction.
-- General places the language label on the left and a compact 160px selector on the right. Omit the language and appearance autosave footnotes; the toolbar already displays save status.
-- Changes apply immediately and save automatically. There are no Save or Cancel buttons. Changes to an inactive appearance's palette only update that mode's saved choice.
-- Toggles, selects and palette controls save immediately. Folder text inputs debounce for 500ms; blur and Back flush pending input. Save requests run in order and submit changed fields, preserving newer input when an older response arrives.
-- Show saving, saved and failed states. Keep failed changes available and offer Retry; do not report success before persistence completes. Back waits for pending saves and stays on settings if saving fails.
-- Keep the seven categories as accessible tabs with arrow-key and Home/End navigation. Switching categories retains pending edits.
-
-## Theme modes and palette pairs
-
-Theme mode and palette selection are independent preferences. The only mode choices are **System, Light and Dark**. Only those three controls change `themeMode`; neither an individual swatch nor an entire palette card may change it.
-
-Each of the six palettes contains a light and dark swatch. Store `lightTheme` and `darkTheme` independently: for example, light can use Forest while dark uses Violet. Explicit mode changes and operating-system changes in System mode use the palette saved for that appearance.
-
-| Palette         | Palette key | Light `--accent` | Dark `--accent` |
-| --------------- | ----------- | ---------------- | --------------- |
-| 石墨 / Graphite | `dark`      | `#4b5563`        | `#c4ccd5`       |
-| 青空 / Cyan     | `cyan`      | `#0d6e83`        | `#6ed7e8`       |
-| 暖橙 / Orange   | `orange`    | `#b3430c`        | `#f4ae79`       |
-| 紫夜 / Violet   | `violet`    | `#7040ae`        | `#bca1ff`       |
-| 森林 / Forest   | `forest`    | `#247249`        | `#6edcab`       |
-| 深海 / Ocean    | `ocean`     | `#196b9e`        | `#72d2fc`       |
-
-- Clicking a card's name or empty area selects both palettes in that pair in one save. It preserves the current theme mode.
-- Clicking a swatch changes only the corresponding light or dark palette. Choosing a light swatch while Dark is active must not switch the workspace to Light, and vice versa. System must remain System.
-- Show selection with rings and checkmarks on the individual swatches. Do not add an accent border to a selected large card. Neutral card hover feedback and keyboard focus remain available.
-- Keep card and swatch controls as separate buttons, without nested buttons. Each receives an accessible name; pressed states describe the pair and individual choices.
-- The legacy `theme` field and seven old identifiers remain readable for compatibility. They do not represent seven current palette choices. Missing per-mode preferences fall back to the legacy palette; legacy `light` maps to Graphite.
-
-## Tokens, typography and components
-
-Graphite's key values are:
-
-| Token           | Dark      | Light     |
-| --------------- | --------- | --------- |
-| `--bg`          | `#0d1114` | `#f0f3f8` |
-| `--surface`     | `#141a1e` | `#ffffff` |
-| `--surface-alt` | `#1c2328` | `#edf1f7` |
-| `--text`        | `#edf1f3` | `#1c293d` |
-| `--muted`       | `#a2adb5` | `#526278` |
-| `--accent`      | `#c4ccd5` | `#4b5563` |
-| `--on-accent`   | `#1b232c` | `#ffffff` |
-
-Use semantic surface, border, accent, feedback and control-border tokens in components. Selection rings, checkmarks, primary actions and focus colors derive from `--accent`, with `--accent-soft` and `--accent-border` for supporting surfaces. Success, danger, warning and information tokens describe status independently of the chosen palette. Do not reintroduce mint as a default graphite accent or use success green for selection.
-
-Use local Segoe UI and Microsoft YaHei fonts, tabular figures for numbers, and Cascadia Code or Consolas for identifiers. Use Font Awesome SVG icons consistently, following the icon and motion rules below. No remote font dependency.
-
-Spacing uses 4/8px increments. Card radius is 14px and control radius is 8–9px. Short hover feedback uses 140ms; dialogs use 220ms. Respect reduced motion and avoid decorative animation.
-
-Archive pagination uses the shared `components/Pagination.tsx` component: a muted record-range summary on the left and a compact previous/page-selector/next group on the right. Controls share a 34px height. Keep the page selector accessible without a stacked visible label, disable arrows at the boundaries, and allow the footer to wrap on narrow screens.
-
-Ban tracking reuses the same pagination with 20 records per page. Limit its independently scrollable list to `min(560px, 60dvh)` so large ban datasets cannot stretch the card indefinitely; keep filters and pagination outside that list. Changing filters resets the page, changing pages resets the list scroll position, and refreshed results clamp the displayed page to the available range. Every record remains reachable, and profile actions and encounter badges remain available. Keep native keyboard scrolling, a visible focus outline and the shared scrollbar style.
-
-Use a compact two-label sliding switch for the ban filter. Clicking anywhere toggles between all bans and encountered bans; Space and Enter also toggle it. Expose `role="switch"`, the encountered-bans label and `aria-checked`. Keep both labels visible and move one shared selection background between equal-width halves with a 220ms transform transition using `--ease-out`. Text colors use the 140ms transition. Keep keyboard focus visible and disable transitions when reduced motion is requested.
-
-Ban rows use shared column widths for player, ELO, encounter state and timestamp so varying name lengths or missing encounter badges cannot move other columns. Left-align player names and encounter markers; right-align ELO values and timestamps with tabular numbers. At list widths of 640px or less, place the player on the first line, ELO and encounter state on the second, and the timestamp on the third. Keep long names readable by wrapping within their column.
-
-### Icons
-
-- Use the Free Solid family from `@fortawesome/free-solid-svg-icons` with the official `@fortawesome/react-fontawesome` renderer. Import individual icon definitions so unused icons can be removed from the bundle. Keep icon assets local for the offline desktop interface; do not load a remote kit or icon font.
-- Use the shared `Icon` component for application icons. Its numeric `size` is in pixels and defaults to 16px; it forwards native Font Awesome properties such as `spin`. Use contextual sizes for inline text, card headings and empty states. Sidebar navigation, Settings and update icons share an 18px size.
-- Existing direct `FontAwesomeIcon` usage in `UpdateButton` follows the same family, sizing and accessibility rules. The entry point imports `@fortawesome/fontawesome-svg-core/styles.css` once and sets `fontAwesomeConfig.autoAddCss = false`.
-- Keep icon semantics consistent across navigation, actions, menus, empty states, dialogs and toast dismissal. Do not introduce Lucide, emoji or hand-drawn SVG glyphs as additional UI icon families. Terrain illustrations and determinate progress rings remain purpose-specific SVG graphics.
-- Decorative icons are hidden from assistive technology; `Icon` defaults to `aria-hidden="true"`. Put contextual accessible names on icon-only controls and expose their expanded, pressed or busy state as applicable. An independently meaningful icon needs an equivalent text alternative.
+- Compose content cards with `CardHeader`, `CardTitle`, `CardDescription`,
+  `CardAction`, `CardContent`, and `CardFooter` as needed. A visually hidden title
+  is appropriate when the surrounding section already supplies the visible title.
+- Use `size="sm"` for metrics. Layout classes may change width, grid placement,
+  padding, or gaps. Do not override a card's surface with page-specific CSS.
+- Use `ToggleGroup type="single" variant="card"` for full-size mutually exclusive
+  card choices. Appearance mode and ELO color choices use this variant.
+- A card choice keeps the glass fill during hover and selection. Hover may
+  strengthen its neutral border. Selection uses `--appearance-selection`, an
+  alias of `--ring` in Appearance. Focus adds the shared visible focus ring.
+- Keep the border width constant between states. Expose selection through the
+  primitive's radio/checked state; do not replace native interaction with a
+  clickable `div` or nest buttons.
+- Compact filters and view switches continue to use ordinary ToggleGroup
+  variants. A two-option filter is not a glass content card.
+- Palette-pair cards use the same glass surface. Their individual light/dark
+  swatches show selection; selecting a pair must not change the theme mode.
 
 ```tsx
-import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
-import { Icon } from '../../components/Icon';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
-<Icon icon={faArrowsRotate} size={18} spin={pending} />;
+<Card>
+  <CardHeader>
+    <CardTitle>Match summary</CardTitle>
+  </CardHeader>
+  <CardContent>{content}</CardContent>
+</Card>;
+
+<ToggleGroup type="single" variant="card" value={value} onValueChange={onChange}>
+  <ToggleGroupItem value="first">First choice</ToggleGroupItem>
+  <ToggleGroupItem value="second">Second choice</ToggleGroupItem>
+</ToggleGroup>;
 ```
 
-### Motion
+Use the application Card wrapper when collapsible headings or standard panel
+actions are required. A list row inside a card uses `Item`, a separator, or plain
+layout. A collection may contain separate cards for independently meaningful
+items, such as recordings; do not add redundant glass wrappers around controls.
 
-- Use [Font Awesome's native React animation properties](https://docs.fontawesome.com/web/use-with/react/style#animate-icons) for icon motion. Loading, refresh, health-check, saving and pending-return indicators use `spin` only while work is pending. Check and install update states use the same native rotation.
-- Do not recreate icon rotation with application `@keyframes`, a custom `.spinner` class, JavaScript timers or per-frame transforms. Use Font Awesome's animation properties and, when needed, its documented `--fa-animation-*` CSS variables. The current continuous rotation uses the library's default 2s cycle.
-- Keep motion tied to an explicit state. End the animation when the request finishes, fails or is superseded; application state must not depend on an animation-end event. Pair pending actions with readable status and disabled or busy semantics as appropriate.
-- Ordinary interface transitions retain their existing CSS: `--motion-fast` is 140ms, `--motion-normal` is 220ms and `--ease-out` defines the shared arrival curve. Dialogs, overlays, hover feedback and the sliding filter are interface transitions; they do not use icon animation utilities.
-- Respect `prefers-reduced-motion: reduce`. Font Awesome and the shared base stylesheet disable animation and transitions in this mode. Preserve the icon, text, progress value and control state so status remains understandable without motion.
+## Surface hierarchy and deliberate exceptions
 
-### Update action
+| Surface                                                                          | Treatment and reason                                                                                                  |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Dashboard, room, APM, player summary, deck, recording, cache, and settings cards | Shared glass Card                                                                                                     |
+| Archive grid cards                                                               | Shared glass Card; custom content density is allowed, a separate radius is not                                        |
+| Appearance mode and ELO choices                                                  | Shared glass Toggle `card` variant                                                                                    |
+| Workspace, sidebar, and titlebar                                                 | Flat semantic background; keep navigation and native caption controls legible                                         |
+| Dialog, alert dialog, sheet, popover, dropdown, tooltip, toast                   | Existing overlay primitives and readable semantic fills; do not apply the adjustable content-card opacity             |
+| Data-table frames, sticky headers, and profile tables                            | Solid semantic surfaces, clear borders, and independent scrolling; rows must not bleed through sticky labels          |
+| Alerts and selected list rows                                                    | Semantic feedback or muted fills; these communicate state within the surrounding layout                               |
+| Inputs, sliders, switches, badges, and compact filters                           | Their shared control variants and semantic colors; do not add a glass layer to every control                          |
+| Video frames, display previews, and the recorder canvas                          | Media-specific neutral or black fills preserve framing and playback contrast                                          |
+| Theme wireframes and palette swatches                                            | Illustrations of palettes; decorative gradients and preview-specific edge effects are confined to these illustrations |
+| Approved logo                                                                    | Preserve the supplied image colors and white background                                                               |
 
-The sidebar update control matches the Settings entry's visual scale: a 42px square button, an 18px icon and an 8px corner radius. Use `--muted` at rest, `--surface-hover` and `--text` on hover, and retain visible keyboard focus. The glyph container is 26px, the download progress ring is 28px and the available/ready notification dot is 5px. The inline Settings update action also uses an 18px icon.
+An exception belongs to a surface role, not to a feature page. A new content card
+must not opt out simply because another surface is solid. Add a justified role
+here before introducing a new surface treatment.
 
-| State         | Font Awesome icon    | Animation and feedback                                                              |
-| ------------- | -------------------- | ----------------------------------------------------------------------------------- |
-| `idle`        | `faArrowsRotate`     | Static icon; clicking starts a check.                                               |
-| `checking`    | `faArrowsRotate`     | Native `spin`; disable the action and expose busy status.                           |
-| `available`   | `faDownload`         | Static icon, full ring and notification dot; clicking starts the download.          |
-| `downloading` | `faDownload`         | Static icon with a determinate progress ring; disable the action while downloading. |
-| `downloaded`  | `faArrowRotateRight` | Static icon and notification dot; clicking requests restart and installation.       |
-| `installing`  | `faArrowRotateRight` | Native `spin`; disable the action while saving data and preparing installation.     |
+## Appearance and semantic color
 
-Known download progress uses the SVG ring's `stroke-dashoffset`, clamped to 0–100%, with a 220ms linear transition. Do not spin the download icon or put percentage text inside the sidebar button. If progress is unknown, rotate the indeterminate ring segment with Font Awesome's `fa-spin` utility. The SVG ring communicates progress and remains separate from the icon glyph.
+Theme mode is System, Light, or Dark. Each mode uses its saved palette from the
+six palette pairs. Palette selection and mode selection are independent. Automatic
+saving, live preview, Back navigation, and native caption colors must remain in
+sync with the active preferences.
 
-Keep the action's accessible name, tooltip and status announcement aligned with the current operation. Pending actions reject repeated activation. Installation remains blocked during an active match or while recording is starting, running or stopping; the disabled update mode also prevents activation. Portable mode opens the release download page for manual installation.
+Use `--background`, `--foreground`, `--muted-foreground`, `--border`, `--input`,
+`--primary`, `--ring`, and feedback tokens. Do not introduce raw page colors or
+per-card light/dark overrides. Native select options use system Canvas colors;
+overlay scrims and media canvases keep their purpose-specific treatment.
 
-### Scrollbars
+ELO changes use `eloChangeClass` with `--elo-increase` and `--elo-decrease`.
+Positive changes include a plus sign, zero is neutral, and unavailable values
+show an em dash. The saved green-up/red-up preference applies independently of
+the result of the match. Feedback success/error colors retain their own meaning.
 
-Use the supplied narrow, rounded dark scrollbar reference throughout the shared React interface. Workspace content, sidebars, settings, dialog bodies, table wrappers, horizontal navigation and multiline inputs all use the global rules in `styles/scrollbars.css`. Workspace and Settings scrollbars begin below their toolbars. Do not add component-specific scrollbar colors or widths.
+## Typography, icons, and motion
 
-- Keep the track and the corner where horizontal and vertical bars meet transparent. Hide arrow buttons. Use a pill-shaped thumb without visible borders, shadows or accent colors.
-- In Electron and Chromium, `--scrollbar-size` is 10px for both axes. A 1px transparent border leaves an 8px visible thumb; `--scrollbar-radius` is 999px. Track ends have 4px margins and the thumb has a 24px minimum length.
-- Thumb colors derive from `--text`, so every palette follows the same rule. Dark mode uses 10% opacity at rest, 20% on thumb hover and 30% while dragging. Light mode uses 18%, 28% and 38% respectively. The resting thumb stays subtle, matching the reference, and interaction increases visibility without changing its size.
-- Browsers without the Chromium scrollbar pseudo-elements use standard `scrollbar-width: thin` and the same thumb/transparent-track colors. Hovering or focusing the scroll container increases visibility in this fallback; exact dimensions and rounding remain browser-controlled. Keep standard scrollbar properties at `auto` in Chromium so they do not override its custom geometry.
-- Preserve native wheel, trackpad, touch, keyboard and thumb dragging behavior. Scrollbar styling must not add nested scrolling or force scrollbars onto content that fits. Use `scrollbar-gutter: stable` in workspace content, settings and the recording dialog to prevent their content from shifting.
-- In forced-colors mode, leave scrollbar rendering to the operating system. No custom scrollbar animations are required; reduced-motion preferences remain respected.
+Use bundled Geist Variable with Segoe UI and Microsoft YaHei fallbacks. Body and
+control typography follows the shared shadcn components; use tabular figures for
+numerical comparisons. Keep long names and labels within their layout bounds.
 
-### Control states
+Use `lucide-react` icons or the shared `Icon` adapter. Components own control icon
+sizes; meaningful standalone graphics may specify contextual sizes. Decorative
+icons use `aria-hidden`; icon-only controls need localized accessible names and
+tooltips. Use `data-icon` for leading/trailing button icons.
 
-| Control                  | Resting state                                           | Hover                                                                   | Selected or focused state                                       |
-| ------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Sidebar collapse control | Transparent background and border                       | Surface highlight, no border highlight                                  | Visible keyboard focus                                          |
-| Settings entry           | Transparent background and border                       | Same background treatment as other sidebar entries, no border highlight | Visible keyboard focus                                          |
-| Ban player action        | Transparent background and border                       | Surface highlight matching sidebar hover, no border highlight           | Visible keyboard focus; no persistent selected background       |
-| Previous-match action    | No visible border                                       | Background highlight, no accent border                                  | Expose pressed state; preserve keyboard focus                   |
-| Recording widget action  | Soft accent background, accent text, transparent border | Background highlight, no accent border                                  | Visible keyboard focus                                          |
-| Palette card             | Subtle neutral border                                   | Neutral surface/border feedback                                         | Selection lives on its swatches; no selected-card accent border |
-| Palette swatch           | Light or dark color preview                             | Clear hover feedback                                                    | Accent ring and checkmark; expose pressed state                 |
+Pending actions show a spinner or `animate-spin`, expose busy state, and reject
+duplicate activation. Do not tie application state to animation completion.
+The global reduced-motion rules preserve status, set transitions to zero, and
+minimize animation duration. No Font Awesome package, icon-font stylesheet, or remote font is
+required by the current interface.
 
-Use `button-borderless` for the specified shared buttons. The settings Back control follows the sidebar Settings entry: transparent at rest, surface highlight on hover, and no resting or hover border. Do not remove keyboard focus outlines to achieve a borderless resting or hover state. Keep one emphasized action per workflow; destructive operations retain their existing confirmation behavior.
+## Composition and stable layout
 
-Inputs need visible labels and associated helper text. Errors offer recovery actions, and empty states explain the next step. Deck selection uses labeled checkboxes. Filters expose pressed state and navigation exposes the current page. Radix dialogs retain focus trapping, Escape dismissal and focus restoration; settings itself does not use that dialog workflow.
+- Overview has four equal summary columns, followed by a full-width room panel
+  and the recent-results/tools grid. Summary details hide when their individual
+  cards are too narrow; primary values stay on one line.
+- Room panels reserve the standard responsive 5v5 height in empty, party, and
+  match states. Pre-match parties reuse Alpha's presentation without modifying
+  the underlying lobby member data. Keep player ELO and query results aligned.
+- Overview and Radar retain their independent current/previous selection.
+  Full match details and player details use the shared dialogs.
+- Player refresh is an icon action in the dialog header immediately before
+  Close. It stays available while the content scrolls and refreshes the profile
+  and report together.
+- APM history and capture context share a wrapping toolbar. Metric cards use a
+  12px grid gap. History selection must update the context and metrics together.
+- ELO color options sit directly under their section heading. Do not restore
+  the removed explanatory paragraph or an additional wrapper card.
+- Quick tools keep their actions without an extra visible heading.
+- Archive filters and actions wrap as complete controls when space is limited.
+  Inline FieldGroup wrappers must use content sizing rather than inline-size
+  containment, which would collapse their intrinsic width and overlap neighbors.
+- Settings categories are Appearance, General, Connection, Automation, and Cache.
+  Use existing section headings, Field composition, shared actions, and automatic
+  saving. Do not recreate Settings as a modal.
+- Workspace and Settings reuse Sidebar and PageToolbar. Keep native caption
+  space, the header separator, accessible navigation, and route scroll state.
+  Sidebar footers reserve 16px of bottom padding so update actions sit clear
+  of the window edge.
 
-Shared toggles use a 40×24px track and a 16px thumb, with equal 4px end spacing and vertical centering in both states. Draw the track boundary with an inset outline so fractional zoom cannot change the thumb's positioning geometry. Center the transparent checkbox on the track with matching 40×24px bounds; reset inherited input minimum height, padding and border. The full label remains clickable, and keyboard focus outlines the visible track. Thumb movement uses the shared 140ms transform transition and respects reduced motion.
+Use container queries when available space depends on a panel, not the viewport.
+At the existing narrow breakpoints, metrics and teams may stack. Controls may
+wrap instead of overflowing. Preserve keyboard access, scrollable long content,
+dialog close controls, and readable table headers.
 
-Keep historical BATrace information distinct from live room data. Missing statistics show a dash; never create substitute values. Win rate uses up to 12 completed win/loss matches for the current player and excludes restarted matches.
+## Accessibility and validation
 
-## Responsive behavior and accessibility
+Maintain accessible labels, visible focus, radio/pressed/busy state, disabled
+behavior, and Radix focus trapping and restoration. Normal readable text should
+meet 4.5:1 contrast against its composited background; essential focus and
+selection boundaries should meet 3:1. Check glass against the actual underlying
+surface in both appearances. Decorative card borders do not replace the focus
+indicator or a control's accessible state.
 
-Match detail tables reserve a 360px sticky player column on desktop and 210px at viewport widths of 600px or less. Player names may use up to 55% of the identity row when awards are present; the remaining space holds the inline award groups. Use 8px horizontal padding for numeric cells and a 104px ELO column to give the player column more room without hiding statistics. The player column retains 12px horizontal padding. Both teams share the same column geometry, and narrow viewports scroll the statistics horizontally while keeping the player identity pinned.
+Verify all six palettes in light and dark modes, opacity at 40%, 50%, and 100%,
+hover/selected/focus states, a narrow viewport, long labels, and reduced motion.
+Use native scrollbars with the shared layout rules; forced-colors mode keeps
+operating-system rendering.
 
-- At 1180px and below, place overview tools below the roster, with the recording and shortcut cards side by side where space permits.
-- At 800px and below, workspace navigation uses an accessible dialog rather than the desktop sidebar.
-- At 720px and below, settings categories form a horizontally scrollable row, with Back above it. Hide the desktop collapse control in this layout.
-- At 600px and below, stack teams and supporting tool cards, use two overview metric columns, and keep form inputs at 16px.
-- At 420px and below, palette pairs use two columns; the three theme-mode previews remain together in one row.
-- Preserve document zoom, visible keyboard focus, a skip link, associated form help and accessible names for repeated action menus. Sticky headers must not obscure focused controls.
-- Check all twelve light/dark palette variants independently. Target at least 4.5:1 contrast for normal text and primary button text, with a separate contrast token for control boundaries.
-- Reserve space for media and use local assets. Keep loading, empty, disabled and error states legible in both appearances.
-
-## Validation
-
-For implementation changes, run `pnpm check` for type checking, regression tests and production builds, plus `pnpm format:check`. Run `pnpm smoke` for desktop behavior changes and `pnpm smoke:real` when real-data behavior is affected. Use `pnpm dev:web` with the collaborative preview at `http://127.0.0.1:5174/`. Browser previews use isolated real test fixtures; native desktop integration remains the source of local data.
-
-Check the following when changing visual behavior:
-
-1. Desktop overview tool edges align with the 房间玩家 metric at normal and wide widths.
-2. Overview and radar both retain room analysis; the full ban list appears only on its dedicated page.
-3. Workspace and Settings headers remain at the top while their content scrolls below them. The soft fade has no seam at the header boundary, never covers the scrollbar and leaves controls usable. Workspace routes retain their own scroll positions, including after visiting Settings.
-4. Both sidebar layouts collapse, retain names and tooltips, and remember the preference after reload.
-5. Settings opens directly, supports linked categories and returns to the previous workspace page with its state intact.
-6. Individual swatches and whole-card selection never change Light, Dark or System mode. Switching modes applies each saved palette.
-7. Graphite rings, checkmarks and primary controls use neutral gray in both appearances; green is reserved for appropriate status feedback.
-8. Automatic saving handles quick changes, pending text on Back, delayed responses, failures and Retry without losing newer input.
-9. Keyboard navigation, focused controls and dialogs work at 375px portrait, a short landscape viewport and desktop sizes, with reduced motion enabled.
-10. Document, sidebar, settings, dialog, table and horizontal scrollbars share the same geometry and theme tokens. Check resting, hover and drag states in light and dark appearances, retain native scrolling, and use operating-system scrollbars in forced-colors mode.
-11. UI icons use Font Awesome consistently. Settings and sidebar update icons measure 18px, both buttons remain 42px high, and the download ring measures 28px in light and dark appearances.
-12. Check idle, checking, available, downloading, downloaded and installing update states. Native rotation runs only during checks, installation and indeterminate ring progress; determinate progress stays accurate. Reduced motion preserves status without animation, and busy or blocked actions cannot activate twice.
-
-For documentation-only changes, check Markdown formatting, local links and agreement with the source files above; application tests do not need to be rerun.
+Run `pnpm check`, `pnpm format:check`, and `pnpm smoke` for implementation changes.
+`pnpm check` includes `pnpm ui:check`, which inventories Card usage, rejects
+feature-level surface overrides and retired card-choice variants, and checks
+local documentation links. `pnpm ui:check --json` prints the detailed inventory.
+Run `pnpm smoke:real` when actual fixture-backed rendering or data behavior is
+affected. `pnpm format:check` includes this design-system directory. Check local
+documentation links and keep the audit record current when changing the rules.

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppEvent, Bridge, RpcInputs, RpcMethod, RpcOutputs } from '@ba/contracts';
 import { fixtureBootstrap, capturedMatches } from './fixtures/ui';
-import { createDevelopmentRuntime } from '../apps/web/src/dev/runtime';
+import {
+  createDevelopmentRuntime,
+  developmentLobbyPlayerCounts,
+} from '../apps/web/src/dev/runtime';
 
 const runtimes: ReturnType<typeof createDevelopmentRuntime>[] = [];
 function setup(
@@ -28,6 +31,128 @@ afterEach(() => {
 });
 
 describe('browser development scenes', () => {
+  it.each(developmentLobbyPlayerCounts)(
+    'simulates a %i-player pre-match party with matching teammate queries and roster events',
+    async (count) => {
+      const { runtime, calls } = setup();
+      await runtime.controls.setMode('demo');
+      const api = runtime.api;
+      const initial = await api.invoke('app.bootstrap', null);
+      const events: AppEvent[] = [];
+      const unsubscribe = api.subscribe((event) => events.push(event));
+
+      runtime.controls.setLobbyPlayerCount(count);
+
+      const bootstrap = await api.invoke('app.bootstrap', null);
+      expect(bootstrap.session).toMatchObject({
+        phase: 'lobby',
+        current: null,
+        localDeck: '',
+        localPlayerId: initial.session.localPlayerId,
+        generation: initial.session.generation + 1,
+      });
+      expect(bootstrap.session.lobbyPlayers).toEqual(
+        initial.session.lobbyPlayers.slice(0, count).map(({ id, name }) => ({
+          id,
+          name,
+          teamId: null,
+        })),
+      );
+      expect(new Set(bootstrap.session.lobbyPlayers.map((player) => player.id)).size).toBe(count);
+      expect(runtime.controls.getSnapshot()).toMatchObject({
+        mode: 'demo',
+        lobbyPlayerCount: count,
+      });
+      expect(events[0]).toMatchObject({ type: 'session', session: bootstrap.session });
+      const roster = events.filter((event) => event.type === 'roster');
+      expect(roster.map((event) => event.player.id)).toEqual(
+        bootstrap.session.lobbyPlayers.map((player) => player.id),
+      );
+      expect(roster.every((event) => event.generation === bootstrap.session.generation)).toBe(true);
+      expect(roster.every((event) => event.info?.elo && event.info.sampleCount)).toBe(true);
+      events.length = 0;
+      const result = await api.invoke('session.query', {
+        context: 'current',
+        requestId: '00000000-0000-4000-8000-000000000002',
+      });
+      expect(result).toMatchObject({ queried: count, skipped: 0, cancelled: false });
+      expect(events.filter((event) => event.type === 'roster')).toHaveLength(count);
+      expect(await api.invoke('matches.list', {})).toHaveLength(72);
+      expect(calls).toEqual(['app.bootstrap']);
+      unsubscribe();
+    },
+  );
+
+  it('grows and shrinks the lobby without losing players and restores the live match', async () => {
+    const { runtime, calls } = setup();
+    await runtime.controls.setMode('demo');
+    const initial = await runtime.api.invoke('app.bootstrap', null);
+    const generation = runtime.controls.getSnapshot().generation;
+    runtime.controls.setRecording('error');
+    runtime.controls.setApm('empty');
+    for (const count of [5, 1, 3, 2, 4, 5, null] as const) {
+      runtime.controls.setLobbyPlayerCount(count);
+      const bootstrap = await runtime.api.invoke('app.bootstrap', null);
+      expect(bootstrap.session.lobbyPlayers).toHaveLength(count ?? 10);
+      expect(bootstrap.session.current).toEqual(count === null ? initial.session.current : null);
+      expect(bootstrap.session.phase).toBe(count === null ? 'match' : 'lobby');
+      expect(bootstrap.session.localDeck).toBe(count === null ? initial.session.localDeck : '');
+      expect(bootstrap.session.lobbyPlayers.every((player) => player.teamId === null)).toBe(
+        count !== null,
+      );
+      expect(runtime.controls.getSnapshot()).toMatchObject({
+        generation,
+        lobbyPlayerCount: count,
+        recording: 'error',
+        apm: 'empty',
+      });
+    }
+    expect(calls).toEqual(['app.bootstrap']);
+  });
+
+  it('leaves automatic roster queries disabled when changing the lobby size', async () => {
+    const { runtime } = setup();
+    await runtime.controls.setMode('demo');
+    await runtime.api.invoke('app.bootstrap', null);
+    await runtime.api.invoke('config.update', { autoQueryCurrentMatch: false });
+    const events: AppEvent[] = [];
+    const unsubscribe = runtime.api.subscribe((event) => events.push(event));
+    runtime.controls.setLobbyPlayerCount(2);
+    expect(events.map((event) => event.type)).toEqual(['session']);
+    expect(
+      await runtime.api.invoke('session.query', {
+        context: 'current',
+        requestId: '00000000-0000-4000-8000-000000000003',
+      }),
+    ).toMatchObject({ queried: 2 });
+    expect(events.filter((event) => event.type === 'roster')).toHaveLength(2);
+    unsubscribe();
+  });
+
+  it('resets the lobby selection and ignores it outside demo mode', async () => {
+    const { runtime, calls } = setup();
+    runtime.controls.setLobbyPlayerCount(3);
+    expect(await runtime.api.invoke('app.bootstrap', null)).toEqual(fixtureBootstrap);
+    await runtime.controls.setMode('empty');
+    runtime.controls.setLobbyPlayerCount(3);
+    expect((await runtime.api.invoke('app.bootstrap', null)).session.lobbyPlayers).toEqual([]);
+    await runtime.controls.setMode('demo');
+    runtime.controls.setLobbyPlayerCount(3);
+    const oldApi = runtime.api;
+    await runtime.controls.setMode('demo');
+    expect(runtime.controls.getSnapshot().lobbyPlayerCount).toBeNull();
+    expect((await runtime.api.invoke('app.bootstrap', null)).session.current?.players).toHaveLength(
+      10,
+    );
+    await expect(oldApi.invoke('app.bootstrap', null)).rejects.toThrow(
+      'Development scene changed.',
+    );
+    await runtime.controls.setMode('captured');
+    runtime.controls.setLobbyPlayerCount(3);
+    expect(await runtime.api.invoke('app.bootstrap', null)).toEqual(fixtureBootstrap);
+    expect(calls.every((method) => method === 'app.bootstrap')).toBe(true);
+  });
+
   it('hydrates a complete live roster after bootstrap and queries only the requested previous players', async () => {
     const { runtime, calls } = setup();
     await runtime.controls.setMode('demo');

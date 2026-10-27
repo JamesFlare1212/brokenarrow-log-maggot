@@ -44,6 +44,18 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
       onBack={backModal}
       title={`${p?.name || r?.name || name} · #${id}`}
       className="dialog-wide profile-dialog"
+      headerActions={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t('refresh')}
+          onClick={() => void load(true)}
+          disabled={profile.pending || report.pending}
+          aria-busy={profile.pending || report.pending}
+        >
+          <Icon icon={faArrowsRotate} spin={profile.pending || report.pending} aria-hidden="true" />
+        </Button>
+      }
     >
       <div className="profile-toolbar">
         <div className="profile-heading">
@@ -65,19 +77,6 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
           )}
         </div>
         <div className="actions">
-          <Button
-            onClick={() => void load(true)}
-            disabled={profile.pending || report.pending}
-            aria-busy={profile.pending || report.pending}
-          >
-            <Icon
-              icon={faArrowsRotate}
-              size={16}
-              spin={profile.pending || report.pending}
-              aria-hidden="true"
-            />
-            {t('refresh')}
-          </Button>
           <Button
             onClick={() =>
               void api

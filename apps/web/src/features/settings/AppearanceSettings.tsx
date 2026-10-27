@@ -42,7 +42,7 @@ export function AppearanceSettings({
             <ToggleGroup
               type="single"
               value={draft.themeMode}
-              variant="appearance"
+              variant="card"
               className="appearance-modes"
               aria-labelledby="settings-mode-heading"
               onValueChange={(value) => {
@@ -140,50 +140,38 @@ export function AppearanceSettings({
         <h3 className="appearance-section-title" id="appearance-elo-heading">
           {t('eloColorScheme')}
         </h3>
-        <Card>
-          <CardHeader className="sr-only">
-            <CardTitle>{t('eloColorScheme')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <Field>
-                <FieldDescription id="elo-color-scheme-hint">
-                  {t('eloColorSchemeHint')}
-                </FieldDescription>
-                <ToggleGroup
-                  type="single"
-                  value={draft.eloColorScheme}
-                  variant="outline"
-                  className="w-full flex-wrap"
-                  aria-labelledby="appearance-elo-heading"
-                  aria-describedby="elo-color-scheme-hint"
-                  onValueChange={(value) => {
-                    if (value === 'green-up' || value === 'red-up')
-                      change({ eloColorScheme: value });
-                  }}
+        <FieldGroup>
+          <Field>
+            <ToggleGroup
+              type="single"
+              value={draft.eloColorScheme}
+              variant="card"
+              className="w-full flex-wrap"
+              aria-labelledby="appearance-elo-heading"
+              onValueChange={(value) => {
+                if (value === 'green-up' || value === 'red-up') change({ eloColorScheme: value });
+              }}
+            >
+              {(['green-up', 'red-up'] as const).map((scheme) => (
+                <ToggleGroupItem
+                  key={scheme}
+                  value={scheme}
+                  className="h-auto min-w-0 flex-1 flex-col gap-2 py-3 whitespace-normal"
                 >
-                  {(['green-up', 'red-up'] as const).map((scheme) => (
-                    <ToggleGroupItem
-                      key={scheme}
-                      value={scheme}
-                      className="h-auto min-w-0 flex-1 flex-col gap-2 py-3 whitespace-normal"
-                    >
-                      <span>{t('eloColorScheme.' + scheme)}</span>
-                      <span className="flex items-center gap-4 tabular-nums" aria-hidden="true">
-                        <span className={scheme === 'green-up' ? 'text-success' : 'text-danger'}>
-                          +20.00
-                        </span>
-                        <span className={scheme === 'green-up' ? 'text-danger' : 'text-success'}>
-                          -20.00
-                        </span>
-                      </span>
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
+                  <span>{t('eloColorScheme.' + scheme)}</span>
+                  <span className="flex items-center gap-4 tabular-nums" aria-hidden="true">
+                    <span className={scheme === 'green-up' ? 'text-success' : 'text-danger'}>
+                      +20.00
+                    </span>
+                    <span className={scheme === 'green-up' ? 'text-danger' : 'text-success'}>
+                      -20.00
+                    </span>
+                  </span>
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </Field>
+        </FieldGroup>
       </section>
       <section className="appearance-section" aria-labelledby="appearance-themes-heading">
         <h3 className="appearance-section-title" id="appearance-themes-heading">

@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
+const cardSurfaceClasses =
+  'rounded-xl border border-(--glass-border) bg-(--glass-surface) text-card-foreground shadow-(--glass-shadow) backdrop-blur-(--glass-blur) backdrop-saturate-(--glass-saturation)';
+
 function Card({
   className,
   size = 'default',
@@ -13,7 +16,8 @@ function Card({
       data-size={size}
       data-variant={variant}
       className={cn(
-        'group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl border border-(--glass-border) bg-(--glass-surface) py-(--card-spacing) text-sm text-card-foreground shadow-(--glass-shadow) backdrop-blur-(--glass-blur) backdrop-saturate-(--glass-saturation) [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
+        cardSurfaceClasses,
+        'group/card flex flex-col gap-(--card-spacing) overflow-hidden py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
         variant === 'appearance' && 'transition-colors hover:border-foreground/20',
         className,
       )}
@@ -92,4 +96,13 @@ function CardFooter({
   );
 }
 
-export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardAction,
+  CardDescription,
+  CardContent,
+  cardSurfaceClasses,
+};

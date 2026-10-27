@@ -1,10 +1,10 @@
-# 断箭蛐工具 · v4
+# BARadar · 断箭蛐工具
 
-<img src="apps/web/public/logo.png" width="80" height="80" alt="Broken Arrow Log Assistant logo" />
+<img src="apps/web/public/logo.png" width="80" height="80" alt="BARadar logo" />
 
 本地 Broken Arrow 对局助手，使用 React + Vite + Electron + Node.js + TypeScript + SQLite，以及 pnpm。
 
-[视觉规范](design-system/broken-arrow/MASTER.md) · [架构](docs/architecture.md) · [数据迁移](docs/migration.md) · [审查问题处理](docs/audit-resolution.md)
+[UI design system](design-system/broken-arrow/MASTER.md) · [UI audit](docs/ui-audit.md) · [Architecture](docs/architecture.md) · [Migration](docs/migration.md) · [Audit resolutions](docs/audit-resolution.md)
 
 [游戏日志目录检测：实现与调研依据](docs/log-directory-detection.md)
 
@@ -25,6 +25,10 @@ BATrace 是历史数据，可能延迟数天。蛆指数需要最近 12 场有�
 ## Screenshots
 
 Captured from the running application in browser development mode (`pnpm dev:web`), using the repository's [real-data fixtures](tests/fixtures/real/README.md). Player names, match results and statistics come from recorded data.
+
+The [UI design system](design-system/broken-arrow/MASTER.md) defines current
+surface and interaction requirements; the [UI audit](docs/ui-audit.md) records
+the latest compliance review.
 
 ### Overview
 

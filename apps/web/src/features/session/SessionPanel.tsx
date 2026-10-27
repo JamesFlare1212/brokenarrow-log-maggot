@@ -10,16 +10,15 @@ import {
   Layers,
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
-import { TooltipButton } from '../../components/Tooltip';
 import type { Match, Player } from '@ba/contracts';
 import { formatDuration, formatMetric, teamLabel, matchTitles } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { Card, Button, Empty } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 import { MatchAwards } from '../matches/MatchAwards';
+import { Button as PrimitiveButton } from '@/components/ui/button';
 import { Item, ItemContent, ItemActions } from '@/components/ui/item';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const { state, api, openModal, notify } = useApp(),
     { t } = useI18n();
@@ -58,11 +57,13 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
       cancelled = true;
     };
   }, [api, view, previous?.fid]);
-  const players: Player[] =
+  const roster: Player[] =
       view === 'previous'
         ? previous?.players || []
         : (state.session.current?.players ?? state.session.lobbyPlayers),
     match = view === 'previous' ? previous : state.session.current;
+  const isLobby = view === 'current' && state.session.phase === 'lobby' && !match;
+  const players: Player[] = isLobby ? roster.map((player) => ({ ...player, teamId: 0 })) : roster;
   const titles = useMemo(
     () => (match?.endedAt ? (match.titles ?? matchTitles(match)) : {}),
     [match],
@@ -138,7 +139,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
     </>
   );
   const content = (
-    <>
+    <div className="session-layout">
       <div className="session-banner">
         {players.length > 0 && (
           <div className="session-banner-content">
@@ -148,7 +149,9 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                   ? 'previous'
                   : state.session.phase === 'match'
                     ? 'liveMatch'
-                    : 'waiting',
+                    : isLobby
+                      ? 'waitingForMatch'
+                      : 'waiting',
               )}
               {match?.fid && (
                 <Button
@@ -167,7 +170,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                 </Button>
               )}
             </div>
-            <h2>{match?.map || t('sessionOverview')}</h2>
+            <h2>{match?.map || t(isLobby ? 'partyLobby' : 'sessionOverview')}</h2>
             <div className="match-meta">
               {match && (
                 <span>
@@ -210,6 +213,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
           {([0, 1, 100, null] as const).map((team) => {
             const list = players.filter((p) => p.teamId === team);
             if (!list.length) return null;
+            const label = teamLabel(team);
             return (
               <div className={`team-column team-${team}`} key={String(team)}>
                 <div className="team-title">
@@ -217,7 +221,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                     {(team === 0 || team === 1) && (
                       <span className="team-indicator" aria-hidden="true" />
                     )}
-                    {teamLabel(team)}{' '}
+                    {label}{' '}
                     <small>
                       {team === 0 || team === 1
                         ? t(
@@ -245,7 +249,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={t('copy') + ' ' + teamLabel(team)}
+                    aria-label={t('copy') + ' ' + label}
                     onClick={() =>
                       void navigator.clipboard
                         .writeText(
@@ -280,26 +284,20 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                       className="player-card"
                       key={p.id}
                     >
+                      <PrimitiveButton
+                        type="button"
+                        variant="ghost"
+                        className="player-card-trigger"
+                        aria-label={p.name}
+                        aria-haspopup="dialog"
+                        onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}
+                      />
                       <ItemContent>
                         <div className="player-identity">
                           <div className="player-heading">
-                            <TooltipButton
-                              variant="link"
-                              className="player-name-button h-auto px-0 py-0"
-                              tooltip={
-                                <>
-                                  <span className="button-tooltip-label">
-                                    {p.name} · #{p.id}
-                                  </span>
-                                  {analysis && (
-                                    <span className="button-tooltip-detail">{analysis}</span>
-                                  )}
-                                </>
-                              }
-                              onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}
-                            >
-                              <span className="player-name">{p.name}</span>
-                            </TooltipButton>
+                            <span className="player-name min-w-0 font-medium text-primary">
+                              {p.name}
+                            </span>
                             <MatchAwards
                               key={`${match?.id}:${p.id}`}
                               titles={titles[p.id] ?? []}
@@ -341,7 +339,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
           })}
         </div>
       )}
-    </>
+    </div>
   );
   if (standalone) {
     return (
@@ -352,12 +350,12 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   }
   return (
     <Card
-      className={cn('session-card session-roster', players.length === 0 && 'session-empty')}
+      className="session-card session-roster"
       contentClassName="session-content"
       title={title}
       showHeader={false}
     >
-      <div className="session-layout">{content}</div>
+      {content}
     </Card>
   );
 }

@@ -7,6 +7,7 @@ import type {
   RpcInputs,
   RpcMethod,
   RpcOutputs,
+  Session,
 } from '@ba/contracts';
 import {
   createDevelopmentData,
@@ -20,6 +21,8 @@ import { createDevelopmentVideo } from './media';
 export type DevelopmentMode = 'captured' | 'empty' | 'demo';
 export type DevelopmentApm = 'empty' | 'active' | 'complete';
 export type DevelopmentRecording = 'idle' | 'recording' | 'error';
+export const developmentLobbyPlayerCounts = [1, 2, 3, 4, 5] as const;
+export type DevelopmentLobbyPlayerCount = (typeof developmentLobbyPlayerCounts)[number];
 export interface DevelopmentSnapshot {
   locale: 'zh' | 'en';
   mode: DevelopmentMode;
@@ -27,6 +30,7 @@ export interface DevelopmentSnapshot {
   pending: boolean;
   recording: DevelopmentRecording;
   apm: DevelopmentApm;
+  lobbyPlayerCount: DevelopmentLobbyPlayerCount | null;
 }
 type WithoutRevision<T> = T extends unknown ? Omit<T, 'revision'> : never;
 type Handlers = {
@@ -47,8 +51,10 @@ export function createDevelopmentRuntime(
     pending: false,
     recording: 'idle',
     apm: 'empty',
+    lobbyPlayerCount: null,
   };
   let local: DevelopmentData | null = null;
+  let demoSession: Session | null = null;
   let rosterHydrated = false;
   let clock: ReturnType<typeof setInterval> | undefined;
   let video: Promise<string> | null = null;
@@ -236,6 +242,29 @@ export function createDevelopmentRuntime(
       });
     }
   };
+  const setLobbyPlayerCount = (count: DevelopmentLobbyPlayerCount | null) => {
+    if (snapshot.mode !== 'demo' || snapshot.pending || !demoSession) return;
+    const scene = data();
+    const session = structuredClone(demoSession);
+    session.generation = scene.bootstrap.session.generation + 1;
+    if (count !== null) {
+      session.phase = 'lobby';
+      session.current = null;
+      session.localDeck = '';
+      session.lobbyPlayers = session.lobbyPlayers
+        .slice(0, count)
+        .map(({ id, name }) => ({ id, name, teamId: null }));
+    }
+    scene.bootstrap.session = session;
+    emit({ type: 'session', session });
+    if (scene.bootstrap.config.autoQueryCurrentMatch)
+      publishRoster(
+        'current',
+        session.current?.players ?? session.lobbyPlayers,
+        `development-session-${session.generation}`,
+      );
+    publish({ lobbyPlayerCount: count });
+  };
   const handlers: Handlers = {
     'app.bootstrap': () => {
       const bootstrap = structuredClone(data().bootstrap);
@@ -243,7 +272,11 @@ export function createDevelopmentRuntime(
         rosterHydrated = true;
         const generation = snapshot.generation;
         queueMicrotask(() => {
-          if (snapshot.generation !== generation) return;
+          if (
+            snapshot.generation !== generation ||
+            data().bootstrap.session.generation !== bootstrap.session.generation
+          )
+            return;
           publishRoster(
             'current',
             bootstrap.session.current?.players ?? bootstrap.session.lobbyPlayers,
@@ -491,6 +524,7 @@ export function createDevelopmentRuntime(
           stopClock();
           local =
             mode === 'captured' ? null : createDevelopmentData(baseState, mode === 'empty', now());
+          demoSession = mode === 'demo' ? structuredClone(local!.bootstrap.session) : null;
           rosterHydrated = false;
           snapshot = {
             locale: baseState.config.lang,
@@ -499,6 +533,7 @@ export function createDevelopmentRuntime(
             pending: false,
             recording: 'idle',
             apm: mode === 'demo' ? 'complete' : 'empty',
+            lobbyPlayerCount: null,
           };
           api = createBridge();
           observers.forEach((listener) => listener());
@@ -509,6 +544,7 @@ export function createDevelopmentRuntime(
       },
       setRecording,
       setApm,
+      setLobbyPlayerCount,
     },
     dispose() {
       stopClock();
