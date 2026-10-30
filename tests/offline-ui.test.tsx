@@ -9,6 +9,7 @@ import { MatchDialog } from '../apps/web/src/features/matches/MatchDialog';
 import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
 import { createBrowserFixtures } from '../apps/server/src/dev/browser';
 import { loadRealData } from '../apps/server/src/dev/real-data';
+import { formatMetric } from '@ba/shared';
 import { translate } from '../apps/web/src/hooks/useI18n';
 
 const root = resolve('.test-data/offline-ui-tests');
@@ -101,6 +102,42 @@ describe('UI backed by the complete recorded BATrace service', () => {
     expect(within(matchData).getAllByRole('columnheader')).toHaveLength(9);
     expect(screen.queryByRole('tab', { name: new RegExp(t('recent')) })).toBeNull();
     expect(screen.getAllByText(t('latestKd'))).toHaveLength(1);
+    const report = await api.invoke('players.report', { id });
+    const ratingTrend = screen.getByRole('region', { name: t('ratingTrend') });
+    expect(report.ratingTrend.length).toBeGreaterThan(0);
+    expect(
+      within(ratingTrend).getByText(
+        translate('zh', 'ratingTrendRange', { count: report.ratingTrend.length }),
+      ),
+    ).toBeTruthy();
+    expect(
+      within(ratingTrend).getByText(t('ratingTrendLatest')).nextElementSibling?.textContent,
+    ).toBe(formatMetric(report.ratingTrend.at(-1)!.ratingAfter, 1));
+    const units = screen.getByRole('table', { name: t('units') });
+    const unitRows = within(units).getAllByRole('row').slice(1);
+    expect(report.favUnits.length).toBeGreaterThan(3);
+    expect(unitRows).toHaveLength(report.favUnits.length);
+    expect(within(units).getByRole('columnheader', { name: t('deployments') })).toBeTruthy();
+    for (const [index, unit] of report.favUnits.entries()) {
+      const cells = within(unitRows[index]!).getAllByRole('cell');
+      expect(cells[0]!.textContent).toContain(unit.name);
+      expect(cells.slice(1).map((cell) => cell.textContent)).toEqual([
+        formatMetric(unit.value, 0),
+        formatMetric(unit.spawn, 0),
+        formatMetric(unit.roi),
+      ]);
+    }
+    const preferences = screen.getByRole('region', { name: t('preference') });
+    expect(report.categories).toHaveLength(7);
+    expect(within(preferences).getAllByRole('listitem')).toHaveLength(7);
+    for (const category of report.categories) {
+      expect(
+        within(preferences)
+          .getByRole('progressbar', { name: t('cat.' + category.key) })
+          .getAttribute('aria-valuenow'),
+      ).toBe(String(category.pct));
+      expect(within(preferences).getByText(formatMetric(category.totalCost, 0))).toBeTruthy();
+    }
     expect(screen.queryByRole('button', { name: t('maggot') })).toBeNull();
     await waitFor(
       () => expect(completed.filter((call) => call.method === 'players.maggot')).toHaveLength(1),
