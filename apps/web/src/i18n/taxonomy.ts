@@ -15,6 +15,7 @@ export const taxonomy: Record<string, readonly [string, string]> = {
   'cat.naval': ['海军', 'Navy'],
   'cat.vehicles': ['载具', 'Vehicles'],
   'cat.support': ['支援', 'Support'],
+  'cat.logistic': ['后勤', 'Logistics'],
   'cat.planes': ['战机', 'Planes'],
   'cat.armor': ['装甲', 'Armor'],
   'style.team_player': ['团队型', 'Team player'],

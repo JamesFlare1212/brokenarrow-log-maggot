@@ -132,8 +132,8 @@ export function createDevelopmentData(
           { name: 'AH-64 Apache', value: 2100, spawn: 8, roi: 1.4 },
         ],
         categories: [
-          { key: 'armor', pct: 42 },
-          { key: 'infantry', pct: 31 },
+          { key: 'armor', pct: 42, totalCost: 42_000 },
+          { key: 'infantry', pct: 31, totalCost: 31_000 },
         ],
         mapStats: [{ mapId: 1, name: 'Dam', matchCount: 24, winRate: 62 }],
         style: null,

@@ -172,8 +172,8 @@ required by the current interface.
   Close. It stays available while the content scrolls and refreshes the profile
   and report together.
 - Player details keep their final layout during the initial load: metadata,
-  four metric cards, combat preferences beside the Maggot Index, and record tabs
-  with table headers. Use shadcn Skeleton inside the values, preference rows,
+  four metric cards, highlight units beside the preferences and Maggot Index
+  column, and record tabs with table headers. Use shadcn Skeleton inside the values, preference rows,
   tab counts, and table cells that are still pending. Do not insert a generic
   loading block above the metrics or expand the index into the preference column.
   The shared Skeleton uses foreground at 10% opacity so placeholders remain
@@ -181,6 +181,15 @@ required by the current interface.
   and use the same table column widths in loading and loaded states.
   Keep Copy visible and disabled until a report is available. Empty preferences
   retain their card and show an explicit empty state.
+- Player details and query reports share the same preference display. Show every
+  highlight unit and category returned by BATrace in source order without a
+  fixed item limit. Highlight units use a shared glass Card and shadcn Table
+  with unit name, damage, deployment count, and ROI columns. Category preferences
+  use the shared Progress component with one-decimal percentages and total
+  deployment investment. Keep zero values distinct from unavailable values,
+  which use an em dash. Use tabular numbers and theme tokens; unit names wrap,
+  narrow containers stack the cards, and any table overflow stays inside its
+  scroll container. Loading placeholders retain the same headers and columns.
 - Profile and report requests resolve independently. Replace only the placeholders
   supplied by each response; show empty states only after that request settles.
   Refreshes retain existing values and the active record tab. The Maggot Index

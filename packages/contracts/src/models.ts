@@ -125,7 +125,7 @@ export interface PlayerReport {
     endTime: number | null;
   }>;
   favUnits: Array<{ name: string; value: Metric; spawn: Metric; roi: Metric }>;
-  categories: Array<{ key: string; pct: Metric }>;
+  categories: Array<{ key: string; pct: Metric; totalCost: Metric }>;
   mapStats: Array<{ mapId: number | null; name: string; matchCount: number; winRate: Metric }>;
   style: string | null;
 }
