@@ -172,10 +172,11 @@ required by the current interface.
   Close. It stays available while the content scrolls and refreshes the profile
   and report together.
 - Player details keep their final layout during the initial load: metadata,
-  four metric cards, the ELO trend, combat preferences beside the Maggot Index, and record tabs
-  with table headers. Use shadcn Skeleton inside the values, preference rows,
-  tab counts, and table cells that are still pending. Do not insert a generic
-  loading block above the metrics or expand the index into the preference column.
+  four metric cards, the ELO trend, combat preferences beside the Maggot Index,
+  and record tabs with table headers or map cards. Use shadcn Skeleton inside the
+  values, preference rows, tab counts, table cells, and map cards that are still
+  pending. Do not insert a generic loading block above the metrics or expand the
+  index into the preference column.
   The shared Skeleton uses foreground at 10% opacity so placeholders remain
   visible on both light and dark cards. Reserve the dialog's scrollbar gutter
   and use the same table column widths in loading and loaded states.
@@ -200,6 +201,19 @@ required by the current interface.
   keeps its score and summary in place while progress appears in its header badge
   and a reserved track below the sample caption. Loading and loaded content share
   the same responsive grids and reduced-motion behavior.
+- Map performance uses the shared `MapPerformanceGrid` in player records and
+  report details. Arrange small glass Cards in a responsive grid with 12px gaps
+  and a 16rem minimum column width that shrinks to fit narrow containers. Sort
+  maps by match count descending without changing the report data. Each card has
+  a wrapping map name, match count, shadcn Progress track, and labeled win rate,
+  average K/D, and average destruction value. Preserve one decimal for win rates;
+  abbreviate destruction values of at least 1,000 with `k` and expose the full
+  value on hover. Use upstream map averages, never the latest match's statistics.
+  Missing metrics show an em dash; a missing win rate has an empty track with no
+  announced numeric value. Win rates above 50% use success, 50% information,
+  40% to below 50% warning, and below 40% destructive tokens. These colors are
+  independent of ELO preferences. Initial loading uses the same card composition
+  with six skeleton cards, and refreshes retain the populated grid.
 - ELO color options sit directly under their section heading. Do not restore
   the removed explanatory paragraph or an additional wrapper card.
 - Quick tools keep their actions without an extra visible heading.

@@ -133,7 +133,14 @@ export interface PlayerReport {
   }>;
   favUnits: Array<{ name: string; value: Metric; spawn: Metric; roi: Metric }>;
   categories: Array<{ key: string; pct: Metric }>;
-  mapStats: Array<{ mapId: number | null; name: string; matchCount: number; winRate: Metric }>;
+  mapStats: Array<{
+    mapId: number | null;
+    name: string;
+    matchCount: number;
+    winRate: Metric;
+    avgKd: Metric;
+    avgDestructionScore: Metric;
+  }>;
   style: string | null;
 }
 export interface MaggotRow {
