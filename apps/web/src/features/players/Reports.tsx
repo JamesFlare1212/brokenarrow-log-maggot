@@ -32,6 +32,7 @@ import { useI18n } from '../../hooks/useI18n';
 import { useApp } from '../../app/state';
 import { MaggotCard } from './MaggotCard';
 import { ProfileTableSkeleton } from './ProfileTableSkeleton';
+import { MapPerformanceGrid } from './MapPerformanceGrid';
 
 export function ReportCopyButton({ report }: { report: PlayerReport | null }) {
   const { t } = useI18n(),
@@ -165,13 +166,7 @@ export function ReportView({
         {!embedded && <MaggotCard id={report.id} />}
         {report.mapStats.length > 0 && (
           <ReportDetails embedded label={t('mapStatistics')}>
-            <div className="report-tags">
-              {report.mapStats.map((m) => (
-                <Badge key={m.mapId ?? m.name}>
-                  {m.name} · {formatMetric(m.winRate, 0)}% ({m.matchCount})
-                </Badge>
-              ))}
-            </div>
+            <MapPerformanceGrid maps={report.mapStats} />
           </ReportDetails>
         )}
         {!!report.recentMatches.length && (
