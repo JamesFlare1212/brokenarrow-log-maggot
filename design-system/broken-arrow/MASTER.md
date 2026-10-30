@@ -168,6 +168,9 @@ required by the current interface.
   the underlying lobby member data. Keep player ELO and query results aligned.
 - Overview and Radar retain their independent current/previous selection.
   Full match details and player details use the shared dialogs.
+- While a lazy dialog module loads, announce loading through an out-of-flow
+  screen-reader status. Keep the underlying workspace geometry unchanged until
+  the dialog portal mounts; do not add loading columns to the application shell.
 - Player refresh is an icon action in the dialog header immediately before
   Close. It stays available while the content scrolls and refreshes the profile
   and report together.
@@ -241,6 +244,37 @@ Use container queries when available space depends on a panel, not the viewport.
 At the existing narrow breakpoints, metrics and teams may stack. Controls may
 wrap instead of overflowing. Preserve keyboard access, scrollable long content,
 dialog close controls, and readable table headers.
+
+### Asynchronous content and reserved space
+
+Keep the same section shells, labels, table headers, column widths, and responsive
+grids while requests are waiting, partially available, or complete. Replace values
+inside their final slots with shadcn Skeleton. A cache response must fill those
+slots without changing a table or preference list into a short text paragraph.
+Keep cached names visible; leave unavailable metrics as placeholders until their
+request settles, then use an em dash for missing metrics. Never infer zero values
+or numeric category percentages from a cached name.
+
+Player preferences reserve a minimum of fifteen unit rows and seven category rows
+in every state, including sparse, empty, and failed reports. The reservation counts
+also drive the initial placeholder rows, and shared CSS row sizes and gaps drive
+the minimum heights. These are space budgets, not item limits: additional entries
+and wrapping names grow naturally and remain available. Do not show extra skeletons
+or fabricated rows after loading. Reserve header space for badges and use the same
+column definitions for placeholders and loaded cells.
+
+When encounter data is pending, render all four summary labels with value
+placeholders above the table from the start. The summary uses the same grid,
+spacing, and value line height as the loaded counts. Keep the same table and
+header mounted when nonempty records arrive. A confirmed empty result may replace
+the pending summary and table with the established empty state.
+
+Check both response orders, cached partial responses, missing metrics, failed
+reports, empty and nonempty encounters, and refreshes that retain data. Runtime
+layout checks compare section positions and the table header's offset from its tab
+panel at desktop and narrow widths. Element presence alone does not verify layout
+stability. Large reports or long names may exceed their reserved budget; verify
+that this growth stays inside the dialog and preserves access to every value.
 
 ## Accessibility and validation
 

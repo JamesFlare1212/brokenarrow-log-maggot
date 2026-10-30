@@ -144,3 +144,49 @@ smoke loaded 454 recorded matches offline. Initial test failures exposed two
 outdated loading assertions and incomplete simulated pointer input for Radix
 tabs. The assertions and input simulation were corrected, and the final full
 test run passed without skipped tests.
+
+## Cached preferences and encounter summary reservation
+
+Date: 2026-10-30. A follow-up review of PR #16 reproduced two remaining layout
+changes: cached profile preferences replaced the unit table and category list
+with compact paragraphs before the full report arrived, and a nonempty encounter
+response inserted its four-count summary above an existing table header.
+
+Cached unit names and the cached category now fill their final table and list
+slots. Metrics without a report retain shadcn Skeleton until the request settles;
+missing metrics then use an em dash. Unit and category regions retain a minimum
+of fifteen and seven rows of space respectively, including sparse, empty, and
+failed results. Placeholder counts and minimum heights share the same row budgets.
+Additional entries and wrapping names or values can grow beyond these minimums.
+Unit columns and badge headers keep the same dimensions during loading.
+
+Encounter records now render the four summary labels and value placeholders from
+the start. Pending and loaded records share the same summary, table, headers,
+column widths, and responsive grid. A confirmed empty result still uses the
+existing empty state. The rules are recorded in the design system's
+[asynchronous content specification](../design-system/broken-arrow/MASTER.md#asynchronous-content-and-reserved-space).
+
+Regression coverage checks cached values while reports remain pending, successful
+and failed reports in Chinese and English, both response orders for nonempty
+encounters, and reports larger than the reserved row budgets. The existing tests
+also cover empty encounters and refreshes that retain values and the active tab.
+
+Hidden Electron windows measured 1440px, 760px, and 375px layouts with Chinese/light
+and English/dark appearances and both response orders: twelve scenarios. Preference
+region heights and the record section's offset below that region varied by at
+most 1px; encounter header offsets and table column widths did not change. These
+measurements isolate the preference region and encounter tab from unrelated
+content above them, such as the ELO chart caption. No renderer errors or dialog
+overflow were recorded. The initial combined harness run timed out after eight
+scenarios; separate runs per width completed all twelve scenarios.
+
+A separate 375px English/dark check loaded twenty units and nine categories with
+long unit names and large numeric values. Both regions grew beyond their minimum
+budgets, every entry remained available, and numeric cells and the dialog stayed
+free of horizontal overflow.
+
+Validation: `pnpm check` passed type checking, the UI design guard, 978 regression
+tests across 42 files without skipped tests, and all production builds.
+`pnpm format:check`, `pnpm smoke`, and `pnpm smoke:real` passed; the real-data smoke
+loaded 454 recorded matches offline through the native bridge. `git diff --check`
+also passed.

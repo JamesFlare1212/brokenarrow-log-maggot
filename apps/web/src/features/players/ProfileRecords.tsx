@@ -83,14 +83,9 @@ export function ProfileRecords({
         )}
       </TabsContent>
       <TabsContent value="encounters">
-        {profilePending ? (
-          <ProfileRecordLoading
-            columns={['map', 'team', 'result', 'time']}
-            label={t('encounters')}
-          />
-        ) : encounters.length > 0 ? (
+        {profilePending || encounters.length > 0 ? (
           <>
-            <dl className="profile-encounter-summary">
+            <dl className="profile-encounter-summary" aria-busy={profilePending}>
               {[
                 { label: t('same'), value: teammates.length },
                 {
@@ -108,57 +103,68 @@ export function ProfileRecords({
               ].map((item) => (
                 <div key={item.label}>
                   <dt>{item.label}</dt>
-                  <dd>{item.value}</dd>
+                  <dd>
+                    {profilePending ? (
+                      <Skeleton className="h-5 w-8" aria-hidden="true" />
+                    ) : (
+                      item.value
+                    )}
+                  </dd>
                 </div>
               ))}
             </dl>
-            <div className="profile-table">
-              <Table>
+            <div className="profile-table profile-encounters-table">
+              <Table aria-busy={profilePending}>
                 <TableCaption className="sr-only">{t('encounters')}</TableCaption>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('map')}</TableHead>
-                    <TableHead>{t('team')}</TableHead>
-                    <TableHead>{t('result')}</TableHead>
-                    <TableHead>{t('time')}</TableHead>
+                    {['map', 'team', 'result', 'time'].map((column) => (
+                      <TableHead key={column} data-column={column}>
+                        {t(column)}
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {encounters.map((encounter, index) => (
-                    <TableRow key={encounter.matchId + ':' + index}>
-                      <TableCell>
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => openModal({ type: 'match', fid: encounter.matchId })}
-                        >
-                          {encounter.map || encounter.matchId}
-                        </Button>
-                      </TableCell>
-                      <TableCell>{t(encounter.relation)}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge
-                            tone={
-                              encounter.won === null
-                                ? 'muted'
-                                : encounter.won
-                                  ? 'success'
-                                  : 'danger'
-                            }
+                  {profilePending ? (
+                    <ProfileTableSkeleton columns={['map', 'team', 'result', 'time']} />
+                  ) : (
+                    encounters.map((encounter, index) => (
+                      <TableRow key={encounter.matchId + ':' + index}>
+                        <TableCell>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => openModal({ type: 'match', fid: encounter.matchId })}
                           >
-                            {encounter.won === null
-                              ? t('unknown')
-                              : t(encounter.won ? 'win' : 'loss')}
-                          </Badge>
-                          {encounter.custom && <Badge>{t('custom')}</Badge>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="profile-time">
-                        {formatTime(encounter.at, locale)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            {encounter.map || encounter.matchId}
+                          </Button>
+                        </TableCell>
+                        <TableCell>{t(encounter.relation)}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              tone={
+                                encounter.won === null
+                                  ? 'muted'
+                                  : encounter.won
+                                    ? 'success'
+                                    : 'danger'
+                              }
+                            >
+                              {encounter.won === null
+                                ? t('unknown')
+                                : t(encounter.won ? 'win' : 'loss')}
+                            </Badge>
+                            {encounter.custom && <Badge>{t('custom')}</Badge>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="profile-time">
+                          {formatTime(encounter.at, locale)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -177,26 +183,5 @@ export function ProfileRecords({
         )}
       </TabsContent>
     </Tabs>
-  );
-}
-
-function ProfileRecordLoading({ columns, label }: { columns: string[]; label: string }) {
-  const { t } = useI18n();
-  return (
-    <div className="profile-table">
-      <Table aria-busy="true">
-        <TableCaption className="sr-only">{label}</TableCaption>
-        <TableHeader>
-          <TableRow>
-            {columns.map((column) => (
-              <TableHead key={column}>{t(column)}</TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <ProfileTableSkeleton columns={columns} />
-        </TableBody>
-      </Table>
-    </div>
   );
 }

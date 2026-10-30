@@ -3485,6 +3485,172 @@ describe('profile refresh and report scopes', () => {
     },
   );
 
+  it.each([
+    { locale: 'zh', fails: false },
+    { locale: 'en', fails: false },
+    { locale: 'zh', fails: true },
+    { locale: 'en', fails: true },
+  ] as const)(
+    'keeps cached preferences in their table and rows in $locale when report failure is $fails',
+    async ({ locale, fails }) => {
+      const profileRequest = deferred<RpcOutputs['players.profile']>();
+      const reportRequest = deferred<RpcOutputs['players.report']>();
+      const report = reportFixture();
+      report.favUnits = report.favUnits.slice(0, 2);
+      report.categories = report.categories.slice(0, 2);
+      const profile = structuredClone(capturedProfiles[localPlayer.id]!);
+      profile.info = {
+        ...profile.info!,
+        category: report.categories[0]!.key,
+        topUnits: report.favUnits.map((unit) => unit.name).join(', '),
+      };
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const native = nativeFixture(initial, {
+        'players.profile': () => profileRequest.promise,
+        'players.report': () => reportRequest.promise,
+      });
+      render(<ProfileDialog id={localPlayer.id} name={localPlayer.name} />, {
+        wrapper: wrapper(native.api),
+      });
+      const label = (key: string) => translate(locale, key);
+      const table = await screen.findByRole('table', { name: label('units') });
+      const header = within(table).getAllByRole('columnheader');
+      const unitRow = table.querySelector('tbody tr');
+      const preferences = screen.getByRole('region', { name: label('preference') });
+      const categoryList = preferences.querySelector('ul');
+      const unitRowCount = table.querySelectorAll('tbody tr').length;
+      const categoryRowCount = categoryList!.children.length;
+
+      await act(async () => profileRequest.resolve(profile));
+      expect(screen.getByRole('table', { name: label('units') })).toBe(table);
+      expect(within(table).getAllByRole('columnheader')).toEqual(header);
+      expect(table.querySelector('tbody tr')).toBe(unitRow);
+      expect(table.querySelectorAll('tbody tr')).toHaveLength(unitRowCount);
+      expect(table.getAttribute('aria-busy')).toBe('true');
+      for (const unit of report.favUnits) {
+        const row = within(table).getByText(unit.name).closest('tr')!;
+        expect(row.getAttribute('aria-hidden')).toBeNull();
+        expect(row.querySelectorAll('td [data-slot="skeleton"]')).toHaveLength(3);
+        expect(within(row).queryByText('—')).toBeNull();
+      }
+      expect(preferences.querySelector('ul')).toBe(categoryList);
+      expect(categoryList!.children).toHaveLength(categoryRowCount);
+      expect(
+        within(preferences).getByText(label('cat.' + report.categories[0]!.key.toLowerCase())),
+      ).toBeTruthy();
+      expect(within(preferences).queryByRole('progressbar')).toBeNull();
+
+      await act(async () => {
+        if (fails) reportRequest.reject(new Error('Report unavailable'));
+        else reportRequest.resolve(report);
+      });
+      expect(screen.getByRole('table', { name: label('units') })).toBe(table);
+      expect(table.getAttribute('aria-busy')).toBe('false');
+      expect(table.querySelectorAll('tbody tr')).toHaveLength(2);
+      expect(table.querySelector('[data-slot="skeleton"]')).toBeNull();
+      expect(preferences.querySelector('ul')).toBe(categoryList);
+      if (fails) {
+        expect(screen.getByRole('alert').textContent).toContain('Report unavailable');
+        expect(within(table).getAllByText('—')).toHaveLength(6);
+        expect(within(preferences).queryByRole('progressbar')).toBeNull();
+      } else {
+        expect(categoryList!.children).toHaveLength(report.categories.length);
+        expect(within(preferences).getAllByRole('progressbar')).toHaveLength(
+          report.categories.filter((category) => category.pct !== null).length,
+        );
+      }
+    },
+  );
+
+  it.each([
+    { locale: 'zh', first: 'profile' },
+    { locale: 'en', first: 'profile' },
+    { locale: 'zh', first: 'report' },
+    { locale: 'en', first: 'report' },
+  ] as const)(
+    'reserves the encounter summary and retains its table in $locale when $first arrives first',
+    async ({ locale, first }) => {
+      const profileRequest = deferred<RpcOutputs['players.profile']>();
+      const reportRequest = deferred<RpcOutputs['players.report']>();
+      const profile = structuredClone(capturedProfiles[localPlayer.id]!);
+      profile.encounters = [
+        { matchId: '1', at: 1000, map: 'Dam', relation: 'same', won: true, custom: false },
+        { matchId: '2', at: 2000, map: 'Coast', relation: 'opponent', won: false, custom: false },
+        { matchId: '3', at: null, map: 'Airport', relation: 'same', won: null, custom: true },
+      ];
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const native = nativeFixture(initial, {
+        'players.profile': () => profileRequest.promise,
+        'players.report': () => reportRequest.promise,
+      });
+      render(<ProfileDialog id={localPlayer.id} name={localPlayer.name} />, {
+        wrapper: wrapper(native.api),
+      });
+      const label = (key: string) => translate(locale, key);
+      await userEvent.setup().click(await screen.findByRole('tab', { name: label('encounters') }));
+      const table = screen.getByRole('table', { name: label('encounters') });
+      const header = table.querySelector('thead');
+      const summary = document.querySelector('.profile-encounter-summary')!;
+      expect(summary.getAttribute('aria-busy')).toBe('true');
+      expect(summary.querySelectorAll('dt')).toHaveLength(4);
+      expect(summary.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(4);
+      expect(Array.from(summary.querySelectorAll('dd'), (value) => value.textContent)).toEqual([
+        '',
+        '',
+        '',
+        '',
+      ]);
+
+      if (first === 'report') {
+        await act(async () => reportRequest.resolve(reportFixture()));
+        expect(summary.getAttribute('aria-busy')).toBe('true');
+        expect(table.getAttribute('aria-busy')).toBe('true');
+      }
+      await act(async () => profileRequest.resolve(profile));
+      expect(document.querySelector('.profile-encounter-summary')).toBe(summary);
+      expect(summary.getAttribute('aria-busy')).toBe('false');
+      expect(summary.querySelector('[data-slot="skeleton"]')).toBeNull();
+      expect(Array.from(summary.querySelectorAll('dd'), (value) => value.textContent)).toEqual([
+        '2',
+        '1',
+        '1',
+        '0',
+      ]);
+      expect(screen.getByRole('table', { name: label('encounters') })).toBe(table);
+      expect(table.querySelector('thead')).toBe(header);
+      expect(table.getAttribute('aria-busy')).toBe('false');
+      expect(within(table).getAllByRole('row')).toHaveLength(4);
+      if (first === 'profile') {
+        await act(async () => reportRequest.resolve(reportFixture()));
+        expect(document.querySelector('.profile-encounter-summary')).toBe(summary);
+        expect(table.querySelector('thead')).toBe(header);
+      }
+    },
+  );
+
+  it('shows every preference entry when a report exceeds the reserved row budgets', async () => {
+    const report = reportFixture();
+    report.favUnits = Array.from({ length: 20 }, (_, index) => ({
+      ...report.favUnits[0]!,
+      name: `${report.favUnits[0]!.name} ${index + 1}`,
+      value: 123_456_789_012,
+    }));
+    report.categories = Array.from({ length: 9 }, (_, index) => ({
+      ...report.categories[0]!,
+      key: `Additional category ${index + 1}`,
+    }));
+    const native = nativeFixture(bootstrapForApp());
+    render(<ReportView report={report} />, { wrapper: wrapper(native.api) });
+    const table = await screen.findByRole('table', { name: translate('zh', 'units') });
+    expect(within(table).getAllByRole('row')).toHaveLength(21);
+    expect(within(table).getByText(report.favUnits.at(-1)!.name)).toBeTruthy();
+    const preferences = screen.getByRole('region', { name: translate('zh', 'preference') });
+    expect(within(preferences).getAllByRole('listitem')).toHaveLength(9);
+    expect(within(preferences).getByText('Additional category 9')).toBeTruthy();
+  });
+
   it('marks ELO increases and decreases while leaving zero and missing values neutral', async () => {
     const native = nativeFixture(bootstrapForApp());
     const report = reportFixture();

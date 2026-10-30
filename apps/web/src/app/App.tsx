@@ -322,9 +322,9 @@ export function App() {
       )}
       <Suspense
         fallback={
-          <div className="modal-loading">
-            <Loading />
-          </div>
+          <span className="sr-only" role="status">
+            {t('loading')}
+          </span>
         }
       >
         {hasAnalyticsChoice(state.config) && <ModalRouter />}

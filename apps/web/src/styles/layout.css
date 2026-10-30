@@ -1317,6 +1317,9 @@ button:not(:disabled),
   container: profile-overview / inline-size;
 }
 .profile-analysis-grid {
+  --profile-unit-row-height: calc(2.25rem + 1px);
+  --profile-category-row-height: 1.875rem;
+  --profile-category-gap: 0.875rem;
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 1fr);
   align-items: start;
@@ -1379,7 +1382,18 @@ button:not(:disabled),
 }
 .profile-highlights > [data-slot='card-header'],
 .profile-preferences > [data-slot='card-header'] {
-  min-height: 1.25rem;
+  min-height: 1.75rem;
+}
+.profile-highlight-content {
+  min-height: calc(
+    2.5rem + var(--profile-unit-rows) * var(--profile-unit-row-height) - 1px + var(--scrollbar-size)
+  );
+}
+.profile-category-content {
+  min-height: calc(
+    var(--profile-category-rows) * var(--profile-category-row-height) +
+      (var(--profile-category-rows) - 1) * var(--profile-category-gap)
+  );
 }
 .profile-preference-section {
   display: flex;
@@ -1402,18 +1416,19 @@ button:not(:disabled),
 .profile-category-list {
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: var(--profile-category-gap);
 }
 .profile-category-list > li {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+  min-height: var(--profile-category-row-height);
 }
 .profile-category-label {
   display: flex;
-  min-height: 1lh;
+  min-height: 1.25rem;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.25rem 0.75rem;
   font-size: 0.8125rem;
@@ -1428,7 +1443,8 @@ button:not(:disabled),
 }
 .profile-unit-table,
 .report .profile-unit-table {
-  min-width: 24rem;
+  min-width: 26rem;
+  table-layout: fixed;
   font-variant-numeric: tabular-nums;
 }
 .profile-unit-table th:not(:first-child),
@@ -1436,7 +1452,21 @@ button:not(:disabled),
   text-align: right;
 }
 .profile-unit-table th:first-child {
-  width: 100%;
+  width: auto;
+}
+.profile-unit-table th:nth-child(2) {
+  width: 5rem;
+}
+.profile-unit-table th:nth-child(3) {
+  width: 6.5rem;
+}
+.profile-unit-table th:nth-child(4) {
+  width: 4.5rem;
+}
+.profile-unit-table td {
+  height: var(--profile-unit-row-height);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .profile-unit-identity {
   display: flex;
@@ -1646,6 +1676,18 @@ button:not(:disabled),
 .profile-statistics-table th[data-column='time'] {
   width: 12.5rem;
 }
+.profile-encounters-table table {
+  table-layout: fixed;
+}
+.profile-encounters-table th[data-column='team'] {
+  width: 6rem;
+}
+.profile-encounters-table th[data-column='result'] {
+  width: 8rem;
+}
+.profile-encounters-table th[data-column='time'] {
+  width: 12.5rem;
+}
 .profile-encounter-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1656,6 +1698,9 @@ button:not(:disabled),
   font-size: 0.75rem;
 }
 .profile-encounter-summary dd {
+  display: flex;
+  min-height: 1.875rem;
+  align-items: center;
   margin-top: 0.25rem;
   font-size: 1.25rem;
   font-weight: 600;
