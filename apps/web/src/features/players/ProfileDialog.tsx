@@ -5,6 +5,7 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import { BATRACE_ORIGIN } from '@ba/contracts';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect } from 'react';
 import { ExternalLink, RefreshCw as faArrowsRotate } from 'lucide-react';
 import { Icon } from '../../components/Icon';
@@ -13,7 +14,7 @@ import { formatTime, formatMetric } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Dialog, Button, Loading, Notice, Badge } from '../../components/ui';
+import { Dialog, Button, Notice, Badge } from '../../components/ui';
 import { ReportCopyButton } from './Reports';
 import { ProfileOverview } from './ProfileOverview';
 import { ProfileRecords } from './ProfileRecords';
@@ -37,6 +38,9 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
     r = report.data?.id === id ? report.data : null,
     info = r ?? p?.info,
     aliases = p?.names.filter((entry) => entry.name !== p.name) || [];
+  const profilePending = !p && (profile.pending || !profile.error);
+  const reportPending = !r && (report.pending || !report.error);
+  const metaPending = !info && (profilePending || reportPending);
   return (
     <Dialog
       open
@@ -63,18 +67,23 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
             <h2>{t('profileOverview')}</h2>
             {p?.banned && <Badge tone="danger">{t('banned')}</Badge>}
           </div>
-          {info && (
-            <dl className="profile-meta">
-              <div>
-                <dt>{t('totalMatches')}</dt>
-                <dd>{formatMetric(info.matchCount, 0)}</dd>
+          <dl className="profile-meta" aria-busy={metaPending}>
+            {[
+              { label: t('totalMatches'), value: info?.matchCount },
+              { label: t('samples'), value: info?.sampleCount },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>
+                  {metaPending ? (
+                    <Skeleton className="h-4 w-6" aria-hidden="true" />
+                  ) : (
+                    formatMetric(value ?? null, 0)
+                  )}
+                </dd>
               </div>
-              <div>
-                <dt>{t('samples')}</dt>
-                <dd>{formatMetric(info.sampleCount ?? null, 0)}</dd>
-              </div>
-            </dl>
-          )}
+            ))}
+          </dl>
         </div>
         <div className="actions">
           <Button
@@ -87,10 +96,12 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
             <ExternalLink data-icon="inline-start" aria-hidden="true" />
             {t('openBatrace')}
           </Button>
-          {r && <ReportCopyButton report={r} />}
+          <ReportCopyButton report={r} />
         </div>
       </div>
-      {((profile.pending && !p) || (report.pending && !r)) && <Loading />}
+      <span className="sr-only" role="status">
+        {(profilePending || reportPending) && t('loading')}
+      </span>
       {profile.error && <Notice error>{profile.error}</Notice>}
       {report.error && <Notice error>{report.error}</Notice>}
       {info?.stale && (
@@ -98,8 +109,20 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
           {t('stale')} · {formatTime(info.updatedAt, locale)}
         </Notice>
       )}
-      <ProfileOverview id={id} profile={p} report={r} />
-      {(r || p) && <ProfileRecords key={id} profile={p} report={r} />}
+      <ProfileOverview
+        id={id}
+        profile={p}
+        report={r}
+        profilePending={profilePending}
+        reportPending={reportPending}
+      />
+      <ProfileRecords
+        key={id}
+        profile={p}
+        report={r}
+        profilePending={profilePending}
+        reportPending={reportPending}
+      />
       {p && (
         <>
           {aliases.length > 0 && (

@@ -31,12 +31,16 @@ import { Badge, Button, Notice, Stats } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 import { useApp } from '../../app/state';
 import { MaggotCard } from './MaggotCard';
-export function ReportCopyButton({ report }: { report: PlayerReport }) {
+import { ProfileTableSkeleton } from './ProfileTableSkeleton';
+
+export function ReportCopyButton({ report }: { report: PlayerReport | null }) {
   const { t } = useI18n(),
     { notify } = useApp();
   return (
     <Button
+      disabled={!report}
       onClick={() =>
+        report &&
         void navigator.clipboard
           .writeText(
             `${report.name} · ELO ${formatMetric(report.elo, 0)} · ${t(report.fallback ? 'winRate' : 'recentWinRate')} ${formatMetric(report.winRate, 0)}% (${report.sampleCount}) · ${report.favUnits.map((u) => u.name).join(', ')}`,
@@ -192,26 +196,35 @@ export function ReportView({
     </ReportContainer>
   );
 }
-export function ReportMatchTable({ report, label }: { report: PlayerReport; label?: string }) {
+export function ReportMatchTable({
+  report,
+  label,
+  pending = false,
+}: {
+  report: PlayerReport | null;
+  label?: string;
+  pending?: boolean;
+}) {
   const { t, locale } = useI18n();
   const { openModal } = useApp();
+  const columns = [
+    'matchId',
+    'result',
+    'eloDelta',
+    'K/D',
+    'DMR',
+    'destruction',
+    'losses',
+    'objectives',
+    'time',
+  ];
   return (
     <div className="table-wrap report-match-table">
-      <Table>
+      <Table aria-busy={pending}>
         <TableCaption className="sr-only">{label ?? t('matchStatistics')}</TableCaption>
         <TableHeader>
           <TableRow>
-            {[
-              'matchId',
-              'result',
-              'eloDelta',
-              'K/D',
-              'DMR',
-              'destruction',
-              'losses',
-              'objectives',
-              'time',
-            ].map((k) => (
+            {columns.map((k) => (
               <TableHead
                 key={k}
                 data-column={k}
@@ -223,7 +236,8 @@ export function ReportMatchTable({ report, label }: { report: PlayerReport; labe
           </TableRow>
         </TableHeader>
         <TableBody>
-          {report.recentMatches.map((m) => (
+          {pending && !report && <ProfileTableSkeleton columns={columns} />}
+          {report?.recentMatches.map((m) => (
             <TableRow key={m.matchId}>
               <TableCell data-column="matchId">
                 <Button

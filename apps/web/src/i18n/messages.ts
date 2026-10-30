@@ -523,6 +523,7 @@ export const messages: Record<string, readonly [string, string]> = {
   profileOverview: ['玩家概览', 'Player overview'],
   profileRecords: ['玩家记录', 'Player records'],
   playerPreferences: ['作战偏好', 'Combat preferences'],
+  noPlayerPreferences: ['暂无作战偏好', 'No combat preferences yet'],
   noEncounters: ['暂无相遇记录', 'No encounters yet'],
   noEncountersDescription: [
     '与该玩家同场对局后，记录会显示在这里。',

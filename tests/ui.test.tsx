@@ -3370,6 +3370,67 @@ describe('user interaction regressions', () => {
 });
 
 describe('profile refresh and report scopes', () => {
+  it.each(['profile', 'report'] as const)(
+    'keeps pending profile sections in place when the %s response arrives first',
+    async (first) => {
+      const profileRequest = deferred<RpcOutputs['players.profile']>();
+      const reportRequest = deferred<RpcOutputs['players.report']>();
+      const maggotRequest = deferred<RpcOutputs['players.maggot']>();
+      const profile = structuredClone(capturedProfiles[localPlayer.id]!);
+      profile.encounters = [];
+      const report = reportFixture({ id: localPlayer.id, elo: 2345 });
+      const native = nativeFixture(bootstrapForApp(), {
+        'players.profile': () => profileRequest.promise,
+        'players.report': () => reportRequest.promise,
+        'players.maggot': () => maggotRequest.promise,
+      });
+      render(<ProfileDialog id={localPlayer.id} name={localPlayer.name} />, {
+        wrapper: wrapper(native.api),
+      });
+
+      await screen.findByRole('heading', { name: '玩家概览' });
+      expect(screen.getByRole('heading', { name: '作战偏好' })).toBeTruthy();
+      expect(screen.getByRole('region', { name: '蛐指数' })).toBeTruthy();
+      const copy = screen.getByRole('button', { name: '复制' });
+      expect(copy.hasAttribute('disabled')).toBe(true);
+      const matchTable = screen.getByRole('table', { name: '对局数据' });
+      expect(matchTable.getAttribute('aria-busy')).toBe('true');
+      expect(within(matchTable).getAllByRole('columnheader')).toHaveLength(9);
+      expect(screen.getByRole('tab', { name: '相遇记录' })).toBeTruthy();
+      expect(screen.queryByText('暂无对局数据')).toBeNull();
+
+      if (first === 'profile') {
+        await act(async () => profileRequest.resolve(profile));
+        expect(screen.getByRole('tab', { name: '相遇记录 0' })).toBeTruthy();
+        expect(matchTable.getAttribute('aria-busy')).toBe('true');
+        expect(copy.hasAttribute('disabled')).toBe(true);
+        expect(screen.queryByText('暂无对局数据')).toBeNull();
+        await act(async () => reportRequest.resolve(report));
+      } else {
+        await act(async () => reportRequest.resolve(report));
+        expect(screen.getByText('2,345')).toBeTruthy();
+        expect(copy.hasAttribute('disabled')).toBe(false);
+        await userEvent.setup().click(screen.getByRole('tab', { name: '相遇记录' }));
+        expect(screen.getByRole('table', { name: '相遇记录' }).getAttribute('aria-busy')).toBe(
+          'true',
+        );
+        expect(screen.queryByText('暂无相遇记录')).toBeNull();
+        await act(async () => profileRequest.resolve(profile));
+        expect(screen.getByText('暂无相遇记录')).toBeTruthy();
+        await userEvent.setup().click(screen.getByRole('tab', { name: /^对局数据/ }));
+      }
+
+      expect(screen.getByText('2,345')).toBeTruthy();
+      expect(copy.hasAttribute('disabled')).toBe(false);
+      const loadedTable = screen.getByRole('table', { name: '对局数据' });
+      expect(loadedTable.getAttribute('aria-busy')).toBe('false');
+      expect(within(loadedTable).getByText('#' + report.recentMatches[0]!.matchId)).toBeTruthy();
+      expect(screen.getByRole('progressbar', { name: '自动计算中' })).toBeTruthy();
+      await act(async () => maggotRequest.resolve(summarizeMaggot(localPlayer.id, [])));
+      expect(screen.queryByRole('progressbar', { name: '自动计算中' })).toBeNull();
+    },
+  );
+
   it('marks ELO increases and decreases while leaving zero and missing values neutral', async () => {
     const native = nativeFixture(bootstrapForApp());
     const report = reportFixture();
@@ -3589,6 +3650,8 @@ describe('profile refresh and report scopes', () => {
   });
 
   it('refreshes the profile and full report together and explains metric and sample scopes', async () => {
+    const refreshProfile = deferred<RpcOutputs['players.profile']>();
+    const refreshReport = deferred<RpcOutputs['players.report']>();
     const profile: PlayerProfile = {
       id: localPlayer.id,
       name: 'Player',
@@ -3603,12 +3666,9 @@ describe('profile refresh and report scopes', () => {
       info: null,
     };
     const native = nativeFixture(bootstrapForApp(), {
-      'players.profile': () => profile,
-      'players.report': ({ id, force }) => ({
-        ...reportFixture({ id }),
-        elo: force ? 2002 : 1001,
-        sampleCount: 12,
-      }),
+      'players.profile': ({ force }) => (force ? refreshProfile.promise : profile),
+      'players.report': ({ id, force }) =>
+        force ? refreshReport.promise : reportFixture({ id, elo: 1001, sampleCount: 12 }),
     });
     render(<ProfileDialog id={localPlayer.id} name="Player" />, { wrapper: wrapper(native.api) });
     await screen.findByText('1,001');
@@ -3618,8 +3678,22 @@ describe('profile refresh and report scopes', () => {
     expect(screen.getByText('最近一场 K/D')).toBeTruthy();
     expect(screen.getByText('最近一场 DMR')).toBeTruthy();
     expect(screen.getByText('总场次')).toBeTruthy();
+    await userEvent.setup().click(screen.getByRole('tab', { name: /^地图表现/ }));
+    const mapsTable = screen.getByRole('table', { name: '地图表现' });
     fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    expect(screen.getByRole('button', { name: '刷新' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('1,001')).toBeTruthy();
+    expect(screen.getByRole('table', { name: '地图表现' })).toBe(mapsTable);
+    expect(screen.getByRole('button', { name: '复制' }).hasAttribute('disabled')).toBe(false);
+    expect(document.querySelector('.profile-overview [data-slot="skeleton"]')).toBeNull();
+    await act(async () => {
+      refreshProfile.resolve(profile);
+      refreshReport.resolve(reportFixture({ id: localPlayer.id, elo: 2002, sampleCount: 12 }));
+    });
     await screen.findByText('2,002');
+    expect(screen.getByRole('tab', { name: /^地图表现/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
     await waitFor(() =>
       expect(native.calls.filter((call) => call.method === 'players.maggot')).toHaveLength(2),
     );

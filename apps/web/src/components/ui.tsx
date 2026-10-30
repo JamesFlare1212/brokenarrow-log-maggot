@@ -312,7 +312,12 @@ export function Badge({
   return <PrimitiveBadge variant={variants[tone]}>{children}</PrimitiveBadge>;
 }
 
-export function Stats({ items }: { items: Array<{ label: string; value: ReactNode }> }) {
+export function Stats({
+  items,
+}: {
+  items: Array<{ label: string; value: ReactNode; pending?: boolean }>;
+}) {
+  const { t } = useI18n();
   return (
     <dl className="stats" data-count={items.length}>
       {items.map((item, index) => (
@@ -323,7 +328,19 @@ export function Stats({ items }: { items: Array<{ label: string; value: ReactNod
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <dd className="text-2xl font-semibold tracking-tight tabular-nums">{item.value}</dd>
+            <dd
+              className="text-2xl font-semibold tracking-tight tabular-nums"
+              aria-busy={item.pending || undefined}
+            >
+              {item.pending ? (
+                <>
+                  <span className="sr-only">{t('loading')}</span>
+                  <Skeleton className="h-8 w-20" aria-hidden="true" />
+                </>
+              ) : (
+                item.value
+              )}
+            </dd>
           </CardContent>
         </PrimitiveCard>
       ))}
