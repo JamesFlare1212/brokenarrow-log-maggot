@@ -162,6 +162,7 @@ export function createDevelopmentRuntime(
       losses: 0,
       updatedAt: now(),
       stale: false,
+      ratingTrend: [],
       recentMatches: [],
       favUnits: [],
       categories: [],

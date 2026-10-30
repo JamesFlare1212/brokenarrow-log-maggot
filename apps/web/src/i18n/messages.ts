@@ -1,4 +1,24 @@
 export const messages: Record<string, readonly [string, string]> = {
+  ratingTrend: ['ELO 趋势', 'ELO trend'],
+  ratingTrendRange: ['最近 {count} 场 · 从早到晚', 'Last {count} matches · oldest to newest'],
+  ratingTrendScope: ['最近 30 场', 'Last 30 matches'],
+  ratingTrendLatest: ['最近一场赛后 ELO', 'Latest post-match ELO'],
+  ratingTrendChange: ['区间变化', 'Period change'],
+  ratingTrendEmpty: ['暂无 ELO 趋势数据', 'No ELO history available'],
+  ratingTrendEmptyHint: [
+    '有近期对局评分后，趋势将在这里显示。',
+    'The trend will appear when recent match ratings are available.',
+  ],
+  ratingTrendMatch: ['第 {number} 场', 'Match {number}'],
+  ratingTrendHint: [
+    '虚线为区间起始评分；悬停或使用左右方向键查看单场数据。',
+    'The dashed line marks the starting rating. Hover or use the arrow keys for match details.',
+  ],
+  ratingTrendNoBaselineHint: [
+    '悬停或使用左右方向键查看单场数据。',
+    'Hover or use the arrow keys for match details.',
+  ],
+  ratingTrendGaps: ['部分评分缺失，曲线保留断点。', 'Missing ratings appear as gaps.'],
   lastEncounterTime: ['最近相遇', 'Last encounter'],
   banFirstSeen: ['封禁记录时间', 'Ban first seen'],
   encounterTimeUnknown: ['未记录时间', 'Time not recorded'],

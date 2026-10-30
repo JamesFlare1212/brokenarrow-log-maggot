@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/componen
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MaggotCard } from './MaggotCard';
+import { RatingTrendChart } from './RatingTrendChart';
 import { useI18n } from '../../hooks/useI18n';
 
 export function ProfileOverview({
@@ -63,6 +64,7 @@ export function ProfileOverview({
           },
         ]}
       />
+      <RatingTrendChart report={report} pending={reportPending} />
       <div className="profile-analysis-grid">
         <Card size="sm" className="profile-preferences" aria-busy={preferencesPending}>
           <CardHeader>

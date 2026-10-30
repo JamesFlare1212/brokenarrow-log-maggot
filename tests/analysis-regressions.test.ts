@@ -48,6 +48,44 @@ function cacheMatches(db: Database, mvpRanking: unknown[], economy?: unknown) {
 }
 
 describe('analysis report regressions', () => {
+  it('preserves the last 30 chronological ratings independently of the 12-match table', async () => {
+    const { db, analyzer } = setup();
+    const history = Array.from({ length: 35 }, (_, index) => ({
+      matchId: String(100 + index),
+      ratingBefore: 1800 + index * 3.5,
+      ratingAfter: 1803.5 + index * 3.5,
+      endTime: 1800000000000 + index * 3600000,
+    }));
+    db.saveCache('analysis:1', { trend: { points: history } }, 21600000);
+
+    const report = await analyzer.report('1');
+    expect(report.ratingTrend).toEqual(history.slice(-30));
+    expect(report.ratingTrend.at(-1)?.ratingAfter).toBe(report.elo);
+    expect(report.recentMatches).toHaveLength(12);
+    expect(report.recentMatches[0]?.matchId).toBe('134');
+  });
+  it('keeps missing ratings as gaps and preserves zero instead of reconstructing scores', async () => {
+    const { db, analyzer } = setup();
+    db.saveCache(
+      'analysis:1',
+      {
+        trend: {
+          points: [
+            { matchId: 1, ratingBefore: 0, ratingAfter: 0 },
+            { matchId: 2, ratingBefore: 10, ratingAfter: 'invalid' },
+            { matchId: 3, ratingAfter: 25.75 },
+          ],
+        },
+      },
+      21600000,
+    );
+
+    expect((await analyzer.report('1')).ratingTrend).toEqual([
+      { matchId: '1', endTime: null, ratingBefore: 0, ratingAfter: 0 },
+      { matchId: '2', endTime: null, ratingBefore: 10, ratingAfter: null },
+      { matchId: '3', endTime: null, ratingBefore: null, ratingAfter: 25.75 },
+    ]);
+  });
   it.each([null, {}, { name: '' }])('rejects invalid fallback info %j', async (info) => {
     const { db, analyzer } = setup();
     db.saveCache('analysis:1', { error: 'Not found' }, 21600000);
@@ -93,6 +131,7 @@ describe('analysis report regressions', () => {
     );
     const report = await analyzer.report('1');
     expect(report).toMatchObject({ fallback: true, matchCount: 20, sampleCount: 10, winRate: 60 });
+    expect(report.ratingTrend).toEqual([]);
     expect(db.snapshot('1')).toEqual(analyzer.mini(report));
   });
   it('force refresh also refreshes fallback info instead of returning a fresh old cache', async () => {

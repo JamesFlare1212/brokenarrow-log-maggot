@@ -37,6 +37,14 @@ Database startup removes retired input-statistics tables and the obsolete collec
 
 录制有独立 token、sender、sequence 和写盘队列；逐片等待确认，停止等待尾片与落盘。时长取真实经过时间。播放器用短期 token 和 Range，不整文件跨 IPC。
 
+Player reports expose a separate `ratingTrend` of up to 30 chronological analysis
+points, retaining each match ID, end time, and pre/post-match rating. The existing
+12-row recent-match table keeps its newest-first order. Both views use the same
+analysis response without additional network calls. Missing ratings remain null;
+fallback player summaries supply an empty trend. The player detail chart measures
+the displayed period from the first pre-match rating to the last post-match rating
+and never reconstructs history from the current rating or partial deltas.
+
 卡组 ZIP 校验路径、扩展名、CRC、边界和容量。压缩 / 解压使用异步线程池，写入临时文件后 rename，失败明确反馈。
 
 Shared shadcn primitives and the application Button, Card, Dialog, Menu, Field,
