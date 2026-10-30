@@ -135,7 +135,16 @@ export function createDevelopmentData(
           { key: 'armor', pct: 42, totalCost: 42_000 },
           { key: 'infantry', pct: 31, totalCost: 31_000 },
         ],
-        mapStats: [{ mapId: 1, name: 'Dam', matchCount: 24, winRate: 62 }],
+        mapStats: [
+          {
+            mapId: 1,
+            name: 'Dam',
+            matchCount: 24,
+            winRate: 62,
+            avgKd: 1.5,
+            avgDestructionScore: 5400,
+          },
+        ],
         style: null,
       };
   const bootstrap = structuredClone(base);

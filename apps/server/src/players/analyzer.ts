@@ -97,6 +97,8 @@ export class Analyzer {
           name: text(m.mapName),
           matchCount: number(m.matchCount) ?? 0,
           winRate: number(m.winRate),
+          avgKd: number(m.avgKd),
+          avgDestructionScore: number(m.avgDestructionScore),
         })),
         style: text(object(a.playStyle).primaryStyle) || null,
       };

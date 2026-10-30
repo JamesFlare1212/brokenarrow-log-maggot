@@ -87,7 +87,16 @@ const analysisPlayer = {
     { unitId: 2, unitName: 'Infantry', totalDamage: 5_000, spawnCount: 4, avgRoi: 1.25 },
   ],
   categoryPreferences: [{ categoryKey: 'tanks', percentage: 42 }],
-  mapPerformance: [{ mapId: 7, mapName: 'Dam', matchCount: 12, winRate: 66 }],
+  mapPerformance: [
+    {
+      mapId: 7,
+      mapName: 'Dam',
+      matchCount: 12,
+      winRate: 66,
+      avgKd: 1.58,
+      avgDestructionScore: 5347,
+    },
+  ],
   playStyle: { primaryStyle: 'team_player' },
 };
 
@@ -476,7 +485,16 @@ describe('player reports and Maggot Index', () => {
     expect(report.recentMatches[1]?.endTime).toBe(1_700_000_000_000);
     expect(report.favUnits[0]).toEqual({ name: 'Tank', value: 0, spawn: 0, roi: 0 });
     expect(report.categories).toEqual([{ key: 'tanks', pct: 42, totalCost: null }]);
-    expect(report.mapStats).toEqual([{ mapId: 7, name: 'Dam', matchCount: 12, winRate: 66 }]);
+    expect(report.mapStats).toEqual([
+      {
+        mapId: 7,
+        name: 'Dam',
+        matchCount: 12,
+        winRate: 66,
+        avgKd: 1.58,
+        avgDestructionScore: 5347,
+      },
+    ]);
     expect(db.snapshot('8863')).toEqual(analyzer.mini(report));
   });
 
@@ -524,6 +542,30 @@ describe('player reports and Maggot Index', () => {
       { key: 'unknown', pct: 0, totalCost: 0 },
     ]);
   });
+
+  it.each([
+    {
+      name: 'zero',
+      averages: { avgKd: 0, avgDestructionScore: 0 },
+      expected: { avgKd: 0, avgDestructionScore: 0 },
+    },
+    { name: 'missing', averages: {}, expected: { avgKd: null, avgDestructionScore: null } },
+  ])(
+    'preserves $name map averages without substituting recent-match metrics',
+    async ({ averages, expected }) => {
+      const db = database();
+      db.saveCache(
+        'analysis:8863',
+        {
+          ...analysisPlayer,
+          mapPerformance: [{ mapId: 7, mapName: 'Dam', matchCount: 12, winRate: 66, ...averages }],
+        },
+        21_600_000,
+      );
+      const report = await cachedAnalyzer(db).report('8863');
+      expect(report.mapStats[0]).toMatchObject(expected);
+    },
+  );
 
   it('skips a match without the target player and joins mixed numeric/string economy IDs', async () => {
     const db = database();
