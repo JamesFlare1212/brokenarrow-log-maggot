@@ -2,6 +2,7 @@ import type { PlayerProfile, PlayerReport } from '@ba/contracts';
 import { formatMetric, formatTime } from '@ba/shared';
 import { Map, Swords, TableProperties } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -15,13 +16,18 @@ import { Badge, Button, Empty } from '../../components/ui';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { ReportMatchTable } from './Reports';
+import { ProfileTableSkeleton } from './ProfileTableSkeleton';
 
 export function ProfileRecords({
   profile,
   report,
+  profilePending,
+  reportPending,
 }: {
   profile: PlayerProfile | null;
   report: PlayerReport | null;
+  profilePending: boolean;
+  reportPending: boolean;
 }) {
   const { t, locale } = useI18n();
   const { openModal } = useApp();
@@ -33,35 +39,55 @@ export function ProfileRecords({
       label: t('matchStatistics'),
       icon: TableProperties,
       count: report?.recentMatches.length ?? 0,
+      pending: reportPending,
     },
-    { value: 'encounters', label: t('encounters'), icon: Swords, count: encounters.length },
-    { value: 'maps', label: t('mapStatistics'), icon: Map, count: report?.mapStats.length ?? 0 },
+    {
+      value: 'encounters',
+      label: t('encounters'),
+      icon: Swords,
+      count: encounters.length,
+      pending: profilePending,
+    },
+    {
+      value: 'maps',
+      label: t('mapStatistics'),
+      icon: Map,
+      count: report?.mapStats.length ?? 0,
+      pending: reportPending,
+    },
   ];
 
   return (
     <Tabs defaultValue="statistics" className="profile-records">
       <div className="profile-tab-scroll">
         <TabsList variant="line" aria-label={t('profileRecords')}>
-          {tabs.map(({ value, label, icon: TabIcon, count }) => (
+          {tabs.map(({ value, label, icon: TabIcon, count, pending }) => (
             <TabsTrigger key={value} value={value}>
               <TabIcon aria-hidden="true" />
               {label}
-              <span className="profile-tab-count">{count}</span>
+              <span className="profile-tab-count" aria-busy={pending}>
+                {pending ? <Skeleton className="h-3 w-4" aria-hidden="true" /> : count}
+              </span>
             </TabsTrigger>
           ))}
         </TabsList>
       </div>
       <TabsContent value="statistics">
-        {report && report.recentMatches.length > 0 ? (
+        {reportPending || (report && report.recentMatches.length > 0) ? (
           <div className="profile-table profile-statistics-table">
-            <ReportMatchTable report={report} />
+            <ReportMatchTable report={report} pending={reportPending} />
           </div>
         ) : (
           <Empty icon={<TableProperties />}>{t('noMatchStatistics')}</Empty>
         )}
       </TabsContent>
       <TabsContent value="encounters">
-        {encounters.length > 0 ? (
+        {profilePending ? (
+          <ProfileRecordLoading
+            columns={['map', 'team', 'result', 'time']}
+            label={t('encounters')}
+          />
+        ) : encounters.length > 0 ? (
           <>
             <dl className="profile-encounter-summary">
               {[
@@ -143,7 +169,12 @@ export function ProfileRecords({
         )}
       </TabsContent>
       <TabsContent value="maps">
-        {report && report.mapStats.length > 0 ? (
+        {reportPending ? (
+          <ProfileRecordLoading
+            columns={['map', 'totalMatches', 'winRate']}
+            label={t('mapStatistics')}
+          />
+        ) : report && report.mapStats.length > 0 ? (
           <div className="profile-table">
             <Table>
               <TableCaption className="sr-only">{t('mapStatistics')}</TableCaption>
@@ -172,5 +203,26 @@ export function ProfileRecords({
         )}
       </TabsContent>
     </Tabs>
+  );
+}
+
+function ProfileRecordLoading({ columns, label }: { columns: string[]; label: string }) {
+  const { t } = useI18n();
+  return (
+    <div className="profile-table">
+      <Table aria-busy="true">
+        <TableCaption className="sr-only">{label}</TableCaption>
+        <TableHeader>
+          <TableRow>
+            {columns.map((column) => (
+              <TableHead key={column}>{t(column)}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <ProfileTableSkeleton columns={columns} />
+        </TableBody>
+      </Table>
+    </div>
   );
 }

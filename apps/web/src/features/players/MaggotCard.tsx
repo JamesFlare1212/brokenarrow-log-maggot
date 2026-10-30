@@ -33,23 +33,91 @@ export function MaggotCard({ id }: { id: string }) {
         <CardTitle role="heading" aria-level={3}>
           {t('maggot')}
         </CardTitle>
-        <CardAction>
-          <Badge>{status}</Badge>
+        <CardAction role="status">
+          <Badge>
+            {pending && <Spinner aria-hidden="true" />}
+            {status}
+            {pending && <span className="tabular-nums">{progress?.done ?? 0}/12</span>}
+          </Badge>
         </CardAction>
       </CardHeader>
       <CardContent className="maggot-card-content">
-        {pending && (
-          <div className="maggot-loading" role="status">
-            {!report && <Skeleton className="h-9 w-20" />}
-            <div className="maggot-progress-label">
-              <span className="inline-flex items-center gap-2">
-                <Spinner />
-                {status}
-              </span>
-              <span className="tabular-nums">{progress?.done ?? 0}/12</span>
+        {(report || pending) && (
+          <>
+            <div className="maggot-summary">
+              <div>
+                <div className="maggot-score-row" aria-busy={pending && !report}>
+                  {report ? (
+                    <strong
+                      className={cn(
+                        'maggot-score',
+                        report.index !== null &&
+                          (report.index <= 3.5
+                            ? 'text-success'
+                            : report.index <= 7
+                              ? 'text-warning'
+                              : 'text-danger'),
+                      )}
+                    >
+                      {formatMetric(report.index, 1)}
+                    </strong>
+                  ) : (
+                    <Skeleton className="h-9 w-16" aria-hidden="true" />
+                  )}
+                  {(!report || report.index !== null) && (
+                    <span className="pb-1 text-muted-foreground"> / 10</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{t('maggotScale')}</p>
+              </div>
+              <dl className="maggot-summary-metrics">
+                <div>
+                  <dt>{t('averageRank')}</dt>
+                  <dd>
+                    {report ? (
+                      formatMetric(report.averageRank, 1)
+                    ) : (
+                      <Skeleton className="h-4 w-8" aria-hidden="true" />
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('trend')}</dt>
+                  <dd>
+                    {report ? (
+                      report.complete ? (
+                        t(report.trend)
+                      ) : (
+                        '—'
+                      )
+                    ) : (
+                      <Skeleton className="h-4 w-8" aria-hidden="true" />
+                    )}
+                  </dd>
+                </div>
+              </dl>
             </div>
-            <Progress max={12} value={progress?.done ?? 0} aria-label={t('maggotCalculating')} />
-          </div>
+            <div className="maggot-feedback">
+              {report ? (
+                <p className="text-xs text-muted-foreground" role="status">
+                  {report.complete
+                    ? t('maggotSample', { n: report.rows.length })
+                    : t('partialMaggot', { n: report.rows.length })}
+                </p>
+              ) : (
+                <Skeleton className="h-4 w-40" aria-hidden="true" />
+              )}
+              <div className="h-1">
+                {pending && (
+                  <Progress
+                    max={12}
+                    value={progress?.done ?? 0}
+                    aria-label={t('maggotCalculating')}
+                  />
+                )}
+              </div>
+            </div>
+          </>
         )}
         {request?.error && (
           <Notice error>
@@ -58,44 +126,6 @@ export function MaggotCard({ id }: { id: string }) {
               {t('retry')}
             </Button>
           </Notice>
-        )}
-        {report && (
-          <>
-            <div className="maggot-summary">
-              <div>
-                <strong
-                  className={cn(
-                    'maggot-score',
-                    report.index !== null &&
-                      (report.index <= 3.5
-                        ? 'text-success'
-                        : report.index <= 7
-                          ? 'text-warning'
-                          : 'text-danger'),
-                  )}
-                >
-                  {formatMetric(report.index, 1)}
-                </strong>
-                {report.index !== null && <span className="text-muted-foreground"> / 10</span>}
-                <p className="text-xs text-muted-foreground">{t('maggotScale')}</p>
-              </div>
-              <dl className="maggot-summary-metrics">
-                <div>
-                  <dt>{t('averageRank')}</dt>
-                  <dd>{formatMetric(report.averageRank, 1)}</dd>
-                </div>
-                <div>
-                  <dt>{t('trend')}</dt>
-                  <dd>{report.complete ? t(report.trend) : '—'}</dd>
-                </div>
-              </dl>
-            </div>
-            <p className="text-xs text-muted-foreground" role="status">
-              {report.complete
-                ? t('maggotSample', { n: report.rows.length })
-                : t('partialMaggot', { n: report.rows.length })}
-            </p>
-          </>
         )}
       </CardContent>
     </Card>

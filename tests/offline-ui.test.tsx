@@ -95,7 +95,9 @@ describe('UI backed by the complete recorded BATrace service', () => {
       </AppProvider>,
     );
     const matchData = await screen.findByRole('table', { name: t('matchStatistics') });
-    expect(within(matchData).getAllByRole('row')).toHaveLength(13);
+    await waitFor(() => expect(within(matchData).getAllByRole('row')).toHaveLength(13), {
+      timeout: 10000,
+    });
     expect(within(matchData).getAllByRole('columnheader')).toHaveLength(9);
     expect(screen.queryByRole('tab', { name: new RegExp(t('recent')) })).toBeNull();
     expect(screen.getAllByText(t('latestKd'))).toHaveLength(1);

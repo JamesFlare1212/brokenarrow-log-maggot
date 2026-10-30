@@ -1242,6 +1242,7 @@ button:not(:disabled),
 }
 .profile-dialog > .dialog-body {
   gap: 1rem;
+  scrollbar-gutter: stable;
 }
 .profile-dialog .dialog-body > * {
   flex-shrink: 0;
@@ -1290,6 +1291,9 @@ button:not(:disabled),
   gap: 1rem;
   font-size: 0.75rem;
 }
+.profile-meta > div {
+  align-items: center;
+}
 .profile-meta dt,
 .profile-preference-section h4,
 .profile-unit-rank,
@@ -1298,6 +1302,10 @@ button:not(:disabled),
   color: var(--muted-foreground);
 }
 .profile-meta dd {
+  display: flex;
+  min-width: 1.5rem;
+  min-height: 1.125rem;
+  align-items: center;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -1323,6 +1331,10 @@ button:not(:disabled),
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   gap: 1rem;
+  min-height: 8.5rem;
+}
+.profile-preferences > [data-slot='card-header'] {
+  min-height: 1.25rem;
 }
 .profile-preference-section {
   display: flex;
@@ -1378,6 +1390,8 @@ button:not(:disabled),
 }
 .profile-category-label {
   display: flex;
+  min-height: 1lh;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   font-size: 0.8125rem;
@@ -1403,14 +1417,12 @@ button:not(:disabled),
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
 }
-.maggot-card-content,
-.maggot-loading {
+.maggot-card-content {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 0.75rem;
 }
-.maggot-progress-label,
 .maggot-summary {
   display: flex;
   flex-wrap: wrap;
@@ -1418,9 +1430,23 @@ button:not(:disabled),
   justify-content: space-between;
   gap: 0.5rem 1rem;
 }
-.maggot-progress-label {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
+.maggot-score-row {
+  display: flex;
+  min-height: 2.7rem;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+.maggot-score-row > [data-slot='skeleton'] {
+  align-self: center;
+}
+.maggot-feedback {
+  display: flex;
+  min-height: 2rem;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.maggot-feedback > :first-child {
+  min-height: 1.125rem;
 }
 .maggot-score {
   font-size: 2.25rem;
@@ -1444,6 +1470,11 @@ button:not(:disabled),
   color: var(--muted-foreground);
 }
 .maggot-summary-metrics dd {
+  display: flex;
+  min-width: 2rem;
+  min-height: 1.125rem;
+  align-items: center;
+  justify-content: flex-end;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -1473,6 +1504,11 @@ button:not(:disabled),
   gap: 1rem;
 }
 .profile-tab-count {
+  display: inline-flex;
+  min-width: 1rem;
+  min-height: 1rem;
+  align-items: center;
+  justify-content: center;
   color: var(--muted-foreground);
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
@@ -1517,7 +1553,21 @@ button:not(:disabled),
   white-space: nowrap;
 }
 .profile-statistics-table table {
-  min-width: 0;
+  table-layout: fixed;
+}
+.profile-statistics-table th {
+  width: 7rem;
+}
+.profile-statistics-table th[data-column='matchId'] {
+  width: 8rem;
+}
+.profile-statistics-table th[data-column='result'],
+.profile-statistics-table th[data-column='K/D'],
+.profile-statistics-table th[data-column='DMR'] {
+  width: 4.5rem;
+}
+.profile-statistics-table th[data-column='time'] {
+  width: 12.5rem;
 }
 .profile-encounter-summary {
   display: grid;

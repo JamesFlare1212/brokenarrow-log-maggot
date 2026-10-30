@@ -171,6 +171,22 @@ required by the current interface.
 - Player refresh is an icon action in the dialog header immediately before
   Close. It stays available while the content scrolls and refreshes the profile
   and report together.
+- Player details keep their final layout during the initial load: metadata,
+  four metric cards, combat preferences beside the Maggot Index, and record tabs
+  with table headers. Use shadcn Skeleton inside the values, preference rows,
+  tab counts, and table cells that are still pending. Do not insert a generic
+  loading block above the metrics or expand the index into the preference column.
+  The shared Skeleton uses foreground at 10% opacity so placeholders remain
+  visible on both light and dark cards. Reserve the dialog's scrollbar gutter
+  and use the same table column widths in loading and loaded states.
+  Keep Copy visible and disabled until a report is available. Empty preferences
+  retain their card and show an explicit empty state.
+- Profile and report requests resolve independently. Replace only the placeholders
+  supplied by each response; show empty states only after that request settles.
+  Refreshes retain existing values and the active record tab. The Maggot Index
+  keeps its score and summary in place while progress appears in its header badge
+  and a reserved track below the sample caption. Loading and loaded content share
+  the same responsive grids and reduced-motion behavior.
 - ELO color options sit directly under their section heading. Do not restore
   the removed explanatory paragraph or an additional wrapper card.
 - Quick tools keep their actions without an extra visible heading.

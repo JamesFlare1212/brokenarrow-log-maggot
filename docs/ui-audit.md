@@ -113,3 +113,34 @@ inline-field sizing requirement.
   bridge.
 - The temporary fixture server used for runtime inspection was stopped after
   the checks. No live game data or application preferences were changed.
+
+## Player loading layout follow-up
+
+Date: 2026-10-30. Player details now render their final section structure while
+profile, report, and Maggot Index requests are pending. Inline shadcn Skeleton
+values replace the previous generic loading block. Combat preferences retain
+their column, record tabs and table headers remain available, and cached values
+stay visible during refresh. Missing data becomes an empty state only after its
+request settles. The shared Skeleton uses a semantic foreground tint for visible
+contrast on both light and dark cards.
+
+A hidden Electron window rendered the actual profile components with controlled
+offline fixture responses. The visual review covered 1440px dark Chinese,
+1440px light English, 760px dark Chinese, and 375px light Chinese layouts. Each
+scenario included initial loading, profile arrival, report arrival, completed
+calculation, refresh, and recalculation. Section positions and widths remained
+within 1px across the loading transitions. Dialog scrolling stayed contained,
+refresh retained loaded values, and reduced-motion settings suppressed the
+skeleton animation. No renderer errors were recorded.
+
+Regression coverage exercises both response orders, pending encounter records,
+copy availability, and the selected record tab during refresh. The offline UI
+test waits for loaded rows because the table is now present before data arrives.
+
+Validation for this follow-up: `pnpm check` passed type checking, the UI design
+guard, 936 regression tests across 40 files, and production builds.
+`pnpm format:check`, `pnpm smoke`, and `pnpm smoke:real` also passed; the real-data
+smoke loaded 454 recorded matches offline. Initial test failures exposed two
+outdated loading assertions and incomplete simulated pointer input for Radix
+tabs. The assertions and input simulation were corrected, and the final full
+test run passed without skipped tests.
