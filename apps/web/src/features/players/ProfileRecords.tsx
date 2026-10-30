@@ -1,5 +1,5 @@
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
-import { formatMetric, formatTime } from '@ba/shared';
+import { formatTime } from '@ba/shared';
 import { Map, Swords, TableProperties } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +17,7 @@ import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { ReportMatchTable } from './Reports';
 import { ProfileTableSkeleton } from './ProfileTableSkeleton';
+import { MapPerformanceGrid } from './MapPerformanceGrid';
 
 export function ProfileRecords({
   profile,
@@ -169,35 +170,8 @@ export function ProfileRecords({
         )}
       </TabsContent>
       <TabsContent value="maps">
-        {reportPending ? (
-          <ProfileRecordLoading
-            columns={['map', 'totalMatches', 'winRate']}
-            label={t('mapStatistics')}
-          />
-        ) : report && report.mapStats.length > 0 ? (
-          <div className="profile-table">
-            <Table>
-              <TableCaption className="sr-only">{t('mapStatistics')}</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('map')}</TableHead>
-                  <TableHead className="numeric">{t('totalMatches')}</TableHead>
-                  <TableHead className="numeric">{t('winRate')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {report.mapStats.map((map) => (
-                  <TableRow key={map.mapId ?? map.name}>
-                    <TableCell>{map.name}</TableCell>
-                    <TableCell className="numeric">{formatMetric(map.matchCount, 0)}</TableCell>
-                    <TableCell className="numeric">
-                      {map.winRate == null ? '—' : `${formatMetric(map.winRate, 0)}%`}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        {reportPending || (report && report.mapStats.length > 0) ? (
+          <MapPerformanceGrid maps={report?.mapStats ?? []} pending={reportPending} />
         ) : (
           <Empty icon={<Map />}>{t('noMapStatistics')}</Empty>
         )}

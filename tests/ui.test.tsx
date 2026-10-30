@@ -3542,7 +3542,7 @@ describe('profile refresh and report scopes', () => {
     await user.keyboard('{End}');
     const mapsTab = screen.getByRole('tab', { name: /^地图表现/ });
     await waitFor(() => expect(mapsTab.getAttribute('aria-selected')).toBe('true'));
-    expect(screen.getByRole('table', { name: '地图表现' })).toBeTruthy();
+    expect(screen.getByRole('list', { name: '地图表现' })).toBeTruthy();
     expect(screen.queryByRole('table', { name: '对局数据' })).toBeNull();
     await user.click(screen.getByRole('tab', { name: /^相遇记录/ }));
     expect(screen.getByText('暂无相遇记录')).toBeTruthy();
@@ -3594,8 +3594,15 @@ describe('profile refresh and report scopes', () => {
         reportFixture({
           winRate: null,
           mapStats: [
-            { mapId: 1, name: 'Dam', matchCount: 5, winRate: 0 },
-            { mapId: 2, name: 'Frontiers', matchCount: 0, winRate: null },
+            { mapId: 1, name: 'Dam', matchCount: 5, winRate: 0, avgKd: 0, avgDestructionScore: 0 },
+            {
+              mapId: 2,
+              name: 'Frontiers',
+              matchCount: 0,
+              winRate: null,
+              avgKd: null,
+              avgDestructionScore: null,
+            },
           ],
         }),
     });
@@ -3615,9 +3622,14 @@ describe('profile refresh and report scopes', () => {
     expect(within(encounters).getAllByRole('row')).toHaveLength(4);
     expect(within(encounters).getByText('自定义')).toBeTruthy();
     await user.click(screen.getByRole('tab', { name: '地图表现 2' }));
-    const maps = screen.getByRole('table', { name: '地图表现' });
+    const maps = screen.getByRole('list', { name: '地图表现' });
     expect(within(maps).getByText('0%')).toBeTruthy();
-    expect(within(maps).getByText('—')).toBeTruthy();
+    expect(within(maps).getAllByText('—')).toHaveLength(3);
+    expect(within(maps).getAllByText('0')).toHaveLength(2);
+    expect(
+      within(maps).getByRole('progressbar', { name: 'Dam · 胜率' }).getAttribute('aria-valuenow'),
+    ).toBe('0');
+    expect(within(maps).queryByRole('progressbar', { name: 'Frontiers · 胜率' })).toBeNull();
     expect(screen.queryByRole('table', { name: '相遇记录' })).toBeNull();
   });
 
@@ -3679,11 +3691,11 @@ describe('profile refresh and report scopes', () => {
     expect(screen.getByText('最近一场 DMR')).toBeTruthy();
     expect(screen.getByText('总场次')).toBeTruthy();
     await userEvent.setup().click(screen.getByRole('tab', { name: /^地图表现/ }));
-    const mapsTable = screen.getByRole('table', { name: '地图表现' });
+    const mapsGrid = screen.getByRole('list', { name: '地图表现' });
     fireEvent.click(screen.getByRole('button', { name: '刷新' }));
     expect(screen.getByRole('button', { name: '刷新' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByText('1,001')).toBeTruthy();
-    expect(screen.getByRole('table', { name: '地图表现' })).toBe(mapsTable);
+    expect(screen.getByRole('list', { name: '地图表现' })).toBe(mapsGrid);
     expect(screen.getByRole('button', { name: '复制' }).hasAttribute('disabled')).toBe(false);
     expect(document.querySelector('.profile-overview [data-slot="skeleton"]')).toBeNull();
     await act(async () => {
