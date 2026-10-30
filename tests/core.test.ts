@@ -484,7 +484,7 @@ describe('player reports and Maggot Index', () => {
     });
     expect(report.recentMatches[1]?.endTime).toBe(1_700_000_000_000);
     expect(report.favUnits[0]).toEqual({ name: 'Tank', value: 0, spawn: 0, roi: 0 });
-    expect(report.categories).toEqual([{ key: 'tanks', pct: 42 }]);
+    expect(report.categories).toEqual([{ key: 'tanks', pct: 42, totalCost: null }]);
     expect(report.mapStats).toEqual([
       {
         mapId: 7,
@@ -496,6 +496,51 @@ describe('player reports and Maggot Index', () => {
       },
     ]);
     expect(db.snapshot('8863')).toEqual(analyzer.mini(report));
+  });
+
+  it('retains every highlight unit and category, including small preferences and missing metrics', async () => {
+    const db = database();
+    db.saveCache(
+      'analysis:8863',
+      {
+        ...analysisPlayer,
+        highlightUnits: [
+          { unitId: 0, unitName: 'Unknown metrics' },
+          ...Array.from({ length: 16 }, (_, index) => ({
+            unitId: index + 1,
+            unitName: `Unit ${index + 1}`,
+            totalDamage: (index + 1) * 100,
+            spawnCount: index + 1,
+            avgRoi: (index + 1) / 100,
+          })),
+        ],
+        categoryPreferences: [
+          { categoryKey: 'aircrafts', percentage: 40, totalCost: 216_100 },
+          { categoryKey: 'support', percentage: 25.6, totalCost: 138_300 },
+          { categoryKey: 'vehicles', percentage: 13.5, totalCost: 72_900 },
+          { categoryKey: 'helicopters', percentage: 7.6, totalCost: 40_900 },
+          { categoryKey: 'infantry', percentage: 7.3, totalCost: 39_400 },
+          { categoryKey: 'recon', percentage: 6.1, totalCost: 32_900 },
+          { categoryKey: 'logistic', percentage: 0.1, totalCost: 300 },
+          { categoryKey: 'unknown', percentage: 0, totalCost: 0 },
+        ],
+      },
+      21_600_000,
+    );
+    const report = await cachedAnalyzer(db).report('8863');
+    expect(report.favUnits).toHaveLength(17);
+    expect(report.favUnits[0]).toEqual({
+      name: 'Unknown metrics',
+      value: null,
+      spawn: null,
+      roi: null,
+    });
+    expect(report.favUnits.at(-1)).toEqual({ name: 'Unit 16', value: 1600, spawn: 16, roi: 0.16 });
+    expect(report.categories).toHaveLength(8);
+    expect(report.categories.slice(-2)).toEqual([
+      { key: 'logistic', pct: 0.1, totalCost: 300 },
+      { key: 'unknown', pct: 0, totalCost: 0 },
+    ]);
   });
 
   it.each([

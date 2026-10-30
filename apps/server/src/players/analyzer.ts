@@ -78,7 +78,6 @@ export class Analyzer {
             endTime: timestamp(p.endTime),
           })),
         favUnits: array(a.highlightUnits)
-          .slice(0, 3)
           .map(object)
           .map((u) => ({
             name: text(u.unitName, `unit:${u.unitId}`),
@@ -87,9 +86,12 @@ export class Analyzer {
             roi: number(u.avgRoi),
           })),
         categories: array(a.categoryPreferences)
-          .slice(0, 3)
           .map(object)
-          .map((c) => ({ key: text(c.categoryKey), pct: number(c.percentage) })),
+          .map((c) => ({
+            key: text(c.categoryKey),
+            pct: number(c.percentage),
+            totalCost: number(c.totalCost),
+          })),
         mapStats: maps.map((m) => ({
           mapId: number(m.mapId),
           name: text(m.mapName),

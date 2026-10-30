@@ -30,6 +30,7 @@ import { eloChangeClass } from '@/lib/elo';
 import { Badge, Button, Notice, Stats } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 import { useApp } from '../../app/state';
+import { PlayerPreferences } from './PlayerPreferences';
 import { MaggotCard } from './MaggotCard';
 import { ProfileTableSkeleton } from './ProfileTableSkeleton';
 import { MapPerformanceGrid } from './MapPerformanceGrid';
@@ -137,31 +138,7 @@ export function ReportView({
           ]}
         />
         {(report.categories.length > 0 || report.favUnits.length > 0 || report.style) && (
-          <div className="report-tags">
-            {report.categories.length > 0 && <span>{t('preference')}</span>}
-            {report.categories.map((c) => (
-              <Badge key={c.key}>
-                {t('cat.' + c.key.toLowerCase()) === 'cat.' + c.key.toLowerCase()
-                  ? c.key
-                  : t('cat.' + c.key.toLowerCase())}{' '}
-                {formatMetric(c.pct, 0)}%
-              </Badge>
-            ))}
-            {report.favUnits.length > 0 && <span>{t('units')}</span>}
-            {report.favUnits.map((u) => (
-              <Badge key={u.name}>
-                {u.name} · {formatMetric(u.value, 0)}
-              </Badge>
-            ))}
-            {report.style && (
-              <Badge>
-                {t('style')}:{' '}
-                {t('style.' + report.style.toLowerCase()) === 'style.' + report.style.toLowerCase()
-                  ? report.style
-                  : t('style.' + report.style.toLowerCase())}
-              </Badge>
-            )}
-          </div>
+          <PlayerPreferences id={report.id} report={report} showMaggot={false} />
         )}
         {!embedded && <MaggotCard id={report.id} />}
         {report.mapStats.length > 0 && (

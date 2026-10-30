@@ -42,7 +42,7 @@ import { translate } from '../apps/web/src/hooks/useI18n';
 import { SessionPanel } from '../apps/web/src/features/session/SessionPanel';
 import { PlayersPanel } from '../apps/web/src/features/players/PlayersPanel';
 import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
-import { ReportMatchTable } from '../apps/web/src/features/players/Reports';
+import { ReportMatchTable, ReportView } from '../apps/web/src/features/players/Reports';
 import { ReplayDialog } from '../apps/web/src/features/replays/ReplayDialog';
 import { RecordingSettings } from '../apps/web/src/features/replays/RecordingSettings';
 import { ReplaysPanel } from '../apps/web/src/features/replays/ReplaysPanel';
@@ -3253,7 +3253,11 @@ describe('user interaction regressions', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Second Player/ }));
     await screen.findByRole('heading', { name: `Second Player #${secondPlayer.id}` });
     expect(screen.getAllByText('等待计算').length).toBeGreaterThan(0);
-    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('0');
+    expect(
+      within(screen.getByRole('region', { name: '蛐指数' }))
+        .getByRole('progressbar')
+        .getAttribute('aria-valuenow'),
+    ).toBe('0');
     expect(native.calls.filter((call) => call.method === 'players.maggot')).toHaveLength(1);
     const complete = (id: string, rank: number) =>
       summarizeMaggot(
@@ -3370,6 +3374,56 @@ describe('user interaction regressions', () => {
 });
 
 describe('profile refresh and report scopes', () => {
+  it.each(['zh', 'en'] as const)(
+    'shows deployments, ROI, precise preferences, and missing values in the %s query report',
+    async (locale) => {
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const native = nativeFixture(initial);
+      const report = reportFixture({
+        favUnits: [
+          { name: 'Zero metrics', value: 0, spawn: 0, roi: 0 },
+          { name: 'Missing metrics', value: null, spawn: null, roi: null },
+        ],
+        categories: [
+          { key: 'support', pct: 0, totalCost: 0 },
+          { key: 'logistic', pct: 0.1, totalCost: 300 },
+          { key: 'Unrecognized category', pct: null, totalCost: null },
+        ],
+      });
+      render(<ReportView report={report} />, { wrapper: wrapper(native.api) });
+      const label = (key: string) => translate(locale, key);
+      const units = await screen.findByRole('table', { name: label('units') });
+      expect(within(units).getByRole('columnheader', { name: label('deployments') })).toBeTruthy();
+      expect(within(units).getByRole('columnheader', { name: 'ROI' })).toBeTruthy();
+      const rows = within(units).getAllByRole('row').slice(1);
+      expect(rows).toHaveLength(2);
+      expect(
+        within(rows[0]!)
+          .getAllByRole('cell')
+          .slice(1)
+          .map((cell) => cell.textContent),
+      ).toEqual(['0', '0', '0']);
+      expect(
+        within(rows[1]!)
+          .getAllByRole('cell')
+          .slice(1)
+          .map((cell) => cell.textContent),
+      ).toEqual(['—', '—', '—']);
+      const preferences = screen.getByRole('region', { name: label('preference') });
+      expect(within(preferences).getByText('0.1%')).toBeTruthy();
+      expect(within(preferences).getByText('300')).toBeTruthy();
+      expect(within(preferences).getByText('Unrecognized category')).toBeTruthy();
+      expect(within(preferences).getAllByRole('progressbar')).toHaveLength(2);
+      expect(
+        within(preferences)
+          .getByRole('progressbar', { name: label('cat.logistic') })
+          .getAttribute('aria-valuenow'),
+      ).toBe('0.1');
+      expect(within(preferences).queryByText('—%')).toBeNull();
+    },
+  );
+
   it.each(['profile', 'report'] as const)(
     'keeps pending profile sections in place when the %s response arrives first',
     async (first) => {
