@@ -37,6 +37,12 @@ Database startup removes retired input-statistics tables and the obsolete collec
 
 录制有独立 token、sender、sequence 和写盘队列；逐片等待确认，停止等待尾片与落盘。时长取真实经过时间。播放器用短期 token 和 Range，不整文件跨 IPC。
 
+The recording controller allocates a capture token before display discovery and
+keeps that session identity throughout startup, recording, and stopping. Recording
+the same match again allocates a different token, so IPC from an earlier capture
+cannot affect the new recording. Disabling recording during display discovery
+cancels startup; disabling an active recording waits for the final file.
+
 Player reports expose a separate `ratingTrend` of up to 30 chronological analysis
 points, retaining each match ID, end time, and pre/post-match rating. The existing
 12-row recent-match table keeps its newest-first order. Both views use the same
@@ -46,6 +52,14 @@ the displayed period from the first pre-match rating to the last post-match rati
 and never reconstructs history from the current rating or partial deltas.
 
 卡组 ZIP 校验路径、扩展名、CRC、边界和容量。压缩 / 解压使用异步线程池，写入临时文件后 rename，失败明确反馈。
+
+Manual deck backups stage the complete archive and never overwrite an existing
+backup. Create-only writes prefer a hard link and fall back to an exclusive file
+copy when hard links are unsupported. The copy fallback preserves collision
+protection but does not guarantee atomic visibility while bytes are copied.
+Staging files are removed after success or failure, and genuine access-denied
+errors remain errors. The managed previous-match archive intentionally replaces
+its prior version through a rename, as do deck restores.
 
 Shared shadcn primitives and the application Button, Card, Dialog, Menu, Field,
 Toggle, Badge, and Stats wrappers centralize interaction rules. Radix manages

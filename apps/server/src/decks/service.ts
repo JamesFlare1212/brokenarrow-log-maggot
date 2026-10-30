@@ -71,6 +71,13 @@ export class DeckService {
     };
   }
   backup(names: string[], packageName: string): Promise<{ name: string }> {
+    return this.createBackup(names, packageName, false);
+  }
+  private createBackup(
+    names: string[],
+    packageName: string,
+    replaceExisting: boolean,
+  ): Promise<{ name: string }> {
     return this.exclusive(async () => {
       const p = await this.paths();
       if (!p.found) throw new Error('Deck directory not found');
@@ -98,7 +105,13 @@ export class DeckService {
             data: await readFile(childPath(p.decks, n, '.dek')),
           })),
         );
-      await atomicWrite(p.backups, name, await zipCreate(files));
+      try {
+        await atomicWrite(p.backups, name, await zipCreate(files), replaceExisting);
+      } catch (error) {
+        if (object(error).code === 'EEXIST')
+          throw new Error('Deck backup already exists; choose a different name');
+        throw error;
+      }
       return { name };
     });
   }
@@ -131,9 +144,10 @@ export class DeckService {
   async onMatchStart(session: Session): Promise<void> {
     const list = await this.list();
     if (!list.found || !list.decks.length) return;
-    await this.backup(
+    await this.createBackup(
       list.decks.map((f) => f.name),
       PREVIOUS,
+      true,
     );
     const state: DeckState = {
       pkgKey: session.accountKey,

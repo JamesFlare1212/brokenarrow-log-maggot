@@ -63,6 +63,7 @@ vi.mock('electron', () => ({
 import { RecordingController } from '../apps/desktop/src/recordings/controller';
 import { ReplayProtocol } from '../apps/desktop/src/recordings/protocol';
 import { patchDuration, patchDurationFile } from '../apps/desktop/src/recordings/webm';
+import { Application } from '../apps/server/src/app';
 
 const source = {
   id: 'screen:1:0',
@@ -210,6 +211,108 @@ describe('recording display discovery', () => {
 });
 
 describe('recording lifecycle and IPC ownership', () => {
+  it('keeps the startup identity through stop and expires it for a new capture of the same match', async () => {
+    const { value, dir } = await controller();
+    const current = match();
+    await value.start(current, configSchema.parse({}));
+    const sessionId = value.status().sessionId;
+    expect(sessionId).toBeTruthy();
+    expect(sessionId).not.toBe(current.sessionId);
+    const sender = electron.windows.at(-1)!.webContents.id;
+    const token = value.config(sender).sessionId;
+    expect(token).toBe(sessionId);
+    value.ready(sender, token, false);
+    expect(value.status().sessionId).toBe(sessionId);
+    await value.chunk(sender, token, 0, bytes('reviewed capture'));
+    const stopping = value.stop();
+    expect(value.status()).toMatchObject({ phase: 'stopping', sessionId });
+    await value.finish(sender, token, 15, false);
+    await stopping;
+    const files = await readdir(dir);
+    expect(files).toHaveLength(1);
+    expect(await readFile(join(dir, files[0]!), 'utf8')).toBe('reviewed capture');
+
+    await value.start(current, configSchema.parse({}));
+    expect(value.status().sessionId).not.toBe(sessionId);
+    const nextSender = electron.windows.at(-1)!.webContents.id;
+    expect(() => value.ready(nextSender, token, false)).toThrow(/expired/i);
+    expect(value.status().phase).toBe('starting');
+  });
+
+  it.each([false, true])(
+    'disables recording through the application during startup or capture (ready=%s)',
+    async (ready) => {
+      const { value, dir } = await controller();
+      const sources = deferred<(typeof source)[]>();
+      electron.getSources.mockReturnValueOnce(sources.promise);
+      const app = new Application(
+        dir,
+        {
+          version: '4.5.1',
+          http: {
+            offline: true,
+            fetch: async () => {
+              throw new Error('Recording regression must remain offline');
+            },
+          },
+          selectDirectory: async () => null,
+          detectLogDirectory: async () => '',
+          openPath: async () => {},
+          openExternal: async () => {},
+          notify: () => {},
+          recordings: {
+            status: () => value.status(),
+            start: (match, config, test) => value.start(match, config, test),
+            stop: (match) => value.stop(match),
+            abort: () => value.abort(),
+            displays: () => value.displays(),
+            thumbnail: (id) => value.thumbnail(id),
+            playback: async () => '',
+          },
+        },
+        () => {},
+        false,
+      );
+      const starting = value.start(match(), configSchema.parse({}));
+      try {
+        await vi.waitFor(() => expect(electron.getSources).toHaveBeenCalledTimes(1));
+        const sessionId = value.status().sessionId;
+        app.db.updateConfig({ replayEnabled: true });
+        if (ready) {
+          sources.resolve([source]);
+          await starting;
+          const sender = electron.windows.at(-1)!.webContents.id;
+          const token = value.config(sender).sessionId;
+          value.ready(sender, token, false);
+          await value.chunk(sender, token, 0, bytes('disabled capture'));
+          const disabling = app.invoke('config.update', { replayEnabled: false });
+          void disabling.catch(() => {});
+          await vi.waitFor(() =>
+            expect(value.status()).toMatchObject({ phase: 'stopping', sessionId }),
+          );
+          await value.finish(sender, token, 15, false);
+          await disabling;
+          const files = (await readdir(dir)).filter((name) => name.endsWith('.webm'));
+          expect(files).toHaveLength(1);
+          expect(await readFile(join(dir, files[0]!), 'utf8')).toBe('disabled capture');
+        } else {
+          await app.invoke('config.update', { replayEnabled: false });
+          sources.resolve([source]);
+          await starting;
+          expect(electron.windows).toHaveLength(0);
+          expect((await readdir(dir)).filter((name) => name.endsWith('.webm'))).toEqual([]);
+        }
+        expect(value.status()).toMatchObject({ phase: 'idle', sessionId: null });
+        expect(app.db.config().replayEnabled).toBe(false);
+      } finally {
+        sources.resolve([source]);
+        await starting.catch(() => {});
+        await value.abort();
+        await app.stop();
+      }
+    },
+  );
+
   it('does not resurrect a capture aborted while display discovery is pending', async () => {
     const { value, dir } = await controller();
     const sources = deferred<(typeof source)[]>();

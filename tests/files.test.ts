@@ -9,14 +9,24 @@ import {
   rm,
   symlink,
   lstat,
+  link,
+  copyFile,
+  unlink,
 } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { filename } from '@ba/shared';
 import { Database } from '../apps/server/src/storage/database';
 import { ReplayFiles, replayName } from '../apps/server/src/replays/files';
-import { childPath } from '../apps/server/src/files/paths';
+import { atomicWrite, childPath } from '../apps/server/src/files/paths';
+import { DeckService } from '../apps/server/src/decks/service';
+import { LogParser } from '../apps/server/src/logs/parser';
 import { zipCreate, zipExtract } from '../apps/server/src/decks/zip';
+
+vi.mock('node:fs/promises', async (original) => {
+  const actual = await original<typeof import('node:fs/promises')>();
+  return { ...actual, link: vi.fn(actual.link), copyFile: vi.fn(actual.copyFile) };
+});
 
 const workspace = resolve(process.cwd());
 const testRoot = resolve(workspace, '.test-data', 'recordings');
@@ -44,6 +54,11 @@ function database(): Database {
   databases.push(db);
   return db;
 }
+beforeEach(async () => {
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  vi.mocked(link).mockReset().mockImplementation(actual.link);
+  vi.mocked(copyFile).mockReset().mockImplementation(actual.copyFile);
+});
 afterEach(async () => {
   for (const db of databases.splice(0)) db.close();
   for (const entry of temporary.splice(0)) {
@@ -147,6 +162,112 @@ describe('deck ZIP integrity and capacity', () => {
     const zip = await zipCreate([{ name: 'one.dek', data: Buffer.from('X') }]);
     zip.writeUInt32LE(8 * 1_024 * 1_024 + 1, centralOffset(zip) + 24);
     await expect(zipExtract(zip)).rejects.toThrow(/unsafe/i);
+  });
+});
+
+describe('deck backup preservation', () => {
+  it.each(['EXDEV', 'EPERM', 'ENOSYS', 'ENOTSUP', 'EOPNOTSUPP'])(
+    'creates a complete new backup when hard links fail with %s',
+    async (code) => {
+      const root = await temp();
+      const archive = await zipCreate([{ name: 'Alpha.dek', data: Buffer.from('original') }]);
+      vi.mocked(link).mockRejectedValue(Object.assign(new Error('No hard links'), { code }));
+      await atomicWrite(root, 'manual.zip', archive, false);
+      expect(await readFile(join(root, 'manual.zip'))).toEqual(archive);
+      expect(await readdir(root)).toEqual(['manual.zip']);
+    },
+  );
+
+  it('preserves permission failures without attempting a fallback copy', async () => {
+    const root = await temp();
+    const error = Object.assign(new Error('Access denied'), { code: 'EACCES' });
+    vi.mocked(link).mockRejectedValueOnce(error);
+    await expect(atomicWrite(root, 'manual.zip', Buffer.from('backup'), false)).rejects.toBe(error);
+    expect(copyFile).not.toHaveBeenCalled();
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it('cleans the staging file and reports a failed fallback copy', async () => {
+    const root = await temp();
+    const error = Object.assign(new Error('Disk is full'), { code: 'ENOSPC' });
+    vi.mocked(link).mockRejectedValueOnce(
+      Object.assign(new Error('No hard links'), { code: 'ENOTSUP' }),
+    );
+    vi.mocked(copyFile).mockRejectedValueOnce(error);
+    await expect(atomicWrite(root, 'manual.zip', Buffer.from('backup'), false)).rejects.toBe(error);
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it.each([false, true])(
+    'backs up and restores decks without replacing a manual archive (hard links unavailable=%s)',
+    async (unavailable) => {
+      const root = await temp();
+      const decksDir = join(root, 'Decks');
+      await mkdir(decksDir);
+      await writeFile(join(decksDir, 'Alpha.dek'), 'saved alpha');
+      await writeFile(join(decksDir, 'New.dek'), 'saved new');
+      const db = database();
+      db.updateConfig({ decksDir });
+      const decks = new DeckService(db);
+      if (unavailable)
+        vi.mocked(link).mockRejectedValue(
+          Object.assign(new Error('No hard links'), { code: 'ENOTSUP' }),
+        );
+      await decks.backup(['Alpha.dek', 'New.dek'], 'snapshot');
+      const archive = join(root, 'DeckBackups', 'snapshot.zip');
+      const original = await readFile(archive);
+      await writeFile(join(decksDir, 'Alpha.dek'), 'current alpha');
+      await unlink(join(decksDir, 'New.dek'));
+      await expect(decks.backup(['Alpha.dek'], 'snapshot')).rejects.toThrow(/already exists/i);
+      expect(await readFile(archive)).toEqual(original);
+      await expect(decks.deploy('snapshot.zip')).resolves.toEqual({ deployed: 2 });
+      expect(await readFile(join(decksDir, 'Alpha.dek'), 'utf8')).toBe('saved alpha');
+      expect(await readFile(join(decksDir, 'New.dek'), 'utf8')).toBe('saved new');
+      expect(await readdir(join(root, 'DeckBackups'))).toEqual(['snapshot.zip']);
+      expect((await readdir(decksDir)).sort()).toEqual(['Alpha.dek', 'New.dek']);
+    },
+  );
+
+  it.each([false, true])(
+    'publishes one complete archive with concurrent writers (hard links unavailable=%s)',
+    async (unavailable) => {
+      const root = await temp();
+      if (unavailable)
+        vi.mocked(link).mockRejectedValue(
+          Object.assign(new Error('No hard links'), { code: 'ENOTSUP' }),
+        );
+      const first = await zipCreate([{ name: 'Alpha.dek', data: Buffer.from('first') }]);
+      const second = await zipCreate([{ name: 'Bravo.dek', data: Buffer.from('second') }]);
+      const results = await Promise.allSettled([
+        atomicWrite(root, 'shared.zip', first, false),
+        atomicWrite(root, 'shared.zip', second, false),
+      ]);
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+      const saved = await readFile(join(root, 'shared.zip'));
+      expect(saved.equals(first) || saved.equals(second)).toBe(true);
+      await expect(zipExtract(saved)).resolves.toHaveLength(1);
+      expect(await readdir(root)).toEqual(['shared.zip']);
+    },
+  );
+
+  it('continues rotating the automatic previous-match archive', async () => {
+    const root = await temp();
+    const decksDir = join(root, 'Decks');
+    await mkdir(decksDir);
+    await writeFile(join(decksDir, 'Alpha.dek'), 'first match');
+    const db = database();
+    db.updateConfig({ decksDir });
+    const decks = new DeckService(db);
+    const session = new LogParser(() => {}).snapshot();
+    await decks.onMatchStart(session);
+    await writeFile(join(decksDir, 'Alpha.dek'), 'second match');
+    await decks.onMatchStart(session);
+    const archive = await zipExtract(await readFile(join(root, 'DeckBackups', '上一局卡组包.zip')));
+    expect(archive.map((entry) => [entry.name, entry.data.toString()])).toEqual([
+      ['Alpha.dek', 'second match'],
+    ]);
+    expect(await readdir(join(root, 'DeckBackups'))).toEqual(['上一局卡组包.zip']);
   });
 });
 

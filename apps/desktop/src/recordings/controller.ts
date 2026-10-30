@@ -93,9 +93,10 @@ export class RecordingController {
     if (this.current?.stopped) await this.current.done.catch(() => {});
     else await this.discardCurrent();
     if (generation !== this.generation) return;
+    const token = randomUUID();
     this.update({
       phase: 'starting',
-      sessionId: match.sessionId,
+      sessionId: token,
       fid: match.fid,
       map: match.map,
       sourceId: '',
@@ -120,8 +121,7 @@ export class RecordingController {
       const dir = this.directory();
       await mkdir(dir, { recursive: true });
       if (generation !== this.generation) return;
-      const token = randomUUID(),
-        part = join(dir, '.rec-part-' + token + '.webm');
+      const part = join(dir, '.rec-part-' + token + '.webm');
       let resolve: () => void = () => {},
         reject: (e: Error) => void = () => {};
       const done = new Promise<void>((yes, no) => {
