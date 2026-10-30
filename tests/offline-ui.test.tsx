@@ -103,6 +103,16 @@ describe('UI backed by the complete recorded BATrace service', () => {
     expect(screen.queryByRole('tab', { name: new RegExp(t('recent')) })).toBeNull();
     expect(screen.getAllByText(t('latestKd'))).toHaveLength(1);
     const report = await api.invoke('players.report', { id });
+    const ratingTrend = screen.getByRole('region', { name: t('ratingTrend') });
+    expect(report.ratingTrend.length).toBeGreaterThan(0);
+    expect(
+      within(ratingTrend).getByText(
+        translate('zh', 'ratingTrendRange', { count: report.ratingTrend.length }),
+      ),
+    ).toBeTruthy();
+    expect(
+      within(ratingTrend).getByText(t('ratingTrendLatest')).nextElementSibling?.textContent,
+    ).toBe(formatMetric(report.ratingTrend.at(-1)!.ratingAfter, 1));
     const units = screen.getByRole('table', { name: t('units') });
     const unitRows = within(units).getAllByRole('row').slice(1);
     expect(report.favUnits.length).toBeGreaterThan(3);

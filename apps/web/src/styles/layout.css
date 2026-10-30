@@ -1322,6 +1322,50 @@ button:not(:disabled),
   align-items: start;
   gap: 0.75rem;
 }
+.rating-trend-card {
+  min-width: 0;
+}
+.rating-trend-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem 1rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.rating-trend-placeholder {
+  display: flex;
+  height: 200px;
+  align-items: center;
+  justify-content: center;
+}
+.rating-trend-plot {
+  font-variant-numeric: tabular-nums;
+}
+.rating-trend-hint {
+  margin: 0.5rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.rating-trend-tooltip,
+.rating-trend-tooltip dl {
+  display: grid;
+  gap: 0.375rem;
+}
+.rating-trend-tooltip dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.rating-trend-tooltip dt {
+  color: var(--muted-foreground);
+}
+.rating-trend-tooltip dd {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
 .profile-analysis-grid > :only-child {
   grid-column: 1 / -1;
 }

@@ -2,6 +2,7 @@ import type { PlayerProfile, PlayerReport } from '@ba/contracts';
 import { formatMetric } from '@ba/shared';
 import { Stats } from '../../components/ui';
 import { PlayerPreferences } from './PlayerPreferences';
+import { RatingTrendChart } from './RatingTrendChart';
 import { useI18n } from '../../hooks/useI18n';
 
 export function ProfileOverview({
@@ -48,6 +49,7 @@ export function ProfileOverview({
           },
         ]}
       />
+      <RatingTrendChart report={report} pending={reportPending} />
       <PlayerPreferences id={id} profile={profile} report={report} pending={preferencesPending} />
     </div>
   );

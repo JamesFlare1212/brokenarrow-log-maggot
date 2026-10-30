@@ -116,6 +116,18 @@ export function createDevelopmentData(
         losses: 5,
         updatedAt: now,
         stale: false,
+        ratingTrend: matches
+          .slice(0, 30)
+          .reverse()
+          .map((match) => {
+            const matchPlayer = match.players.find((entry) => entry.id === player.id);
+            return {
+              matchId: match.fid!,
+              endTime: match.endedAt,
+              ratingBefore: matchPlayer?.oldRating ?? null,
+              ratingAfter: matchPlayer?.newRating ?? null,
+            };
+          }),
         recentMatches: matches.slice(0, 12).map((match, i) => ({
           matchId: match.fid!,
           won: i % 3 !== 0,

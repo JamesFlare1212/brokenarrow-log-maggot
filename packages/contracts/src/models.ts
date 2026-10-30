@@ -98,6 +98,12 @@ export interface SearchPlayer {
   level: Metric;
   rating: Metric;
 }
+export interface RatingTrendPoint {
+  matchId: Id;
+  endTime: number | null;
+  ratingBefore: Metric;
+  ratingAfter: Metric;
+}
 export interface PlayerReport {
   id: Id;
   name: string;
@@ -113,6 +119,7 @@ export interface PlayerReport {
   losses: number;
   updatedAt: number;
   stale: boolean;
+  ratingTrend: RatingTrendPoint[];
   recentMatches: Array<{
     matchId: Id;
     won: boolean | null;

@@ -60,6 +60,12 @@ export class Analyzer {
         losses,
         updatedAt: response.at,
         stale: response.source === 'stale',
+        ratingTrend: points.slice(-30).map((p) => ({
+          matchId: text(p.matchId),
+          endTime: timestamp(p.endTime),
+          ratingBefore: number(p.ratingBefore),
+          ratingAfter: number(p.ratingAfter),
+        })),
         recentMatches: points
           .slice(-12)
           .reverse()
@@ -130,6 +136,7 @@ export class Analyzer {
           losses,
           updatedAt: result.at,
           stale: result.source === 'stale',
+          ratingTrend: [],
           recentMatches: [],
           favUnits: [],
           categories: [],

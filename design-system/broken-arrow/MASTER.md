@@ -172,16 +172,29 @@ required by the current interface.
   Close. It stays available while the content scrolls and refreshes the profile
   and report together.
 - Player details keep their final layout during the initial load: metadata,
-  four metric cards, highlight units beside the preferences and Maggot Index
-  column, and record tabs with table headers or map cards. Use shadcn Skeleton
-  inside the values, preference rows, tab counts, table cells, and map cards that
-  are still pending. Do not insert a generic loading block above the metrics or
-  expand the index into the preference column.
+  four metric cards, the ELO trend, highlight units beside the preferences and
+  Maggot Index column, and record tabs with table headers or map cards. Use
+  shadcn Skeleton inside the values, preference rows, tab counts, table cells,
+  and map cards that are still pending. Do not insert a generic loading block
+  above the metrics or expand the index into the preference column.
   The shared Skeleton uses foreground at 10% opacity so placeholders remain
   visible on both light and dark cards. Reserve the dialog's scrollbar gutter
   and use the same table column widths in loading and loaded states.
   Keep Copy visible and disabled until a report is available. Empty preferences
   retain their card and show an explicit empty state.
+- The ELO trend uses the shared glass Card and shadcn Chart (Recharts). Plot up to
+  30 recorded post-match ratings from oldest to newest with a 200px plot, adaptive
+  axis labels, a smooth line, and a uniform 8% area fill. Keep the line opaque;
+  do not add a gradient or a separate chart surface. The header shows the latest
+  post-match ELO and its change from the first match's pre-match rating. Use the
+  saved ELO increase/decrease colors for the line and signed change, or `--chart-1`
+  when neutral or unknown. A dashed reference line marks that starting rating.
+  Hover and arrow-key navigation expose match ID, time, rating, and per-match
+  change. Keep a visible keyboard focus ring and disable chart animation.
+  Unknown ratings remain gaps, single samples remain visible as dots, and missing
+  endpoints produce an unknown summary instead of reconstructed values. Initial
+  loading and empty states reserve the same plot height; refresh retains the
+  current plot. Localize captions and tooltip labels in Chinese and English.
 - Player details and query reports share the same preference display. Show every
   highlight unit and category returned by BATrace in source order without a
   fixed item limit. Highlight units use a shared glass Card and shadcn Table
