@@ -54,6 +54,7 @@ export interface Match {
   source: 'log' | 'api' | 'legacy';
   updatedAt: number;
   warning?: string;
+  warningCode?: 'batrace-cache';
   titles?: Record<Id, import('./titles').MatchTitle[]>;
   scoreLabels?: Record<Id, import('./score-labels').MatchScoreLabel[]>;
   scoreLabelRule?: 'team-maximum' | 'match-maximum-single';
@@ -78,20 +79,35 @@ export interface WatcherStatus {
   recovering: boolean;
   error: string | null;
   live?: boolean;
+  checkedAt?: number | null;
+  checking?: boolean;
 }
 export interface MiniInfo {
   name?: string;
   elo: Metric;
   kd: Metric;
   winRate: Metric;
-  matchCount: number;
-  sampleCount?: number;
+  matchCount: Metric;
+  sampleCount?: Metric;
   fallback?: boolean;
   category: string | null;
   topUnits: string;
   updatedAt: number;
   stale: boolean;
 }
+export interface RosterResult {
+  player: Player;
+  info: MiniInfo | null;
+  error: string | null;
+}
+export interface RosterQuery {
+  requestId: string;
+  sourceKey: string;
+  retryAt: number | null;
+  pendingIds: string[];
+  rows: Record<string, RosterResult>;
+}
+export type RosterQueries = Record<'current' | 'previous', RosterQuery>;
 export interface SearchPlayer {
   id: Id;
   name: string;
@@ -103,16 +119,18 @@ export interface PlayerReport {
   name: string;
   level: Metric;
   fallback: boolean;
-  matchCount: number;
-  sampleCount: number;
+  matchCount: Metric;
+  sampleCount: Metric;
   elo: Metric;
   kd: Metric;
   dmr: Metric;
   winRate: Metric;
-  wins: number;
-  losses: number;
+  wins: Metric;
+  losses: Metric;
   updatedAt: number;
   stale: boolean;
+  detailAvailability?: { matches: boolean; maps: boolean };
+  analysisError?: string | null;
   recentMatches: Array<{
     matchId: Id;
     won: boolean | null;
@@ -156,12 +174,46 @@ export interface Account {
   lastSeen: number;
   matchCount: number;
 }
+export interface HistoryMatchSummary {
+  id: string;
+  fid: string | null;
+  map: string;
+  at: number | null;
+  accounts: Array<{ id: string; name: string }>;
+}
+export interface HistoryDeletePlan {
+  token: string;
+  kind: 'account' | 'match';
+  target: { id: string; name: string };
+  removed: HistoryMatchSummary[];
+  retained: HistoryMatchSummary[];
+  affectedAccounts: Array<{ id: string; name: string }>;
+  backupDirectory: string;
+  backupName: string;
+}
+export interface HistoryBackup {
+  name: string;
+  version: string;
+  createdAt: number;
+  kind: 'account' | 'match';
+  target: { id: string; name: string };
+  matchCount: number;
+  restoredAt: number | null;
+}
+export interface HistoryDeleteResult {
+  removed: boolean;
+  removedMatches: number;
+  retainedMatches: number;
+  backup: HistoryBackup;
+}
 export interface NameRecord {
   name: string;
   firstSeen: number;
   lastSeen: number;
 }
 export interface Encounter {
+  accountId?: Id | null;
+  accountName?: string | null;
   matchId: Id;
   at: number | null;
   map: string;
@@ -178,8 +230,28 @@ export interface Ban {
   lastSeenAt: number;
   encountered: boolean;
   lastEncounterAt?: number | null;
+  unverifiedObservation?: boolean;
+}
+export interface BanAlertBatch {
+  id: string;
+  createdAt: number;
+  players: Ban[];
+}
+export interface BanSyncStatus {
+  phase: 'idle' | 'syncing' | 'success' | 'error';
+  attemptId: string | null;
+  lastAttemptAt: number | null;
+  lastSuccessAt: number | null;
+  error: string | null;
 }
 export interface PlayerProfile {
+  encounterScope?: {
+    accountId: Id | null;
+    accountName: string | null;
+    combined: boolean;
+    unattributedCount: number;
+  };
+  unverifiedObservation?: boolean;
   id: Id;
   name: string;
   names: NameRecord[];
@@ -220,6 +292,22 @@ export interface DeckList {
   decks: DeckFile[];
   backups: DeckFile[];
 }
+export interface DeckOperationResult {
+  completed: string[];
+  failed: Array<{ name: string; message: string }>;
+  skipped: string[];
+}
+export interface DeckRestorePlan {
+  token: string;
+  directory: string;
+  name: string;
+  files: string[];
+  replacements: string[];
+}
+export interface DeckRestoreResult extends DeckOperationResult {
+  deployed: number;
+  recoveryBackup: string | null;
+}
 export interface DeckSwitchAlert {
   pair: string;
   from: string;
@@ -227,6 +315,9 @@ export interface DeckSwitchAlert {
   count: number;
   names: string[];
   fid: Id | null;
+  directory: string;
+  version: string;
+  toKey: string;
 }
 export interface Replay {
   id: string;
@@ -237,13 +328,60 @@ export interface Replay {
   teamId: TeamId;
   size: number;
   createdAt: number;
+  dateSource: 'recording' | 'modified';
   durationSec: Metric;
   test: boolean;
+}
+export interface ReplayLibrary {
+  directory: string;
+  recordings: Replay[];
+  migration?: ReplayMoveResult | null;
+}
+export interface ReplayMoveResult {
+  createdAt: number;
+  from: string;
+  to: string;
+  directory: string;
+  committed: boolean;
+  moved: number;
+  copied: string[];
+  retained: string[];
+  destinationCopies: string[];
+  failed: Array<{ name: string; message: string }>;
+}
+export interface ReplayDeletePlan {
+  token: string;
+  directory: string;
+  createdAt: number;
+  days: number | null;
+  recordings: Replay[];
+}
+export interface ReplayDeleteResult {
+  directory: string;
+  removed: number;
+  completed: string[];
+  failed: Array<{ name: string; message: string }>;
+  skipped: string[];
 }
 export interface Display {
   id: string;
   label: string;
   thumbnail: string;
+}
+export interface DisplayChoice {
+  id: string;
+  displayId: string;
+  label: string;
+}
+export interface RecordingDisplayTarget {
+  requestedId: string;
+  sourceId: string | null;
+  label: string | null;
+  selection: 'selected' | 'automatic' | 'fallback' | 'unavailable';
+}
+export interface DisplayPreview extends RecordingDisplayTarget {
+  thumbnail: string | null;
+  displays: DisplayChoice[];
 }
 export interface RecordingState {
   phase: 'idle' | 'starting' | 'recording' | 'stopping' | 'error';
@@ -251,10 +389,20 @@ export interface RecordingState {
   fid: Id | null;
   map: string;
   sourceId: string;
+  display?: RecordingDisplayTarget;
   startedAt: number | null;
   seconds: number;
   hasAudio: boolean;
+  audio?: import('./recording').RecordingAudioState;
+  lastSavedName?: string;
+  audioRetryPending?: boolean;
+  audioRetryError?: string | null;
   error: string | null;
+  failure?: {
+    kind: 'start' | 'capture' | 'save' | 'metadata';
+    discarded: boolean;
+    savedName?: string;
+  } | null;
 }
 export interface MigrationStatus {
   completed: boolean;
@@ -293,6 +441,9 @@ export interface PublicConfig {
   replaySaveDir: string;
 }
 export interface Bootstrap {
+  rosters?: RosterQueries;
+  banSync: BanSyncStatus;
+  banAlerts: BanAlertBatch[];
   updates: import('./updates').UpdateState;
   revision: number;
   config: PublicConfig;

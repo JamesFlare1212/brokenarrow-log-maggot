@@ -2,9 +2,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RecorderBridge, RecorderConfig } from '@ba/contracts';
 
-class Track {
-  stop = vi.fn();
-  constructor(readonly kind: 'audio' | 'video') {}
+class Track extends EventTarget {
+  readyState = 'live';
+  enabled = true;
+  muted = false;
+  stop = vi.fn(() => {
+    this.readyState = 'ended';
+  });
+  constructor(readonly kind: 'audio' | 'video') {
+    super();
+  }
 }
 class Stream {
   constructor(private tracks: Track[] = []) {}
@@ -14,11 +21,15 @@ class Stream {
   getAudioTracks() {
     return this.tracks.filter((track) => track.kind === 'audio');
   }
+  getVideoTracks() {
+    return this.tracks.filter((track) => track.kind === 'video');
+  }
   addTrack(track: Track) {
     this.tracks.push(track);
   }
 }
 class Context {
+  state = 'running';
   static instances: Context[] = [];
   destination = { stream: new Stream([new Track('audio')]) };
   sources: Array<{
@@ -26,6 +37,16 @@ class Context {
     connect: ReturnType<typeof vi.fn>;
     disconnect: ReturnType<typeof vi.fn>;
   }> = [];
+  silence = {
+    offset: { value: 1 },
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+  };
+  createConstantSource() {
+    return this.silence;
+  }
   resume = vi.fn(async () => {});
   close = vi.fn(async () => {});
   constructor() {
@@ -80,6 +101,7 @@ let getUserMedia: ReturnType<typeof vi.fn>;
 let desktop: Stream;
 let microphone: Stream;
 let canvas: Stream;
+let retryAudio: (requestId: string) => void;
 
 beforeEach(() => {
   vi.resetModules();
@@ -116,6 +138,11 @@ beforeEach(() => {
   bridge = {
     config: vi.fn(async () => config),
     started: vi.fn(async () => {}),
+    audio: vi.fn(async () => {}),
+    retryAudio: vi.fn((callback) => {
+      retryAudio = callback;
+      return vi.fn();
+    }),
     chunk: vi.fn(async () => {}),
     finish: vi.fn(async () => {}),
     failure: vi.fn(async () => {}),
@@ -135,12 +162,157 @@ afterEach(() => {
 async function start() {
   await import('../apps/web/src/recorder');
   await vi.waitFor(() =>
-    expect(bridge.started).toHaveBeenCalledWith('session', expect.any(Boolean)),
+    expect(bridge.started).toHaveBeenCalledWith('session', expect.any(Boolean), expect.any(Object)),
   );
   return Recorder.instances[0]!;
 }
 
 describe('recorder microphone capture', () => {
+  it.each(['system', 'microphone'] as const)(
+    'reports an ended %s input while the other mixed source and video continue',
+    async (source) => {
+      const recorder = await start(),
+        track = (source === 'system' ? desktop : microphone).getAudioTracks()[0]!;
+      const output = recorder.stream.getAudioTracks()[0]!;
+      track.stop();
+      await vi.waitFor(() =>
+        expect(bridge.audio).toHaveBeenCalledWith(
+          'session',
+          expect.objectContaining({ [source]: { state: 'ended', gap: true } }),
+        ),
+      );
+      expect(output.readyState).toBe('live');
+      expect(recorder.state).toBe('recording');
+      expect(canvas.getVideoTracks()[0]!.readyState).toBe('live');
+      expect(bridge.failure).not.toHaveBeenCalled();
+      stop(false);
+      await vi.waitFor(() =>
+        expect(bridge.finish).toHaveBeenCalledWith(
+          'session',
+          expect.any(Number),
+          true,
+          expect.objectContaining({ [source]: { state: 'ended', gap: true } }),
+        ),
+      );
+    },
+  );
+
+  it('retains a gap after mute/unmute and notices disabled inputs without a track event', async () => {
+    await start();
+    const track = microphone.getAudioTracks()[0]!;
+    track.muted = true;
+    track.dispatchEvent(new Event('mute'));
+    expect(bridge.audio).toHaveBeenCalledWith(
+      'session',
+      expect.objectContaining({ microphone: { state: 'muted', gap: true } }),
+    );
+    track.muted = false;
+    track.dispatchEvent(new Event('unmute'));
+    expect(bridge.audio).toHaveBeenLastCalledWith(
+      'session',
+      expect.objectContaining({ microphone: { state: 'active', gap: true } }),
+    );
+    track.enabled = false;
+    await vi.waitFor(() =>
+      expect(bridge.audio).toHaveBeenLastCalledWith(
+        'session',
+        expect.objectContaining({ microphone: { state: 'muted', gap: true } }),
+      ),
+    );
+  });
+
+  it('treats a suspended mixer as interrupted audio even while both input tracks stay live', async () => {
+    await start();
+    Context.instances[0]!.state = 'suspended';
+    await vi.waitFor(() =>
+      expect(bridge.audio).toHaveBeenCalledWith('session', {
+        system: { state: 'muted', gap: true },
+        microphone: { state: 'muted', gap: true },
+      }),
+    );
+    Context.instances[0]!.state = 'running';
+    await vi.waitFor(() =>
+      expect(bridge.audio).toHaveBeenCalledWith('session', {
+        system: { state: 'active', gap: true },
+        microphone: { state: 'active', gap: true },
+      }),
+    );
+  });
+
+  it('keeps an encoded audio path when both requested sources fail, and reconnects them without replacing the output track', async () => {
+    getUserMedia
+      .mockRejectedValueOnce(new Error('System unavailable'))
+      .mockResolvedValueOnce(new Stream([new Track('video')]))
+      .mockRejectedValueOnce(new Error('Microphone unavailable'));
+    const recorder = await start(),
+      output = recorder.stream.getAudioTracks()[0];
+    expect(output).toBeTruthy();
+    expect(Context.instances[0]!.silence.offset.value).toBe(0);
+    expect(Context.instances[0]!.silence.start).toHaveBeenCalledOnce();
+    expect(bridge.started).toHaveBeenCalledWith('session', false, {
+      system: { state: 'unavailable', gap: true },
+      microphone: { state: 'unavailable', gap: true },
+    });
+    retryAudio('retry-1');
+    await vi.waitFor(() =>
+      expect(bridge.audio).toHaveBeenCalledWith(
+        'session',
+        { system: { state: 'active', gap: true }, microphone: { state: 'active', gap: true } },
+        'retry-1',
+      ),
+    );
+    expect(Recorder.instances).toHaveLength(1);
+    expect(recorder.stream.getAudioTracks()).toEqual([output]);
+    expect(recorder.state).toBe('recording');
+    stop(false);
+    await vi.waitFor(() =>
+      expect(bridge.finish).toHaveBeenCalledWith(
+        'session',
+        expect.any(Number),
+        true,
+        expect.any(Object),
+      ),
+    );
+  });
+
+  it('keeps video and good system audio active while a microphone retry is held or fails', async () => {
+    getUserMedia
+      .mockResolvedValueOnce(desktop)
+      .mockRejectedValueOnce(new Error('Microphone unavailable'));
+    const recorder = await start(),
+      pending = deferred<Stream>();
+    getUserMedia.mockReturnValueOnce(pending.promise);
+    retryAudio('retry-1');
+    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(3));
+    retryAudio('retry-duplicate');
+    expect(getUserMedia).toHaveBeenCalledTimes(3);
+    expect(recorder.state).toBe('recording');
+    expect(desktop.getAudioTracks()[0]!.readyState).toBe('live');
+    pending.resolve(microphone);
+    await vi.waitFor(() =>
+      expect(bridge.audio).toHaveBeenCalledWith(
+        'session',
+        expect.objectContaining({ microphone: { state: 'active', gap: true } }),
+        'retry-1',
+      ),
+    );
+  });
+
+  it('releases audio granted after a retry is cancelled without updating an expired capture', async () => {
+    getUserMedia
+      .mockResolvedValueOnce(desktop)
+      .mockRejectedValueOnce(new Error('Microphone unavailable'));
+    await start();
+    const pending = deferred<Stream>();
+    getUserMedia.mockReturnValueOnce(pending.promise);
+    retryAudio('retry-1');
+    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(3));
+    stop(true);
+    pending.resolve(microphone);
+    await vi.waitFor(() => expect(microphone.getAudioTracks()[0]!.stop).toHaveBeenCalled());
+    expect(vi.mocked(bridge.audio).mock.calls.some((call) => call[2] === 'retry-1')).toBe(false);
+    expect(bridge.finish).not.toHaveBeenCalled();
+  });
   it('passes 4K, 120fps and 20Mbps through to the capture source and encoder', async () => {
     config.quality = 2160;
     config.fps = 120;
@@ -188,7 +360,12 @@ describe('recorder microphone capture', () => {
     expect(recorder.options.mimeType).toBe('video/webm;codecs=vp8,opus');
     stop(false);
     await vi.waitFor(() =>
-      expect(bridge.finish).toHaveBeenCalledWith('session', expect.any(Number), true),
+      expect(bridge.finish).toHaveBeenCalledWith(
+        'session',
+        expect.any(Number),
+        true,
+        expect.any(Object),
+      ),
     );
     expect(bridge.chunk).toHaveBeenCalledTimes(1);
     const chunk = vi.mocked(bridge.chunk).mock.calls[0]!;
@@ -205,8 +382,12 @@ describe('recorder microphone capture', () => {
     config.microphone = false;
     const recorder = await start();
     expect(getUserMedia).toHaveBeenCalledTimes(1);
-    expect(recorder.stream.getAudioTracks()).toEqual(desktop.getAudioTracks());
-    expect(Context.instances).toHaveLength(0);
+    expect(recorder.stream.getAudioTracks()).toEqual(
+      Context.instances[0]!.destination.stream.getAudioTracks(),
+    );
+    expect(
+      Context.instances[0]!.sources.map((source) => source.stream.getAudioTracks()[0]),
+    ).toEqual(desktop.getAudioTracks());
   });
 
   it('does not request or encode any audio when audio is off', async () => {
@@ -216,7 +397,10 @@ describe('recorder microphone capture', () => {
     expect(getUserMedia).toHaveBeenCalledTimes(1);
     expect(getUserMedia).toHaveBeenCalledWith({ audio: false, video: expect.any(Object) });
     expect(recorder.stream.getAudioTracks()).toEqual([]);
-    expect(bridge.started).toHaveBeenCalledWith('session', false);
+    expect(bridge.started).toHaveBeenCalledWith('session', false, {
+      system: { state: 'off', gap: false },
+      microphone: { state: 'off', gap: false },
+    });
   });
 
   it.each(['NotAllowedError', 'NotFoundError'])(
@@ -226,8 +410,10 @@ describe('recorder microphone capture', () => {
         .mockReset()
         .mockResolvedValueOnce(desktop)
         .mockRejectedValueOnce(new DOMException('Microphone unavailable', name));
-      const recorder = await start();
-      expect(recorder.stream.getAudioTracks()).toEqual(desktop.getAudioTracks());
+      await start();
+      expect(
+        Context.instances[0]!.sources.map((source) => source.stream.getAudioTracks()[0]),
+      ).toEqual(desktop.getAudioTracks());
       expect(bridge.failure).not.toHaveBeenCalled();
     },
   );
@@ -235,10 +421,15 @@ describe('recorder microphone capture', () => {
   it('still records the microphone when system audio capture fails', async () => {
     desktop = new Stream([new Track('video')]);
     getUserMedia.mockRejectedValueOnce(new Error('Loopback unavailable'));
-    const recorder = await start();
+    await start();
     expect(getUserMedia).toHaveBeenCalledTimes(3);
-    expect(recorder.stream.getAudioTracks()).toEqual(microphone.getAudioTracks());
-    expect(bridge.started).toHaveBeenCalledWith('session', true);
+    expect(
+      Context.instances[0]!.sources.map((source) => source.stream.getAudioTracks()[0]),
+    ).toEqual(microphone.getAudioTracks());
+    expect(bridge.started).toHaveBeenCalledWith('session', true, {
+      system: { state: 'unavailable', gap: true },
+      microphone: { state: 'active', gap: false },
+    });
   });
 
   it('releases a microphone granted after capture was cancelled without starting a recorder', async () => {

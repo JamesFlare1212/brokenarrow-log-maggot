@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import { useLayoutEffect, useRef, type MouseEvent, type RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '../hooks/useI18n';
 import {
@@ -36,6 +36,7 @@ export function Pagination({
   onPageChange,
   reserveSpace = false,
   showSinglePage = false,
+  focusFallback,
 }: {
   page: number;
   pageSize: number;
@@ -44,18 +45,41 @@ export function Pagination({
   onPageChange: (page: number) => void;
   reserveSpace?: boolean;
   showSinglePage?: boolean;
+  focusFallback?: RefObject<HTMLElement | null>;
 }) {
   const { t } = useI18n();
   const pages = Math.max(1, Math.ceil(total / pageSize)),
     hidden = pages === 1 && !showSinglePage;
-  if (hidden && !reserveSpace) return null;
   const current = Math.max(1, Math.min(page, pages));
+  const navigation = useRef<HTMLElement>(null);
+  const focused = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (
+      focused.current &&
+      !focused.current.isConnected &&
+      document.activeElement === document.body
+    ) {
+      (
+        navigation.current?.querySelector<HTMLElement>('[aria-current="page"]') ??
+        focusFallback?.current
+      )?.focus({ preventScroll: true });
+      focused.current = null;
+    }
+  }, [current, pages, hidden, focusFallback]);
+  if (hidden && !reserveSpace) return null;
   const navigate = (event: MouseEvent<HTMLAnchorElement>, next: number) => {
     event.preventDefault();
     if (!hidden && next >= 1 && next <= pages && next !== current) onPageChange(next);
   };
   return (
     <PrimitivePagination
+      ref={navigation}
+      onFocusCapture={(event) => {
+        if (event.target instanceof HTMLElement) focused.current = event.target;
+      }}
+      onBlurCapture={() => {
+        if (focused.current?.isConnected) focused.current = null;
+      }}
       className={cn('flex-wrap justify-between gap-3 py-3', hidden && 'invisible')}
       aria-label={label}
       aria-hidden={hidden || undefined}

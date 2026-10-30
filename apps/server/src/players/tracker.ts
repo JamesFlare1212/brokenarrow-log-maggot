@@ -1,4 +1,5 @@
 import type { Match, PlayerProfile } from '@ba/contracts';
+import { isOnlineMatchId } from '@ba/contracts';
 import {
   array,
   object,
@@ -66,19 +67,43 @@ export class TrackerService {
       scoreLabelRule: SCORE_LABEL_RULE,
     };
   }
-  async detail(fid: string, force = false): Promise<Match> {
+  private perspective(match: Match, accountId?: string | null): Match {
+    if (!accountId) return match;
+    const projected = this.db.projectMatch(match, accountId);
+    if (!projected) throw new Error('MATCH_PERSPECTIVE_UNAVAILABLE');
+    return projected;
+  }
+  async detail(
+    fid: string,
+    force = false,
+    restore = false,
+    accountId?: string | null,
+  ): Promise<Match> {
     const previous = this.db.match(fid);
+    if (!isOnlineMatchId(fid)) {
+      if (!previous) throw new Error('LOCAL_MATCH_UNAVAILABLE');
+      const match = this.withAwards(this.perspective(previous, accountId));
+      delete match.warning;
+      delete match.warningCode;
+      return match;
+    }
+    const version = this.db.historyVersion(fid);
+    const unchanged = () => {
+      if (this.db.historyVersion(fid) !== version) throw new Error('HISTORY_TARGET_CHANGED');
+    };
     let result;
     try {
       result = await this.client.match(fid, force);
     } catch (error) {
+      unchanged();
       if (!force && previous)
         return {
-          ...this.withAwards(previous),
+          ...this.withAwards(this.perspective(previous, accountId)),
           warning: error instanceof Error ? error.message : String(error),
         };
       throw error;
     }
+    unchanged();
     const raw = object(result.value),
       data = object(raw.matchInfo);
     if (!raw.matchInfo || data.Data == null)
@@ -113,10 +138,27 @@ export class TrackerService {
       }
     }
     match = this.withAwards(match, result.value, analysis);
+    unchanged();
     if (result.source === 'stale')
-      return { ...match, warning: 'Cached match data; BATrace is unavailable' };
-    this.db.saveMatch(match);
-    return match;
+      return {
+        ...this.perspective(match, accountId),
+        warning: 'Cached match data; BATrace is unavailable',
+        warningCode: 'batrace-cache',
+      };
+    delete match.warning;
+    delete match.warningCode;
+    const projected = this.perspective(match, accountId);
+    const locals = new Set(this.db.accounts().map((account) => account.id));
+    const observe =
+      previous?.source === 'log' ||
+      previous?.source === 'legacy' ||
+      match.players.some((player) => locals.has(player.id));
+    if (restore) this.db.restoreMatch(match, observe);
+    else {
+      if (this.db.matchDeleted(match)) throw new Error('HISTORY_TARGET_CHANGED');
+      this.db.saveMatch(match, observe);
+    }
+    return projected;
   }
   async recent(id: string, force = false): Promise<{ matches: Match[]; stale: boolean }> {
     const result = await this.client.playerMatches(id, force),
@@ -151,16 +193,23 @@ export class TrackerService {
       stale: result.source === 'stale',
     };
   }
-  async profile(id: string, force = false): Promise<PlayerProfile> {
+  async profile(
+    id: string,
+    force = false,
+    scope: { accountId?: string | null; combined?: boolean } = {},
+  ): Promise<PlayerProfile> {
+    const encounters = this.db.encounterViews(id, scope);
     const local = this.db.player(id, this.client.offline),
       snapshot = this.db.snapshot(id),
       profile: PlayerProfile = {
         id,
-        name: local?.name || snapshot?.name || id,
+        name: local?.name || snapshot?.name || this.db.searchedPlayer(id)?.name || id,
         names: local?.names || [],
         firstSeen: local?.firstSeen ?? null,
         lastSeen: local?.lastSeen ?? null,
-        encounters: this.db.encounters(id),
+        unverifiedObservation: local?.unverifiedObservation ?? false,
+        encounters: encounters.encounters,
+        encounterScope: encounters.scope,
         banned: this.db.bans().find((b) => b.id === id) || null,
         recentMatches: [],
         recentError: null,
@@ -187,17 +236,23 @@ export class TrackerService {
     return profile;
   }
   async sync(): Promise<void> {
+    const version = this.db.historyVersion();
     const id = this.db.state<string | null>('activeAccountId', null);
     if (!id) return;
     const result = await this.recent(id);
-    if (result.stale) return;
+    if (result.stale || this.db.historyVersion() !== version) return;
     const pending = this.db
       .matches()
       .filter((m) => m.fid && m.outcome === 'unknown')
       .slice(0, 20);
     // Save the recent snapshot before fetching richer, potentially newer details.
     this.db.transaction(() => {
-      for (const match of result.matches) this.db.saveMatch(match);
+      const locals = new Set(this.db.accounts().map((account) => account.id));
+      for (const match of result.matches)
+        this.db.saveMatch(
+          match,
+          match.players.some((player) => locals.has(player.id)),
+        );
     });
     for (const match of pending) {
       try {

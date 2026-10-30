@@ -4,7 +4,7 @@
 
 本地 Broken Arrow 对局助手，使用 React + Vite + Electron + Node.js + TypeScript + SQLite，以及 pnpm。
 
-[UI design system](design-system/broken-arrow/MASTER.md) · [UI audit](docs/ui-audit.md) · [Architecture](docs/architecture.md) · [Migration](docs/migration.md) · [Audit resolutions](docs/audit-resolution.md)
+[UI design system](design-system/broken-arrow/MASTER.md) · [Architecture](docs/architecture.md) · [Migration](docs/migration.md) · [Audit resolutions](docs/audit-resolution.md)
 
 [游戏日志目录检测：实现与调研依据](docs/log-directory-detection.md)
 
@@ -27,8 +27,7 @@ BATrace 是历史数据，可能延迟数天。蛆指数需要最近 12 场有�
 Captured from the running application in browser development mode (`pnpm dev:web`), using the repository's [real-data fixtures](tests/fixtures/real/README.md). Player names, match results and statistics come from recorded data.
 
 The [UI design system](design-system/broken-arrow/MASTER.md) defines current
-surface and interaction requirements; the [UI audit](docs/ui-audit.md) records
-the latest compliance review.
+surface and interaction requirements.
 
 ### Overview
 
@@ -85,6 +84,14 @@ pnpm dev:web
 | `pnpm format:check` | 格式检查                                                          |
 | `pnpm pack:desktop` | Windows 解包目录                                                  |
 | `pnpm dist`         | NSIS 安装包与便携版                                               |
+
+Tests use four workers by default. Set `BA_TEST_WORKERS=1` for serial fixture
+validation on a busy machine; in PowerShell, run `$env:BA_TEST_WORKERS='1'`
+before `pnpm check`. This setting does not increase test time limits.
+
+The validation and release workflows use one worker and set
+`NODE_OPTIONS=--max-old-space-size=12288` for the UI and filesystem regression
+suite. Use the same environment settings when reproducing those CI runs locally.
 
 生产前端通过 sandboxed preload 的类型化 IPC 访问服务。`pnpm dev` 同时启动 Vite 和 Electron，通过原生服务加载真实样本的隔离副本；其 5173 端口在普通浏览器中访问 `/` 会提示使用桌面应用。`pnpm dev:web` 在 5174 端口为浏览器提供真实测试样本接口，不访问本机应用数据库。
 

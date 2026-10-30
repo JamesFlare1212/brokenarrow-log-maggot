@@ -1,17 +1,18 @@
 import { useEffect } from 'react';
-import { formatMetric } from '@ba/shared';
+import { formatMetric, formatTime } from '@ba/shared';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import { Badge, Button, Notice } from '../../components/ui';
+import { Badge, Notice } from '../../components/ui';
+import { RecoveryAction } from '../../components/RecoveryAction';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 
 export function MaggotCard({ id }: { id: string }) {
   const { maggot, runMaggot, state } = useApp();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   useEffect(() => {
     void runMaggot(id);
   }, [id, runMaggot]);
@@ -54,13 +55,26 @@ export function MaggotCard({ id }: { id: string }) {
         {request?.error && (
           <Notice error>
             <span>{request.error}</span>
-            <Button size="sm" onClick={() => void runMaggot(id, true)}>
-              {t('retry')}
-            </Button>
           </Notice>
         )}
+        <RecoveryAction
+          key={id}
+          available={!!request?.error}
+          pending={pending}
+          retryLabel={t('retry')}
+          refreshLabel={t('recalculateMaggot')}
+          pendingLabel={status}
+          onRetry={() => void runMaggot(id, true)}
+        />
         {report && (
           <>
+            {(pending || request?.error) && (
+              <p role="status" className="text-sm text-muted-foreground wrap-anywhere">
+                {t('maggotPreviousResult', {
+                  time: formatTime(request?.updatedAt ?? null, locale),
+                })}
+              </p>
+            )}
             <div className="maggot-summary">
               <div>
                 <strong

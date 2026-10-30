@@ -305,12 +305,22 @@ describe('SQLite merging and account views', () => {
     ] as const) {
       db.setState('activeAccountId', account);
       expect(db.encounters('3')).toEqual([
-        expect.objectContaining({ matchId: '123', relation, won }),
-        expect.objectContaining({ matchId: 'unowned', relation: 'opponent', won: false }),
+        expect.objectContaining({ matchId: '123', accountId: account, relation, won }),
       ]);
+      expect(db.encounterViews('3').scope.unattributedCount).toBe(1);
     }
     db.updateConfig({ multiAccountBond: true });
-    expect(db.encounters('3')[0]).toMatchObject({ relation: 'opponent', won: false });
+    expect(db.encounters('3')).toEqual([
+      expect.objectContaining({ matchId: '123', accountId: '4', relation: 'spectator', won: null }),
+      expect.objectContaining({ matchId: '123', accountId: '1', relation: 'same', won: true }),
+      expect.objectContaining({ matchId: '123', accountId: '2', relation: 'opponent', won: false }),
+      expect.objectContaining({
+        matchId: 'unowned',
+        accountId: null,
+        relation: 'opponent',
+        won: false,
+      }),
+    ]);
     expect(db.encounters('999')).toEqual([]);
   });
 });
@@ -488,7 +498,11 @@ describe('player reports and Maggot Index', () => {
       ratingAfter: 110,
       won: true,
     }));
-    db.saveCache('analysis:8863', { matchCount: 13, trend: { points } }, 21_600_000);
+    db.saveCache(
+      'analysis:8863',
+      { matchCount: 13, trend: { points }, mapPerformance: [] },
+      21_600_000,
+    );
     for (const [i, point] of points.entries()) {
       const ids =
         i === 12 ? ['100', '99999', '102', '103', '104'] : ['100', '8863', '102', '103', '104'];

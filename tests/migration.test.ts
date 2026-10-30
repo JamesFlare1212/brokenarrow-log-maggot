@@ -483,7 +483,14 @@ describe('legacy migration integrity', () => {
       lastSeen: 500,
     });
     expect(db.player('2')?.name).toBe('最新');
-    expect(db.player('2')).toMatchObject({ firstSeen: 0, lastSeen: 600 });
+    expect(db.player('2')).toMatchObject({
+      firstSeen: null,
+      lastSeen: null,
+      unverifiedObservation: true,
+    });
+    expect(
+      db.sql.prepare('SELECT first_seen,last_seen FROM players WHERE id=?').get('2'),
+    ).toMatchObject({ first_seen: 0, last_seen: 600 });
     expect(db.player('3')).toMatchObject({ firstSeen: null, lastSeen: null });
   });
 
@@ -499,7 +506,15 @@ describe('legacy migration integrity', () => {
       },
     });
     await migrateLegacy(db, dir);
-    expect(db.player('1')).toMatchObject({ name: 'Live name', firstSeen: 100, lastSeen: 1000 });
+    expect(db.player('1')).toMatchObject({
+      name: 'Live name',
+      firstSeen: 1000,
+      lastSeen: 1000,
+      unverifiedObservation: false,
+    });
+    expect(
+      db.sql.prepare('SELECT first_seen,last_seen FROM players WHERE id=?').get('1'),
+    ).toMatchObject({ first_seen: 100, last_seen: 1000 });
     expect(new Set(db.player('1')?.names.map((n) => n.name))).toEqual(
       new Set(['Old', 'Live name']),
     );

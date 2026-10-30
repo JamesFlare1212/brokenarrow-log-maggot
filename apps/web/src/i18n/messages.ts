@@ -1,4 +1,515 @@
-export const messages: Record<string, readonly [string, string]> = {
+type MessageVariables = Record<string, string | number>;
+type MessageTemplate = string | ((variables: MessageVariables) => string);
+const countNoun = (value: string | number | undefined, one: string, other = one + 's') =>
+  Number(value) === 1 ? one : other;
+
+export const messages: Record<string, readonly [MessageTemplate, MessageTemplate]> = {
+  reportLoading: ['正在读取玩家报告…', 'Loading player report…'],
+  reportOutcomeCountsUnavailable: [
+    '胜负场次不完整，胜率及样本数暂不可用。',
+    'Win/loss totals are incomplete; win rate and sample size are unavailable.',
+  ],
+  matchStartingRating: ['开局 ELO', 'Starting ELO'],
+  latestRatingUnavailable: ['最近完成对局的 ELO 暂不可用', 'Latest match ELO unavailable'],
+  reportRefreshingPrevious: [
+    '正在刷新报告，保留 {time} 的上次结果。',
+    'Refreshing the report; showing the previous result from {time}.',
+  ],
+  reportRequestFailed: ['玩家报告读取失败。', 'Player report could not be loaded.'],
+  reportIdentityMismatch: [
+    '返回的报告与所选玩家不一致，请重试。',
+    'The response did not match this player. Please retry.',
+  ],
+  reportPreviousResult: [
+    '以下报告保留自 {time}，本次刷新未确认其仍为最新。',
+    'The report below is from {time}. This refresh did not confirm it is current.',
+  ],
+  reportBasicOnly: [
+    '仅基本资料可用；详细对局与地图分析暂不可用，并非零条记录。',
+    'Only basic player data is available. Detailed match and map analysis is unavailable; this does not mean there are no records.',
+  ],
+  reportPartialDetails: [
+    '部分详细分析暂不可用；未取得的记录不会显示为零。',
+    'Some detailed analysis is unavailable. Missing records are not reported as zero.',
+  ],
+  reportPreviousSection: [
+    '保留 {time} 的「{section}」，请与本次统计摘要区分。',
+    'Showing previous {section} from {time}, separately from the current summary.',
+  ],
+  retryAnalysis: ['重试详细分析', 'Retry detailed analysis'],
+  refreshAnalysis: ['刷新详细分析', 'Refresh detailed analysis'],
+  refreshEncounters: ['刷新相遇记录', 'Refresh encounters'],
+  encountersLoading: ['正在加载相遇记录', 'Loading encounters'],
+  recalculateMaggot: ['重新计算蛐指数', 'Recalculate Maggot Index'],
+  reportRecordsUnavailable: ['详细对局记录暂不可用。', 'Detailed match records are unavailable.'],
+  reportMapsUnavailable: ['地图分析暂不可用。', 'Map analysis is unavailable.'],
+  recordCountUnavailable: ['数量未取得', 'Count unavailable'],
+  encounterRequestFailed: [
+    '本地资料与相遇记录读取失败。',
+    'Local profile and encounter records could not be loaded.',
+  ],
+  encounterRecordsUnavailable: ['相遇记录暂不可用。', 'Encounter records are unavailable.'],
+  encounterPreviousResult: [
+    '相遇记录保留自 {time}，本次刷新失败。',
+    'Encounter records are retained from {time}; the latest refresh failed.',
+  ],
+  maggotPreviousResult: [
+    '上次计算结果（{time}），本次尚未取得新的结果。',
+    'Previous calculation from {time}; a new result has not been obtained.',
+  ],
+  dialogReturnUnavailable: [
+    '原操作已不在当前内容中，已返回当前视图。',
+    'The previous action is no longer available. You have returned to the current view.',
+  ],
+  accountsRediscoveryHint: [
+    '删除仅移除本地账号历史；游戏日志再次识别到该账号时，会重新加入列表。',
+    'Deletion removes local account history. The account returns when game logs identify it again.',
+  ],
+  matchPerspective: ['对局账号视角', 'Match account perspective'],
+  savedPerspective: ['归档保存的视角', 'Saved archive perspective'],
+  perspectiveUnavailable: [
+    '这场对局没有所选账号的记录或参赛依据。请选择其他账号或归档保存的视角。',
+    'This match has no saved view or roster evidence for this account. Choose another account or the saved archive perspective.',
+  ],
+  accountScope: ['账号：{name} · #{id}', 'Account: {name} · #{id}'],
+  accountIdentityNeeded: [
+    '尚未从游戏日志识别当前账号。识别后显示该账号的最近对局、胜率与 ELO；本地全部历史可在对局归档查看。',
+    'The current account has not been identified from game logs. Its recent matches, win rate and ELO appear after identification. Open the archive for all local history.',
+  ],
+  allAccountArchive: ['所有账号的本地对局', 'Local matches across all accounts'],
+  combinedEncounterScope: [
+    '合并全部账号的相遇视角。同一场对局可能按不同账号分别列出；下方次数按账号视角计数。',
+    'Encounter views across all accounts. A shared match can appear once per account; counts below count account views.',
+  ],
+  unattributedEncounter: ['导入记录，账号未知', 'Imported record, account unknown'],
+  unattributedEncounterHint: [
+    '另有 {count} 条导入记录无法确定账号归属；开启多账号关联可查看这些记录。',
+    ({ count }) =>
+      `{count} imported ${countNoun(count, 'record')} ${countNoun(count, 'has', 'have')} no known account. Enable multi-account association to view ${countNoun(count, 'it', 'them')}.`,
+  ],
+  unverifiedEncounter: ['旧观察记录，未核实', 'Unverified legacy observation'],
+  unverifiedEncounterHint: [
+    '旧版本的观察记录没有足够的对局或日志依据。保留已知名称和搜索历史，但不将其作为已相遇时间或封禁提醒的依据。',
+    'This older observation lacks sufficient match or log evidence. Known names and search history are preserved; the observation does not establish an encounter time or qualify for ban alerts.',
+  ],
+  playerSearchActiveQuery: [
+    '正在搜索“{query}”。可修改输入并再次提交，新提交会取代当前查询。',
+    'Searching for “{query}”. Edit and submit to replace this query.',
+  ],
+  playerSearchRetainedQuery: [
+    '保留“{query}”的结果，当前查看和菜单操作均属于这些玩家。',
+    'Retained results for “{query}”. The visible result buttons and menus act on these players.',
+  ],
+  playerSearchFailedQuery: [
+    '搜索“{query}”失败，请重试。',
+    'Search for “{query}” failed. Try again.',
+  ],
+  banSyncTitle: ['封禁列表同步状态', 'Ban synchronization status'],
+  banSyncDetails: ['封禁同步详情', 'Ban synchronization details'],
+  banSyncReview: ['封禁同步：{status}', 'Ban synchronization: {status}'],
+  banSyncFailed: ['同步失败', 'Sync failed'],
+  banSyncPending: ['正在同步', 'Syncing'],
+  banSyncSuccess: ['同步成功', 'Synced'],
+  banSyncNever: ['尚未同步', 'Not synced'],
+  banSyncFailureHint: [
+    '上次封禁同步失败。当前显示本地保存的记录，可能缺少最新封禁；重试成功后会更新状态。',
+    'The last ban synchronization failed. Saved records remain available and may omit recent bans. Retry to update them.',
+  ],
+  banSyncPendingHint: [
+    '正在核对远端封禁。本地记录仍可搜索、筛选和查看。',
+    'Checking remote bans. Saved records remain available for searching, filtering and inspection.',
+  ],
+  banSyncSuccessHint: [
+    '上次远端同步已保存到本地。下方时间表示最近一次成功核对。',
+    'The last remote synchronization was saved locally. The time below shows the latest successful check.',
+  ],
+  banSyncNeverHint: [
+    '尚无成功同步记录。当前列表来自本地存储，可手动同步远端封禁。',
+    'No successful synchronization is recorded. This list uses local storage; synchronize to check remote bans.',
+  ],
+  banSyncLastAttempt: ['上次尝试', 'Last attempt'],
+  banSyncLastSuccess: ['上次成功', 'Last successful sync'],
+  banSyncInterrupted: [
+    '上次同步在应用关闭时中断，请重新同步。',
+    'The previous synchronization was interrupted when the app closed. Synchronize again.',
+  ],
+  banListReadIssue: ['读取失败', 'Read failed'],
+  banListReading: ['读取中', 'Reading'],
+  banListReload: ['重读本地列表', 'Reload local list'],
+  banListApplyUpdates: ['查看更新', 'View updates'],
+  banListUpdatesAvailable: [
+    '封禁名单有更新，选择“查看更新”后应用新的顺序。',
+    'Ban list updates are ready. Choose View updates to apply the new order.',
+  ],
+  banListUpdatesCurrent: [
+    '当前显示的封禁名单没有待应用的更新。',
+    'No updates are waiting for the displayed ban list.',
+  ],
+  banListUpdatesRetainedHint: [
+    '本地名单已更新，当前保留原列表和顺序。选择“查看更新”应用最新内容。',
+    'The local list has changed. The displayed list and order are retained until you choose View updates.',
+  ],
+  banListSnapshotTime: [
+    '当前列表顺序读取于 {time}，已知玩家的相遇状态会实时更新。',
+    'The displayed order was read at {time}. Encounter facts for known players update immediately.',
+  ],
+  banListUnknownHint: [
+    '尚未能读取本地封禁列表，当前无法判断是否有记录。请重读本地列表。',
+    'The local ban list could not be read. Whether records exist is unknown. Reload the local list.',
+  ],
+  banListRetainedHint: [
+    '本地列表更新失败，当前保留上次读取的记录，并继续应用当前筛选。重读后可核对最新本地数据。',
+    'The local list could not be updated. Previously read records remain under the current filters. Reload to check the latest local data.',
+  ],
+  banListLoadingHint: [
+    '正在读取本地封禁列表；已有记录仍按当前筛选显示。',
+    'Reading the local ban list. Previously loaded records remain under the current filters.',
+  ],
+  banListReadyHint: [
+    '本地列表已读取，搜索和“遇到过”筛选即时生效。',
+    'The local list is loaded. Search and encountered-player filters apply immediately.',
+  ],
+  banSourceEmpty: ['尚无本地封禁记录', 'No saved bans'],
+  banSourceEmptyHint: [
+    '本地列表为空。同步可获取远端封禁记录。',
+    'The local list is empty. Synchronize to retrieve remote bans.',
+  ],
+  banMetEmpty: ['尚未遇到封禁玩家', 'No encountered banned players'],
+  banMetEmptyHint: [
+    '没有已核实相遇的封禁玩家。缺少对局或日志依据的旧观察记录仅保留在全部封禁中。',
+    'No saved bans have confirmed encounters. Older observations without match or log evidence remain in All bans.',
+  ],
+  banQueryEmpty: ['没有匹配的封禁玩家', 'No matching banned players'],
+  banQueryEmptyHint: [
+    '当前筛选下没有匹配此名称或 ID 的玩家。清空搜索可恢复列表。',
+    'No player under the current filter matches this name or ID. Clear the search to restore the list.',
+  ],
+  settingsSaveStatus: ['设置保存状态', 'Settings save status'],
+  logMonitoringTitle: ['日志监控', 'Log monitoring'],
+  logMonitoringDetails: ['日志监控详情', 'Log monitoring details'],
+  logMonitoringReview: ['日志监控：{status}', 'Log monitoring: {status}'],
+  logMonitoringIssue: ['日志异常', 'Log issue'],
+  logMonitoringChecking: ['核对日志', 'Checking'],
+  logMonitoringWaiting: ['等待日志', 'Waiting logs'],
+  logMonitoringStale: ['日志已过期', 'Stale logs'],
+  logMonitoringFailureHint: [
+    '无法读取游戏日志。显示的房间为最后已知信息；核对成功前，不会据此启动自动录制。请恢复目录访问后重试，或检查连接设置。',
+    'Game logs cannot be read. Room information is last known data; automatic recording waits until it is verified. Restore access and retry, or check Connection settings.',
+  ],
+  logMonitoringWaitingHint: [
+    '目录可以访问，但尚未找到日志文件。等待游戏创建日志，或检查连接设置。',
+    'The folder is accessible, but no log file was found. Wait for the game to create a log, or check Connection settings.',
+  ],
+  logMonitoringStaleHint: [
+    '日志已有一段时间没有更新。房间信息可能已过期，不会据此启动自动录制。',
+    'The log has not been updated recently. Room information may be stale and will not start automatic recording.',
+  ],
+  logMonitoringCheckingHint: [
+    '正在核对日志。核对完成后才会根据当前房间启动自动录制。',
+    'Logs are being checked. Automatic recording waits for the current room to be verified.',
+  ],
+  logMonitoringDisabledHint: [
+    '尚未连接游戏日志。请在连接设置中选择游戏日志目录。',
+    'Game logs are not connected. Choose the game log folder in Connection settings.',
+  ],
+  logMonitoringReadyHint: [
+    '日志可以读取，当前房间信息已核对。',
+    'The log is readable and current room information has been checked.',
+  ],
+  logMonitoringCaptureContinues: [
+    '读取失败时会保留当前录制；恢复后根据核对结果继续，或保存后结束。需要时可手动停止。新的自动录制会等待日志核对成功。',
+    'An unreadable log does not discard the current capture. After verification, capture continues or is saved if the source changed or the match ended. You can also stop it manually.',
+  ],
+  logMonitoringSourceChangeHint: [
+    '切换日志来源会保存当前录制。新的自动录制会等待日志来源核对成功。',
+    'Changing the log source saves the current capture. New automatic recording waits for the source to be verified.',
+  ],
+  logMonitoringRecordingWaits: [
+    '可以保存自动录制偏好。日志尚未就绪或核对完成，当前不会启动录制；恢复后会重新核对房间。',
+    'You can save the auto-record preference. Capture waits while logs are unavailable or being checked; the room will be verified after recovery.',
+  ],
+  logMonitoringFile: ['当前日志文件', 'Current log file'],
+  logMonitoringLastCheck: ['上次成功核对', 'Last successful check'],
+  logMonitoringRetry: ['重新核对', 'Check again'],
+  logMonitoringSettings: ['连接设置', 'Connection settings'],
+  logLastKnownRoom: ['最后已知房间', 'Last known room'],
+  logDetectWaiting: ['目录可访问，等待游戏日志。', 'Folder accessible: waiting for logs.'],
+  logDetectMonitoringFailed: [
+    '日志访问失败，请查看监控详情。',
+    'Log access failed. Review details.',
+  ],
+  logDetectMonitoringReady: ['目录已核对，日志监控正常。', 'Folder checked: monitoring ready.'],
+  logDetectMonitoringChecking: ['正在核对目录日志。', 'Checking this folder’s logs…'],
+  logDetectMonitoringStale: ['目录可访问，日志已过期。', 'Folder accessible: log is stale.'],
+  banAlertsPending: [
+    '待处理封禁提醒：{count} 名玩家',
+    ({ count }) => `Pending ban alerts: {count} ${countNoun(count, 'player')}`,
+  ],
+  banAlertsDetails: ['封禁提醒详情', 'Ban alert details'],
+  banAlertsContinue: [
+    '查看或确认提醒后可继续当前操作。',
+    'Review or acknowledge this alert, then continue your current task.',
+  ],
+  banAlertsDismiss: ['确认此条提醒', 'Acknowledge this alert'],
+  banAlertsAcknowledged: ['已确认此条提醒。', 'This alert has been acknowledged.'],
+  banAlertsEmpty: ['没有待处理的提醒。', 'No pending alerts.'],
+  banAlertsNext: ['查看下一条', 'Review next alert'],
+  banAlertsSaveFailed: [
+    '确认失败，提醒仍然保留。',
+    'Acknowledgement failed. This alert is still available.',
+  ],
+  banAlertsInvestigate: ['调查羁绊：{name} · #{id}', 'Investigate: {name} · #{id}'],
+  autoRecordChoiceHint: [
+    '启用时若有正在进行的对局，将从现在开始录制。关闭后可让当前录制继续到结束，或现在停止。',
+    'Enabling starts recording a live match from now. When disabling, choose to finish the current capture or stop it now.',
+  ],
+  recordingDisableTitle: ['关闭自动录制', 'Turn off auto-record'],
+  recordingDisableExplanation: [
+    '后续对局将不再自动录制。请选择如何处理当前录制；取消不会更改设置或停止录制。',
+    'Future matches will not be recorded automatically. Choose what happens to the current capture. Cancel keeps the preference and capture unchanged.',
+  ],
+  recordingReviewedCapture: ['当前录制：{map} · #{id}', 'Current capture: {map} · #{id}'],
+  recordingStopWarning: [
+    '现在停止后，本场剩余内容不会继续录制。重启录制只能从当时开始，无法补回之前的内容。',
+    'Stopping now leaves the rest of this match unrecorded. Restarting records from that point and cannot recover earlier footage.',
+  ],
+  recordingStartingStopWarning: [
+    '录制仍在启动，立即停止时可能还没有可保存的内容。',
+    'Capture is still starting. Stopping now may leave no footage to save.',
+  ],
+  recordingFinishCurrent: [
+    '关闭后续自动录制，保留当前录制',
+    'Disable future recordings; finish this capture',
+  ],
+  recordingStopNow: ['关闭并现在停止当前录制', 'Disable and stop this capture now'],
+  recordingStopCurrent: ['停止当前录制…', 'Stop current capture…'],
+  recordingPreferenceNotSaved: [
+    '未能确认自动录制设置已保存，请检查当前开关状态后重试。',
+    'The auto-record preference save could not be confirmed. Check the current switch value before retrying.',
+  ],
+  recordingPreferenceSavedCaptureUnchanged: [
+    '自动录制设置已保存，但未能确认停止结果。请检查录制状态和录像库。',
+    'The auto-record preference was saved, but the stop result could not be confirmed. Check the capture status and recording library.',
+  ],
+  recordingStopCompleted: [
+    '当前录制已结束，已保存的文件可在录像库查看。若录制尚未开始，则可能没有文件可保存。',
+    'The capture ended. Saved files are available in the library; a capture that had not started may have no file to save.',
+  ],
+  RECORDING_TARGET_CHANGED: [
+    '当前录制已变化，未停止新的录制。请重新检查当前录制后再操作。',
+    'The capture changed. The new capture was not stopped. Review the current capture before trying again.',
+  ],
+  RECORDING_RETRY_UNAVAILABLE: [
+    '当前无法重新录制。请确认已启用自动录制，且仍有实时监测到的进行中对局。',
+    'Recording cannot restart now. Enable auto-record and check that a live match is still being monitored.',
+  ],
+  recordingStartFailed: [
+    '自动录制未能启动，设置保存成功并不代表已经开始录制。',
+    'Capture did not start. A saved preference does not mean recording started.',
+  ],
+  recordingCaptureFailed: [
+    '本次录制未能完成；录制结果与设置保存状态分开处理。',
+    'This capture did not finish. Its outcome is separate from the preference save.',
+  ],
+  recordingSavedWithWarning: [
+    '录像文件已保存，但旧临时文件清理或附加信息保存未完成。',
+    'The video file was saved, but temporary-file cleanup or additional information could not be saved.',
+  ],
+  recordingTemporaryDiscarded: [
+    '本次未完成录制的临时数据已丢弃，重试保存设置无法恢复它。',
+    'Temporary data for this incomplete capture was discarded. Retrying a preference save cannot restore it.',
+  ],
+  recordingTemporaryRemains: [
+    '本次录制未保存为完整录像，可能仍有临时文件需要手动处理。',
+    'This capture was not saved as a complete video; temporary files may remain for manual handling.',
+  ],
+  recordingRetryLimit: [
+    '重新开始录制只会从现在采集，不会补回未录制或丢弃的内容。',
+    'Restarting records from now and cannot recover missed or discarded footage.',
+  ],
+  recordingRetryCurrent: ['从现在重新录制当前对局', 'Restart this match recording from now'],
+  recordingRetryCondition: [
+    '可在修复录制问题后启用自动录制；只有实时监测到的进行中对局可重新开始。',
+    'After resolving the capture issue, enable auto-record. Only a live match that is still being monitored can restart.',
+  ],
+  recordingMigrationCommitted: [
+    '录像库已切换到目标目录，全部已迁移录像均已复制并校验。',
+    'The recording library switched to the destination after all migrated recordings were copied and verified.',
+  ],
+  recordingMigrationUnchanged: [
+    '此次迁移未完成，未切换保存目录；原录像保留在原目录。可修正冲突后重试、选择其他目录，或放弃此次设置修改。',
+    'This migration did not finish or switch folders. Original recordings remain in the source folder. Resolve the conflict and retry, choose another folder, or discard this settings change.',
+  ],
+  recordingMigrationFrom: ['原目录：', 'Source folder:'],
+  recordingMigrationTo: ['目标目录：', 'Destination folder:'],
+  recordingMigrationLibrary: [
+    '操作结束时的录像库：',
+    'Library selected when the operation finished:',
+  ],
+  recordingMigrationPolicy: [
+    '目标已有文件不会被覆盖。下列旧副本或目标残留副本可能仍需手动清理；放弃设置修改不会删除这些副本。',
+    'Existing destination files are never replaced. Source or destination copies listed below may need manual cleanup; discarding settings does not delete those copies.',
+  ],
+  recordingMigrationCopied: ['目标目录中已校验的录像', 'Verified recordings in the destination'],
+  recordingMigrationRetained: [
+    '原目录中保留或可能保留的录像',
+    'Original recordings or copies that may remain in the source',
+  ],
+  recordingMigrationDestinationCopies: [
+    '未完成迁移时留下的目标副本',
+    'Destination copies left by an incomplete migration',
+  ],
+  recordingMigrationErrors: ['失败文件及原因', 'Files and failure reasons'],
+  recordingMigrationOperation: ['迁移操作', 'Migration operation'],
+  REPLAY_MIGRATION_COLLISION: [
+    '目标目录已存在同名文件，已保留该文件。',
+    'A file with this name already exists in the destination and was preserved.',
+  ],
+  REPLAY_MIGRATION_COPY_MISMATCH: [
+    '复制校验失败，原录像已保留。',
+    'Copy verification failed; the original recording was preserved.',
+  ],
+  REPLAY_MIGRATION_RECORDING_ACTIVE: [
+    '录制或保存录像期间无法迁移。请在当前录像保存完成后重试。',
+    'Recordings cannot be migrated while capture is starting, recording or saving. Retry after the current recording finishes.',
+  ],
+  REPLAY_MIGRATION_BUSY: [
+    '录像正在迁移，请等待完成后再修改保存目录或重试。',
+    'Recordings are being migrated. Wait for completion before changing folders or retrying.',
+  ],
+  archiveUpdates: ['有更新', 'Updates'],
+  archiveUpdateHint: [
+    '浏览时保持当前顺序；刷新后应用后台更新。已删除的旧条目会立即禁用。',
+    'Your current order stays fixed while browsing. Refresh to apply background updates. Removed entries are disabled immediately.',
+  ],
+  archiveUpdatesAvailable: [
+    '档案有更新，刷新后可查看最新结果；已删除的旧条目不可操作。',
+    'Archive updates are available. Refresh to show current results; removed entries cannot be used.',
+  ],
+  archiveUpdatesCurrent: ['当前显示的档案已同步。', 'The displayed archive is up to date.'],
+  archiveUpdatesUnavailable: [
+    '档案读取失败，请重试。当前显示的结果可能不是最新数据。',
+    'Archive data could not be loaded. Retry; any displayed results may be out of date.',
+  ],
+  archiveSortBy: ['对局排序依据', 'Sort matches by'],
+  archiveSortDirection: ['切换排序方向', 'Change sort direction'],
+  archiveSortOrder: ['排序优先级：', 'Sort priority:'],
+  sortAscending: ['升序', 'Ascending'],
+  sortDescending: ['降序', 'Descending'],
+  sortOriginal: ['原始顺序', 'Original order'],
+  archiveAddedMatch: [
+    '已添加对局 #{id}。即使当前筛选或页码未显示它，也可在这里打开详情。',
+    'Match #{id} was added. Open its details here even when the current filters or page hide it.',
+  ],
+  openAddedMatch: ['打开新增对局', 'Open added match'],
+  historyRecovery: ['恢复已删除记录', 'Recover deleted history'],
+  historyRestoreAction: ['恢复记录', 'Restore history'],
+  historyRecoveryHint: [
+    '删除前保存的本地副本可用于恢复账号及对局视图。副本会保留在下方目录，直到你自行移除；它包含本地账号和对局信息。恢复不会覆盖后来新增或重新创建的记录。',
+    'Local copies saved before deletion can restore accounts and match views. They contain local account and match information and remain in the folder below until you remove them. Restoration preserves records added or recreated later.',
+  ],
+  historyDeleteHint: [
+    '请核对下列账号及对局范围。删除前会先保存本地恢复副本；副本保存失败时不会删除。',
+    'Review the accounts and match scope below. A local recovery copy is saved before deletion; deletion stops if that copy cannot be saved.',
+  ],
+  historyAffectedAccounts: ['受影响账号：', 'Affected accounts:'],
+  historyRemovedMatches: [
+    '将从所有账号中删除的对局：{count}',
+    'Matches to remove from all accounts: {count}',
+  ],
+  historyRetainedMatches: [
+    '为其他账号保留的对局：{count}',
+    'Matches retained for other accounts: {count}',
+  ],
+  historyUnassigned: ['未关联账号', 'No linked account'],
+  historyBackupBeforeDelete: [
+    '恢复副本将保存到下方路径，包含受影响的本地账号及对局信息，直到你自行移除。删除后可通过“恢复已删除记录”恢复。',
+    'A recovery copy containing the affected local accounts and matches will remain at the path below until you remove it. Use Recover deleted history to restore it after deletion.',
+  ],
+  historyDeleteResult: [
+    '已删除 {removed} 场对局，为其他账号保留 {retained} 场。',
+    'Matches removed: {removed}. Retained for other accounts: {retained}.',
+  ],
+  historySavedBackup: ['已保存恢复副本：', 'Recovery copy saved:'],
+  historyRestoreTitle: ['恢复已删除的账号及对局？', 'Restore deleted accounts and matches?'],
+  historyRestoreHint: [
+    '恢复原来的账号及对局视图；若记录已被重新创建或再次删除，将停止恢复并保留现有数据。',
+    'Restore the original accounts and match views. If affected records were recreated or deleted again, restoration stops and preserves current data.',
+  ],
+  historyRestoreResult: [
+    '已恢复 {matches} 场对局记录及 {accounts} 个账号。',
+    'Match records restored: {matches}. Accounts restored: {accounts}.',
+  ],
+  historyAlreadyRestored: ['已恢复', 'Restored'],
+  HISTORY_TARGET_CHANGED: [
+    '账号或对局范围已变化。操作未继续，请刷新后重新核对。',
+    'The account or match scope changed. The operation stopped. Refresh and review it again.',
+  ],
+  HISTORY_PLAN_EXPIRED: [
+    '删除确认已失效或已执行，请重新核对后确认。',
+    'This deletion confirmation expired or was already used. Review the scope again.',
+  ],
+  HISTORY_RESTORE_CONFLICT: [
+    '相关记录已变化或已恢复。为保留现有数据，未继续恢复，请刷新后核对。',
+    'Affected records changed or were already restored. Restoration stopped to preserve current data. Refresh and review them.',
+  ],
+  HISTORY_BACKUP_CHANGED: [
+    '恢复副本已变化，未继续恢复。请检查副本文件。',
+    'The recovery copy changed. Restoration stopped. Check the backup file.',
+  ],
+  recordingDate: ['录制时间', 'Recording time'],
+  recordingFailed: ['录制失败', 'Recording failed'],
+  recordingModifiedDate: ['文件修改时间', 'File modification time'],
+  recordingOrderHint: [
+    '新录像追加在末尾；刷新可按时间重新排序。',
+    'New recordings are appended. Refresh to sort by time.',
+  ],
+  recordingCleanupDirectory: ['录像目录：{directory}', 'Recording directory: {directory}'],
+  recordingCleanupCount: ['将删除 {count} 个录像文件：', 'Recordings to delete: {count}'],
+  recordingCleanupScope: [
+    '只删除以下已列出的文件；确认期间新增的录像不会加入。日期缺失时使用标注的文件修改时间。',
+    'Only the listed files will be deleted. Recordings added during confirmation are excluded. File modification time is labeled when recording time is unavailable.',
+  ],
+  recordingCleanupEmpty: ['没有符合清理条件的录像。', 'No recordings match this cleanup.'],
+  recordingCleanupPartial: [
+    '部分录像未能删除，请查看逐项结果后重试。',
+    'Some recordings could not be deleted. Review the per-file results before retrying.',
+  ],
+  recordingCleanupSummary: [
+    '已删除 {completed} 个，失败 {failed} 个，已不存在 {skipped} 个。',
+    'Deleted: {completed}. Failed: {failed}. Already absent: {skipped}.',
+  ],
+  recordingCleanupSkipped: ['已不存在：', 'Already absent:'],
+  recordingLinksLoading: ['正在读取关联录像…', 'Loading associated recordings…'],
+  recordingLinksUnavailable: [
+    '关联录像读取失败，可以重试；这不表示该对局没有录像。',
+    'Associated recordings could not be loaded. Retry to check whether recordings are available.',
+  ],
+  REPLAY_DIRECTORY_CHANGED: [
+    '录像目录已变化。未继续删除，请刷新后重新检查文件。',
+    'The recording directory changed. Deletion did not continue. Refresh and review the files again.',
+  ],
+  REPLAY_TARGET_CHANGED: [
+    '录像文件已变化。为避免误删，已保留该文件，请重新检查后重试。',
+    'The recording changed and was preserved. Review it again before retrying.',
+  ],
+  REPLAY_DELETE_EXPIRED: [
+    '删除确认已失效或已执行。请重新检查文件后确认。',
+    'This deletion confirmation expired or was already used. Review the files before confirming again.',
+  ],
+  REPLAY_METADATA_DELETE_FAILED: [
+    '录像信息未能更新，该文件未删除。请重试。',
+    'Recording metadata could not be updated. The file was preserved. Retry when the problem is resolved.',
+  ],
+  REPLAY_METADATA_RECOVERY_FAILED: [
+    '文件未能删除，且录像信息未能恢复。文件仍保留，请检查后重试。',
+    'The file could not be deleted and its metadata could not be restored. The file was preserved. Check it before retrying.',
+  ],
+  REPLAY_FILE_DELETE_FAILED: [
+    '文件未能删除，已保留文件及其信息。请检查是否被占用或缺少权限后重试。',
+    'The file and its metadata were preserved. Check whether the file is in use or access is denied, then retry.',
+  ],
+  'confirmation.details': ['确认信息与操作对象', 'Confirmation details and targets'],
   lastEncounterTime: ['最近相遇', 'Last encounter'],
   banFirstSeen: ['封禁记录时间', 'Ban first seen'],
   encounterTimeUnknown: ['未记录时间', 'Time not recorded'],
@@ -18,6 +529,21 @@ export const messages: Record<string, readonly [string, string]> = {
   banPlayer: ['玩家', 'Player'],
   filterPlayers: ['筛选名字或 ID', 'Filter by name or ID'],
   devTools: ['开发工具', 'Dev tools'],
+  devHideTools: ['隐藏开发工具', 'Hide development tools'],
+  devSceneChangeFailed: ['无法切换到“{scene}”：{error}', 'Could not switch to “{scene}”: {error}'],
+  devHideToolsHint: [
+    '隐藏本次预览的开发工具。刷新页面可恢复。',
+    'Hide the tools for this preview. Reload the page to show them again.',
+  ],
+  desktopBridgeUnavailableTitle: ['无法连接桌面应用', 'Desktop application unavailable'],
+  replayPlaybackLimit: [
+    '打开的录像过多，请关闭一段录像后重试。',
+    'Too many recordings are open. Close a recording and try again.',
+  ],
+  desktopBridgeUnavailableHint: [
+    '请从已安装的断箭蛐工具启动，以访问本地游戏数据。',
+    'Open the installed BARadar desktop application to access local game data.',
+  ],
   devToolsHint: [
     '在当前标签页预览状态，不读写真实游戏数据。',
     'Preview states in this tab without changing real game data.',
@@ -51,11 +577,18 @@ export const messages: Record<string, readonly [string, string]> = {
   'devRecording.error': ['录制失败（模拟）', 'Recording error (simulated)'],
   devReset: ['重置当前场景', 'Reset current scene'],
   recognizedAccounts: ['已识别的账号', 'Recognized accounts'],
-  accountMatches: ['{count} 场对局', '{count} matches'],
+  accountMatches: [
+    '{count} 场对局',
+    ({ count }) => `{count} ${countNoun(count, 'match', 'matches')}`,
+  ],
   appearanceColorScheme: ['配色模式', 'Color scheme'],
   appearanceThemes: ['主题', 'Theme'],
   appearanceGlass: ['玻璃效果', 'Glass'],
-  glassOpacity: ['Glass opacity', 'Glass opacity'],
+  glassOpacity: ['玻璃不透明度', 'Glass opacity'],
+  cachedMatchWarning: [
+    '当前显示缓存对局数据，BATrace 暂不可用。',
+    'Cached match data; BATrace is unavailable.',
+  ],
   glassOpacityHint: [
     '数值越高，卡片背景越不透明。',
     'Higher values make card backgrounds more solid.',
@@ -65,7 +598,10 @@ export const messages: Record<string, readonly [string, string]> = {
   appearanceUseMode: ['仅用于{mode}模式', 'Use for {mode} mode only'],
   clearSearch: ['清除搜索', 'Clear search'],
   searchingPlayers: ['正在查找玩家…', 'Searching for players…'],
-  searchResultSummary: ['“{query}” · {count} 位玩家', '“{query}” · {count} players'],
+  searchResultSummary: [
+    '“{query}” · {count} 位玩家',
+    ({ count }) => `“{query}” · {count} ${countNoun(count, 'player')}`,
+  ],
   matchIdHint: [
     '输入 BATrace 对局页面中的数字 ID。',
     'Enter the numeric ID from the BATrace match page.',
@@ -77,6 +613,14 @@ export const messages: Record<string, readonly [string, string]> = {
     'Review cache usage and manage locally saved query data.',
   ],
   cacheUsage: ['缓存概览', 'Cache overview'],
+  cacheStatsUnavailable: [
+    '尚未读取缓存统计，请刷新重试。',
+    'Cache statistics are unavailable. Refresh to retry.',
+  ],
+  deckListUnavailable: [
+    '尚未读取卡组列表，请刷新重试。',
+    'Deck lists are unavailable. Refresh to retry.',
+  ],
   cacheEntries: ['缓存条数', 'Cached entries'],
   cacheExpired: ['已过期', 'Expired entries'],
   cacheDataSize: ['缓存数据量', 'Cached data size'],
@@ -90,7 +634,10 @@ export const messages: Record<string, readonly [string, string]> = {
     '玩家评分、胜率等摘要，超过 6 小时标记为过期。',
     'Player rating and win-rate summaries, marked expired after 6 hours.',
   ],
-  cacheEntrySummary: ['{entries} 条 · {expired} 条已过期', '{entries} entries · {expired} expired'],
+  cacheEntrySummary: [
+    '{entries} 条 · {expired} 条已过期',
+    ({ entries }) => `{entries} ${countNoun(entries, 'entry', 'entries')} · {expired} expired`,
+  ],
   cacheSizeHint: [
     '数据量仅统计缓存内容，不代表数据库文件大小或清理后释放的磁盘空间。',
     'Size measures cached content, not the database file size or disk space reclaimed by cleanup.',
@@ -111,7 +658,34 @@ export const messages: Record<string, readonly [string, string]> = {
     'Clear all cached API responses and player summaries? Less data will be available offline, and new queries will need a connection.',
   ],
   cacheClearing: ['正在清理…', 'Clearing…'],
-  cacheCleared: ['已清理 {count} 条缓存。', 'Removed {count} cached entries.'],
+  cacheStatsAsOf: [
+    '统计时间：{time}，到期及返回窗口时自动刷新。',
+    'Statistics as of {time}; refreshed on expiry and when returning to this window.',
+  ],
+  cacheStatsRefreshing: [
+    '正在刷新统计，暂显示 {time} 的快照。',
+    'Refreshing statistics; showing the snapshot from {time}.',
+  ],
+  cacheStatsOutdated: [
+    '统计可能已过期（{time}），请刷新后再清理。',
+    'Statistics may be outdated ({time}). Refresh before cleaning.',
+  ],
+  cacheReconciling: [
+    '清理结果未确认，正在重新读取统计…',
+    'Cleanup outcome is unconfirmed. Reloading statistics…',
+  ],
+  cacheClearUnknown: [
+    '无法确认清理结果或删除数量。请刷新统计后再进行清理。',
+    'The cleanup outcome and removal count could not be confirmed. Refresh statistics before cleaning again.',
+  ],
+  cacheClearUnknownReconciled: [
+    '已重新读取当前统计，但上次清理的删除数量仍无法确认。',
+    'Current statistics have been reloaded; the previous cleanup removal count remains unconfirmed.',
+  ],
+  cacheCleared: [
+    '已清理 {count} 条缓存。',
+    ({ count }) => `Removed {count} cached ${countNoun(count, 'entry', 'entries')}.`,
+  ],
   analyticsConsentTitle: [
     '是否允许使用情况与诊断统计？',
     'Allow usage and diagnostics statistics?',
@@ -125,6 +699,25 @@ export const messages: Record<string, readonly [string, string]> = {
     'Declining does not affect app features. Change your choice at any time in Settings → General.',
   ],
   analyticsConsentAccept: ['同意使用与诊断统计', 'Allow usage and diagnostics'],
+  analyticsConsentSummary: [
+    '使用与诊断统计完全可选。请阅读说明后选择同意或不同意，之后可在设置中更改。',
+    'Usage and diagnostics statistics are optional. Read the details before choosing Allow or Decline; change your choice later in Settings.',
+  ],
+  analyticsConsentDetails: ['使用与诊断统计说明', 'Usage and diagnostics details'],
+  analyticsConsentFeedback: ['选择保存状态', 'Choice save status'],
+  analyticsConsentChoose: ['请选择是否同意', 'Choose an option'],
+  analyticsConsentSaving: ['正在保存选择', 'Saving choice'],
+  analyticsConsentSaveFailed: ['选择尚未保存', 'Choice not saved'],
+  analyticsConsentFeedbackDetails: ['查看保存详情', 'View save details'],
+  analyticsConsentUnconfirmedHint: [
+    '这次选择可能已生效。再次选择时会先核对当前偏好，核对成功前不会重复保存。',
+    'This choice may already be active. Choose again to check the saved preference; another save waits until that check succeeds.',
+  ],
+  settingsSaveUnconfirmed: ['保存结果尚未确认', 'Save outcome unconfirmed'],
+  settingsSaveUnconfirmedHint: [
+    '暂时无法读取已保存的配置。重试会先核对当前配置，再决定是否需要保存；丢弃本地编辑不会撤销已经生效的选择。',
+    'Saved settings could not be read. Retry checks the current settings before deciding whether another save is needed. Discarding local edits does not undo an applied choice.',
+  ],
   analyticsConsentDecline: ['不同意', 'Decline'],
   analytics: ['使用统计与隐私', 'Usage statistics and privacy'],
   analyticsEnabled: ['发送可选使用统计', 'Send optional usage statistics'],
@@ -148,6 +741,21 @@ export const messages: Record<string, readonly [string, string]> = {
   ],
   updateLatest: ['当前已是最新版本。', 'You are using the latest version.'],
   updateRetryDownload: ['重试下载', 'Retry download'],
+  updateRetryInstall: ['重试安装', 'Retry installation'],
+  updateStatusLabel: ['更新状态与说明', 'Update status and details'],
+  updateInstallBlocked: [
+    '本次安装未开始。请等待当前应用任务结束后重试。',
+    'Installation did not start. Wait until the app is idle, then retry.',
+  ],
+  updateDownloaded: [
+    '更新已下载，可在对局和录制结束后安装。',
+    'Update downloaded. Install after the match and recording have ended.',
+  ],
+  updateOpeningDownloads: ['正在打开下载页面…', 'Opening downloads…'],
+  updateDownloadsOpened: [
+    '已请求系统浏览器打开下载页面，请按页面说明手动安装。',
+    'Downloads were requested in your browser. Follow that page to install manually.',
+  ],
   updateInstall: ['重启并安装', 'Restart and install'],
   updateReleasePage: ['打开下载页面', 'Open downloads'],
   updateDetails: ['查看更新', 'View update'],
@@ -182,7 +790,16 @@ export const messages: Record<string, readonly [string, string]> = {
   'update.error': ['更新未完成', 'Update incomplete'],
   expand: ['展开', 'Expand'],
   collapse: ['收起', 'Collapse'],
-  autoDisplay: ['自动选择游戏所在屏幕', 'Select the screen near the cursor'],
+  autoDisplay: ['自动（优先鼠标所在屏幕）', 'Automatic (prefer screen under pointer)'],
+  settingsSaveDetails: ['设置保存详情', 'Settings save details'],
+  settingsSaveScope: ['查看更改范围', 'Changes to review'],
+  settingsSaveReview: ['{status}，查看更改', '{status}. Review changes'],
+  settingsApplicationChanges: ['应用设置更改', 'Application settings changes'],
+  settingsRecordingChanges: ['录像设置更改', 'Recording settings changes'],
+  settingsChangesRetained: [
+    '离开此页后，未保存的更改仍可重试或放弃。',
+    'Unsaved changes remain available to retry or discard after leaving this page.',
+  ],
   recordingDescription: [
     '录像只保存在本地，录制所选显示器的完整画面。',
     'Recordings stay local and capture the entire selected display.',
@@ -237,7 +854,11 @@ export const messages: Record<string, readonly [string, string]> = {
   latestKd: ['最近一场 K/D', 'Latest match K/D'],
   latestDmr: ['最近一场 DMR', 'Latest match DMR'],
   totalMatches: ['总场次', 'Total matches'],
-  winLossCount: ['{wins} 胜 · {losses} 负', '{wins} wins · {losses} losses'],
+  winLossCount: [
+    '{wins} 胜 · {losses} 负',
+    ({ wins, losses }) =>
+      `{wins} ${countNoun(wins, 'win')} · {losses} ${countNoun(losses, 'loss', 'losses')}`,
+  ],
   archiveCount: ['已收录对局', 'Saved matches'],
   realDataOffline: ['本地真实数据 · 离线', 'Local real data · Offline'],
   scanningLogs: ['扫描本地日志中…', 'Scanning local logs…'],
@@ -260,8 +881,8 @@ export const messages: Record<string, readonly [string, string]> = {
   recordingReady: ['自动录制已开启', 'Auto-record is ready'],
   recordingOff: ['自动录制未开启', 'Auto-record is off'],
   recordingHint: [
-    '开启后，自动保存下一场对局的录像。',
-    'Automatically save a recording of your next match.',
+    '开启后，将从现在录制进行中的对局，并自动录制后续对局。',
+    'When enabled, record a live match from now and automatically record future matches.',
   ],
   enableRecording: ['设置自动录制', 'Set up auto-record'],
   waitingHint: [
@@ -270,7 +891,7 @@ export const messages: Record<string, readonly [string, string]> = {
   ],
   sessionOverview: ['房间概览', 'Room overview'],
   you: ['你', 'You'],
-  playersCount: ['{n} 位玩家', '{n} players'],
+  playersCount: ['{n} 位玩家', ({ n }) => `{n} ${countNoun(n, 'player')}`],
   teamRating: ['平均 ELO', 'Average ELO'],
   friendlyTeam: ['我方队伍', 'Your team'],
   enemyTeam: ['对方队伍', 'Opposing team'],
@@ -281,6 +902,9 @@ export const messages: Record<string, readonly [string, string]> = {
   searchPlaceholder: ['搜索玩家名字或 ID…', 'Search player name or ID…'],
   currentRoomPlayers: ['当前房间的玩家', 'Players in your room'],
   searchResults: ['查询结果', 'Search results'],
+  searchStatus: ['查询状态与重试', 'Search status and retry'],
+  roomPlayersEmpty: ['当前没有房间玩家。', 'No current room players.'],
+  backToPlayerSelection: ['返回玩家选择', 'Back to player selection'],
   selectPlayer: ['选择一位玩家', 'Select a player'],
   selectPlayerHint: [
     '从查询结果中选择玩家，查看战绩与详细报告。',
@@ -357,8 +981,8 @@ export const messages: Record<string, readonly [string, string]> = {
   colorScheme: ['配色方案', 'Color palette'],
   selectPalettePair: ['选择整组配色', 'Select palette pair'],
   colorSchemeHint: [
-    '选择整组配色，或分别设置浅色与深色配色。当前主题模式保持不变。',
-    'Choose a matching pair or individual light and dark palettes. Your theme mode stays the same.',
+    '选择浅色或深色按钮只更改对应模式；选择整组按钮或卡片空白处会同时更改两种模式。当前主题模式保持不变。',
+    'Light and Dark buttons change only that mode. The pair button or card background changes both modes. Your theme mode stays the same.',
   ],
   languageHint: [
     '更改后自动保存，并应用到整个界面。',
@@ -366,11 +990,16 @@ export const messages: Record<string, readonly [string, string]> = {
   ],
   healthHint: ['检查对局数据服务的连接状态。', 'Check the connection to match data services.'],
   healthCheck: ['检查连接', 'Check connection'],
+  healthChecking: ['正在检查', 'Checking'],
+  healthCheckFailed: ['检查失败', 'Check failed'],
+  healthLastResult: ['上次结果：{state}', 'Last result: {state}'],
+  healthFailedAt: ['本次检查失败：{time}', 'Check failed at {time}'],
+  healthDetails: ['接口详情', 'Endpoint details'],
   healthCheckedAt: ['上次检查：{time}', 'Last checked: {time}'],
   healthNotChecked: ['尚无检查结果。', 'No check results yet.'],
   healthRefreshHint: [
-    '每 10 分钟自动检查，业务请求也会更新状态。也可点击顶部 BATrace 状态旁的「API 健康检查」重试。',
-    'Checked every 10 minutes and updated by live requests. Use API health beside the BATrace status in the top bar to retry.',
+    '每 10 分钟自动检查，业务请求也会更新状态。可使用「检查连接」重试。',
+    'Checked every 10 minutes and updated by live requests. Use Check connection to retry.',
   ],
   healthPlayerSearch: ['玩家搜索', 'Player search'],
   healthPlayerInfo: ['玩家资料', 'Player details'],
@@ -444,11 +1073,45 @@ export const messages: Record<string, readonly [string, string]> = {
   maggotReady: ['已计算', 'Calculated'],
   maggotInsufficient: ['样本不足', 'Insufficient matches'],
   maggotScale: ['指数越低，表现越好', 'Lower is better'],
-  maggotSample: ['基于最近 {n} 场有效排位', 'Based on the latest {n} eligible ranked matches'],
+  maggotSample: [
+    '基于最近 {n} 场有效排位',
+    ({ n }) => `Based on the latest {n} eligible ranked ${countNoun(n, 'match', 'matches')}`,
+  ],
   copy: ['复制', 'Copy'],
   copied: ['已复制', 'Copied'],
+  clipboardUnavailable: [
+    '无法访问剪贴板，请稍后重试。',
+    'The clipboard is unavailable. Try copying again later.',
+  ],
+  clipboardWriteFailed: ['复制失败：{error}。请重试。', 'Copy failed: {error}. Try again.'],
+  viewFileName: ['查看完整文件名：{name}', 'View full filename: {name}'],
+  reportCopyUnavailable: ['报告尚不可用，暂时无法复制。', 'A report is not available to copy yet.'],
   actions: ['操作', 'Actions'],
   openBatrace: ['在 BATrace 打开', 'Open BATrace'],
+  localMatch: ['本地对局', 'Local match'],
+  localMatchDetails: [
+    '此页显示本机保存的对局信息。重新读取会刷新本地记录，不会发起在线查询。',
+    'This page shows match information saved on this device. Reload reads the local record without an online request.',
+  ],
+  localMatchOnlineUnavailable: [
+    '此记录没有在线对局编号，无法查询 BATrace 详情。',
+    'This record has no online match ID, so BATrace details are unavailable.',
+  ],
+  localMatchSavedAt: ['本地记录更新时间：{time}', 'Local record updated: {time}'],
+  localMatchRefresh: ['重新读取本地记录', 'Reload local record'],
+  localMatchRetained: [
+    '下方保留上次读取的本地详情。',
+    'The last loaded local details remain below.',
+  ],
+  localMatchUnavailable: [
+    '本地对局记录已不存在。请重新扫描日志或恢复历史备份后重试。',
+    'The local match record is no longer available. Scan the logs again or restore a history backup, then retry.',
+  ],
+  encounterEndUnknown: ['未记录结束时间', 'End time unavailable'],
+  encounterScrollHint: [
+    '横向滚动查看完整记录，也可聚焦表格区域后使用左右方向键。',
+    'Scroll for complete records; focus this table region to use the Left/Right arrow keys.',
+  ],
   loading: ['加载中…', 'Loading…'],
   empty: ['暂无数据', 'No data yet'],
   retry: ['重试', 'Retry'],
@@ -458,6 +1121,11 @@ export const messages: Record<string, readonly [string, string]> = {
   confirm: ['确认', 'Confirm'],
   refresh: ['刷新', 'Refresh'],
   delete: ['删除', 'Delete'],
+  deleteAccountAction: ['删除账号 {name} · #{id}', 'Delete account {name} · #{id}'],
+  listReadRetained: [
+    '显示上次确认的列表，最新读取失败。',
+    'Showing the last confirmed list; the latest read failed.',
+  ],
   'confirmation.deleteMatch': ['删除对局记录？', 'Delete match record?'],
   'confirmation.deleteReplay': ['删除录像？', 'Delete recording?'],
   'confirmation.deleteAccount': ['删除账号数据？', 'Delete account data?'],
@@ -480,6 +1148,62 @@ export const messages: Record<string, readonly [string, string]> = {
   success: ['操作已完成', 'Completed'],
   offline: ['本地缓存 / 离线数据', 'Local / offline data'],
   stale: ['缓存数据，可能已过期', 'Cached data may be outdated'],
+  rosterQueryLoading: ['正在查询房间玩家…', 'Querying room players…'],
+  rosterRetryScheduled: [
+    '{n} 位玩家查询失败，将在 {time} 自动补试一次；也可立即使用「刷新粗查」。',
+    ({ n }) =>
+      `{n} ${countNoun(n, 'player query', 'player queries')} failed. One automatic retry is scheduled for {time}; use Refresh players to retry now.`,
+  ],
+  rosterQueryIncomplete: [
+    '{n} 位玩家查询失败，可使用「刷新粗查」重试。',
+    ({ n }) =>
+      `{n} ${countNoun(n, 'player query', 'player queries')} failed. Use Refresh players to retry.`,
+  ],
+  startupFailure: ['应用未能完成启动', 'The app could not finish starting'],
+  startupFailureHint: [
+    '可以重试连接本地服务。错误详情保留在下方。',
+    'Retry connecting to the local service. Error details are shown below.',
+  ],
+  startupRetry: ['重试启动', 'Retry startup'],
+  startupPreviousFailure: ['上次启动错误', 'Previous startup error'],
+  startupRetrying: ['正在重新连接本地服务…', 'Reconnecting to the local service…'],
+  recordingStatus: ['录制状态', 'Recording status'],
+  recordingStatusDetails: ['录制状态详情', 'Recording status details'],
+  recordingStatusReview: ['录制状态：{status}', 'Recording status: {status}'],
+  recordingNeedsAttention: ['录制需要检查', 'Recording needs attention'],
+  overviewStatsUpdating: ['统计正在更新', 'Updating statistics'],
+  overviewStatsUnavailable: ['统计暂不可用', 'Statistics unavailable'],
+  overviewArchiveUpdating: ['存档正在更新', 'Updating archive'],
+  overviewArchiveUnavailable: ['存档暂不可用', 'Archive unavailable'],
+  rosterQueryProgress: ['玩家查询：{done}/{total} 已完成', 'Player query: {done}/{total} complete'],
+  rosterPlayerLoading: ['正在查询该玩家…', 'Querying this player…'],
+  rosterRefreshing: ['正在刷新', 'Refreshing'],
+  rosterRefreshingPrevious: [
+    '正在刷新，暂显示 {time} 的结果',
+    'Refreshing; showing the result from {time}',
+  ],
+  rosterMixedFreshness: [
+    '队伍评分可能包含缓存或刷新前的玩家数据。',
+    'Team ratings may include cached or previous player results.',
+  ],
+  rosterQueryFailed: [
+    '查询失败，可使用刷新粗查重试。',
+    'Query failed. Use Refresh players to retry.',
+  ],
+  rosterCompact: ['整理名单', 'Arrange roster'],
+  rosterCompactHint: [
+    '移除已离开或转队的空位，并重新排列当前成员。',
+    'Remove departed or moved slots and arrange the current members.',
+  ],
+  rosterPlayerLeft: ['已离开此名单', 'No longer in this roster'],
+  rosterPlayerMoved: ['已转至 {team}', 'Moved to {team}'],
+  rosterIdentityAction: ['查看 {name} · #{id} 的完整身份', 'Read full identity for {name} · #{id}'],
+  rosterFailureSummary: ['查询失败', 'Query failed'],
+  rosterRequestFailure: ['查询失败（HTTP {status}）', 'Request failed (HTTP {status})'],
+  rosterServiceFailure: ['服务暂不可用（HTTP {status}）', 'Service unavailable (HTTP {status})'],
+  rosterInvalidResponse: ['服务返回的数据无效', 'The service returned invalid data'],
+  rosterAnalysisUnavailable: ['详细分析暂不可用', 'Detailed analysis is unavailable'],
+  rosterTechnicalDetails: ['技术详情', 'Technical details'],
   historical: [
     'BATrace 为历史数据，存在数天延迟。',
     'BATrace data can be delayed by several days.',
@@ -533,7 +1257,20 @@ export const messages: Record<string, readonly [string, string]> = {
   sameTeamWins: ['同队获胜', 'Wins as teammates'],
   sameTeamLosses: ['同队落败', 'Losses as teammates'],
   names: ['名字历史', 'Name history'],
+  profileIdentity: ['玩家完整身份', 'Full player identity'],
+  profileIdentityHint: [
+    '完整名字和编号显示在下方“玩家完整身份”区域。',
+    'Read the complete name and ID in Full player identity below.',
+  ],
+  profileOpenedName: ['打开时的名字：', 'Name when opened:'],
+  profileReadingLabel: ['玩家资料阅读区域', 'Player profile reading area'],
   matchStatistics: ['对局数据', 'Match data'],
+  reportMatchScrollHint: [
+    '横向滚动查看全部数据，也可聚焦表格后使用左右方向键。',
+    'Scroll for all metrics; focus this table to use the Left/Right arrow keys.',
+  ],
+  matchTimeUnknown: ['时间未知', 'Time unknown'],
+  matchDurationUnknown: ['时长未知', 'Duration unknown'],
   mapStatistics: ['地图表现', 'Map performance'],
   recent: ['近期对局', 'Recent matches'],
   same: ['同队', 'Teammate'],
@@ -557,6 +1294,58 @@ export const messages: Record<string, readonly [string, string]> = {
   backups: ['备份卡组', 'Deck backups'],
   backupSelected: ['备份选中', 'Back up selected'],
   backupAll: ['备份全部', 'Back up all'],
+  backupContents: ['将备份以下卡组：', 'The following decks will be backed up:'],
+  backupNameInvalid: [
+    '请输入有效的文件名，不要使用路径、保留名称或特殊字符。',
+    'Enter a valid filename without paths, reserved names or special characters.',
+  ],
+  backupNameExists: [
+    '此名称的备份已存在，请使用其他名称。原备份未被覆盖。',
+    'A backup with this name already exists. Choose another name; the existing backup was preserved.',
+  ],
+  backupSaving: [
+    '正在保存备份，请等待完成后再关闭。',
+    'Saving the backup. Please wait until it finishes before closing.',
+  ],
+  DECK_DIRECTORY_CHANGED: [
+    '卡组目录已变化。请刷新并重新选择操作对象。',
+    'The deck directory changed. Refresh and select the intended files again.',
+  ],
+  DECK_RESTORE_CHANGED: [
+    '备份或当前卡组已变化。未继续恢复，请重新检查文件并确认。',
+    'The backup or current decks changed. Restore did not continue. Review the files and confirm again.',
+  ],
+  DECK_RESTORE_EXPIRED: [
+    '恢复确认已失效。请重新检查文件并确认。',
+    'The restore confirmation expired. Review the files and confirm again.',
+  ],
+  DECK_UNSAFE_TARGET: [
+    '目标不是可安全操作的普通卡组文件。请检查该文件后重试。',
+    'The target is not a regular deck file that can be safely changed. Check it before retrying.',
+  ],
+  deckRestoreSource: ['备份包：{name}', 'Backup: {name}'],
+  deckRestoreDirectory: ['目标目录：{directory}', 'Destination: {directory}'],
+  deckRestoreFiles: ['将恢复以下卡组：', 'Decks to restore:'],
+  deckRestoreReplacements: ['将覆盖以下现有卡组：', 'Existing decks to replace:'],
+  deckRestoreNoReplacements: ['无', 'None'],
+  deckRestoreRecoveryHint: [
+    '覆盖前会自动保存现有卡组的恢复备份。',
+    'A recovery backup of existing decks will be saved before replacement.',
+  ],
+  deckOperationPartial: [
+    '操作未全部完成，请查看逐项结果。',
+    'The operation did not fully complete. Review the per-file results.',
+  ],
+  deckOperationSummary: [
+    '已完成 {completed} 项，失败 {failed} 项，未执行 {skipped} 项。',
+    'Completed: {completed}. Failed: {failed}. Not attempted: {skipped}.',
+  ],
+  deckCompletedFiles: ['已完成：', 'Completed:'],
+  deckSkippedFiles: ['未执行：', 'Not attempted:'],
+  deckRecoverySaved: [
+    '覆盖前的卡组已保存在备份包 {name} 中，可从备份列表恢复。',
+    'The previous decks were saved in {name}. Restore them from the backup list if needed.',
+  ],
   deploy: ['恢复到当前卡组', 'Restore to current decks'],
   folder: ['打开目录', 'Open folder'],
   packageName: ['备份包名称', 'Backup name'],
@@ -595,14 +1384,132 @@ export const messages: Record<string, readonly [string, string]> = {
   clean30: ['删除 30 天前录像', 'Delete recordings older than 30 days'],
   cleanAll: ['删除全部录像', 'Delete all recordings'],
   display: ['显示器', 'Display'],
+  displayPreviewFor: ['显示器预览：{display}', 'Display preview: {display}'],
+  displayPreviewStatus: ['显示器预览状态', 'Display preview status'],
+  displayMissingChoice: ['已保存但不可用：{id}', 'Saved display unavailable: {id}'],
+  displayUnconfirmedChoice: ['已保存，待确认：{id}', 'Saved display not confirmed: {id}'],
+  displayPreviewLoading: ['正在获取显示器和预览…', 'Loading displays and preview…'],
+  displayPreviewNoSources: ['当前没有可用显示器。', 'No displays are currently available.'],
+  displayPreviewUnconfirmed: [
+    '尚未确认可用显示器和预览。',
+    'Display availability and preview are not confirmed.',
+  ],
+  displayPreviewTarget: ['本次预览：{display}。', 'Preview target: {display}.'],
+  displayPreviewStale: [
+    '上次预览：{display}；刷新尚未成功。',
+    'Last preview: {display}; refresh has not succeeded.',
+  ],
+  displayAutomaticPolicy: [
+    '自动模式会在下次录制开始时，优先选择鼠标所在的显示器。',
+    'Automatic mode prefers the display under the pointer when the next recording starts.',
+  ],
+  displayFixedPolicy: [
+    '此选择用于下次录制，不会改变当前录制。',
+    'This choice applies to the next recording and leaves the current capture unchanged.',
+  ],
+  displayPreviewFallback: [
+    '已保存的显示器 {id} 不可用；当前将回退到 {display}。',
+    'Saved display {id} is unavailable; the current fallback is {display}.',
+  ],
+  displayPreviewRefreshFailed: [
+    '无法刷新显示器和预览；请重试。',
+    'Could not refresh displays and preview. Please retry.',
+  ],
+  displayPreviewImageFailed: [
+    '此显示器的预览图无法加载。',
+    'The preview image for this display could not load.',
+  ],
+  refreshDisplays: ['刷新显示器', 'Refresh displays'],
+  displayPreviewTargetChanged: [
+    '返回的预览与当前选择不符，请刷新确认。',
+    'The returned preview did not match this selection. Refresh to confirm the target.',
+  ],
+  recordingDisplayFallbackStarting: [
+    '显示器 {id} 不可用；这次录制将改用 {display}。',
+    'Display {id} is unavailable. This recording will use {display} instead.',
+  ],
+  recordingDisplayFallback: [
+    '显示器 {id} 不可用；当前录像使用的是 {display}。',
+    'Display {id} is unavailable. The current capture uses {display} instead.',
+  ],
   quality: ['分辨率', 'Resolution'],
   fps: ['帧率', 'Frame rate'],
   bitrate: ['码率', 'Bitrate'],
   audio: ['系统声音', 'System audio'],
   audioOff: ['关闭声音', 'Audio off'],
   recordMicrophone: ['录制麦克风（系统默认设备）', 'Record microphone (system default device)'],
+  recordingMicrophone: ['麦克风', 'Microphone'],
+  recordingMicrophonePausedOn: [
+    '保留麦克风开启偏好，但关闭声音时不会录制麦克风。重新开启声音后，下一次录制会使用此偏好。',
+    'Your microphone-on preference is retained, but Audio off also disables microphone capture. Turning audio back on uses this preference for the next recording.',
+  ],
+  recordingMicrophonePausedOff: [
+    '关闭声音时，系统声音和麦克风都不会录制；麦克风偏好保持关闭。',
+    'Audio off disables both system and microphone capture. Your microphone-off preference is retained.',
+  ],
+  recordingAudioNextCapture: [
+    '声音设置用于下一次录制，不会更改当前录制的音源。',
+    'Audio settings apply to the next recording and do not change the current capture.',
+  ],
+  recordingAudioUnknown: ['音源状态尚未确认', 'Audio source status is not confirmed'],
+  recordingAudioAtFinish: ['停止时的音源状态：', 'Audio source status at finish:'],
+  recordingAudioRetry: ['重试缺失音源', 'Retry missing audio'],
+  recordingAudioRetryLimit: [
+    '重试只重新连接缺失音源，视频保持录制。',
+    'Retry reconnects missing sources without stopping video.',
+  ],
+  RECORDING_AUDIO_RETRY_UNAVAILABLE: [
+    '当前录制已变化，无法为该录像重试音源。',
+    'This capture changed. Its audio sources cannot be retried.',
+  ],
+  RECORDING_AUDIO_RETRY_PENDING: [
+    '正在重试音源，请等待当前请求完成。',
+    'An audio retry is already in progress. Wait for it to finish.',
+  ],
+  RECORDING_AUDIO_RETRY_TIMEOUT: [
+    '音源重试尚未确认完成，视频仍在录制。请检查系统权限提示。',
+    'The audio retry has not been confirmed. Video continues; check for a system permission prompt.',
+  ],
+  RECORDING_AUDIO_UNAVAILABLE: [
+    '部分音源仍不可用，视频继续录制。请检查权限或默认设备后再重试。',
+    'Some audio sources are still unavailable. Video continues; check permissions or default devices before retrying.',
+  ],
+  'recordingAudio.off': ['未请求', 'Not requested'],
+  'recordingAudio.starting': ['连接中', 'Connecting'],
+  'recordingAudio.active': ['音轨可用', 'Track available'],
+  'recordingAudio.unavailable': ['无法获取', 'Unavailable'],
+  'recordingAudio.muted': ['暂时无输入', 'Input interrupted'],
+  'recordingAudio.ended': ['已中断', 'Ended'],
+  recordingAudioMissing: [
+    '部分请求的声音未录入，视频仍在录制。',
+    'Some requested audio is missing. Video recording continues.',
+  ],
+  recordingAudioRecovered: ['音源已恢复。', 'Audio sources have recovered.'],
+  recordingAudioSavedGap: [
+    '已保存录像，但部分声音缺失。',
+    'The recording was saved with missing audio.',
+  ],
+  recordingAudioGapLimit: ['已缺失的声音无法补回。', 'Earlier missing audio cannot be recovered.'],
+  recordingAudioCheckDevices: [
+    '请检查音频权限及系统默认设备后重试。',
+    'Check audio permissions and default devices before retrying.',
+  ],
   saveDirectory: ['保存目录', 'Save folder'],
   defaultDirectory: ['默认目录', 'Default folder'],
+  decksAutomaticHint: [
+    '留空时自动查找游戏卡组目录。',
+    'Leave empty to find the game deck folder automatically.',
+  ],
+  decksAutomaticChecking: ['正在查找默认卡组目录…', 'Looking for the default deck folder…'],
+  decksAutomaticFound: ['自动找到的卡组目录：', 'Automatically found deck folder:'],
+  decksAutomaticMissing: [
+    '未找到默认卡组目录。请启动一次游戏或手动选择已有目录。候选位置：',
+    'Default deck folder not found. Start the game once or select an existing folder. Candidate location:',
+  ],
+  decksAutomaticFailed: [
+    '无法核对默认卡组目录。请重新打开此分类重试，或手动选择已有目录。',
+    'The default deck folder could not be checked. Reopen this category to retry, or select an existing folder.',
+  ],
   select: ['选择', 'Select'],
   recordingTest: ['录制 60 秒测试', 'Record a 60-second test'],
   estimated: ['45 分钟理论大小约 {size}', '45-minute theoretical size: {size}'],
@@ -613,7 +1520,7 @@ export const messages: Record<string, readonly [string, string]> = {
   ],
   movePartial: [
     '{n} 个文件迁移失败；原目录和设置保留。',
-    '{n} files could not be moved; original folder remains selected.',
+    ({ n }) => `{n} ${countNoun(n, 'file')} could not be moved; original folder remains selected.`,
   ],
   preview: ['录制预览', 'Recording preview'],
   logDirectory: ['游戏日志目录', 'Game log folder'],
@@ -621,8 +1528,13 @@ export const messages: Record<string, readonly [string, string]> = {
   detect: ['自动检测 Steam', 'Detect Steam'],
   detectingLogs: ['正在检测…', 'Detecting…'],
   logDetectFound: [
-    '已找到日志目录，将自动保存并开始监听。',
-    'Log folder found. The path will be saved automatically and monitoring will start.',
+    '已找到日志目录，路径尚未保存。',
+    'Log folder found. This path has not been saved yet.',
+  ],
+  logDirectorySaved: ['路径已保存。', 'Path saved.'],
+  logDetectSaveFailed: [
+    '已找到日志目录，但保存失败，尚未启用此路径。请重试保存或丢弃更改。',
+    'Log folder found, but saving failed. This path is not active. Retry saving or discard the change.',
   ],
   logDetectNotFound: [
     '未找到可用的 GameLogs 目录，已保留原路径。请先启动一次游戏，或通过 Steam 的“浏览本地文件”找到 GameLogs 后手动选择。',

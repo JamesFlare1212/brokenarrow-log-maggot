@@ -51,6 +51,9 @@ export function formatMetric(value: Metric, digits = 2): string {
     ? '—'
     : new Intl.NumberFormat('en', { maximumFractionDigits: digits }).format(value);
 }
+export function formatPercent(value: Metric, digits = 0): string {
+  return value == null || !Number.isFinite(value) ? '—' : `${formatMetric(value, digits)}%`;
+}
 export function formatDelta(value: Metric): string {
   return value == null ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(2)}`;
 }

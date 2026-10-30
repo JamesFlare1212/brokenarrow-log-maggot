@@ -19,6 +19,8 @@ export interface UpdateState {
   error: string | null;
   errorContext: 'check' | 'download' | 'install' | null;
   notAppliedVersion: string | null;
+  // The latest installation attempt was rejected by the host activity guard.
+  installBlocked?: boolean;
 }
 
 export function initialUpdateState(
@@ -35,5 +37,6 @@ export function initialUpdateState(
     error: null,
     errorContext: null,
     notAppliedVersion: null,
+    installBlocked: false,
   };
 }

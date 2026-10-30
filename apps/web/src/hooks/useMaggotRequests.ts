@@ -7,6 +7,7 @@ interface MaggotRequest {
   requestId: string;
   data: MaggotReport | null;
   error: string | null;
+  updatedAt: number | null;
 }
 
 const CACHE_TTL = 5 * 60_000;
@@ -14,7 +15,9 @@ const CACHE_TTL = 5 * 60_000;
 export function useMaggotRequests(api: Bridge) {
   const [maggot, setMaggot] = useState<Record<string, MaggotRequest>>({});
   const pending = useRef(new Map<string, { promise: Promise<void>; force: boolean }>());
-  const cache = useRef(new Map<string, { data: MaggotReport; updatedAt: number }>());
+  const cache = useRef(
+    new Map<string, { data: MaggotReport; updatedAt: number; failed?: boolean }>(),
+  );
   const queue = useRef(Promise.resolve());
 
   const runMaggot = useCallback(
@@ -25,23 +28,27 @@ export function useMaggotRequests(api: Bridge) {
           ? active.promise.then(() => runMaggot(id, true))
           : active.promise;
       const cached = cache.current.get(id);
-      if (!force && cached && Date.now() - cached.updatedAt < CACHE_TTL) return Promise.resolve();
+      if (!force && cached && !cached.failed && Date.now() - cached.updatedAt < CACHE_TTL)
+        return Promise.resolve();
 
       const requestId = crypto.randomUUID();
       const previous = cached?.data ?? null;
-      const update = (value: Omit<MaggotRequest, 'requestId'>) =>
-        setMaggot((current) => ({ ...current, [id]: { ...value, requestId } }));
+      const update = (
+        value: Omit<MaggotRequest, 'requestId' | 'updatedAt'>,
+        updatedAt = cached?.updatedAt ?? null,
+      ) => setMaggot((current) => ({ ...current, [id]: { ...value, requestId, updatedAt } }));
       update({ status: 'queued', data: previous, error: null });
       // The analyzer accepts one calculation at a time across all player views.
       const request = queue.current.then(async () => {
         update({ status: 'loading', data: previous, error: null });
         try {
           const data = await api.invoke('players.maggot', { id, requestId });
-          cache.current.set(id, { data, updatedAt: Date.now() });
-          update({ status: 'success', data, error: null });
+          const updatedAt = Date.now();
+          cache.current.set(id, { data, updatedAt });
+          update({ status: 'success', data, error: null }, updatedAt);
         } catch (error) {
-          cache.current.delete(id);
-          update({ status: 'error', data: null, error: errorMessage(error) });
+          if (cached) cache.current.set(id, { ...cached, failed: true });
+          update({ status: 'error', data: previous, error: errorMessage(error) });
         } finally {
           pending.current.delete(id);
         }

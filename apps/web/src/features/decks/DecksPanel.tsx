@@ -1,27 +1,39 @@
 import { Input } from '@/components/ui/input';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Layers as faLayerGroup,
   FileText as faFileLines,
   FolderOpen as faFolderOpen,
   RefreshCw as faArrowsRotate,
+  Info,
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
-import type { DeckList, DeckFile } from '@ba/contracts';
-import { formatSize } from '@ba/shared';
+import type {
+  DeckList,
+  DeckFile,
+  DeckOperationResult,
+  DeckRestoreResult,
+  DeckSwitchAlert,
+} from '@ba/contracts';
+import { errorMessage, filename, formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Dialog, Field, Notice, Loading, Empty } from '../../components/ui';
+import { Button, Dialog, Notice, Empty } from '../../components/ui';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button as FileNameButton } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardHeader, CardTitle, CardAction, CardContent } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
   FieldSet,
   FieldLegend,
   FieldGroup,
   Field as PrimitiveField,
   FieldLabel,
+  FieldError,
 } from '@/components/ui/field';
 function DeckFiles({
   id,
@@ -29,14 +41,16 @@ function DeckFiles({
   files,
   selected,
   onChange,
-  actions,
+  placeholder,
+  disabled = false,
 }: {
   id: string;
   title: string;
   files: DeckFile[];
   selected: string[];
   onChange: (names: string[]) => void;
-  actions?: ReactNode;
+  placeholder?: 'loading' | 'unavailable';
+  disabled?: boolean;
 }) {
   const { t } = useI18n();
   const selectedCount = files.filter((file) => selected.includes(file.name)).length;
@@ -47,7 +61,6 @@ function DeckFiles({
         <CardTitle role="heading" aria-level={2}>
           {title}
         </CardTitle>
-        <CardAction>{actions}</CardAction>
       </CardHeader>
       <CardContent>
         <FieldSet className="field deck-fieldset">
@@ -57,19 +70,28 @@ function DeckFiles({
             className="deck-file-list"
             tabIndex={0}
             onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+              if (!disabled && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
                 e.preventDefault();
                 onChange(files.map((f) => f.name));
               }
             }}
           >
-            {files.length ? (
+            {placeholder ? (
+              <div className="flex flex-col gap-3" role="status">
+                <span>{t(placeholder === 'loading' ? 'loading' : 'deckListUnavailable')}</span>
+                {placeholder === 'loading' &&
+                  Array.from({ length: 3 }, (_, index) => (
+                    <Skeleton key={index} className="h-6 w-full" aria-hidden="true" />
+                  ))}
+              </div>
+            ) : files.length ? (
               <FieldGroup>
                 {files.map((f, index) => (
                   <PrimitiveField orientation="horizontal" key={f.name}>
                     <Checkbox
                       id={`${id}-${index}`}
                       checked={selected.includes(f.name)}
+                      disabled={disabled}
                       onCheckedChange={(checked) =>
                         onChange(
                           checked === true
@@ -85,6 +107,28 @@ function DeckFiles({
                       <Icon icon={faFileLines} aria-hidden="true" />
                       <span className="truncate">{f.name}</span>
                     </FieldLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FileNameButton
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={t('viewFileName', { name: f.name })}
+                        >
+                          <Info aria-hidden="true" />
+                        </FileNameButton>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        aria-label={t('viewFileName', { name: f.name })}
+                        className="max-w-[calc(100vw-2rem)] max-h-[70svh] overflow-y-auto"
+                      >
+                        <p
+                          tabIndex={0}
+                          className="rounded-sm wrap-anywhere focus-visible:outline-2 focus-visible:outline-ring"
+                        >
+                          {f.name}
+                        </p>
+                      </PopoverContent>
+                    </Popover>
                     <small className="shrink-0 text-muted-foreground">{formatSize(f.size)}</small>
                   </PrimitiveField>
                 ))}
@@ -100,11 +144,11 @@ function DeckFiles({
               onCheckedChange={(checked) =>
                 onChange(checked === true ? files.map((file) => file.name) : [])
               }
-              disabled={!files.length}
+              disabled={disabled || !!placeholder || !files.length}
             />
             <FieldLabel htmlFor={`${id}-all`}>{t('selectAll')}</FieldLabel>
             <small className="muted">
-              {selectedCount} / {files.length}
+              {placeholder ? '— / —' : `${selectedCount} / ${files.length}`}
             </small>
           </PrimitiveField>
         </FieldSet>
@@ -121,54 +165,184 @@ export function DecksPanel() {
     [back, setBack] = useState<string[]>([]),
     [packageName, setPackageName] = useState(''),
     [backupNames, setBackupNames] = useState<string[] | null>(null),
-    [busy, setBusy] = useState(false);
-  const refresh = () => void request.load(() => api.invoke('decks.list', null), true);
+    [backupDirectory, setBackupDirectory] = useState(''),
+    [backupMode, setBackupMode] = useState<'selected' | 'all'>('selected'),
+    [backupError, setBackupError] = useState<string | null>(null),
+    [busy, setBusy] = useState(false),
+    [outcome, setOutcome] = useState<
+      (DeckOperationResult & { recoveryBackup?: string | null }) | null
+    >(null),
+    [operationError, setOperationError] = useState<string | null>(null);
+  const busyRef = useRef(false);
+  const root = useRef<HTMLDivElement>(null);
+  const refreshFocus = useRef<HTMLButtonElement | null>(null);
+  const configuredDirectory = useRef(state.config.decksDir);
+  const list = request.data;
+  useLayoutEffect(() => {
+    const source = refreshFocus.current;
+    if (!source) return;
+    if (source.isConnected) {
+      if (document.activeElement === source)
+        source.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+      return;
+    }
+    refreshFocus.current = null;
+    if (document.activeElement !== document.body || root.current?.closest('[hidden],[inert]'))
+      return;
+    const target = root.current?.querySelector<HTMLButtonElement>('[data-deck-refresh]');
+    target?.focus();
+    target?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  }, [list, request.pending, request.error]);
+  const feedback = (error: unknown) => {
+    const message = errorMessage(error);
+    for (const key of [
+      'DECK_DIRECTORY_CHANGED',
+      'DECK_RESTORE_CHANGED',
+      'DECK_RESTORE_EXPIRED',
+      'DECK_UNSAFE_TARGET',
+    ])
+      if (message.includes(key)) return t(key);
+    return message;
+  };
+  const refresh = () => request.load(() => api.invoke('decks.list', null), true);
   useEffect(() => {
-    refresh();
-  }, [api, state.decksRevision, state.config.decksDir]);
-  const operate = async (run: () => Promise<unknown>) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await run();
-      notify(t('success'));
-      refresh();
+    const changed = configuredDirectory.current !== state.config.decksDir;
+    configuredDirectory.current = state.config.decksDir;
+    if (changed) {
       setFront([]);
       setBack([]);
+      request.invalidate();
+      if (!busyRef.current) setBackupNames(null);
+    }
+    void refresh();
+  }, [api, state.decksRevision, state.config.decksDir]);
+  useEffect(() => {
+    if (!list) return;
+    setFront((names) => names.filter((name) => list.decks.some((file) => file.name === name)));
+    setBack((names) => names.filter((name) => list.backups.some((file) => file.name === name)));
+  }, [list]);
+  const operate = async (
+    run: () => Promise<DeckOperationResult | { name: string } | null | void | false>,
+  ) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setOperationError(null);
+    setOutcome(null);
+    try {
+      const result = await run();
+      if (result && 'completed' in result) {
+        setOutcome(result);
+        notify(
+          t(result.failed.length ? 'deckOperationPartial' : 'success'),
+          !!result.failed.length,
+        );
+      } else if (result !== false) notify(t('success'));
     } catch (e) {
-      notify(String(e), true);
+      const message = feedback(e);
+      setOperationError(message);
+      notify(message, true);
     } finally {
+      await refresh();
+      busyRef.current = false;
       setBusy(false);
     }
   };
-  const list = request.data;
+  const restore = (name: string, directory: string, alert?: DeckSwitchAlert) =>
+    void operate(async () => {
+      const plan = await api.invoke('decks.planRestore', {
+        name,
+        directory,
+        ...(alert ? { version: alert.version } : {}),
+      });
+      const detail = [
+        t('deckRestoreSource', { name: plan.name }),
+        t('deckRestoreDirectory', { directory: plan.directory }),
+        t('deckRestoreFiles'),
+        ...plan.files,
+        t('deckRestoreReplacements'),
+        ...(plan.replacements.length ? plan.replacements : [t('deckRestoreNoReplacements')]),
+        ...(plan.replacements.length ? [t('deckRestoreRecoveryHint')] : []),
+      ].join('\n');
+      if (
+        !(await confirm({
+          title: t('deploy'),
+          description: t('confirmation.deployHint'),
+          detail,
+          confirmLabel: t('deploy'),
+          variant: 'primary',
+        }))
+      )
+        return false;
+      const result: DeckRestoreResult | null = alert
+        ? await api.invoke('decks.switch', { action: 'restore', token: plan.token })
+        : await api.invoke('decks.deploy', { token: plan.token });
+      return result;
+    });
+  const startBackup = (names: string[], mode: 'selected' | 'all') => {
+    const base = 'decks-' + new Date().toISOString().slice(0, 10);
+    const existing = new Set(list?.backups.map((file) => file.name.toLowerCase()));
+    let name = base;
+    for (let suffix = 2; existing.has(name.toLowerCase() + '.zip'); suffix++)
+      name = `${base}-${suffix}`;
+    setPackageName(name);
+    setBackupMode(mode);
+    setBackupError(null);
+    setBackupDirectory(list?.decksDir ?? '');
+    setBackupNames([...names]);
+  };
+  let nameInvalid = false;
+  try {
+    if (!packageName.trim()) throw new Error('Empty backup name');
+    filename(packageName.toLowerCase().endsWith('.zip') ? packageName : packageName + '.zip');
+  } catch {
+    nameInvalid = true;
+  }
+  const nameError = nameInvalid ? t('backupNameInvalid') : backupError;
   const refreshButton = (
-    <Button disabled={request.pending || busy} aria-busy={request.pending} onClick={refresh}>
+    <Button
+      data-deck-refresh=""
+      className="scroll-m-2"
+      aria-disabled={request.pending || busy}
+      aria-busy={request.pending}
+      onBlur={() => {
+        refreshFocus.current = null;
+      }}
+      onClick={(event) => {
+        if (request.pending || busyRef.current) return;
+        refreshFocus.current = event.currentTarget;
+        void refresh();
+      }}
+    >
       <Icon icon={faArrowsRotate} size={15} spin={request.pending} aria-hidden="true" />
       {t('refresh')}
     </Button>
   );
   return (
-    <div className="decks-panel">
-      {!list?.found && <div className="deck-toolbar">{refreshButton}</div>}
-      {state.deckAlert && (
-        <Notice>
-          <span>{t('deckSwitch', { name: state.deckAlert.from })}</span>
-          <div className="actions">
-            {(['restore', 'ignore', 'dismiss'] as const).map((action) => (
-              <Button
-                key={action}
-                disabled={busy}
-                onClick={() => void operate(() => api.invoke('decks.switch', { action }))}
-              >
-                {t(action === 'dismiss' ? 'close' : action)}
-              </Button>
-            ))}
-          </div>
-        </Notice>
+    <div ref={root} className="decks-panel">
+      <div className="deck-toolbar">{refreshButton}</div>
+      {!list && (
+        <div className="deck-columns" aria-busy={request.pending}>
+          <DeckFiles
+            id="front-decks"
+            title={t('frontDecks')}
+            files={[]}
+            selected={[]}
+            onChange={setFront}
+            disabled
+            placeholder={request.pending ? 'loading' : 'unavailable'}
+          />
+          <DeckFiles
+            id="back-decks"
+            title={t('backups')}
+            files={[]}
+            selected={[]}
+            onChange={setBack}
+            disabled
+            placeholder={request.pending ? 'loading' : 'unavailable'}
+          />
+        </div>
       )}
-      {request.pending && !list && <Loading />}
-      {request.error && <Notice error>{request.error}</Notice>}
       {list && !list.found ? (
         <Card>
           <CardHeader className="sr-only">
@@ -194,30 +368,30 @@ export function DecksPanel() {
                 files={list.decks}
                 selected={front}
                 onChange={setFront}
-                actions={refreshButton}
+                disabled={busy || request.pending}
               />
               <small className="path">{list.decksDir}</small>
               <div className="actions">
                 <Button
                   disabled={busy || !front.length}
-                  onClick={() => {
-                    setPackageName('decks-' + new Date().toISOString().slice(0, 10));
-                    setBackupNames(front);
-                  }}
+                  onClick={() => startBackup(front, 'selected')}
                 >
                   <Icon icon={faLayerGroup} size={16} aria-hidden="true" />
                   {t('backupSelected')}
                 </Button>
                 <Button
                   disabled={busy || !list.decks.length}
-                  onClick={() => {
-                    setPackageName('decks-' + new Date().toISOString().slice(0, 10));
-                    setBackupNames(list.decks.map((d) => d.name));
-                  }}
+                  onClick={() =>
+                    startBackup(
+                      list.decks.map((d) => d.name),
+                      'all',
+                    )
+                  }
                 >
                   {t('backupAll')}
                 </Button>
                 <Button
+                  disabled={busy}
                   onClick={() => void operate(() => api.invoke('decks.open', { kind: 'decks' }))}
                 >
                   <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
@@ -231,12 +405,16 @@ export function DecksPanel() {
                       await confirm({
                         title: t('confirmation.deleteDecks'),
                         description: t('confirmation.deleteHint'),
-                        detail: front.join('\n'),
+                        detail: [list.decksDir, ...front].join('\n'),
                         confirmLabel: t('delete'),
                       })
                     )
                       void operate(() =>
-                        api.invoke('decks.delete', { kind: 'decks', names: front }),
+                        api.invoke('decks.delete', {
+                          kind: 'decks',
+                          names: front,
+                          directory: list.decksDir,
+                        }),
                       );
                   }}
                 >
@@ -251,29 +429,19 @@ export function DecksPanel() {
                 files={list.backups}
                 selected={back}
                 onChange={setBack}
-                actions={refreshButton}
+                disabled={busy || request.pending}
               />
               <small className="path">{list.backupsDir}</small>
               <div className="actions">
                 <Button
                   disabled={busy || back.length !== 1}
                   variant="default"
-                  onClick={async () => {
-                    if (
-                      await confirm({
-                        title: t('deploy'),
-                        description: t('confirmation.deployHint'),
-                        detail: back[0],
-                        confirmLabel: t('deploy'),
-                        variant: 'primary',
-                      })
-                    )
-                      void operate(() => api.invoke('decks.deploy', { name: back[0] || '' }));
-                  }}
+                  onClick={() => restore(back[0] || '', list.decksDir)}
                 >
                   {t('deploy')}
                 </Button>
                 <Button
+                  disabled={busy}
                   onClick={() => void operate(() => api.invoke('decks.open', { kind: 'backups' }))}
                 >
                   {t('folder')}
@@ -286,12 +454,16 @@ export function DecksPanel() {
                       await confirm({
                         title: t('confirmation.deleteBackups'),
                         description: t('confirmation.deleteHint'),
-                        detail: back.join('\n'),
+                        detail: [list.decksDir, ...back].join('\n'),
                         confirmLabel: t('delete'),
                       })
                     )
                       void operate(() =>
-                        api.invoke('decks.delete', { kind: 'backups', names: back }),
+                        api.invoke('decks.delete', {
+                          kind: 'backups',
+                          names: back,
+                          directory: list.decksDir,
+                        }),
                       );
                   }}
                 >
@@ -302,33 +474,136 @@ export function DecksPanel() {
           </div>
         )
       )}
+      {state.deckAlert && (
+        <Notice>
+          <span>{t('deckSwitch', { name: state.deckAlert.from })}</span>
+          <div className="actions">
+            {(['restore', 'ignore', 'dismiss'] as const).map((action) => (
+              <Button
+                key={action}
+                disabled={busy}
+                onClick={() =>
+                  action === 'restore'
+                    ? restore('上一局卡组包.zip', state.deckAlert!.directory, state.deckAlert!)
+                    : void operate(() => api.invoke('decks.switch', { action }))
+                }
+              >
+                {t(action === 'dismiss' ? 'close' : action)}
+              </Button>
+            ))}
+          </div>
+        </Notice>
+      )}
+      {request.error && <Notice error>{request.error}</Notice>}
+      {operationError && (
+        <Notice error>
+          <span className="min-w-0 whitespace-pre-wrap wrap-anywhere">{operationError}</span>
+        </Notice>
+      )}
+      {outcome && (
+        <Notice error={outcome.failed.length > 0}>
+          <div className="flex min-w-0 flex-1 flex-col gap-2 wrap-anywhere">
+            <p>
+              {t('deckOperationSummary', {
+                completed: outcome.completed.length,
+                failed: outcome.failed.length,
+                skipped: outcome.skipped.length,
+              })}
+            </p>
+            {outcome.completed.length > 0 && (
+              <p>
+                {t('deckCompletedFiles')} {outcome.completed.join(', ')}
+              </p>
+            )}
+            {outcome.failed.length > 0 && (
+              <ul>
+                {outcome.failed.map((failure) => (
+                  <li key={failure.name}>
+                    {failure.name}: {feedback(failure.message)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {outcome.skipped.length > 0 && (
+              <p>
+                {t('deckSkippedFiles')} {outcome.skipped.join(', ')}
+              </p>
+            )}
+            {outcome.recoveryBackup && (
+              <p>{t('deckRecoverySaved', { name: outcome.recoveryBackup })}</p>
+            )}
+          </div>
+        </Notice>
+      )}
       <Dialog
         open={backupNames !== null}
         onClose={() => setBackupNames(null)}
-        title={t('backupSelected')}
+        title={t(backupMode === 'all' ? 'backupAll' : 'backupSelected')}
+        dismissible={!busy}
       >
-        <Field id="backup-name" label={t('packageName')}>
-          <Input
-            id="backup-name"
-            value={packageName}
-            onChange={(e) => setPackageName(e.target.value)}
-            maxLength={200}
-          />
-        </Field>
+        <FieldGroup>
+          <PrimitiveField data-invalid={!!nameError} data-disabled={busy}>
+            <FieldLabel htmlFor="backup-name">{t('packageName')}</FieldLabel>
+            <Input
+              id="backup-name"
+              value={packageName}
+              onChange={(e) => {
+                setPackageName(e.target.value);
+                setBackupError(null);
+              }}
+              disabled={busy}
+              aria-invalid={!!nameError}
+              aria-describedby={nameError ? 'backup-name-error' : undefined}
+              maxLength={200}
+            />
+            {nameError && <FieldError id="backup-name-error">{nameError}</FieldError>}
+          </PrimitiveField>
+        </FieldGroup>
+        <div className="flex min-w-0 flex-col gap-2">
+          <p>{t('backupContents')}</p>
+          <ul
+            tabIndex={0}
+            aria-label={t('backupContents')}
+            className="max-h-40 overflow-y-auto whitespace-pre-wrap wrap-anywhere"
+          >
+            {backupNames?.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+        </div>
+        {busy && <p role="status">{t('backupSaving')}</p>}
         <div className="actions">
           <Button
-            disabled={busy || !packageName.trim()}
+            disabled={busy || nameInvalid}
+            aria-busy={busy}
             variant="default"
             onClick={() =>
               void operate(async () => {
-                await api.invoke('decks.backup', { names: backupNames || [], packageName });
+                setBackupError(null);
+                try {
+                  await api.invoke('decks.backup', {
+                    names: backupNames || [],
+                    packageName,
+                    directory: backupDirectory,
+                  });
+                } catch (error) {
+                  const message = errorMessage(error);
+                  const feedback = message.includes('DECK_BACKUP_EXISTS')
+                    ? t('backupNameExists')
+                    : message;
+                  setBackupError(feedback);
+                  throw new Error(feedback);
+                }
                 setBackupNames(null);
               })
             }
           >
+            {busy && <Spinner aria-hidden="true" data-icon="inline-start" />}
             {t('save')}
           </Button>
-          <Button onClick={() => setBackupNames(null)}>{t('cancel')}</Button>
+          <Button disabled={busy} onClick={() => setBackupNames(null)}>
+            {t('cancel')}
+          </Button>
         </div>
       </Dialog>
     </div>

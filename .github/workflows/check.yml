@@ -11,7 +11,7 @@ concurrency:
 jobs:
   check:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -31,6 +31,9 @@ jobs:
       - name: Run type checks
         run: pnpm typecheck
       - name: Run regression tests
+        env:
+          BA_TEST_WORKERS: '1'
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm test
       - name: Build application
         run: pnpm build

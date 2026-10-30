@@ -29,9 +29,12 @@ export interface Platform {
     status(): RecordingState;
     start(match: Match, config: PublicConfig, test?: boolean): Promise<void>;
     stop(match?: Match): Promise<void>;
+    retryAudio?(sessionId: string): Promise<void>;
     abort(): Promise<void>;
     displays(): Promise<Display[]>;
+    displayPreview(id: string): Promise<import('@ba/contracts').DisplayPreview>;
     thumbnail(id: string): Promise<string | null>;
     playback(path: string): Promise<string>;
+    releasePlayback?(url: string): void;
   };
 }

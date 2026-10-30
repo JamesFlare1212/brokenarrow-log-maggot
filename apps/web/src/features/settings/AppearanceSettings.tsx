@@ -177,6 +177,9 @@ export function AppearanceSettings({
         <h3 className="appearance-section-title" id="appearance-themes-heading">
           {t('appearanceColorScheme')}
         </h3>
+        <p className="text-sm text-muted-foreground" id="appearance-themes-hint">
+          {t('colorSchemeHint')}
+        </p>
         <div className="appearance-theme-grid">
           {COLOR_SCHEMES.map((color) => {
             const label = t('theme.' + color);
@@ -202,6 +205,7 @@ export function AppearanceSettings({
                     variant="sphere"
                     className="appearance-theme-swatches"
                     aria-label={t('appearanceThemeVariants', { theme: label })}
+                    aria-describedby="appearance-themes-hint"
                     value={activeModes}
                     onValueChange={(values) => {
                       const mode = values.find(
@@ -220,16 +224,19 @@ export function AppearanceSettings({
                         >
                           <ToggleGroupItem
                             value={mode}
-                            className="appearance-theme-swatch size-[68px] min-w-0 rounded-full p-1"
+                            className="appearance-theme-swatch h-auto w-[68px] min-w-0 flex-col gap-1 p-0"
                             aria-label={`${label} · ${t('themeMode.' + mode)}`}
                           >
-                            <ThemePreviewCircle
-                              colors={previewColorsFor(color, mode)}
-                              mode={mode}
-                            />
-                            <span className="appearance-swatch-state" aria-hidden="true">
-                              <ModeIcon />
+                            <span className="appearance-swatch-preview">
+                              <ThemePreviewCircle
+                                colors={previewColorsFor(color, mode)}
+                                mode={mode}
+                              />
+                              <span className="appearance-swatch-state" aria-hidden="true">
+                                <ModeIcon />
+                              </span>
                             </span>
+                            <span className="text-xs">{t('themeMode.' + mode)}</span>
                           </ToggleGroupItem>
                         </Tooltip>
                       );
@@ -239,13 +246,14 @@ export function AppearanceSettings({
                 <CardFooter variant="plain" className="appearance-theme-footer">
                   <Button
                     variant="ghost"
-                    className="h-auto min-w-0 justify-start p-0"
+                    className="h-auto min-w-0 flex-col items-start gap-1 p-0 text-left whitespace-normal"
                     aria-label={`${label} · ${t('selectPalettePair')}`}
                     aria-pressed={activeModes.length === 2}
                     title={t('selectPalettePair')}
                     onClick={() => pickPair(color)}
                   >
-                    {label}
+                    <span>{label}</span>
+                    <span className="text-xs text-muted-foreground">{t('selectPalettePair')}</span>
                   </Button>
                 </CardFooter>
               </Card>

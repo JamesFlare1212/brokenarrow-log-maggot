@@ -1,5 +1,5 @@
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
-import { formatMetric } from '@ba/shared';
+import { formatMetric, formatPercent } from '@ba/shared';
 import { Badge, Stats } from '../../components/ui';
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -37,7 +37,7 @@ export function ProfileOverview({
           { label: 'ELO', value: formatMetric(info?.elo ?? profile?.latestElo ?? null, 0) },
           {
             label: t(info?.fallback ? 'winRate' : 'recentWinRate'),
-            value: info?.winRate == null ? '—' : `${formatMetric(info.winRate, 0)}%`,
+            value: formatPercent(info?.winRate ?? null),
           },
           { label: t('latestKd'), value: formatMetric(info?.kd ?? null) },
           { label: t('latestDmr'), value: formatMetric(report?.dmr ?? null) },
@@ -68,9 +68,7 @@ export function ProfileOverview({
                         <li key={category.key}>
                           <div className="profile-category-label">
                             <span>{categoryLabel(category.key)}</span>
-                            <span className="tabular-nums">
-                              {category.pct == null ? '—' : `${formatMetric(category.pct, 0)}%`}
-                            </span>
+                            <span className="tabular-nums">{formatPercent(category.pct)}</span>
                           </div>
                           {category.pct != null && (
                             <Progress

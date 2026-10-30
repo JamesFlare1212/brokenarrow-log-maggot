@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from 'react';
+import { useId, type ReactNode, type Ref } from 'react';
 import { flexRender, type Table as TableModel } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ export function DataTable<T>({
   empty,
   scrollRef,
   className,
+  sortDescription,
 }: {
   table: TableModel<T>;
   label: string;
@@ -20,7 +21,9 @@ export function DataTable<T>({
   empty: ReactNode;
   scrollRef?: Ref<HTMLDivElement>;
   className?: string;
+  sortDescription?: string;
 }) {
+  const sortDescriptionId = useId();
   return (
     <div
       className={cn('table-wrap data-table-scroll', className)}
@@ -28,6 +31,11 @@ export function DataTable<T>({
       tabIndex={0}
       aria-busy={pending}
     >
+      {sortDescription && (
+        <p id={sortDescriptionId} className="sr-only">
+          {sortDescription}
+        </p>
+      )}
       <Table aria-label={label}>
         <colgroup>
           {table.getAllLeafColumns().map((column) => (
@@ -64,9 +72,20 @@ export function DataTable<T>({
                         size="sm"
                         className={cn('-mx-2', right && 'ml-auto flex')}
                         onClick={header.column.getToggleSortingHandler()}
+                        aria-describedby={
+                          direction && sortDescription ? sortDescriptionId : undefined
+                        }
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         <Icon data-icon="inline-end" aria-hidden="true" />
+                        {direction && (
+                          <span
+                            aria-hidden="true"
+                            className="inline-flex size-4 items-center justify-center rounded bg-muted text-xs tabular-nums"
+                          >
+                            {header.column.getSortIndex() + 1}
+                          </span>
+                        )}
                       </Button>
                     ) : (
                       flexRender(header.column.columnDef.header, header.getContext())

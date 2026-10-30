@@ -11,9 +11,10 @@ export function translate(
   vars: Record<string, string | number> = {},
 ): string {
   const index = { zh: 0, en: 1 }[locale];
-  let value =
+  const template =
     (messages[key] ?? taxonomy[key] ?? titleMessages[key] ?? scoreLabelMessages[key])?.[index] ??
     key;
+  let value = typeof template === 'function' ? template(vars) : template;
   for (const [name, replacement] of Object.entries(vars))
     value = value.split('{' + name + '}').join(String(replacement));
   return value;

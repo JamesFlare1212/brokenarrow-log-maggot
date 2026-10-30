@@ -47,6 +47,14 @@ async function launch(
       abort: async () => {},
       displays: async () => [],
       thumbnail: async () => null,
+      displayPreview: async (id) => ({
+        requestedId: id,
+        sourceId: null,
+        label: null,
+        selection: 'unavailable',
+        thumbnail: null,
+        displays: [],
+      }),
       playback: async () => '',
     },
   };

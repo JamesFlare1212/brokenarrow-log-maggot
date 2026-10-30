@@ -6,7 +6,12 @@ import type { Platform } from '../ports';
 import { prepareRealData } from './real-data';
 
 const methods = new Set<RpcMethod>([
+  'matches.planDelete',
+  'accounts.planDelete',
+  'history.backups',
+  'history.restore',
   'app.bootstrap',
+  'logs.refresh',
   'config.update',
   'cache.stats',
   'cache.clear',
@@ -23,12 +28,14 @@ const methods = new Set<RpcMethod>([
   'matches.delete',
   'bans.list',
   'bans.sync',
+  'bans.acknowledgeAlerts',
   'accounts.list',
   'accounts.delete',
   'decks.list',
   'replays.list',
   'replays.directory',
   'displays.list',
+  'displays.preview',
   'displays.thumbnail',
   'api.health',
 ]);
@@ -92,6 +99,14 @@ export async function createBrowserFixtures(
       abort: async () => {},
       displays: async () => [],
       thumbnail: async () => null,
+      displayPreview: async (id) => ({
+        requestedId: id,
+        sourceId: null,
+        label: null,
+        selection: 'unavailable',
+        thumbnail: null,
+        displays: [],
+      }),
       playback: async () => desktopOnly(),
     },
   };

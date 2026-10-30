@@ -13,7 +13,12 @@ import electronUpdater from 'electron-updater';
 import { join, resolve } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { Application, type Platform } from '@ba/server';
-import { rpcSchemas, windowThemeColorsSchema, type RpcMethod } from '@ba/contracts';
+import {
+  rpcSchemas,
+  windowThemeColorsSchema,
+  type RpcMethod,
+  type RecordingAudioState,
+} from '@ba/contracts';
 import { errorMessage } from '@ba/shared';
 import { RecordingController } from './recordings/controller';
 import { ReplayProtocol } from './recordings/protocol';
@@ -37,6 +42,9 @@ let window: BrowserWindow | null = null,
   replays: ReplayProtocol | null = null,
   updates: UpdateController | null = null,
   quitting = false;
+function invalidateReplaySession(): void {
+  replays?.clear();
+}
 process.on('uncaughtExceptionMonitor', (error) => service?.reportError('main', error));
 const smoke = process.env.BA_SMOKE === '1';
 const offline = process.env.BA_OFFLINE === '1';
@@ -152,10 +160,13 @@ async function start(): Promise<void> {
       status: () => nativeRecordings.status(),
       start: (match, config, test) => nativeRecordings.start(match, config, test),
       stop: (match) => nativeRecordings.stop(match),
+      retryAudio: (sessionId) => nativeRecordings.retryAudio(sessionId),
       abort: () => nativeRecordings.abort(),
       displays: () => nativeRecordings.displays(),
+      displayPreview: (id) => nativeRecordings.displayPreview(id),
       thumbnail: (id) => nativeRecordings.thumbnail(id),
-      playback: async (path) => replays?.url(path) || '',
+      playback: async (path) => replays?.lease(path) || '',
+      releasePlayback: (url) => replays?.release(url),
     },
   };
   service = new Application(
@@ -203,7 +214,12 @@ async function start(): Promise<void> {
   });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event) => event.preventDefault());
+  window.webContents.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) invalidateReplaySession();
+  });
+  window.webContents.once('destroyed', invalidateReplaySession);
   window.webContents.on('render-process-gone', (_event, details) => {
+    invalidateReplaySession();
     service?.reportError('renderer_crash', new Error());
     console.error('Renderer stopped:', details.reason);
   });
@@ -237,7 +253,13 @@ async function start(): Promise<void> {
           }
           throw new Error('Window chrome smoke dialog did not initialize');
         };
-        document.querySelector('.app-dialog .dialog-footer button')?.click();
+        const consent = document.querySelector('.consent-dialog');
+        if (consent) {
+          const decline = await waitFor(() => Array.from(consent.querySelectorAll('button'))
+            .find(button => ['不同意', 'Decline'].includes(button.textContent.trim()) &&
+              button.getAttribute('aria-disabled') !== 'true'));
+          decline.click();
+        }
         await waitFor(() => !document.querySelector('.app-dialog'));
         document.querySelector('.nav-item[aria-label="对局录像"], .nav-item[aria-label="Recordings"]').click();
         const settings = await waitFor(() => Array.from(document.querySelectorAll('button'))
@@ -352,7 +374,12 @@ ipcMain.handle('ba:rpc', async (event, method: unknown, input: unknown) => {
   if (typeof method !== 'string' || !Object.prototype.hasOwnProperty.call(rpcSchemas, method))
     throw new Error('Unknown RPC method');
   if (!service) throw new Error('Application not ready');
-  return service.invoke(method as RpcMethod, input);
+  const current = service;
+  if (method === 'replays.play') {
+    if (!replays) throw new Error('Playback is not ready');
+    return replays.withSession(() => current.invoke('replays.play', input));
+  }
+  return current.invoke(method as RpcMethod, input);
 });
 ipcMain.handle('ba:window:theme', (event, mode: unknown, input: unknown) => {
   if (!window || event.sender !== window.webContents) throw new Error('Untrusted IPC sender');
@@ -366,25 +393,37 @@ ipcMain.handle('ba:window:theme', (event, mode: unknown, input: unknown) => {
   window.setBackgroundColor(palette.color);
 });
 ipcMain.handle('ba:recording:config', (event) => recordings?.config(event.sender.id));
-ipcMain.handle('ba:recording:started', (event, id: string, audio: boolean) =>
-  recordings?.ready(event.sender.id, id, audio),
+ipcMain.handle(
+  'ba:recording:started',
+  (event, id: string, hasAudio: boolean, audio: RecordingAudioState) =>
+    recordings?.ready(event.sender.id, id, hasAudio, audio),
+);
+ipcMain.handle(
+  'ba:recording:audio',
+  (event, id: string, audio: RecordingAudioState, retryId?: string) =>
+    recordings?.audio(event.sender.id, id, audio, retryId),
 );
 ipcMain.handle('ba:recording:chunk', (event, id: string, sequence: number, data: ArrayBuffer) =>
   recordings?.chunk(event.sender.id, id, sequence, data),
 );
-ipcMain.handle('ba:recording:finish', (event, id: string, duration: number, audio: boolean) =>
-  recordings?.finish(event.sender.id, id, duration, audio),
+ipcMain.handle(
+  'ba:recording:finish',
+  (event, id: string, duration: number, hasAudio: boolean, audio: RecordingAudioState) =>
+    recordings?.finish(event.sender.id, id, duration, hasAudio, audio),
 );
 ipcMain.handle('ba:recording:failure', (event, id: string, error: string) =>
   recordings?.failure(event.sender.id, id, error),
 );
-ipcMain.on('ba:recording:preview', (event, id: string, dataUrl: string, audio: boolean) => {
-  try {
-    recordings?.preview(event.sender.id, id, dataUrl, audio);
-  } catch {
-    /* Discard previews from a destroyed recording session. */
-  }
-});
+ipcMain.on(
+  'ba:recording:preview',
+  (event, id: string, dataUrl: string, hasAudio: boolean, audio: RecordingAudioState) => {
+    try {
+      recordings?.preview(event.sender.id, id, dataUrl, hasAudio, audio);
+    } catch {
+      /* Discard previews from a destroyed recording session. */
+    }
+  },
+);
 async function shutdown(): Promise<void> {
   if (quitting) return;
   quitting = true;

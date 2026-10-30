@@ -4,6 +4,7 @@ import type { Bridge } from '@ba/contracts';
 import { App } from './app/App';
 import { AppProvider } from './app/state';
 import { attachRendererDiagnostics, reportRendererError } from './app/diagnostics';
+import { StartupBridgeError } from './components/StartupBridgeError';
 import './styles/index.css';
 
 declare global {
@@ -29,13 +30,10 @@ const root = createRoot(
       }
     : undefined,
 );
-if (!native && !fixtures)
-  root.render(
-    <div className="startup-error">
-      请通过桌面应用启动 / Open the desktop application to access local game data.
-    </div>,
-  );
-else {
+if (!native && !fixtures) {
+  const locale = navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  root.render(<StartupBridgeError locale={locale} />);
+} else {
   const render = (api: Bridge) =>
     root.render(
       <StrictMode>

@@ -5,6 +5,8 @@ export interface CacheUsage {
 }
 
 export interface CacheStats {
+  at: number;
+  nextExpiryAt: number | null;
   api: CacheUsage;
   snapshots: CacheUsage;
 }

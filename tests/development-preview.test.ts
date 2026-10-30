@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppEvent, Bridge, RpcInputs, RpcMethod, RpcOutputs } from '@ba/contracts';
 import { fixtureBootstrap, capturedMatches } from './fixtures/ui';
+import { createDevelopmentData } from '../apps/web/src/dev/data';
 import {
   createDevelopmentRuntime,
   developmentLobbyPlayerCounts,
@@ -31,6 +32,25 @@ afterEach(() => {
 });
 
 describe('browser development scenes', () => {
+  it('acknowledges a demo inbox without mutating the captured bridge', async () => {
+    const captured = structuredClone(fixtureBootstrap);
+    captured.banAlerts = [{ id: 'real-batch', createdAt: 1, players: [] }];
+    expect(createDevelopmentData(captured, false, 1).bootstrap.banAlerts).toEqual([]);
+    expect(captured.banAlerts).toHaveLength(1);
+    const { runtime, calls } = setup();
+    await runtime.controls.setMode('demo');
+    const before = calls.length;
+    const events: AppEvent[] = [];
+    const unsubscribe = runtime.api.subscribe((event) => events.push(event));
+    expect(
+      await runtime.api.invoke('bans.acknowledgeAlerts', { ids: ['unknown-demo-batch'] }),
+    ).toBeNull();
+    expect(events.at(-1)).toMatchObject({ type: 'banAlerts', alerts: [] });
+    expect((await runtime.api.invoke('logs.refresh', null)).checkedAt).toBe(1_800_000_000_000);
+    expect(events.at(-1)?.type).toBe('watcher');
+    expect(calls).toHaveLength(before);
+    unsubscribe();
+  });
   it.each(developmentLobbyPlayerCounts)(
     'simulates a %i-player pre-match party with matching teammate queries and roster events',
     async (count) => {
@@ -208,7 +228,7 @@ describe('browser development scenes', () => {
     expect(bootstrap.session.lobbyPlayers).toEqual([]);
     expect(bootstrap.config.analyticsEnabled).toBe(false);
     expect(await api.invoke('matches.list', {})).toEqual([]);
-    expect(await api.invoke('replays.list', null)).toEqual([]);
+    expect((await api.invoke('replays.list', null)).recordings).toEqual([]);
     expect(await api.invoke('accounts.list', null)).toEqual([]);
     const match = await api.invoke('matches.add', { fid: '9900007' });
     expect(match.fid).toBe('9900007');
@@ -226,7 +246,7 @@ describe('browser development scenes', () => {
       events: AppEvent[] = [];
     const unsubscribe = api.subscribe((event) => events.push(event));
     expect(await api.invoke('matches.list', {})).toHaveLength(72);
-    expect(await api.invoke('replays.list', null)).toHaveLength(6);
+    expect((await api.invoke('replays.list', null)).recordings).toHaveLength(6);
     runtime.controls.setRecording('recording');
     vi.advanceTimersByTime(2000);
     const bootstrap = await api.invoke('app.bootstrap', null);
@@ -236,7 +256,7 @@ describe('browser development scenes', () => {
       [...events.map((event) => event.revision)].sort((a, b) => a - b),
     );
     runtime.controls.setRecording('idle');
-    expect(await api.invoke('replays.list', null)).toHaveLength(7);
+    expect((await api.invoke('replays.list', null)).recordings).toHaveLength(7);
     expect(calls).toEqual(['app.bootstrap']);
     unsubscribe();
   });
@@ -246,15 +266,19 @@ describe('browser development scenes', () => {
     await runtime.controls.setMode('demo');
     const api = runtime.api,
       replays = await api.invoke('replays.list', null);
-    expect(await api.invoke('replays.play', { name: replays[0]!.id })).toEqual({
+    expect(await api.invoke('replays.play', { name: replays.recordings[0]!.id })).toEqual({
       url: 'blob:development-preview',
     });
-    await api.invoke('replays.play', { name: replays[1]!.id });
+    await api.invoke('replays.play', { name: replays.recordings[1]!.id });
     expect(createVideo).toHaveBeenCalledTimes(1);
-    await api.invoke('replays.delete', { name: replays[0]!.id });
-    expect(await api.invoke('replays.list', null)).toHaveLength(5);
+    const plan = await api.invoke('replays.planDelete', {
+      directory: replays.directory,
+      names: [replays.recordings[0]!.id],
+    });
+    await api.invoke('replays.delete', { token: plan.token });
+    expect((await api.invoke('replays.list', null)).recordings).toHaveLength(5);
     await runtime.controls.setMode('demo');
-    expect(await runtime.api.invoke('replays.list', null)).toHaveLength(6);
+    expect((await runtime.api.invoke('replays.list', null)).recordings).toHaveLength(6);
     expect(calls).toEqual(['app.bootstrap', 'app.bootstrap']);
   });
 

@@ -34,4 +34,7 @@ if (typeof window !== 'undefined') {
   HTMLElement.prototype.setPointerCapture ??= () => {};
   HTMLElement.prototype.releasePointerCapture ??= () => {};
   HTMLElement.prototype.scrollIntoView ??= () => {};
+  // Media decoding and playback are verified in Electron; jsdom only models DOM events.
+  HTMLMediaElement.prototype.pause = () => {};
+  HTMLMediaElement.prototype.load = () => {};
 }

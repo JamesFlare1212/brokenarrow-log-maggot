@@ -27,20 +27,20 @@ import {
   Plug as faPlug,
   Users as faUsers,
   ArrowLeft as faArrowLeft,
-  Check as faCheck,
   LoaderCircle as faSpinner,
   Video as faVideo,
   Database as faDatabase,
   RefreshCw as faArrowsRotate,
   Search as faMagnifyingGlass,
-  Activity as faWaveSquare,
   ShieldCheck as faShieldHalved,
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import { BrandLogo } from '../../components/BrandLogo';
-import type { Account, PublicConfig } from '@ba/contracts';
+import type { Account, DeckList, PublicConfig } from '@ba/contracts';
 import { useApp } from '../../app/state';
-import { useConfirmation } from '../../components/Confirmation';
+import { useHistoryDeletion } from '../history/useHistoryDeletion';
+import { HistoryOperationResult } from '../history/HistoryOperationResult';
+import { useRequest } from '../../hooks/useRequest';
 import { useI18n } from '../../hooks/useI18n';
 import { Button, Dialog, Field, Toggle, Notice, Empty } from '../../components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -58,7 +58,9 @@ import { AppearanceSettings } from './AppearanceSettings';
 import { CacheSettings } from './CacheSettings';
 import { UpdateButton } from './UpdateButton';
 import { RecordingSettings } from '../replays/RecordingSettings';
-import type { SettingsSaveStatus } from '../../hooks/useSettingsAutosave';
+import { SettingsSaveIndicator } from './SettingsSaveIndicator';
+import { LogMonitoringIndicator } from '../../components/LogMonitoringIndicator';
+import { HealthCheckPanel } from '../../components/HealthCheckPanel';
 
 const tabs = [
   { id: 'general', label: 'generalSettings', icon: faSliders },
@@ -77,26 +79,99 @@ const flags = [
   ['multiAccountBond', 'multiAccount', faUsers],
 ] as const;
 
+interface DirectoryRequest {
+  action: 'detect' | 'select';
+  isCurrent: () => boolean;
+}
+
 export function SettingsPage() {
-  const confirm = useConfirmation();
-  const { api, state, settings, settingsTab: tab, openSettings, closeSettings, notify } = useApp(),
+  const deletion = useHistoryDeletion();
+  const accountRequest = useRequest<Account[]>();
+  const accounts = accountRequest.data ?? [],
+    accountsLoading = accountRequest.data === null && !accountRequest.error;
+  const {
+      api,
+      state,
+      settings,
+      monitoring,
+      flushSettings: flush,
+      flushPendingSettings,
+      discardSettings,
+      settingsTab: tab,
+      openSettings,
+      closeSettings,
+      openModal,
+      healthCheck,
+    } = useApp(),
     { t } = useI18n(),
-    [accounts, setAccounts] = useState<Account[]>([]),
-    [accountsLoading, setAccountsLoading] = useState(true),
     [returning, setReturning] = useState(false),
     [confirmLeaving, setConfirmLeaving] = useState(false),
-    [healthPending, setHealthPending] = useState(false),
-    [healthError, setHealthError] = useState<string | null>(null),
-    [recordingStatus, setRecordingStatus] = useState<SettingsSaveStatus>('saved'),
-    [detecting, setDetecting] = useState(false),
-    [defaultDecksDir, setDefaultDecksDir] = useState(''),
-    [logFeedback, setLogFeedback] = useState<{ key: string; error: boolean } | null>(null),
+    [defaultDecks, setDefaultDecks] = useState<Pick<DeckList, 'found' | 'decksDir'> | null>(null),
+    [defaultDecksError, setDefaultDecksError] = useState(false),
+    [, renderDirectoryRequest] = useState(0),
+    [logFeedback, setLogFeedback] = useState<{
+      key: string;
+      error: boolean;
+      path?: string;
+      isCurrent: () => boolean;
+    } | null>(null),
     [error, setError] = useState<string | null>(null);
-  const logRevision = useRef(0),
-    logRequest = useRef(0),
-    healthRunning = useRef(false);
+  const mounted = useRef(true),
+    directoryRequests = useRef<Partial<Record<'logs' | 'decks', DirectoryRequest>>>({});
+  const accountRefresh = useRef<HTMLButtonElement>(null);
+  const reloadAccounts = () => accountRequest.load(() => api.invoke('accounts.list', null), true);
+  const retryAccounts = () => {
+    if (accountRequest.pending || deletion.busy) return;
+    accountRefresh.current?.focus({ preventScroll: true });
+    accountRefresh.current?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior: 'instant',
+    });
+    void reloadAccounts();
+  };
   const draft = settings.draft ?? state.config;
+  const confirmed = settings.confirmed ?? state.config;
+  const directoryPending = (kind: 'logs' | 'decks', action: DirectoryRequest['action']) => {
+    const request = directoryRequests.current[kind];
+    return request?.action === action && request.isCurrent();
+  };
+  const detecting = directoryPending('logs', 'detect');
+  const panelLabel = (panel: PublicConfig['panelOrder'][number]) =>
+    t(panel === 'current' ? 'overview' : panel);
+  const monitoredKey =
+    monitoring.pending ||
+    state.watcher.recovering ||
+    state.watcher.checking ||
+    state.watcher.dir !== logFeedback?.path
+      ? 'logDetectMonitoringChecking'
+      : state.watcher.error || monitoring.error
+        ? 'logDetectMonitoringFailed'
+        : !state.watcher.file
+          ? 'logDetectWaiting'
+          : state.watcher.live === false
+            ? 'logDetectMonitoringStale'
+            : 'logDetectMonitoringReady';
+  const displayedLogFeedback = !logFeedback?.isCurrent()
+    ? null
+    : !logFeedback.path
+      ? logFeedback
+      : logFeedback.path !== draft.logDir
+        ? null
+        : logFeedback.path !== confirmed.logDir
+          ? {
+              key:
+                settings.status === 'unconfirmed'
+                  ? 'settingsSaveUnconfirmed'
+                  : settings.status === 'error'
+                    ? 'logDetectSaveFailed'
+                    : 'logDetectFound',
+              error: settings.status === 'error' || settings.status === 'unconfirmed',
+            }
+          : { key: monitoredKey, error: monitoredKey === 'logDetectMonitoringFailed', saved: true };
   const orderList = useRef<HTMLOListElement>(null),
+    orderFocus = useRef<HTMLButtonElement | null>(null),
+    orderFocusGeneration = useRef(0),
     orderPositions = useRef(new Map<string, number>()),
     orderAnimations = useRef<Animation[]>([]);
   useLayoutEffect(() => {
@@ -126,13 +201,34 @@ export function SettingsPage() {
       );
   }, [draft.panelOrder]);
   useEffect(() => () => orderAnimations.current.forEach((animation) => animation.cancel()), []);
+  useLayoutEffect(() => {
+    const source = orderFocus.current;
+    orderFocus.current = null;
+    if (!source?.isConnected || source.closest('[hidden],[inert]')) return;
+    if (document.activeElement !== document.body && document.activeElement !== source) return;
+    const generation = orderFocusGeneration.current;
+    source.focus({ preventScroll: true });
+    source.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    void Promise.all(
+      orderAnimations.current.map((animation) => animation.finished.catch(() => {})),
+    ).then(() => {
+      const active = document.activeElement;
+      if (
+        generation === orderFocusGeneration.current &&
+        active instanceof HTMLElement &&
+        orderList.current?.contains(active)
+      )
+        active.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    });
+  }, [draft.panelOrder]);
   const collapsed = draft.sidebarCollapsed;
-  const flush = settings.flush;
-  const saveStatus = tab === 'recording' ? recordingStatus : settings.status;
   const sidebar = useSidebar();
   const setTab: typeof openSettings = (value) => {
     openSettings(value);
-    sidebar.setOpenMobile(false);
+  };
+  const selectTab: typeof openSettings = (value) => {
+    setTab(value);
+    if (sidebar.isMobile) sidebar.closeMobileForNavigation('settings-panel-' + value);
   };
   const back = async () => {
     setReturning(true);
@@ -144,95 +240,117 @@ export function SettingsPage() {
   };
   const discardAndReturn = async () => {
     setReturning(true);
-    await settings.discard();
+    await discardSettings();
     setConfirmLeaving(false);
     closeSettings();
   };
-  const checkHealth = async () => {
-    if (healthRunning.current) return;
-    healthRunning.current = true;
-    setHealthPending(true);
-    setHealthError(null);
-    try {
-      await api.invoke('api.health', { force: true });
-      notify(t('success'));
-    } catch (error) {
-      setHealthError(String(error));
-    } finally {
-      healthRunning.current = false;
-      setHealthPending(false);
-    }
-  };
   useEffect(() => {
+    mounted.current = true;
     document.getElementById('settings-content')?.focus({ preventScroll: true });
     return () => {
-      logRequest.current++;
-      void flush();
+      mounted.current = false;
+      directoryRequests.current = {};
+      void flushPendingSettings();
     };
-  }, [flush]);
+  }, [flushPendingSettings]);
   useEffect(() => {
-    let active = true;
-    void api
-      .invoke('accounts.list', null)
-      .then((value) => {
-        if (active) setAccounts(value);
-      })
-      .catch((e) => {
-        if (active) setError(String(e));
-      })
-      .finally(() => {
-        if (active) setAccountsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [api]);
+    if (state.accountsSnapshot) {
+      accountRequest.invalidate();
+      accountRequest.setData(state.accountsSnapshot);
+      return;
+    }
+    void accountRequest.load(() => api.invoke('accounts.list', null), true);
+  }, [api, state.matchesRevision, state.accountsRevision]);
   useEffect(() => {
-    if (tab !== 'connection' || state.config.decksDir) return;
+    if (tab !== 'connection' || draft.decksDir) return;
     let active = true;
+    setDefaultDecks(null);
+    setDefaultDecksError(false);
+    if (confirmed.decksDir) return;
     void api
       .invoke('decks.list', null)
       .then((result) => {
-        if (active) setDefaultDecksDir(result.decksDir);
+        if (active) setDefaultDecks({ found: result.found, decksDir: result.decksDir });
       })
-      .catch((e) => {
-        if (active) setError(String(e));
+      .catch(() => {
+        if (active) setDefaultDecksError(true);
       });
     return () => {
       active = false;
     };
-  }, [api, tab, state.config.decksDir]);
+  }, [api, tab, draft.decksDir, confirmed.decksDir]);
   const set = <K extends keyof PublicConfig>(key: K, value: PublicConfig[K], delay = 0) => {
     if (key === 'logDir') {
-      logRevision.current++;
       setLogFeedback(null);
     }
     settings.change({ [key]: value }, delay);
   };
+  const beginDirectoryRequest = (kind: 'logs' | 'decks', action: DirectoryRequest['action']) => {
+    if (directoryPending(kind, action)) return null;
+    const unchanged = settings.capture(kind === 'logs' ? 'logDir' : 'decksDir');
+    const request: DirectoryRequest = {
+      action,
+      isCurrent: () =>
+        mounted.current && directoryRequests.current[kind] === request && unchanged(),
+    };
+    directoryRequests.current[kind] = request;
+    renderDirectoryRequest((value) => value + 1);
+    return request;
+  };
+  const finishDirectoryRequest = (kind: 'logs' | 'decks', request: DirectoryRequest) => {
+    if (directoryRequests.current[kind] !== request) return;
+    delete directoryRequests.current[kind];
+    if (mounted.current) renderDirectoryRequest((value) => value + 1);
+  };
+  const foundLogDirectory = (path: string) => {
+    set('logDir', path);
+    setLogFeedback({
+      key: 'logDetectFound',
+      error: false,
+      path,
+      isCurrent: settings.capture('logDir'),
+    });
+  };
   const detect = async () => {
-    const request = ++logRequest.current,
-      revision = logRevision.current;
-    setDetecting(true);
+    const request = beginDirectoryRequest('logs', 'detect');
+    if (!request) return;
     setLogFeedback(null);
     try {
       const dir = await api.invoke('directory.detect', null);
-      if (request !== logRequest.current || revision !== logRevision.current) return;
-      if (dir) set('logDir', dir);
-      setLogFeedback({ key: dir ? 'logDetectFound' : 'logDetectNotFound', error: !dir });
+      if (!request.isCurrent()) return;
+      if (dir) {
+        if (dir === confirmed.logDir && dir === draft.logDir) {
+          await monitoring.refresh();
+          if (!request.isCurrent()) return;
+        }
+        foundLogDirectory(dir);
+      } else {
+        setLogFeedback({
+          key: 'logDetectNotFound',
+          error: true,
+          isCurrent: settings.capture('logDir'),
+        });
+      }
     } catch {
-      if (request === logRequest.current && revision === logRevision.current)
-        setLogFeedback({ key: 'logDetectFailed', error: true });
+      if (request.isCurrent())
+        setLogFeedback({
+          key: 'logDetectFailed',
+          error: true,
+          isCurrent: settings.capture('logDir'),
+        });
     } finally {
-      if (request === logRequest.current) setDetecting(false);
+      finishDirectoryRequest('logs', request);
     }
   };
-  const move = (index: number, direction: number) => {
+  const move = (index: number, direction: number, source: HTMLButtonElement) => {
     const order = [...draft.panelOrder],
       other = index + direction;
     if (other < 0 || other >= order.length) return;
     const first = order[index],
       second = order[other];
     if (first && second) {
+      orderFocus.current = source;
+      orderFocusGeneration.current++;
       orderPositions.current = new Map(
         Array.from(orderList.current?.children ?? [], (child) => [
           (child as HTMLElement).dataset.panel!,
@@ -245,12 +363,21 @@ export function SettingsPage() {
     }
   };
   const choose = async (kind: 'logs' | 'decks') => {
+    const request = beginDirectoryRequest(kind, 'select');
+    if (!request) return;
     setError(null);
+    if (kind === 'logs') setLogFeedback(null);
     try {
       const dir = await api.invoke('directory.select', { kind });
-      if (dir) set(kind === 'logs' ? 'logDir' : 'decksDir', dir);
+      if (!request.isCurrent()) return;
+      if (dir) {
+        if (kind === 'logs') foundLogDirectory(dir);
+        else set('decksDir', dir);
+      }
     } catch (e) {
-      setError(String(e));
+      if (request.isCurrent()) setError(String(e));
+    } finally {
+      finishDirectoryRequest(kind, request);
     }
   };
   const currentTab = tabs.find((item) => item.id === tab)!;
@@ -274,9 +401,13 @@ export function SettingsPage() {
         <TabsList variant="navigation" className="settings-tabs" aria-label={t('settings')}>
           {tabs.map(({ id, label, icon: TabIcon }) => (
             <TabsTrigger
+              className="scroll-m-1"
               value={id}
               key={id}
-              onClick={() => setTab(id)}
+              onClick={() => selectTab(id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') selectTab(id);
+              }}
               id={'settings-tab-' + id}
               aria-controls={'settings-panel-' + id}
               aria-label={t(label)}
@@ -336,28 +467,14 @@ export function SettingsPage() {
             </span>
             <h2 className="truncate">{t(currentTab.label)}</h2>
           </div>
-          <div className="settings-save-state" role="status" aria-live="polite">
-            {saveStatus === 'saved' ? (
-              <Icon icon={faCheck} size={14} aria-hidden="true" />
-            ) : saveStatus !== 'error' ? (
-              <Icon icon={faSpinner} size={14} spin aria-hidden="true" />
-            ) : null}
-            {t(
-              saveStatus === 'saved'
-                ? 'settingsAutoSaved'
-                : saveStatus === 'error'
-                  ? 'settingsSaveFailed'
-                  : 'settingsSaving',
-            )}
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
+            <LogMonitoringIndicator />
+            <SettingsSaveIndicator responsive />
           </div>
         </PageToolbar>
-        {(settings.error || error) && (
+        {error && (
           <div className="settings-errors">
-            <Notice error>{settings.error ?? error}</Notice>
-            {settings.error && <Button onClick={() => void flush()}>{t('settingsRetry')}</Button>}
-            {settings.error && (
-              <Button onClick={() => void settings.discard()}>{t('settingsDiscard')}</Button>
-            )}
+            <Notice error>{error}</Notice>
           </div>
         )}
         {tabs.map(({ id }) => (
@@ -432,55 +549,118 @@ export function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <FieldGroup>
-                      <Field id="settings-log" label={t('logDirectory')}>
+                      <Field
+                        id="settings-log"
+                        label={t('logDirectory')}
+                        hint={t('logMonitoringSourceChangeHint')}
+                      >
                         <InputGroup>
                           <InputGroupInput
                             id="settings-log"
                             value={draft.logDir}
                             onChange={(e) => set('logDir', e.target.value, 500)}
-                            onBlur={() => void flush()}
-                            aria-describedby={logFeedback ? 'settings-log-feedback' : undefined}
+                            onBlur={() => void settings.flushPending()}
+                            aria-describedby={
+                              displayedLogFeedback ? 'settings-log-feedback' : undefined
+                            }
                           />
                           <InputGroupAddon align="inline-end">
-                            <InputGroupButton onClick={() => void choose('logs')}>
+                            <InputGroupButton
+                              aria-disabled={directoryPending('logs', 'select')}
+                              aria-busy={directoryPending('logs', 'select')}
+                              onClick={() => void choose('logs')}
+                            >
                               <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                               {t('select')}
                             </InputGroupButton>
                             <InputGroupButton
-                              disabled={detecting}
+                              aria-disabled={detecting}
                               aria-busy={detecting}
+                              aria-label={t('detect')}
                               onClick={() => void detect()}
                             >
-                              {t(detecting ? 'detectingLogs' : 'detect')}
+                              {detecting && (
+                                <Icon
+                                  icon={faSpinner}
+                                  className="animate-spin"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              {t('detect')}
+                              {detecting && (
+                                <span className="sr-only" role="status">
+                                  {t('detectingLogs')}
+                                </span>
+                              )}
                             </InputGroupButton>
                           </InputGroupAddon>
                         </InputGroup>
-                        {logFeedback && (
+                        {displayedLogFeedback && (
                           <div id="settings-log-feedback">
-                            <Notice error={logFeedback.error}>
-                              <span role={logFeedback.error ? undefined : 'status'}>
-                                {t(logFeedback.key)}
+                            <Notice error={displayedLogFeedback.error}>
+                              <span role={displayedLogFeedback.error ? undefined : 'status'}>
+                                {'saved' in displayedLogFeedback && (
+                                  <span>{t('logDirectorySaved')} </span>
+                                )}
+                                <span>{t(displayedLogFeedback.key)}</span>
                               </span>
                             </Notice>
                           </div>
                         )}
                       </Field>
-                      <Field id="settings-decks" label={t('decksDirectory')}>
+                      <Field
+                        id="settings-decks"
+                        label={t('decksDirectory')}
+                        hint={t('decksAutomaticHint')}
+                      >
                         <InputGroup>
                           <InputGroupInput
                             id="settings-decks"
-                            value={draft.decksDir || defaultDecksDir}
+                            value={draft.decksDir}
                             onChange={(e) => set('decksDir', e.target.value, 500)}
-                            onBlur={() => void flush()}
+                            onBlur={() => void settings.flushPending()}
                             placeholder={t('defaultDirectory')}
+                            aria-describedby={
+                              !draft.decksDir ? 'settings-decks-feedback' : undefined
+                            }
                           />
                           <InputGroupAddon align="inline-end">
-                            <InputGroupButton onClick={() => void choose('decks')}>
+                            <InputGroupButton
+                              aria-disabled={directoryPending('decks', 'select')}
+                              aria-busy={directoryPending('decks', 'select')}
+                              onClick={() => void choose('decks')}
+                            >
                               <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                               {t('select')}
                             </InputGroupButton>
                           </InputGroupAddon>
                         </InputGroup>
+                        {!draft.decksDir && (
+                          <FieldDescription
+                            id="settings-decks-feedback"
+                            role="status"
+                            className={
+                              defaultDecksError || defaultDecks?.found === false
+                                ? 'text-destructive'
+                                : undefined
+                            }
+                          >
+                            <span>
+                              {t(
+                                defaultDecksError
+                                  ? 'decksAutomaticFailed'
+                                  : !defaultDecks
+                                    ? 'decksAutomaticChecking'
+                                    : defaultDecks.found
+                                      ? 'decksAutomaticFound'
+                                      : 'decksAutomaticMissing',
+                              )}
+                            </span>
+                            {defaultDecks?.decksDir && (
+                              <span className="block break-all">{defaultDecks.decksDir}</span>
+                            )}
+                          </FieldDescription>
+                        )}
                       </Field>
                     </FieldGroup>
                   </CardContent>
@@ -491,27 +671,7 @@ export function SettingsPage() {
                     <CardDescription>{t('healthHint')}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col gap-4">
-                    <div className="settings-health-summary">
-                      <span className="settings-feature-icon" aria-hidden="true">
-                        <Icon icon={faWaveSquare} size={18} />
-                      </span>
-                      <div className="settings-health-copy">
-                        <div
-                          className="settings-health-feedback"
-                          role={healthError ? 'alert' : 'status'}
-                        >
-                          {healthError || (healthPending ? t('loading') : '')}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      disabled={healthPending}
-                      aria-busy={healthPending}
-                      onClick={() => void checkHealth()}
-                    >
-                      <Icon icon={faWaveSquare} size={16} spin={healthPending} aria-hidden="true" />
-                      {t('healthCheck')}
-                    </Button>
+                    <HealthCheckPanel request={healthCheck} collapsible />
                   </CardContent>
                 </Card>
               </>
@@ -547,7 +707,7 @@ export function SettingsPage() {
               </section>
             )}
             {id === 'recording' && tab === id && (
-              <RecordingSettings inline onStatusChange={setRecordingStatus} />
+              <RecordingSettings inline showSaveStatus={false} />
             )}
             {id === 'navigation' && (
               <section
@@ -572,7 +732,7 @@ export function SettingsPage() {
                               <ItemTitle>
                                 <span className="panel-order-label">
                                   <small>{String(index + 1).padStart(2, '0')}</small>
-                                  {t(panel)}
+                                  {panelLabel(panel)}
                                 </span>
                               </ItemTitle>
                             </ItemContent>
@@ -580,7 +740,7 @@ export function SettingsPage() {
                               <div className="panel-order-actions">
                                 <Switch
                                   id={`navigation-visible-${panel}`}
-                                  aria-label={t('showInNavigation') + ' ' + t(panel)}
+                                  aria-label={t('showInNavigation') + ' ' + panelLabel(panel)}
                                   checked={!draft.hiddenPanels.includes(panel)}
                                   onCheckedChange={(visible) =>
                                     set(
@@ -594,18 +754,20 @@ export function SettingsPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon-sm"
-                                  disabled={index === 0}
-                                  aria-label={t('moveUp') + ' ' + t(panel)}
-                                  onClick={() => move(index, -1)}
+                                  className="scroll-m-1"
+                                  aria-disabled={index === 0}
+                                  aria-label={t('moveUp') + ' ' + panelLabel(panel)}
+                                  onClick={(event) => move(index, -1, event.currentTarget)}
                                 >
                                   <Icon icon={faArrowUp} size={16} />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon-sm"
-                                  disabled={index === draft.panelOrder.length - 1}
-                                  aria-label={t('moveDown') + ' ' + t(panel)}
-                                  onClick={() => move(index, 1)}
+                                  className="scroll-m-1"
+                                  aria-disabled={index === draft.panelOrder.length - 1}
+                                  aria-label={t('moveDown') + ' ' + panelLabel(panel)}
+                                  onClick={(event) => move(index, 1, event.currentTarget)}
                                 >
                                   <Icon icon={faArrowDown} size={16} />
                                 </Button>
@@ -625,12 +787,46 @@ export function SettingsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>{t('recognizedAccounts')}</CardTitle>
-                    <CardDescription>{t('settingsHint.accounts')}</CardDescription>
+                    <CardDescription>
+                      {t('settingsHint.accounts')} {t('accountsRediscoveryHint')}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
+                    <div className="actions">
+                      <Button
+                        ref={accountRefresh}
+                        id="accounts-refresh"
+                        aria-disabled={accountRequest.pending || deletion.busy}
+                        aria-busy={accountRequest.pending}
+                        onClick={retryAccounts}
+                      >
+                        {t('refresh')}
+                      </Button>
+                      <Button onClick={() => openModal({ type: 'historyRecovery' })}>
+                        {t('historyRecovery')}
+                      </Button>
+                    </div>
+                    {accountRequest.error && (
+                      <Notice error>
+                        <div className="flex min-w-0 flex-1 flex-col gap-2 wrap-anywhere">
+                          <p>{accountRequest.error}</p>
+                          {accountRequest.data !== null && <p>{t('listReadRetained')}</p>}
+                        </div>
+                        <Button
+                          aria-disabled={accountRequest.pending || deletion.busy}
+                          onClick={retryAccounts}
+                        >
+                          {t('retry')}
+                        </Button>
+                      </Notice>
+                    )}
+                    {deletion.error && <Notice error>{deletion.error}</Notice>}
+                    <HistoryOperationResult result={deletion.result} />
                     {accountsLoading ? (
                       <p role="status">{t('loading')}</p>
-                    ) : accounts.length === 0 ? (
+                    ) : accountRequest.data !== null &&
+                      accounts.length === 0 &&
+                      !accountRequest.error ? (
                       <Empty
                         icon={<Icon icon={faUsers} size={26} aria-hidden="true" />}
                         description={t('accountsEmptyHint')}
@@ -640,31 +836,40 @@ export function SettingsPage() {
                     ) : (
                       <div className="account-list">
                         {accounts.map((account) => (
-                          <Item variant="outline" key={account.id}>
+                          <Item
+                            variant="outline"
+                            className="min-w-0 flex-nowrap"
+                            data-account-id={account.id}
+                            key={account.id}
+                          >
                             <ItemContent>
-                              <ItemTitle>{account.name}</ItemTitle>
-                              <p className="muted">
+                              <ItemTitle className="block w-full min-w-0 line-clamp-none wrap-anywhere">
+                                {account.name}
+                              </ItemTitle>
+                              <p className="muted wrap-anywhere">
                                 #{account.id} · {t('accountMatches', { count: account.matchCount })}
                               </p>
                             </ItemContent>
                             <ItemActions>
                               <Button
                                 variant="destructive"
+                                aria-label={t('deleteAccountAction', {
+                                  name: account.name,
+                                  id: account.id,
+                                })}
+                                disabled={deletion.busy || accountRequest.pending}
                                 onClick={async () => {
-                                  if (
-                                    !(await confirm({
-                                      title: t('confirmation.deleteAccount'),
-                                      description: t('confirmation.deleteAccountHint'),
-                                      detail: `${account.name} · #${account.id}`,
-                                      confirmLabel: t('delete'),
-                                    }))
-                                  )
-                                    return;
-                                  void api
-                                    .invoke('accounts.delete', { id: account.id })
-                                    .then(() => api.invoke('accounts.list', null))
-                                    .then(setAccounts)
-                                    .catch((e) => setError(String(e)));
+                                  const result = await deletion.run('account', account.id);
+                                  if (result === undefined) return;
+                                  if (result)
+                                    accountRequest.setData(
+                                      (list) =>
+                                        list?.filter((item) => item.id !== account.id) ?? null,
+                                    );
+                                  await accountRequest.load(
+                                    () => api.invoke('accounts.list', null),
+                                    true,
+                                  );
                                 }}
                               >
                                 {t('delete')}

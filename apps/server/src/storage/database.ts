@@ -1,12 +1,14 @@
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type {
   Account,
   CacheClearMode,
   CacheStats,
   CacheUsage,
   Ban,
+  BanAlertBatch,
   Encounter,
   Match,
   MiniInfo,
@@ -47,6 +49,9 @@ export class Database {
       CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS app_state(key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS players(id TEXT PRIMARY KEY,name TEXT NOT NULL,first_seen INTEGER,last_seen INTEGER,observed INTEGER NOT NULL DEFAULT 0) STRICT;
+      CREATE TABLE IF NOT EXISTS game_observations(player_id TEXT PRIMARY KEY REFERENCES players(id),first_seen INTEGER NOT NULL,last_seen INTEGER NOT NULL) STRICT;
+      CREATE TABLE IF NOT EXISTS search_players(player_id TEXT PRIMARY KEY,name TEXT NOT NULL,first_searched_at INTEGER NOT NULL,last_searched_at INTEGER NOT NULL,payload TEXT NOT NULL) STRICT;
+      CREATE TABLE IF NOT EXISTS search_names(player_id TEXT NOT NULL REFERENCES search_players(player_id) ON DELETE CASCADE,name TEXT NOT NULL,at INTEGER NOT NULL,PRIMARY KEY(player_id,name)) STRICT;
       CREATE TABLE IF NOT EXISTS player_names(player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,name TEXT NOT NULL,first_seen INTEGER NOT NULL,last_seen INTEGER NOT NULL,PRIMARY KEY(player_id,name)) STRICT;
       CREATE TABLE IF NOT EXISTS accounts(id TEXT PRIMARY KEY,name TEXT NOT NULL,persona TEXT NOT NULL,first_seen INTEGER NOT NULL,last_seen INTEGER NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS matches(id TEXT PRIMARY KEY,fid TEXT UNIQUE,end_time INTEGER,payload TEXT NOT NULL) STRICT;
@@ -71,6 +76,25 @@ export class Database {
       UPDATE settings SET value=json_remove(value,'$.inputHookEnabled')
         WHERE key='public' AND json_valid(value) AND json_type(value,'$.inputHookEnabled') IS NOT NULL;
       DELETE FROM app_state WHERE key='apiAttemptTotal';`);
+    if (!this.state('encounterEvidence:v1', false)) {
+      this.transaction(() => {
+        this.rebuildGameObservations();
+        const old = this.state<BanAlertBatch[]>('banAlerts', []);
+        if (old.length) {
+          this.setState('banAlertsBeforeEncounterEvidence', old);
+          this.setState(
+            'banAlerts',
+            old
+              .map((batch) => ({
+                ...batch,
+                players: batch.players.filter((player) => this.hasGameObservation(player.id)),
+              }))
+              .filter((batch) => batch.players.length),
+          );
+        }
+        this.setState('encounterEvidence:v1', true);
+      });
+    }
   }
   private prepare(query: string): StatementSync {
     let statement = this.statements.get(query);
@@ -135,6 +159,43 @@ export class Database {
   ensurePlayer(id: string, name = id): void {
     this.prepare('INSERT OR IGNORE INTO players(id,name,observed) VALUES(?,?,0)').run(id, name);
   }
+  hasGameObservation(id: string): boolean {
+    return !!this.prepare('SELECT 1 FROM game_observations WHERE player_id=?').get(id);
+  }
+  rebuildGameObservations(): void {
+    this.transaction(() => {
+      const merge =
+        ' ON CONFLICT(player_id) DO UPDATE SET first_seen=MIN(game_observations.first_seen,excluded.first_seen),last_seen=MAX(game_observations.last_seen,excluded.last_seen)';
+      this.sql.exec(`INSERT INTO game_observations
+        SELECT p.player_id,MIN(COALESCE(m.end_time,json_extract(m.payload,'$.startedAt'),0)),MAX(COALESCE(m.end_time,json_extract(m.payload,'$.startedAt'),0))
+        FROM match_players p JOIN matches m ON m.id=p.match_id
+        WHERE json_extract(m.payload,'$.source') IN ('log','legacy') OR EXISTS(
+          SELECT 1 FROM accounts a JOIN match_players owner ON owner.player_id=a.id AND owner.match_id=m.id
+          WHERE a.id=json_extract(m.payload,'$.localPlayerId')) GROUP BY p.player_id ${merge};
+        INSERT INTO game_observations SELECT player_id,MIN(COALESCE(at,0)),MAX(COALESCE(at,0)) FROM legacy_encounters GROUP BY player_id ${merge};
+        INSERT INTO game_observations SELECT player_id,COALESCE(json_extract(payload,'$.lastEncounterAt'),0),COALESCE(json_extract(payload,'$.lastEncounterAt'),0) FROM bans WHERE json_extract(payload,'$.encountered')=1 ${merge};`);
+    });
+  }
+  rememberSearchPlayers(players: SearchPlayer[], at: number): void {
+    this.transaction(() => {
+      for (const player of players) {
+        if (!/^\d+$/.test(player.id)) continue;
+        this.prepare(
+          `INSERT INTO search_players VALUES(?,?,?,?,?) ON CONFLICT(player_id) DO UPDATE SET
+          name=CASE WHEN excluded.last_searched_at>=search_players.last_searched_at THEN excluded.name ELSE search_players.name END,
+          first_searched_at=MIN(search_players.first_searched_at,excluded.first_searched_at),last_searched_at=MAX(search_players.last_searched_at,excluded.last_searched_at),
+          payload=CASE WHEN excluded.last_searched_at>=search_players.last_searched_at THEN excluded.payload ELSE search_players.payload END`,
+        ).run(player.id, player.name, at, at, JSON.stringify(player));
+        this.prepare(
+          'INSERT INTO search_names VALUES(?,?,?) ON CONFLICT(player_id,name) DO UPDATE SET at=MAX(search_names.at,excluded.at)',
+        ).run(player.id, player.name, at);
+      }
+    });
+  }
+  searchedPlayer(id: string): SearchPlayer | null {
+    const row = this.prepare('SELECT payload FROM search_players WHERE player_id=?').get(id);
+    return row ? (JSON.parse(String(row.payload)) as SearchPlayer) : null;
+  }
   observe(players: Array<{ id: string; name: string }>, at = Date.now()): void {
     this.transaction(() => {
       for (const p of players) {
@@ -142,6 +203,9 @@ export class Database {
         this.prepare(
           'INSERT INTO players VALUES(?,?,?,?,1) ON CONFLICT(id) DO UPDATE SET name=CASE WHEN excluded.last_seen>=COALESCE(players.last_seen,0) THEN excluded.name ELSE players.name END,first_seen=MIN(COALESCE(players.first_seen,excluded.first_seen),excluded.first_seen),last_seen=MAX(COALESCE(players.last_seen,0),excluded.last_seen),observed=1',
         ).run(p.id, p.name, at, at);
+        this.prepare(
+          'INSERT INTO game_observations VALUES(?,?,?) ON CONFLICT(player_id) DO UPDATE SET first_seen=MIN(game_observations.first_seen,excluded.first_seen),last_seen=MAX(game_observations.last_seen,excluded.last_seen)',
+        ).run(p.id, at, at);
         this.prepare(
           'INSERT INTO player_names VALUES(?,?,?,?) ON CONFLICT(player_id,name) DO UPDATE SET first_seen=MIN(player_names.first_seen,excluded.first_seen),last_seen=MAX(player_names.last_seen,excluded.last_seen)',
         ).run(p.id, p.name, at, at);
@@ -168,14 +232,7 @@ export class Database {
       }));
   }
   saveMatch(match: Match, observe = true): void {
-    if (
-      match.source === 'log' &&
-      this.prepare('SELECT 1 FROM deleted_log_matches WHERE id IN (?,?)').get(
-        match.id,
-        'local:' + match.sessionId,
-      )
-    )
-      return;
+    if (this.matchDeleted(match)) return;
     this.transaction(() => {
       const incoming = match;
       const temporary = this.prepare(
@@ -187,7 +244,11 @@ export class Database {
       if (previous) match = mergeMatch(previous, match);
       if (temporary && String(temporary.id) !== match.id)
         this.prepare('DELETE FROM matches WHERE id=?').run(String(temporary.id));
-      if (observe) this.observe(match.players, match.endedAt ?? match.updatedAt);
+      if (observe)
+        this.observe(
+          match.players,
+          match.endedAt ?? match.startedAt ?? (match.source === 'log' ? match.updatedAt : 0),
+        );
       for (const p of match.players) this.ensurePlayer(p.id, p.name);
       this.prepare(
         'INSERT INTO matches VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET fid=excluded.fid,end_time=excluded.end_time,payload=excluded.payload',
@@ -226,13 +287,41 @@ export class Database {
     const row = this.prepare('SELECT payload FROM matches WHERE id=? OR fid=?').get(id, id);
     if (!row) return null;
     const match = JSON.parse(String(row.payload)) as Match;
-    if (accountId) {
-      const view = this.prepare(
-        'SELECT payload FROM match_views WHERE match_id=? AND account_id=?',
-      ).get(match.id, accountId);
-      if (view) Object.assign(match, JSON.parse(String(view.payload)));
-    }
-    return match;
+    return accountId ? this.projectMatch(match, accountId) : match;
+  }
+  projectMatch(match: Match, accountId: string, savedView?: string | null): Match | null {
+    const payload =
+      savedView === undefined
+        ? this.prepare('SELECT payload FROM match_views WHERE match_id=? AND account_id=?').get(
+            match.id,
+            accountId,
+          )?.payload
+        : savedView;
+    const view = payload ? (JSON.parse(String(payload)) as Partial<Match>) : null;
+    const player = match.players.find((entry) => entry.id === accountId);
+    if (!view && !player) return null;
+    const result = determineOutcome(match.players, accountId, match.mode, match.winnerTeamId);
+    return {
+      ...match,
+      localPlayerId: accountId,
+      localPersona: view?.localPersona || player?.name || accountId,
+      outcome:
+        result.outcome === 'unknown'
+          ? match.localPlayerId === accountId
+            ? match.outcome
+            : (view?.outcome ?? 'unknown')
+          : result.outcome,
+      eloBefore:
+        result.before ??
+        (match.localPlayerId === accountId ? match.eloBefore : null) ??
+        view?.eloBefore ??
+        null,
+      eloAfter:
+        result.after ??
+        (match.localPlayerId === accountId ? match.eloAfter : null) ??
+        view?.eloAfter ??
+        null,
+    };
   }
   matches(accountId?: string): Match[] {
     const rows = accountId
@@ -244,16 +333,17 @@ export class Database {
         ).all();
     return rows.map((row) => {
       const match = JSON.parse(String(row.payload)) as Match;
-      if (row.view) Object.assign(match, JSON.parse(String(row.view)));
-      return match;
+      return accountId ? this.projectMatch(match, accountId, String(row.view))! : match;
     });
   }
   deleteMatch(id: string): boolean {
     return this.transaction(() => {
       const match = this.match(id);
       if (!match) return false;
+      this.advanceHistory([match]);
       const remember = this.prepare('INSERT OR IGNORE INTO deleted_log_matches VALUES(?)');
       remember.run(match.id);
+      if (match.fid) remember.run(match.fid);
       remember.run('local:' + match.sessionId);
       return this.prepare('DELETE FROM matches WHERE id=?').run(match.id).changes > 0;
     });
@@ -263,6 +353,8 @@ export class Database {
       const owned = this.prepare('SELECT match_id FROM match_views WHERE account_id=?')
         .all(id)
         .map((r) => String(r.match_id));
+      this.setState('history:version:account:' + id, randomUUID());
+      this.advanceHistory(owned.flatMap((matchId) => this.match(matchId) ?? []));
       this.prepare('DELETE FROM accounts WHERE id=?').run(id);
       const remainingAccounts = this.accounts();
       let removedMatches = 0;
@@ -303,32 +395,86 @@ export class Database {
       return { removedMatches };
     });
   }
+  historyVersion(id = '*'): string {
+    return this.state('history:version:' + id, '');
+  }
+  advanceHistory(matches: Match[], version: string = randomUUID()): void {
+    this.setState('history:version:*', version);
+    for (const match of matches)
+      for (const id of new Set([match.id, match.fid, 'local:' + match.sessionId]))
+        if (id) this.setState('history:version:' + id, version);
+  }
+  matchDeleted(match: Pick<Match, 'id' | 'fid' | 'sessionId'>): boolean {
+    return !!this.prepare('SELECT 1 FROM deleted_log_matches WHERE id IN (?,?,?)').get(
+      match.id,
+      match.fid ?? match.id,
+      'local:' + match.sessionId,
+    );
+  }
+  restoreMatch(match: Match, observe = true): void {
+    this.transaction(() => {
+      this.prepare('DELETE FROM deleted_log_matches WHERE id IN (?,?,?)').run(
+        match.id,
+        match.fid ?? match.id,
+        'local:' + match.sessionId,
+      );
+      this.advanceHistory([match]);
+      this.saveMatch(match, observe);
+    });
+  }
   localSearch(query: string, includeRecorded = false): SearchPlayer[] {
     const q = query.toLocaleLowerCase();
-    const rows = this.prepare(
+    const recorded = this.prepare(
       'SELECT p.id,p.name,p.last_seen,GROUP_CONCAT(n.name,char(31)) aliases FROM players p LEFT JOIN player_names n ON n.player_id=p.id WHERE p.observed=1 OR ? GROUP BY p.id ORDER BY p.last_seen DESC',
     ).all(includeRecorded ? 1 : 0);
-    return rows
+    const rows = new Map(
+      recorded.map((row) => {
+        const info = includeRecorded
+          ? object(object(this.cache('info:' + row.id, true)?.value).info)
+          : {};
+        return [
+          String(row.id),
+          {
+            id: String(row.id),
+            name: String(row.name),
+            at: number(row.last_seen) ?? 0,
+            aliases: String(row.aliases || '').split(String.fromCharCode(31)),
+            level: number(info.level),
+            rating: number(info.rating),
+          },
+        ] as const;
+      }),
+    );
+    for (const row of this.prepare(
+      'SELECT p.*,GROUP_CONCAT(n.name,char(31)) aliases FROM search_players p LEFT JOIN search_names n ON n.player_id=p.player_id GROUP BY p.player_id',
+    ).all()) {
+      const id = String(row.player_id),
+        previous = rows.get(id),
+        info = object(JSON.parse(String(row.payload)));
+      rows.set(id, {
+        id,
+        name:
+          previous && previous.at > Number(row.last_searched_at) ? previous.name : String(row.name),
+        at: Math.max(previous?.at ?? 0, Number(row.last_searched_at)),
+        aliases: [
+          ...(previous?.aliases ?? []),
+          ...(previous ? [previous.name] : []),
+          ...String(row.aliases || '').split(String.fromCharCode(31)),
+        ],
+        level: number(info.level),
+        rating: number(info.rating),
+      });
+    }
+    return [...rows.values()]
+      .sort((a, b) => b.at - a.at || a.id.localeCompare(b.id))
       .filter(
         (r) =>
-          String(r.id).startsWith(query) ||
-          String(r.name).toLocaleLowerCase().includes(q) ||
-          String(r.aliases || '')
-            .split(String.fromCharCode(31))
-            .some((name) => name.toLocaleLowerCase().includes(q)),
+          r.id.startsWith(query) ||
+          r.name.toLocaleLowerCase().includes(q) ||
+          r.aliases.some((name) => name.toLocaleLowerCase().includes(q)),
       )
       .slice(0, 20)
-      .map((r) => {
-        const info = includeRecorded
-          ? object(object(this.cache('info:' + r.id, true)?.value).info)
-          : {};
-        return {
-          id: String(r.id),
-          name: String(r.name),
-          level: number(info.level),
-          rating: number(info.rating),
-        };
-      });
+      .map(({ id, name, level, rating }) => ({ id, name, level, rating }));
   }
   player(
     id: string,
@@ -338,11 +484,11 @@ export class Database {
     firstSeen: number | null;
     lastSeen: number | null;
     names: NameRecord[];
+    unverifiedObservation: boolean;
   } | null {
-    const r = this.prepare('SELECT * FROM players WHERE id=? AND (observed=1 OR ?)').get(
-      id,
-      includeRecorded ? 1 : 0,
-    );
+    const r = this.prepare(
+      'SELECT p.*,g.first_seen game_first,g.last_seen game_last FROM players p LEFT JOIN game_observations g ON g.player_id=p.id WHERE p.id=? AND (p.observed=1 OR g.player_id IS NOT NULL OR ?)',
+    ).get(id, includeRecorded ? 1 : 0);
     if (!r) return null;
     const names = this.prepare(
       'SELECT * FROM player_names WHERE player_id=? ORDER BY last_seen DESC',
@@ -355,9 +501,10 @@ export class Database {
       }));
     return {
       name: String(r.name),
-      firstSeen: number(r.first_seen),
-      lastSeen: number(r.last_seen),
+      firstSeen: number(r.game_first),
+      lastSeen: number(r.game_last),
       names,
+      unverifiedObservation: Number(r.observed) === 1 && r.game_first == null,
     };
   }
   snapshot(id: string): MiniInfo | null {
@@ -382,20 +529,22 @@ export class Database {
   }
   bans(metOnly = false): Ban[] {
     return this.prepare(
-      "SELECT b.payload,p.observed,p.last_seen,e.encounter_at FROM bans b JOIN players p ON b.player_id=p.id LEFT JOIN (SELECT player_id,MAX(at) encounter_at FROM legacy_encounters GROUP BY player_id) e ON e.player_id=b.player_id ORDER BY json_extract(b.payload,'$.firstSeenAt') DESC",
+      "SELECT b.payload,p.observed,g.player_id evidence_id,g.last_seen game_seen,e.player_id legacy_id,e.encounter_at FROM bans b JOIN players p ON b.player_id=p.id LEFT JOIN game_observations g ON g.player_id=p.id LEFT JOIN (SELECT player_id,MAX(at) encounter_at FROM legacy_encounters GROUP BY player_id) e ON e.player_id=b.player_id ORDER BY json_extract(b.payload,'$.firstSeenAt') DESC",
     )
       .all()
       .map((r) => {
         const b = JSON.parse(String(r.payload)) as Ban;
         const lastEncounterAt =
-          Math.max(
-            Number(r.observed) === 1 ? (number(r.last_seen) ?? 0) : 0,
-            number(r.encounter_at) ?? 0,
-          ) || null;
+          Math.max(number(r.game_seen) ?? 0, number(r.encounter_at) ?? 0) || null;
         return {
           ...b,
-          encountered: b.encountered || Number(r.observed) === 1 || lastEncounterAt !== null,
+          encountered: b.encountered || r.evidence_id != null || r.legacy_id != null,
           lastEncounterAt,
+          unverifiedObservation:
+            Number(r.observed) === 1 &&
+            !b.encountered &&
+            r.evidence_id == null &&
+            r.legacy_id == null,
         };
       })
       .filter((b) => !metOnly || b.encountered);
@@ -405,24 +554,53 @@ export class Database {
       const newly: Ban[] = [];
       for (const b of list) {
         this.ensurePlayer(b.id, b.name);
+        if (b.encountered)
+          this.prepare(
+            'INSERT INTO game_observations VALUES(?,?,?) ON CONFLICT(player_id) DO NOTHING',
+          ).run(b.id, b.lastEncounterAt ?? 0, b.lastEncounterAt ?? 0);
         const old = this.prepare('SELECT payload FROM bans WHERE player_id=?').get(b.id);
         const value = old
           ? { ...b, firstSeenAt: (JSON.parse(String(old.payload)) as Ban).firstSeenAt }
           : b;
-        if (!old && this.player(b.id)) newly.push({ ...value, encountered: true });
+        if (!old && this.hasGameObservation(b.id)) newly.push({ ...value, encountered: true });
         this.prepare(
           'INSERT INTO bans VALUES(?,?) ON CONFLICT(player_id) DO UPDATE SET payload=excluded.payload',
         ).run(b.id, JSON.stringify(value));
       }
+      if (newly.length)
+        this.setState('banAlerts', [
+          ...this.banAlerts(),
+          { id: randomUUID(), createdAt: Date.now(), players: newly },
+        ]);
       return newly;
     });
   }
-  encounters(id: string): Encounter[] {
-    const locals = new Set(
-      this.config().multiAccountBond
-        ? this.accounts().map((a) => a.id)
-        : [this.state<string | null>('activeAccountId', null)].filter((a): a is string => !!a),
-    );
+  banAlerts(): BanAlertBatch[] {
+    return this.state<BanAlertBatch[]>('banAlerts', []);
+  }
+  acknowledgeBanAlerts(ids: string[]): void {
+    this.transaction(() => {
+      const acknowledged = new Set(ids);
+      this.setState(
+        'banAlerts',
+        this.banAlerts().filter((batch) => !acknowledged.has(batch.id)),
+      );
+    });
+  }
+  encounters(
+    id: string,
+    scope: { accountId?: string | null; combined?: boolean } = {},
+  ): Encounter[] {
+    return this.encounterViews(id, scope).encounters;
+  }
+  encounterViews(id: string, scope: { accountId?: string | null; combined?: boolean } = {}) {
+    const accounts = this.accounts().sort((a, b) => a.id.localeCompare(b.id));
+    const accountId =
+      scope.accountId === undefined
+        ? this.state<string | null>('activeAccountId', null)
+        : scope.accountId;
+    const combined = scope.combined ?? this.config().multiAccountBond;
+    const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
     const rows = this.prepare(
         'SELECT m.payload FROM matches m JOIN match_players p ON m.id=p.match_id WHERE p.player_id=? ORDER BY m.end_time DESC',
       ).all(id),
@@ -441,42 +619,54 @@ export class Database {
     }
     for (const row of rows) {
       const m = JSON.parse(String(row.payload)) as Match;
-      const owner = m.localPlayerId,
-        target = m.players.find((p) => p.id === id);
-      const mine =
-        owner && locals.has(owner)
-          ? m.players.find((p) => p.id === owner)
-          : m.players.find((p) => locals.has(p.id));
-      if (!target || !mine || mine.id === target.id) continue;
-      const view = views.get(m.id)?.get(mine.id);
-      if (view) Object.assign(m, JSON.parse(view));
-      const result = determineOutcome(m.players, mine.id, m.mode, m.winnerTeamId),
-        outcome = result.outcome === 'unknown' ? m.outcome : result.outcome;
-      const spectator = mine.teamId === 100 || target.teamId === 100;
-      out.push({
-        matchId: m.id,
-        at: m.endedAt,
-        map: m.map,
-        relation: spectator
-          ? 'spectator'
-          : mine.teamId === null || target.teamId === null
-            ? 'unknown'
-            : mine.teamId === target.teamId
-              ? 'same'
-              : 'opponent',
-        won: outcome === 'win' ? true : outcome === 'loss' ? false : null,
-        custom: m.mode === 'custom',
-      });
+      const target = m.players.find((p) => p.id === id);
+      if (!target) continue;
+      for (const account of accounts) {
+        if (account.id === id) continue;
+        const view = views.get(m.id)?.get(account.id);
+        const mine = m.players.find((p) => p.id === account.id);
+        if (!view && m.localPlayerId !== account.id && !mine) continue;
+        const projected = this.projectMatch(m, account.id, view ?? null);
+        if (!projected) continue;
+        const spectator = mine?.teamId === 100 || target.teamId === 100;
+        out.push({
+          accountId: account.id,
+          accountName: account.name,
+          matchId: m.id,
+          at: m.endedAt,
+          map: m.map,
+          relation: spectator
+            ? 'spectator'
+            : mine?.teamId == null || target.teamId === null
+              ? 'unknown'
+              : mine.teamId === target.teamId
+                ? 'same'
+                : 'opponent',
+          won: projected.outcome === 'win' ? true : projected.outcome === 'loss' ? false : null,
+          custom: m.mode === 'custom',
+        });
+      }
     }
     const seen = new Set(out.map((encounter) => encounter.matchId));
     const legacy = this.prepare('SELECT payload FROM legacy_encounters WHERE player_id=?').all(id);
     for (const row of legacy) {
       const p = object(JSON.parse(String(row.payload))),
         fid = text(p.fid);
-      if (seen.has(fid)) continue;
+      const owner = text(p.accountId || p.localPlayerId || p.ownerId);
+      const legacyAccount = /^\d+$/.test(owner) ? owner : null;
+      if (
+        seen.has(fid) &&
+        (!legacyAccount ||
+          out.some((entry) => entry.matchId === fid && entry.accountId === legacyAccount))
+      )
+        continue;
       const matchId = fid || text(p.id);
       seen.add(matchId);
       out.push({
+        accountId: legacyAccount,
+        accountName: legacyAccount
+          ? accountNames.get(legacyAccount) || text(p.accountName) || null
+          : null,
         matchId,
         at: number(p.at),
         map: text(p.map),
@@ -492,7 +682,24 @@ export class Database {
         custom: p.custom === true,
       });
     }
-    return out.sort((a, b) => (b.at || 0) - (a.at || 0));
+    const encounters = (
+      combined ? out : out.filter((entry) => !!accountId && entry.accountId === accountId)
+    ).sort(
+      (a, b) =>
+        (b.at || 0) - (a.at || 0) ||
+        b.matchId.localeCompare(a.matchId) ||
+        Number(b.accountId === accountId) - Number(a.accountId === accountId) ||
+        (a.accountId || '~').localeCompare(b.accountId || '~'),
+    );
+    return {
+      encounters,
+      scope: {
+        accountId,
+        accountName: accountId ? accountNames.get(accountId) || null : null,
+        combined,
+        unattributedCount: out.filter((entry) => !entry.accountId).length,
+      },
+    };
   }
   cacheStats(now = Date.now()): CacheStats {
     const usage = (row: Record<string, unknown>): CacheUsage => ({
@@ -500,17 +707,21 @@ export class Database {
       expired: Number(row.expired),
       bytes: Number(row.bytes),
     });
+    const ttl = projectConfig.cache.ttlMs.player;
+    const api = this.prepare(
+      'SELECT COUNT(*) AS entries,COALESCE(SUM(expires_at<=?),0) AS expired,COALESCE(SUM(length(CAST(payload AS BLOB))),0) AS bytes,MIN(CASE WHEN expires_at>? THEN expires_at END) AS nextExpiryAt FROM api_cache',
+    ).get(now, now)!;
+    const snapshots = this.prepare(
+      "SELECT COUNT(*) AS entries,COALESCE(SUM(at<? OR json_extract(payload,'$.stale')=1),0) AS expired,COALESCE(SUM(length(CAST(payload AS BLOB))),0) AS bytes,MIN(CASE WHEN at>=? AND COALESCE(json_extract(payload,'$.stale'),0)<>1 THEN at+?+1 END) AS nextExpiryAt FROM player_snapshots",
+    ).get(now - ttl, now - ttl, ttl)!;
+    const expiries = [api.nextExpiryAt, snapshots.nextExpiryAt]
+      .filter((value) => value !== null)
+      .map(Number);
     return {
-      api: usage(
-        this.prepare(
-          'SELECT COUNT(*) AS entries,COALESCE(SUM(expires_at<=?),0) AS expired,COALESCE(SUM(length(CAST(payload AS BLOB))),0) AS bytes FROM api_cache',
-        ).get(now)!,
-      ),
-      snapshots: usage(
-        this.prepare(
-          "SELECT COUNT(*) AS entries,COALESCE(SUM(at<? OR json_extract(payload,'$.stale')=1),0) AS expired,COALESCE(SUM(length(CAST(payload AS BLOB))),0) AS bytes FROM player_snapshots",
-        ).get(now - projectConfig.cache.ttlMs.player)!,
-      ),
+      at: now,
+      nextExpiryAt: expiries.length ? Math.min(...expiries) : null,
+      api: usage(api),
+      snapshots: usage(snapshots),
     };
   }
   clearCache(mode: CacheClearMode, now = Date.now()): { removed: number; stats: CacheStats } {
@@ -542,6 +753,9 @@ export class Database {
     return stale && !allowStale
       ? null
       : { value: JSON.parse(String(r.payload)), at: Number(r.at), stale };
+  }
+  removeCache(key: string): void {
+    this.prepare('DELETE FROM api_cache WHERE key=?').run(key);
   }
   saveCache(key: string, value: unknown, ttl: number, at = Date.now(), trim = true): void {
     this.prepare(

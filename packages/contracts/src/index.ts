@@ -1,4 +1,5 @@
 export * from './models';
+export * from './matches';
 export * from './rpc';
 export * from './cache';
 export * from './updates';

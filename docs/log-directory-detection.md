@@ -34,6 +34,21 @@
 
 ## 边界与验证
 
+Directory requests capture their field's edit revision and the application
+settings discard generation. A newer request for the same field, a manual edit,
+discard or leaving Settings prevents an older result or error from applying.
+Discard invalidates immediately, including while it awaits an active save. These
+rules also apply to native log/deck directory selection; unrelated settings edits
+do not cancel a valid request.
+
+Finding a directory does not establish that it was saved or that monitoring is
+ready. Nearby feedback follows the pending, failed and confirmed path; monitoring
+feedback uses the actual watcher directory and status. Retry updates the feedback,
+and discard clears the suggestion and its input description. Automatic deck
+discovery shows a separate available/missing candidate while the editable value
+remains empty. Clearing an explicit value restores automatic discovery without
+putting its candidate back into the field.
+
 `libraryfolders.vdf` / ACF 是 Steam 的本地实现格式，不是稳定公开接口；解析失败会降级，手动选择始终可用。最近修改时间只能表明日志近期变化，无法证明对应游戏进程正在运行；复制或触碰旧日志也可能影响排序。多份有效安装仍有歧义时，需核对检测结果，必要时手动指定目录。
 
 检测只覆盖 Windows Steam 正式版。未注册且不在后备位置的便携 Steam、未声明的游戏库、其他发行渠道、测试版或外置自定义日志目录，需要手动选择。注册表子进程有超时，文件系统访问仍可能受 Windows 对离线网络路径的等待影响。

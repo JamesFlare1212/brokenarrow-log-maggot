@@ -39,9 +39,13 @@ describe('application startup with the removed demo query', () => {
     vi.stubEnv('DEV', mode === 'development');
 
     await import('../apps/web/src/main');
+    const { StartupBridgeError } = await import('../apps/web/src/components/StartupBridgeError');
 
     expect(render).toHaveBeenCalledWith(
-      expect.objectContaining({ props: expect.objectContaining({ className: 'startup-error' }) }),
+      expect.objectContaining({
+        type: StartupBridgeError,
+        props: expect.objectContaining({ locale: 'en' }),
+      }),
     );
     expect(createFixtureBridge).not.toHaveBeenCalled();
   });

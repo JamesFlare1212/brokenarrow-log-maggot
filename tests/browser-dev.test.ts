@@ -38,7 +38,7 @@ describe('browser development with repository fixtures', () => {
     });
   }, 30000);
 
-  // Importing the complete recorded corpus into two SQLite profiles can exceed ten seconds.
+  // Two complete offline profiles need headroom for Windows filesystem contention.
   it('cleans cache only in the writable browser profile and preserves match history', async () => {
     const service = await create();
     const before = (await service.invoke('cache.stats', null)) as CacheStats;
@@ -54,13 +54,22 @@ describe('browser development with repository fixtures', () => {
     const fresh = await create();
     const restored = (await fresh.invoke('cache.stats', null)) as CacheStats;
     expect(restored.api.entries).toBe(before.api.entries);
-  }, 30000);
+  }, 60000);
 
   it('loads real logs and cached analysis offline, broadcasts preferences, and isolates edits', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected network'));
     const { data, manifest } = await loadRealData(source);
     const events: AppEvent[] = [];
     const service = await create(events);
+    expect(await service.invoke('logs.refresh', null)).toMatchObject({ error: null });
+    const unread = ((await service.invoke('app.bootstrap', null)) as RpcOutputs['app.bootstrap'])
+      .banAlerts;
+    expect(
+      await service.invoke('bans.acknowledgeAlerts', { ids: ['unknown-fixture-batch'] }),
+    ).toBeNull();
+    expect(
+      ((await service.invoke('app.bootstrap', null)) as RpcOutputs['app.bootstrap']).banAlerts,
+    ).toEqual(unread);
     const matches = (await service.invoke('matches.list', {})) as Match[];
     expect(matches).toHaveLength(manifest.expected.seededMatches);
     const playerId = data.activeAccountId!;
@@ -93,14 +102,17 @@ describe('browser development with repository fixtures', () => {
         }),
       }),
     );
-    await service.invoke('matches.delete', { id: matches[0]!.id });
+    const deletion = await service.invoke('matches.planDelete', { id: matches[0]!.id });
+    await service.invoke('matches.delete', {
+      token: (deletion as import('@ba/contracts').HistoryDeletePlan).token,
+    });
     expect(await service.invoke('matches.list', {})).toHaveLength(matches.length - 1);
     const fresh = await create();
     expect(fresh.directory).not.toBe(service.directory);
     expect(await fresh.invoke('matches.list', {})).toHaveLength(manifest.expected.seededMatches);
     expect((await loadRealData(source)).manifest.sha256).toBe(manifest.sha256);
     expect(fetch).not.toHaveBeenCalled();
-  }, 30000);
+  }, 60000);
 
   it('validates requests and keeps native features and filesystem paths out of browser RPC', async () => {
     const service = await create();

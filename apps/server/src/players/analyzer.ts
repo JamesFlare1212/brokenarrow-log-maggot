@@ -8,16 +8,43 @@ import {
   team,
   summarizeMaggot,
   MAP_NAMES,
+  errorMessage,
 } from '@ba/shared';
 import type { Database } from '../storage/database';
 import type { BatraceClient } from '../network/client';
+import { playerAnalysisSections } from '../network/player-analysis';
+function outcomeCount(value: unknown): number | null {
+  const count = number(value);
+  return count !== null && Number.isInteger(count) && count >= 0 ? count : null;
+}
 export class Analyzer {
   private maggotPending = new Set<string>();
+  private reportPending = new Map<
+    string,
+    { token: number; force: boolean; promise: Promise<PlayerReport> }
+  >();
+  private reportGeneration = 0;
   constructor(
     private client: BatraceClient,
     private db: Database,
   ) {}
-  async report(id: string, force = false): Promise<PlayerReport> {
+  report(id: string, force = false): Promise<PlayerReport> {
+    const active = this.reportPending.get(id);
+    if (active && (!force || active.force)) return active.promise;
+    const token = ++this.reportGeneration;
+    const promise = Promise.resolve()
+      .then(() => this.createReport(id, force, () => this.reportPending.get(id)?.token === token))
+      .finally(() => {
+        if (this.reportPending.get(id)?.token === token) this.reportPending.delete(id);
+      });
+    this.reportPending.set(id, { token, force, promise });
+    return promise;
+  }
+  private async createReport(
+    id: string,
+    force: boolean,
+    isCurrent: () => boolean,
+  ): Promise<PlayerReport> {
     const recordedInfo = this.client.offline
       ? object(object(this.db.cache('info:' + id, true)?.value).info)
       : {};
@@ -25,8 +52,7 @@ export class Analyzer {
     try {
       const response = await this.client.analysisPlayer(id, force),
         a = object(response.value);
-      if (a.matchCount == null && !Array.isArray(object(a.trend).points))
-        throw new Error('No analysis');
+      const detailAvailability = playerAnalysisSections(response.value);
       const points = array(object(a.trend).points).map(object),
         latest = points.at(-1) || {},
         wins = points.filter((p) => p.won === true).length,
@@ -50,6 +76,7 @@ export class Analyzer {
         name,
         level: number(recordedInfo.level),
         fallback: false,
+        detailAvailability,
         matchCount: number(a.matchCount) ?? points.length,
         sampleCount,
         elo: number(latest.ratingAfter),
@@ -59,7 +86,7 @@ export class Analyzer {
         wins,
         losses,
         updatedAt: response.at,
-        stale: response.source === 'stale',
+        stale: response.source === 'stale' || !isCurrent(),
         recentMatches: points
           .slice(-12)
           .reverse()
@@ -98,7 +125,7 @@ export class Analyzer {
         })),
         style: text(object(a.playStyle).primaryStyle) || null,
       };
-      this.db.saveSnapshot(id, this.mini(report));
+      if (isCurrent() && !response.superseded) this.db.saveSnapshot(id, this.mini(report));
       return report;
     } catch (analysisError) {
       try {
@@ -108,31 +135,34 @@ export class Analyzer {
           stats = object(raw.statInfo);
         if (!text(info.name).trim())
           throw new Error('Player not found or incomplete BATrace response');
-        const wins = number(stats.winCountRt) ?? 0,
-          losses = number(stats.lossCountRt) ?? 0,
-          count = number(stats.fightsCountRt) ?? wins + losses;
+        const wins = outcomeCount(stats.winCountRt),
+          losses = outcomeCount(stats.lossCountRt),
+          sampleCount = wins !== null && losses !== null ? wins + losses : null,
+          count = outcomeCount(stats.fightsCountRt) ?? sampleCount;
         const report: PlayerReport = {
           id,
           name: text(info.name, name),
           level: number(info.level),
           fallback: true,
+          detailAvailability: { matches: false, maps: false },
+          analysisError: errorMessage(analysisError),
           matchCount: count,
-          sampleCount: wins + losses,
+          sampleCount,
           elo: number(info.rating),
           kd: null,
           dmr: null,
-          winRate: wins + losses ? Math.round((wins / (wins + losses)) * 100) : null,
+          winRate: sampleCount && wins !== null ? Math.round((wins / sampleCount) * 100) : null,
           wins,
           losses,
           updatedAt: result.at,
-          stale: result.source === 'stale',
+          stale: result.source === 'stale' || !isCurrent(),
           recentMatches: [],
           favUnits: [],
           categories: [],
           mapStats: [],
           style: null,
         };
-        this.db.saveSnapshot(id, this.mini(report));
+        if (isCurrent() && !result.superseded) this.db.saveSnapshot(id, this.mini(report));
         return report;
       } catch {
         throw analysisError;

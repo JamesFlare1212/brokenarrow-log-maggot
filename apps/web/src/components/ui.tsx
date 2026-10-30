@@ -13,6 +13,8 @@ import { ArrowLeft, ChevronDown, ChevronUp, Ellipsis, Info, TriangleAlert, X } f
 import { cn } from '@/lib/utils';
 import { useI18n } from '../hooks/useI18n';
 import { TooltipAutoFocusContext, TooltipButton } from './Tooltip';
+import { BanAlertsIndicator } from '../features/bans/BanAlertsIndicator';
+import { useDialogReturn } from './dialog-navigation';
 import { Button as PrimitiveButton } from './ui/button';
 import {
   Card as PrimitiveCard,
@@ -30,6 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from './ui/dialog';
 import {
   Empty as PrimitiveEmpty,
@@ -138,28 +141,43 @@ export function Dialog({
   open,
   onClose,
   title,
+  description,
+  bodyLabel,
   children,
   className,
   showHeader = true,
   banner,
   onBack,
   headerActions,
+  footer,
+  initialFocus,
   dismissible = true,
+  opener,
+  ready = true,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  description?: string;
+  bodyLabel?: string;
   children: ReactNode;
   className?: string;
   showHeader?: boolean;
   banner?: ReactNode;
   onBack?: () => void;
   headerActions?: ReactNode;
+  footer?: ReactNode;
+  initialFocus?: () => HTMLElement | null;
   dismissible?: boolean;
+  opener?: HTMLElement | null;
+  ready?: boolean;
 }) {
   const { t } = useI18n();
   const returnFocus = useRef<HTMLElement | null>(null);
+  const explicitOpener = useRef(opener);
+  explicitOpener.current = opener;
   const autoFocus = useRef(false);
+  const navigation = useDialogReturn(ready, autoFocus);
   return (
     <TooltipAutoFocusContext value={autoFocus}>
       <PrimitiveDialog
@@ -169,22 +187,24 @@ export function Dialog({
         }}
       >
         <DialogContent
+          ref={navigation.root}
           className={cn('app-dialog flex flex-col gap-0 overflow-hidden p-0', className)}
           showCloseButton={false}
-          aria-describedby={undefined}
+          {...(description ? {} : { 'aria-describedby': undefined })}
           onEscapeKeyDown={(event) => {
             if (!dismissible) event.preventDefault();
           }}
           onPointerDownOutside={(event) => {
             if (!dismissible) event.preventDefault();
           }}
-          onOpenAutoFocus={() => {
+          onOpenAutoFocus={(event) => {
             autoFocus.current = true;
             queueMicrotask(() => {
               autoFocus.current = false;
             });
             returnFocus.current =
-              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+              explicitOpener.current ??
+              (document.activeElement instanceof HTMLElement ? document.activeElement : null);
             const active = returnFocus.current;
             if (active && active !== document.body && !active.closest('[role="dialog"]')) {
               const triggerId = active.closest('[role="menu"]')?.getAttribute('aria-labelledby');
@@ -193,17 +213,25 @@ export function Dialog({
                 (triggerId ? document.getElementById(triggerId) : null) ?? active,
               );
             }
+            if (navigation.restoreOnOpen(event)) return;
+            const target = initialFocus?.();
+            if (target) {
+              event.preventDefault();
+              target.focus({ preventScroll: true });
+            }
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             queueMicrotask(() => {
               if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
-              const opener = dialogOpeners.get(document);
-              const target = opener?.isConnected
-                ? opener
-                : returnFocus.current?.isConnected
-                  ? returnFocus.current
-                  : document.getElementById('main-content');
+              const opener = explicitOpener.current?.isConnected
+                ? explicitOpener.current
+                : dialogOpeners.get(document);
+              const target = [
+                opener,
+                returnFocus.current,
+                document.getElementById('main-content'),
+              ].find((candidate) => candidate?.isConnected && !candidate.matches(':disabled'));
               target?.focus({ preventScroll: true });
               dialogOpeners.delete(document);
             });
@@ -218,6 +246,10 @@ export function Dialog({
             <DialogTitle className={cn('min-w-0 flex-1', !showHeader && 'sr-only')}>
               {title}
             </DialogTitle>
+            {description && (
+              <DialogDescription className="sr-only">{description}</DialogDescription>
+            )}
+            <BanAlertsIndicator />
             {headerActions}
             {dismissible && (
               <DialogClose asChild>
@@ -234,9 +266,22 @@ export function Dialog({
           </DialogHeader>
           <Separator />
           {banner}
-          <div className="dialog-body flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
+          {navigation.targetMissing && (
+            <p role="status" className="shrink-0 border-b px-5 py-2 text-sm text-muted-foreground">
+              {t('dialogReturnUnavailable')}
+            </p>
+          )}
+          <div
+            className="dialog-body flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5"
+            role={bodyLabel ? 'region' : undefined}
+            aria-label={bodyLabel}
+            tabIndex={bodyLabel ? 0 : undefined}
+          >
             {children}
           </div>
+          {footer && (
+            <div className="flex shrink-0 justify-end gap-2 border-t px-5 py-3">{footer}</div>
+          )}
         </DialogContent>
       </PrimitiveDialog>
     </TooltipAutoFocusContext>
@@ -298,10 +343,10 @@ export function Notice({ error, children }: { error?: boolean; children: ReactNo
 export function Badge({
   tone = 'muted',
   children,
+  ...props
 }: {
   tone?: 'muted' | 'success' | 'danger' | 'info' | 'warning';
-  children: ReactNode;
-}) {
+} & Omit<ComponentProps<typeof PrimitiveBadge>, 'variant'>) {
   const variants = {
     muted: 'secondary',
     success: 'success',
@@ -309,7 +354,11 @@ export function Badge({
     info: 'info',
     warning: 'warning',
   } as const;
-  return <PrimitiveBadge variant={variants[tone]}>{children}</PrimitiveBadge>;
+  return (
+    <PrimitiveBadge variant={variants[tone]} {...props}>
+      {children}
+    </PrimitiveBadge>
+  );
 }
 
 export function Stats({ items }: { items: Array<{ label: string; value: ReactNode }> }) {
@@ -426,12 +475,26 @@ function menuItems(children: ReactNode): ReactElement<ComponentProps<typeof Butt
   });
 }
 
-export function Menu({ children, label }: { children: ReactNode; label?: string }) {
+export function Menu({
+  children,
+  label,
+  disabled = false,
+}: {
+  children: ReactNode;
+  label?: string;
+  disabled?: boolean;
+}) {
   const { t } = useI18n();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button data-menu-trigger variant="ghost" size="icon" aria-label={label || t('actions')}>
+        <Button
+          data-menu-trigger
+          variant="ghost"
+          size="icon"
+          aria-label={label || t('actions')}
+          disabled={disabled}
+        >
           <Ellipsis />
         </Button>
       </DropdownMenuTrigger>

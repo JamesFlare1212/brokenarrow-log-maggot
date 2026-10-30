@@ -75,10 +75,14 @@ function TooltipControl({
   const content = tooltip ?? title ?? props['aria-label'];
   const triggerId = props.id ?? id;
   const richContent = badgeVariant !== undefined;
+  const disabledDescriptionId =
+    props.disabled && content && content !== props['aria-label'] ? id + '-description' : undefined;
   const buttonProps = {
     type: 'button' as const,
     id: triggerId,
     ...props,
+    'aria-describedby':
+      [props['aria-describedby'], disabledDescriptionId].filter(Boolean).join(' ') || undefined,
     onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
       setHint(false);
       onClick?.(event);
@@ -96,12 +100,13 @@ function TooltipControl({
   if (!content) return button;
   const trigger =
     props.disabled !== undefined ? (
-      <span
-        className="inline-flex"
-        tabIndex={props.disabled ? 0 : undefined}
-        aria-label={props.disabled ? props['aria-label'] : undefined}
-      >
+      <span className="inline-flex">
         {button}
+        {disabledDescriptionId && (
+          <span id={disabledDescriptionId} className="sr-only">
+            {content}
+          </span>
+        )}
       </span>
     ) : (
       button

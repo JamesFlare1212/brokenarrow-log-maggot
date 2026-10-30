@@ -26,6 +26,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-text: var(--destructive-text);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
@@ -73,6 +74,7 @@
   --theme-primary-light: oklch(0.35 0.025 255);
   --theme-primary-dark: oklch(0.82 0.025 255);
   --destructive: light-dark(oklch(0.54 0.21 27.325), oklch(0.704 0.191 22.216));
+  --destructive-text: color-mix(in oklab, var(--destructive) 80%, var(--foreground));
   --success: light-dark(oklch(0.448 0.119 151.328), oklch(0.792 0.209 151.711));
   --warning: light-dark(oklch(0.473 0.137 46.201), oklch(0.828 0.189 84.429));
   --info: light-dark(oklch(0.488 0.243 264.376), oklch(0.809 0.105 251.813));

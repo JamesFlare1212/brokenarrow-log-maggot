@@ -76,6 +76,14 @@ export function reportFixture(overrides: Partial<PlayerReport> = {}): PlayerRepo
 
 // Native lifecycle state is controlled by UI tests; ordinary game data comes from the capture.
 export const fixtureBootstrap: Bootstrap = {
+  banSync: {
+    phase: 'idle',
+    attemptId: null,
+    lastAttemptAt: null,
+    lastSuccessAt: null,
+    error: null,
+  },
+  banAlerts: [],
   updates: initialUpdateState('4.0.0'),
   revision: 0,
   config: configSchema.parse({

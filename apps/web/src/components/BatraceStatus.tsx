@@ -1,93 +1,85 @@
-import { useId, useRef, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
-import { errorMessage } from '@ba/shared';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
+import { useId } from 'react';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverDescription,
-} from './ui/popover';
+  CircleCheck,
+  CircleX,
+  CircleAlert,
+  CircleHelp,
+  TriangleAlert,
+  LoaderCircle,
+} from 'lucide-react';
 import type { ApiHealth } from '@ba/contracts';
 import { useI18n } from '../hooks/useI18n';
-
-const endpoints: Record<string, string> = {
-  '/api/players/search': 'healthPlayerSearch',
-  '/api/players/info': 'healthPlayerInfo',
-  '/api/leaderboard/ban': 'healthBanLeaderboard',
-  '/api/players/matches': 'healthPlayerMatches',
-  '/api/match': 'healthMatchDetail',
-};
+import { useHealthCheck, type HealthCheckRequest } from '../hooks/useHealthCheck';
+import { HealthCheckPanel, healthStateMessage } from './HealthCheckPanel';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Popover, PopoverContent, PopoverTrigger, PopoverHeader, PopoverTitle } from './ui/popover';
 
 export function BatraceStatus({
   health,
   onCheck,
+  request,
 }: {
   health: ApiHealth;
   onCheck?: () => Promise<ApiHealth>;
+  request?: HealthCheckRequest;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const titleId = useId();
-  const running = useRef(false);
-  const [pending, setPending] = useState(false),
-    [error, setError] = useState<string | null>(null),
-    [result, setResult] = useState<ApiHealth | null>(null);
-  const current = result && result.at >= health.at ? result : health;
-  const checks: Array<ApiHealth['checks'][number] & { unchecked?: boolean }> = Object.keys(
-    endpoints,
-  ).map(
-    (path) =>
-      current.checks.find((check) => check.path.split('?')[0] === path) ?? {
-        path,
-        ok: false,
-        ms: 0,
-        status: null,
-        unchecked: true,
-      },
-  );
-  checks.push(
-    ...current.checks.filter((check) => !Object.hasOwn(endpoints, check.path.split('?')[0] ?? '')),
-  );
-  const check = async () => {
-    if (!onCheck || running.current) return;
-    running.current = true;
-    setPending(true);
-    setError(null);
-    try {
-      setResult(await onCheck());
-    } catch (value) {
-      setError(errorMessage(value));
-    } finally {
-      running.current = false;
-      setPending(false);
-    }
-  };
+  const local = useHealthCheck(health, onCheck);
+  const check = request ?? local;
   const label = t(
-    { ok: 'serviceConnected', partial: 'servicePartial', down: 'serviceDown', unknown: 'unknown' }[
-      current.state
-    ],
+    check.pending
+      ? 'healthChecking'
+      : check.failure
+        ? 'healthCheckFailed'
+        : healthStateMessage(check.current),
   );
+  const name = `BATrace · ${label}${check.pending || check.failure ? ' · ' + t('healthLastResult', { state: t(healthStateMessage(check.current)) }) : ''}`;
+  const StatusIcon = check.pending
+    ? LoaderCircle
+    : check.failure
+      ? CircleAlert
+      : check.current.state === 'ok'
+        ? CircleCheck
+        : check.current.state === 'down'
+          ? CircleX
+          : check.current.state === 'partial'
+            ? TriangleAlert
+            : CircleHelp;
+  const iconColor =
+    check.pending || check.failure || check.current.state === 'partial'
+      ? 'text-warning'
+      : check.current.state === 'ok'
+        ? 'text-success'
+        : check.current.state === 'down'
+          ? 'text-danger'
+          : 'text-muted-foreground';
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" aria-label={`BATrace · ${label}`}>
-          BATrace
-          <Badge
-            variant={
-              current.state === 'ok'
-                ? 'success'
-                : current.state === 'down'
-                  ? 'destructive'
-                  : current.state === 'partial'
-                    ? 'warning'
-                    : 'secondary'
-            }
-          >
-            {label}
-          </Badge>
+        <Button variant="ghost" aria-label={name} title={name} className="health-status-trigger">
+          <span className="health-status-compact" aria-hidden="true">
+            <StatusIcon className={`${iconColor}${check.pending ? ' animate-spin' : ''}`} />
+          </span>
+          <span className="health-status-label inline-flex items-center gap-2">
+            BATrace
+            <Badge
+              variant={
+                check.pending || check.failure
+                  ? 'warning'
+                  : check.current.state === 'ok'
+                    ? 'success'
+                    : check.current.state === 'down'
+                      ? 'destructive'
+                      : check.current.state === 'partial'
+                        ? 'warning'
+                        : 'secondary'
+              }
+            >
+              {label}
+            </Badge>
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -97,107 +89,8 @@ export function BatraceStatus({
       >
         <PopoverHeader>
           <PopoverTitle id={titleId}>{t('health')}</PopoverTitle>
-          <PopoverDescription>
-            {current.at
-              ? t('healthCheckedAt', { time: new Date(current.at).toLocaleString(locale) })
-              : t('healthNotChecked')}
-          </PopoverDescription>
         </PopoverHeader>
-        {checks.length > 0 && (
-          <ul className="health-checks">
-            {checks.map((check) => {
-              const reason = check.unchecked
-                ? 'healthEndpointNotChecked'
-                : check.ok
-                  ? 'healthSuccess'
-                  : check.failure && check.failure !== 'http'
-                    ? `healthFailure_${check.failure}`
-                    : check.status !== null
-                      ? ({
-                          401: 'healthHttp401',
-                          403: 'healthHttp403',
-                          404: 'healthHttp404',
-                          429: 'healthHttp429',
-                        }[check.status] ?? 'healthHttpError')
-                      : 'healthFailure_network';
-              return (
-                <li key={check.path}>
-                  <div className="health-check-heading">
-                    <strong>
-                      {t(endpoints[check.path.split('?')[0] ?? ''] ?? 'healthEndpoint')}
-                    </strong>
-                    <span className="health-check-status">
-                      <span
-                        className={
-                          check.unchecked
-                            ? 'muted'
-                            : check.ok
-                              ? 'text-success'
-                              : check.fallback?.ok
-                                ? 'text-warning'
-                                : 'text-danger'
-                        }
-                      >
-                        {t(reason)}
-                      </span>
-                      {check.fallback && (
-                        <span className={check.fallback.ok ? 'text-success' : 'text-danger'}>
-                          {t(check.fallback.ok ? 'healthFallbackSuccess' : 'healthFallbackFailed')}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <code>{check.path}</code>
-                  {!check.unchecked && (
-                    <small className="muted">
-                      {check.status === null ? t('healthNoHttpResponse') : `HTTP ${check.status}`}
-                      {' · '}
-                      {check.ms} ms
-                    </small>
-                  )}
-                  {check.rayId && <small className="muted">Ray ID: {check.rayId}</small>}
-                  {check.fallback && (
-                    <>
-                      <code>{check.fallback.path}</code>
-                      <small className="muted">
-                        {check.fallback.status === null
-                          ? t('healthNoHttpResponse')
-                          : `HTTP ${check.fallback.status}`}
-                        {' · '}
-                        {check.fallback.ms} ms
-                      </small>
-                      {check.fallback.rayId && (
-                        <small className="muted">Ray ID: {check.fallback.rayId}</small>
-                      )}
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <p className="muted">{t('healthRefreshHint')}</p>
-        {error && (
-          <p role="alert" className="text-destructive">
-            {error}
-          </p>
-        )}
-        {onCheck && (
-          <Button
-            variant="outline"
-            disabled={pending}
-            aria-busy={pending}
-            aria-label={t('health')}
-            onClick={() => void check()}
-          >
-            <RefreshCw
-              data-icon="inline-start"
-              className={pending ? 'animate-spin' : undefined}
-              aria-hidden="true"
-            />
-            {t(pending ? 'loading' : 'healthCheck')}
-          </Button>
-        )}
+        <HealthCheckPanel request={check} />
       </PopoverContent>
     </Popover>
   );

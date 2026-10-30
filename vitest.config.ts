@@ -1,6 +1,9 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
+const testWorkers = Number(process.env.BA_TEST_WORKERS ?? 4);
+if (!Number.isInteger(testWorkers) || testWorkers < 1)
+  throw new Error('BA_TEST_WORKERS must be a positive integer');
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -16,6 +19,8 @@ export default defineConfig({
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     environment: 'node',
     testTimeout: 10000,
+    // Bound concurrent SQLite and filesystem fixtures on machines with many cores.
+    maxWorkers: testWorkers,
     restoreMocks: true,
   },
 });

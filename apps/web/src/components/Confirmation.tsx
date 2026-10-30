@@ -13,11 +13,13 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { useI18n } from '../hooks/useI18n';
+import { BanAlertsIndicator } from '../features/bans/BanAlertsIndicator';
 
 interface ConfirmationOptions {
   title: string;
@@ -25,6 +27,7 @@ interface ConfirmationOptions {
   detail?: string;
   confirmLabel?: string;
   variant?: 'danger' | 'primary';
+  returnFocus?: HTMLElement | null;
 }
 type Confirm = (options: ConfirmationOptions) => Promise<boolean>;
 const ConfirmationContext = createContext<Confirm | null>(null);
@@ -37,6 +40,7 @@ export function useConfirmation() {
 
 export function ConfirmationProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n();
+  const detailId = useId();
   const [options, setOptions] = useState<ConfirmationOptions | null>(null);
   const pending = useRef<((accepted: boolean) => void) | null>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -46,7 +50,8 @@ export function ConfirmationProvider({ children }: { children: ReactNode }) {
     const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const menu = active?.closest('[role="menu"]');
     const trigger = menu?.getAttribute('aria-labelledby');
-    opener.current = (trigger ? document.getElementById(trigger) : null) ?? active;
+    opener.current =
+      request.returnFocus ?? (trigger ? document.getElementById(trigger) : null) ?? active;
     return new Promise((resolve) => {
       pending.current = resolve;
       setOptions(request);
@@ -65,6 +70,8 @@ export function ConfirmationProvider({ children }: { children: ReactNode }) {
       {children}
       <AlertDialog open={options !== null} onOpenChange={(open) => !open && finish(false)}>
         <AlertDialogContent
+          className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden"
+          aria-describedby={options?.detail ? detailId : undefined}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             cancel.current?.focus();
@@ -72,24 +79,51 @@ export function ConfirmationProvider({ children }: { children: ReactNode }) {
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             const target = opener.current;
-            queueMicrotask(() => {
+            requestAnimationFrame(() => {
               if (pending.current) return;
+              const dialog = Array.from(
+                document.querySelectorAll<HTMLElement>('[role="dialog"]'),
+              ).at(-1);
+              if (dialog) {
+                if (target?.isConnected && dialog.contains(target) && !target.matches(':disabled'))
+                  target.focus({ preventScroll: true });
+                else if (!dialog.contains(document.activeElement))
+                  (
+                    dialog.querySelector<HTMLElement>('[data-dialog-feedback]') ??
+                    dialog.querySelector<HTMLElement>('button:not(:disabled)') ??
+                    dialog
+                  ).focus({ preventScroll: true });
+                return;
+              }
               (target?.isConnected ? target : document.getElementById('main-content'))?.focus({
                 preventScroll: true,
               });
             });
           }}
         >
-          <AlertDialogHeader>
-            <AlertDialogTitle>{options?.title}</AlertDialogTitle>
-            <AlertDialogDescription>{options?.description}</AlertDialogDescription>
-          </AlertDialogHeader>
-          {options?.detail && (
-            <p className="max-h-40 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap wrap-anywhere">
-              {options.detail}
-            </p>
-          )}
-          <AlertDialogFooter>
+          <div
+            role="region"
+            aria-label={t('confirmation.details')}
+            tabIndex={0}
+            className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain wrap-anywhere focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <AlertDialogHeader>
+              <div className="flex items-start gap-2">
+                <AlertDialogTitle className="min-w-0 flex-1">{options?.title}</AlertDialogTitle>
+                <BanAlertsIndicator />
+              </div>
+              <AlertDialogDescription>{options?.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            {options?.detail && (
+              <p
+                id={detailId}
+                className="rounded-md bg-muted p-3 text-sm whitespace-pre-wrap wrap-anywhere"
+              >
+                {options.detail}
+              </p>
+            )}
+          </div>
+          <AlertDialogFooter className="shrink-0">
             <AlertDialogCancel ref={cancel} onClick={() => finish(false)}>
               {t('cancel')}
             </AlertDialogCancel>

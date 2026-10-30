@@ -8,7 +8,7 @@ import { LogParser } from './parser';
 export class LogWatcher {
   private timer: ReturnType<typeof setInterval> | null = null;
   private generation = 0;
-  private busy = false;
+  private polling: { generation: number; done: Promise<void> } | null = null;
   private offset = 0;
   private decoder = new StringDecoder('utf8');
   private pending = '';
@@ -21,6 +21,9 @@ export class LogWatcher {
     listening: false,
     recovering: false,
     error: null,
+    live: false,
+    checkedAt: null,
+    checking: false,
   };
   constructor(
     private parser: LogParser,
@@ -43,6 +46,11 @@ export class LogWatcher {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.state.listening = false;
+    this.state.error = null;
+    this.state.recovering = false;
+    this.state.live = false;
+    this.state.checkedAt = null;
+    this.state.checking = false;
     this.clear();
     this.parser.reset();
   }
@@ -55,10 +63,23 @@ export class LogWatcher {
     this.identity = '';
     this.state.file = null;
   }
-  async poll(): Promise<void> {
-    if (this.busy || !this.state.listening) return;
-    this.busy = true;
+  poll(): Promise<void> {
+    if (this.polling)
+      return this.polling.generation === this.generation
+        ? this.polling.done
+        : this.polling.done.then(() => this.poll());
     const generation = this.generation;
+    const done = this.inspect().finally(() => {
+      if (this.polling?.done === done) this.polling = null;
+    });
+    this.polling = { generation, done };
+    return done;
+  }
+  private async inspect(): Promise<void> {
+    if (!this.state.listening) return;
+    const generation = this.generation;
+    const retrying = this.state.error !== null;
+    this.state.checking = true;
     try {
       const entries = await readdir(this.state.dir, { withFileTypes: true });
       const candidates = await Promise.all(
@@ -79,6 +100,11 @@ export class LogWatcher {
           this.clear();
           this.parser.reset();
         }
+        this.state.error = null;
+        this.state.live = false;
+        this.state.recovering = false;
+        this.state.checkedAt = Date.now();
+        this.state.checking = false;
         this.changed(this.status());
         return;
       }
@@ -92,8 +118,8 @@ export class LogWatcher {
         this.recoveryEnd = selected.info.size;
       }
       const recovering = this.offset < this.recoveryEnd;
+      const startingOffset = this.offset;
       this.state.recovering = recovering;
-      this.state.error = null;
       this.changed(this.status());
       const end = selected.info.size,
         handle = await open(selected.path, 'r');
@@ -106,7 +132,8 @@ export class LogWatcher {
             Math.min(buffer.length, end - this.offset),
             this.offset,
           );
-          if (generation !== this.generation || !bytesRead) break;
+          if (generation !== this.generation) break;
+          if (!bytesRead) throw new Error('Log file changed before the current read completed');
           this.offset += bytesRead;
           const firstRecovering = this.pendingRecovering || recovering;
           this.pending += this.decoder.write(buffer.subarray(0, bytesRead));
@@ -123,7 +150,15 @@ export class LogWatcher {
         await handle.close();
       }
       if (generation !== this.generation) return;
-      if (recovering || this.parser.snapshot().recovering) {
+      this.state.error = null;
+      this.state.checkedAt = Date.now();
+      this.state.checking = false;
+      if (
+        recovering ||
+        retrying ||
+        this.offset !== startingOffset ||
+        this.parser.snapshot().recovering
+      ) {
         this.parser.recovered();
         this.state.recovering = false;
       }
@@ -131,10 +166,11 @@ export class LogWatcher {
     } catch (error) {
       if (generation === this.generation) {
         this.state.error = errorMessage(error);
+        this.state.live = false;
+        this.state.recovering = false;
+        this.state.checking = false;
         this.changed(this.status());
       }
-    } finally {
-      this.busy = false;
     }
   }
 }

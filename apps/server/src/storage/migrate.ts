@@ -460,6 +460,7 @@ export async function migrateLegacy(db: Database, dir: string): Promise<Migratio
       // Count logical source records; derived placeholders and v1 match groups are not counted twice.
       imported[source.file] = count;
     }
+    db.rebuildGameObservations();
     db.setState('migration', { completed: !blocked, imported, warnings, backupDir });
   });
   return db.state<MigrationStatus>('migration', {

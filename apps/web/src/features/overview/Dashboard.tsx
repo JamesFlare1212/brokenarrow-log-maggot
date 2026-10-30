@@ -1,21 +1,11 @@
-import { useEffect, type ReactNode } from 'react';
-import {
-  ArrowRight,
-  Archive,
-  Crosshair,
-  Layers,
-  Search,
-  Settings,
-  ShieldCheck,
-  Trophy,
-  Users,
-  Video,
-} from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { ArrowRight, Archive, Crosshair, Trophy, Users } from 'lucide-react';
 import type { Match } from '@ba/contracts';
-import { formatDuration, formatMetric, formatTime } from '@ba/shared';
+import { formatMetric, formatTime } from '@ba/shared';
 import { cn } from '@/lib/utils';
 import { eloChangeClass } from '@/lib/elo';
 import { useApp } from '../../app/state';
+import { OverviewQuickTools } from './OverviewQuickTools';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Card, Empty, Loading, Notice } from '../../components/ui';
@@ -26,17 +16,17 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card';
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from '@/components/ui/item';
-import { Separator } from '@/components/ui/separator';
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { SessionPanel } from '../session/SessionPanel';
+
+interface ArchiveSnapshot {
+  revision: number;
+  rows: Match[];
+}
+interface PersonalSnapshot extends ArchiveSnapshot {
+  accountId: string;
+  context: number;
+}
 
 function Metric({
   label,
@@ -66,16 +56,80 @@ function Metric({
 export function Dashboard() {
   const { api, state, setPage, openModal } = useApp(),
     { t, locale } = useI18n();
-  const { data, pending, error, load } = useRequest<Match[]>();
+  const archiveRequest = useRequest<ArchiveSnapshot>();
+  const archiveOwner = useRef<number | null>(null);
+  const accountId = state.session.localPlayerId ?? null;
+  const accountName = state.session.localName || accountId || t('unknown');
+  const personalRequest = useRequest<PersonalSnapshot>();
+  const personalKey = accountId
+    ? `${accountId}:${state.matchesRevision}:${state.accountContextRevision}`
+    : null;
+  const personalOwner = useRef<string | null>(null);
+  const scopeLabel = useRef<HTMLParagraphElement>(null);
+  const focusedHistoryControl = useRef<HTMLElement | null>(null);
+  const loadArchive = () => {
+    const revision = state.matchesRevision;
+    archiveOwner.current = revision;
+    return archiveRequest.load(
+      async () => ({ revision, rows: await api.invoke('matches.list', {}) }),
+      true,
+    );
+  };
+  const loadPersonal = () => {
+    if (!accountId) {
+      personalOwner.current = null;
+      personalRequest.invalidate();
+      return;
+    }
+    personalOwner.current = personalKey;
+    const revision = state.matchesRevision,
+      context = state.accountContextRevision;
+    return personalRequest.load(async () => {
+      const rows = await api.invoke('matches.list', { accountId });
+      if (rows.some((match) => match.localPlayerId !== accountId))
+        throw new Error(t('perspectiveUnavailable'));
+      return { accountId, revision, context, rows };
+    }, true);
+  };
   useEffect(() => {
-    void load(() => api.invoke('matches.list', {}), true);
-  }, [api, state.matchesRevision, load]);
-  const all = [...(data || [])].sort(
+    void loadArchive();
+  }, [api, state.matchesRevision, archiveRequest.load]);
+  useEffect(() => {
+    void loadPersonal();
+  }, [api, accountId, state.matchesRevision, state.accountContextRevision]);
+  const data =
+    archiveRequest.data?.revision === state.matchesRevision ? archiveRequest.data.rows : null;
+  const error = archiveOwner.current === state.matchesRevision ? archiveRequest.error : null;
+  const personalAvailable =
+    personalRequest.data?.accountId === accountId &&
+    personalRequest.data?.revision === state.matchesRevision &&
+    personalRequest.data?.context === state.accountContextRevision;
+  const all = [...(data ?? [])].sort(
     (a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0),
   );
-  const personal = all.filter(
-    (match) => state.session.localPlayerId && match.localPlayerId === state.session.localPlayerId,
+  const personal = [...(personalAvailable ? personalRequest.data!.rows : [])].sort(
+    (a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0),
   );
+  const personalError = personalOwner.current === personalKey ? personalRequest.error : null;
+  const personalLoading =
+    !!accountId &&
+    !personalError &&
+    (personalOwner.current !== personalKey || personalRequest.pending || !personalAvailable);
+  useLayoutEffect(() => {
+    if (
+      focusedHistoryControl.current &&
+      !focusedHistoryControl.current.isConnected &&
+      document.activeElement === document.body
+    ) {
+      scopeLabel.current?.focus({ preventScroll: true });
+      scopeLabel.current?.scrollIntoView({
+        block: 'nearest',
+        inline: 'nearest',
+        behavior: 'instant',
+      });
+      focusedHistoryControl.current = null;
+    }
+  });
   const recent = personal
     .filter(
       (match) =>
@@ -85,40 +139,64 @@ export function Dashboard() {
     )
     .slice(0, 12);
   const wins = recent.filter((match) => match.outcome === 'win').length;
-  const latest = personal.find((match) => match.endedAt !== null && match.eloAfter !== null);
+  const latest = personal.find((match) => match.endedAt !== null);
   const roster = state.session.current?.players ?? state.session.lobbyPlayers;
-  const recording = state.recording;
-  const recordingActive = recording.phase === 'recording';
-  const recordingLabel = recordingActive
-    ? 'recording'
-    : recording.phase === 'starting'
-      ? 'starting'
-      : recording.phase === 'stopping'
-        ? 'stopping'
-        : state.config.replayEnabled
-          ? 'recordingReady'
-          : 'recordingOff';
   return (
     <div className="dashboard">
+      <OverviewQuickTools />
+      <p
+        ref={scopeLabel}
+        tabIndex={-1}
+        role="status"
+        className="text-sm text-muted-foreground wrap-anywhere"
+      >
+        {accountId
+          ? t('accountScope', { name: accountName, id: accountId })
+          : t('accountIdentityNeeded')}
+      </p>
       <div className="metrics-grid" aria-label={t('sessionOverview')}>
         <Metric
           label={t('recentRating')}
           value={formatMetric(latest?.eloAfter ?? null, 0)}
-          detail={t('completedMatch')}
+          detail={t(
+            !accountId
+              ? 'accountIdentityNeeded'
+              : !personalAvailable
+                ? personalError
+                  ? 'overviewStatsUnavailable'
+                  : 'overviewStatsUpdating'
+                : !latest
+                  ? 'empty'
+                  : latest.eloAfter === null
+                    ? 'latestRatingUnavailable'
+                    : 'completedMatch',
+          )}
           icon={<Crosshair size={16} aria-hidden="true" />}
         />
         <Metric
           label={t('recentWinRate')}
           value={recent.length ? `${Math.round((wins / recent.length) * 100)}%` : '—'}
           detail={
-            recent.length ? t('winLossCount', { wins, losses: recent.length - wins }) : t('empty')
+            !accountId
+              ? t('accountIdentityNeeded')
+              : !personalAvailable
+                ? t(personalError ? 'overviewStatsUnavailable' : 'overviewStatsUpdating')
+                : recent.length
+                  ? t('winLossCount', { wins, losses: recent.length - wins })
+                  : t('empty')
           }
           icon={<Trophy size={16} aria-hidden="true" />}
         />
         <Metric
           label={t('archiveCount')}
           value={data === null ? '—' : all.length}
-          detail={t('localArchive')}
+          detail={t(
+            data === null
+              ? error
+                ? 'overviewArchiveUnavailable'
+                : 'overviewArchiveUpdating'
+              : 'allAccountArchive',
+          )}
           icon={<Archive size={16} aria-hidden="true" />}
         />
         <Metric
@@ -137,133 +215,107 @@ export function Dashboard() {
       {error && (
         <Notice error>
           {error}
-          <Button onClick={() => void load(() => api.invoke('matches.list', {}), true)}>
+          <Button
+            onFocus={(event) => {
+              focusedHistoryControl.current = event.currentTarget;
+            }}
+            onClick={() => void loadArchive()}
+          >
             {t('retry')}
           </Button>
         </Notice>
       )}
       <SessionPanel />
-      <div className="dashboard-grid">
-        <Card
-          title={t('recent')}
-          icon={<Archive />}
-          className="recent-card"
-          actions={
-            <Button variant="ghost" size="sm" onClick={() => setPage('archive')}>
-              {t('viewAll')}
-              <ArrowRight data-icon="inline-end" />
+      <Card
+        title={t('recent')}
+        icon={<Archive />}
+        className="recent-card"
+        actions={
+          <Button variant="ghost" size="sm" onClick={() => setPage('archive')}>
+            {t('viewAll')}
+            <ArrowRight data-icon="inline-end" />
+          </Button>
+        }
+      >
+        {!accountId ? (
+          <Empty icon={<Archive />}>{t('accountIdentityNeeded')}</Empty>
+        ) : personalLoading && !personal.length ? (
+          <Loading />
+        ) : personalError && !personal.length ? (
+          <Notice error>
+            {personalError}
+            <Button
+              onFocus={(event) => {
+                focusedHistoryControl.current = event.currentTarget;
+              }}
+              onClick={() => void loadPersonal()}
+            >
+              {t('retry')}
             </Button>
-          }
-        >
-          {pending && !data ? (
-            <Loading />
-          ) : all.length ? (
-            <ItemGroup className="recent-matches">
-              {all.slice(0, 3).map((match) => (
-                <Item size="sm" asChild key={match.id}>
-                  <Button
-                    variant="ghost"
-                    className="recent-match h-auto w-full justify-start"
-                    disabled={!match.fid}
-                    onClick={() => match.fid && openModal({ type: 'match', fid: match.fid })}
-                  >
-                    <ItemContent>
-                      <ItemTitle>{match.map || `#${match.id}`}</ItemTitle>
-                      <ItemDescription>
-                        {t(match.mode)} · {formatTime(match.endedAt, locale)}
-                      </ItemDescription>
-                    </ItemContent>
-                    <span
-                      className={cn(
-                        'recent-elo',
-                        eloChangeClass(
-                          match.eloAfter !== null && match.eloBefore !== null
-                            ? match.eloAfter - match.eloBefore
-                            : null,
-                        ),
-                      )}
-                    >
-                      {match.eloAfter !== null && match.eloBefore !== null
-                        ? `${match.eloAfter - match.eloBefore > 0 ? '+' : ''}${formatMetric(match.eloAfter - match.eloBefore, 0)}`
-                        : '—'}{' '}
-                      <small>ELO</small>
-                    </span>
-                  </Button>
-                </Item>
-              ))}
-            </ItemGroup>
-          ) : (
-            <Empty icon={<Archive />} description={t('noMatchesHint')}>
-              {t('empty')}
-            </Empty>
-          )}
-        </Card>
-        <aside className="dashboard-side" aria-label={t('quickTools')}>
-          <Card
-            title={t('quickTools')}
-            showHeader={false}
-            className="quick-tools"
-            contentClassName="gap-2"
-          >
-            <Item size="xs">
-              <ItemMedia variant="icon">
-                <Video />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{t('replays')}</ItemTitle>
-                <ItemDescription>
-                  {t(recordingLabel)}
-                  {recordingActive && <> · {formatDuration(recording.seconds)}</>}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
+          </Notice>
+        ) : personal.length ? (
+          <ItemGroup className="recent-matches">
+            {personalError && (
+              <Notice error>
+                {personalError}
+                <Button
+                  onFocus={(event) => {
+                    focusedHistoryControl.current = event.currentTarget;
+                  }}
+                  onClick={() => void loadPersonal()}
+                >
+                  {t('retry')}
+                </Button>
+              </Notice>
+            )}
+            {personal.slice(0, 3).map((match) => (
+              <Item size="sm" asChild key={match.id}>
                 <Button
                   variant="ghost"
-                  size="icon-sm"
-                  aria-label={t(
-                    state.config.replayEnabled ? 'recordingSettings' : 'enableRecording',
-                  )}
+                  className="recent-match h-auto w-full justify-start"
+                  disabled={!match.fid}
+                  onFocus={(event) => {
+                    focusedHistoryControl.current = event.currentTarget;
+                  }}
                   onClick={() =>
-                    openModal({ type: 'recordingSettings', enable: !state.config.replayEnabled })
+                    match.fid && openModal({ type: 'match', fid: match.fid, accountId })
                   }
                 >
-                  <Settings />
-                </Button>
-              </ItemActions>
-            </Item>
-            {recording.error && <Notice error>{recording.error}</Notice>}
-            <Separator />
-            <ItemGroup>
-              {(
-                [
-                  { page: 'players', icon: Search, hint: 'playerShortcut' },
-                  { page: 'decks', icon: Layers, hint: 'deckShortcut' },
-                  { page: 'bans', icon: ShieldCheck, hint: 'banShortcut' },
-                ] as const
-              ).map(({ page, icon: ToolIcon, hint }) => (
-                <Item size="xs" asChild key={page}>
-                  <Button
-                    variant="ghost"
-                    className="h-auto w-full justify-start"
-                    onClick={() => setPage(page)}
+                  <ItemContent>
+                    <ItemTitle>{match.map || `#${match.id}`}</ItemTitle>
+                    <ItemDescription>
+                      {t(match.mode)} · {formatTime(match.endedAt, locale)} ·{' '}
+                      {t('accountScope', {
+                        name: match.localPersona || accountName,
+                        id: accountId,
+                      })}
+                    </ItemDescription>
+                  </ItemContent>
+                  <span
+                    className={cn(
+                      'recent-elo',
+                      eloChangeClass(
+                        match.eloAfter !== null && match.eloBefore !== null
+                          ? match.eloAfter - match.eloBefore
+                          : null,
+                      ),
+                    )}
                   >
-                    <ItemMedia variant="icon">
-                      <ToolIcon />
-                    </ItemMedia>
-                    <ItemContent>
-                      <ItemTitle>{t(page)}</ItemTitle>
-                      <ItemDescription>{t(hint)}</ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <ArrowRight />
-                    </ItemActions>
-                  </Button>
-                </Item>
-              ))}
-            </ItemGroup>
-          </Card>
-        </aside>
-      </div>
+                    {match.eloAfter !== null && match.eloBefore !== null
+                      ? `${match.eloAfter - match.eloBefore > 0 ? '+' : ''}${formatMetric(match.eloAfter - match.eloBefore, 0)}`
+                      : '—'}{' '}
+                    <small>ELO</small>
+                  </span>
+                </Button>
+              </Item>
+            ))}
+          </ItemGroup>
+        ) : (
+          <Empty icon={<Archive />} description={t('noMatchesHint')}>
+            {t('empty')}
+          </Empty>
+        )}
+      </Card>
     </div>
   );
 }

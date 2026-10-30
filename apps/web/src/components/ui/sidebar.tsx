@@ -31,6 +31,8 @@ type SidebarContextProps = {
   setOpen: (open: boolean) => void;
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
+  closeMobileForNavigation: (targetId?: string) => void;
+  restoreMobileFocus: (event: Event) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
 };
@@ -53,6 +55,7 @@ function SidebarProvider({
   className,
   style,
   children,
+  ref: forwardedRef,
   ...props
 }: React.ComponentProps<'div'> & {
   defaultOpen?: boolean;
@@ -60,7 +63,118 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void;
 }) {
   const isMobile = useIsMobile();
-  const [openMobile, setOpenMobile] = React.useState(false);
+  const [openMobile, updateOpenMobile] = React.useState(false);
+  const container = React.useRef<HTMLDivElement>(null);
+  const mobileOpen = React.useRef(false);
+  const mobileOpener = React.useRef<HTMLElement | null>(null);
+  const navigationTarget = React.useRef<string | null>(null);
+  const setContainer = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      container.current = node;
+      if (typeof forwardedRef === 'function') {
+        const cleanup = forwardedRef(node);
+        if (cleanup)
+          return () => {
+            container.current = null;
+            cleanup();
+          };
+      } else if (forwardedRef) forwardedRef.current = node;
+    },
+    [forwardedRef],
+  );
+  const available = (node: HTMLElement | null | undefined): node is HTMLElement => {
+    if (!node?.isConnected || node.closest('[hidden],[inert]') || node.matches(':disabled'))
+      return false;
+    for (let parent: HTMLElement | null = node; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      if (
+        style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        style.visibility === 'collapse'
+      )
+        return false;
+    }
+    return true;
+  };
+  const triggerFor = React.useCallback((sidebarId?: string) => {
+    const triggers = [
+      ...(container.current?.querySelectorAll<HTMLElement>('[data-sidebar="trigger"]') ?? []),
+    ];
+    return triggers.find(
+      (node) =>
+        node.closest('[data-slot="sidebar-wrapper"]') === container.current &&
+        (!sidebarId || node.getAttribute('aria-controls')?.split(/\s+/).includes(sidebarId)) &&
+        available(node),
+    );
+  }, []);
+  const setOpenMobile = React.useCallback(
+    (value: boolean | ((open: boolean) => boolean)) => {
+      const next = typeof value === 'function' ? value(mobileOpen.current) : value;
+      if (next === mobileOpen.current) return;
+      if (next) {
+        const active = document.activeElement;
+        if (!(
+          active instanceof HTMLElement &&
+          active.closest('[data-mobile="true"][data-slot="sidebar"]') &&
+          available(mobileOpener.current)
+        ))
+          mobileOpener.current =
+            active instanceof HTMLElement && active !== document.body
+              ? active
+              : (triggerFor() ?? null);
+        navigationTarget.current = null;
+      }
+      mobileOpen.current = next;
+      updateOpenMobile(next);
+    },
+    [triggerFor],
+  );
+  const closeMobileForNavigation = React.useCallback(
+    (targetId = 'main-content') => {
+      navigationTarget.current = targetId;
+      setOpenMobile(false);
+    },
+    [setOpenMobile],
+  );
+  const restoreMobileFocus = React.useCallback(
+    (event: Event) => {
+      event.preventDefault();
+      if (
+        mobileOpen.current ||
+        document.querySelector('[role="dialog"][data-state="open"],[role="alertdialog"]')
+      )
+        return;
+      const destination = navigationTarget.current;
+      navigationTarget.current = null;
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLElement &&
+        active !== document.body &&
+        !active.closest('[data-mobile="true"][data-state="closed"]') &&
+        available(active)
+      )
+        return;
+      const target = destination
+        ? [
+            document.getElementById(destination),
+            document.getElementById('settings-content'),
+            document.getElementById('main-content'),
+            triggerFor(),
+          ].find(available)
+        : [
+            mobileOpener.current,
+            triggerFor(),
+            document.getElementById('settings-content'),
+            document.getElementById('main-content'),
+          ].find(available);
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    },
+    [triggerFor],
+  );
+  React.useEffect(() => {
+    if (!isMobile && mobileOpen.current) setOpenMobile(false);
+  }, [isMobile, setOpenMobile]);
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -69,6 +183,12 @@ function SidebarProvider({
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === 'function' ? value(open) : value;
+      if (!openState && document.activeElement instanceof HTMLElement) {
+        const sidebar = document.activeElement.closest<HTMLElement>(
+          '[data-slot="sidebar-container"][data-sidebar-collapsible="offcanvas"]',
+        );
+        if (sidebar && container.current?.contains(sidebar)) triggerFor(sidebar.id)?.focus();
+      }
       if (setOpenProp) {
         setOpenProp(openState);
       } else {
@@ -78,7 +198,7 @@ function SidebarProvider({
       // This sets the cookie to keep the sidebar state.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
-    [setOpenProp, open],
+    [setOpenProp, open, triggerFor],
   );
 
   // Helper to toggle the sidebar.
@@ -89,7 +209,16 @@ function SidebarProvider({
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
+      const activeScope = document.activeElement?.closest('[data-slot="sidebar-wrapper"]');
+      if ((activeScope && activeScope !== container.current) || !triggerFor()) return;
+      if (
+        !event.defaultPrevented &&
+        !event.repeat &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT &&
+        (event.metaKey || event.ctrlKey)
+      ) {
         event.preventDefault();
         toggleSidebar();
       }
@@ -97,7 +226,7 @@ function SidebarProvider({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
+  }, [toggleSidebar, triggerFor]);
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -111,14 +240,27 @@ function SidebarProvider({
       isMobile,
       openMobile,
       setOpenMobile,
+      closeMobileForNavigation,
+      restoreMobileFocus,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      closeMobileForNavigation,
+      restoreMobileFocus,
+      toggleSidebar,
+    ],
   );
 
   return (
     <SidebarContext.Provider value={contextValue}>
       <div
+        ref={setContainer}
         data-slot="sidebar-wrapper"
         style={
           {
@@ -155,7 +297,7 @@ function Sidebar({
   collapsible?: 'offcanvas' | 'icon' | 'none';
   label?: string;
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, state, openMobile, setOpenMobile, restoreMobileFocus } = useSidebar();
 
   if (collapsible === 'none') {
     return (
@@ -177,6 +319,7 @@ function Sidebar({
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetContent
+          onCloseAutoFocus={restoreMobileFocus}
           id={id}
           dir={dir}
           data-sidebar="sidebar"
@@ -224,6 +367,7 @@ function Sidebar({
       <div
         id={id}
         data-slot="sidebar-container"
+        data-sidebar-collapsible={collapsible}
         data-side={side}
         inert={state === 'collapsed' && collapsible === 'offcanvas'}
         aria-hidden={state === 'collapsed' && collapsible === 'offcanvas' ? true : undefined}

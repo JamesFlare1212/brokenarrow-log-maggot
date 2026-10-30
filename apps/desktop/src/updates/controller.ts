@@ -100,7 +100,7 @@ export class UpdateController {
       return this.status();
     this.action = 'check';
     const previous = this.status();
-    this.set({ status: 'checking', error: null, errorContext: null });
+    this.set({ status: 'checking', error: null, errorContext: null, installBlocked: false });
     try {
       const result = await engine.checkForUpdates();
       if (!result) throw new Error('Update check did not return a result');
@@ -138,7 +138,13 @@ export class UpdateController {
     )
       return this.status();
     this.action = 'download';
-    this.set({ status: 'downloading', downloadPercent: 0, error: null, errorContext: null });
+    this.set({
+      status: 'downloading',
+      downloadPercent: 0,
+      error: null,
+      errorContext: null,
+      installBlocked: false,
+    });
     try {
       const files = await engine.downloadUpdate();
       if (!files.length) throw new Error('Update download did not produce an installer');
@@ -161,12 +167,15 @@ export class UpdateController {
       this.disposed ||
       this.state.mode !== 'installed' ||
       this.action ||
-      this.state.status !== 'downloaded' ||
-      !this.options.canInstall()
+      this.state.status !== 'downloaded'
     )
       return this.status();
+    if (!this.options.canInstall()) {
+      this.set({ installBlocked: true, error: null, errorContext: null });
+      return this.status();
+    }
     this.action = 'install';
-    this.set({ status: 'installing', error: null, errorContext: null });
+    this.set({ status: 'installing', error: null, errorContext: null, installBlocked: false });
     // Return the RPC first. Application.stop() waits for in-flight RPCs, so
     // awaiting shutdown from inside the install RPC would deadlock itself.
     this.installTimer = setTimeout(() => {
@@ -181,7 +190,7 @@ export class UpdateController {
       // A match/recording can start between the click and this scheduled turn.
       if (!this.options.canInstall()) {
         this.action = null;
-        this.set({ status: 'downloaded' });
+        this.set({ status: 'downloaded', installBlocked: true });
         return;
       }
       await this.options.prepareInstall(this.state.availableVersion!);

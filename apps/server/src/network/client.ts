@@ -7,6 +7,7 @@ import { parsePlayerPage, validatePlayerInfo } from './player-page';
 import { parseMatchPage, validateMatchInfo } from './match-page';
 import { failedHealthCheck } from './health';
 import { projectConfig, type NetworkConfig } from '../config';
+import { playerAnalysisSections, validatePlayerAnalysis } from './player-analysis';
 interface RequestOptions {
   force?: boolean;
   allowStale?: boolean;
@@ -14,6 +15,7 @@ interface RequestOptions {
   health?: boolean;
   parse?: (raw: string) => unknown;
   invalidMessage?: string;
+  cacheable?: (value: unknown) => boolean;
   fallback?: { path: string; parse: (raw: string) => unknown };
 }
 export interface DataResult {
@@ -22,13 +24,17 @@ export interface DataResult {
   at: number;
   attempts?: number;
   status?: number;
+  superseded?: boolean;
 }
 export interface HttpPort {
   fetch: typeof fetch;
   offline?: boolean;
 }
 export class BatraceClient {
-  private pending = new Map<string, Promise<DataResult>>();
+  private pending = new Map<string, { token: number; promise: Promise<DataResult> }>();
+  private activeRequests = new Set<Promise<DataResult>>();
+  private cacheGeneration = new Map<string, number>();
+  private requestGeneration = 0;
   private lifetime = new AbortController();
   private resultListeners = new Set<(check: ApiHealthCheck) => void>();
   constructor(
@@ -80,11 +86,21 @@ export class BatraceClient {
     }
     const pendingKey = key + (options.force ? ':force' : '');
     const existing = this.pending.get(pendingKey);
-    if (existing) return existing;
-    const task = this.request(path, key, ttl, options).finally(() =>
-      this.pending.delete(pendingKey),
-    );
-    this.pending.set(pendingKey, task);
+    if (existing && this.cacheGeneration.get(key) === existing.token) return existing.promise;
+    const token = ++this.requestGeneration;
+    this.cacheGeneration.set(key, token);
+    const canCache = () => this.cacheGeneration.get(key) === token;
+    const task = this.request(path, key, ttl, options, canCache)
+      .then((result): DataResult =>
+        canCache() ? result : { ...result, source: 'stale', superseded: true },
+      )
+      .finally(() => {
+        if (this.pending.get(pendingKey)?.token === token) this.pending.delete(pendingKey);
+        this.activeRequests.delete(task);
+        if (canCache()) this.cacheGeneration.delete(key);
+      });
+    this.pending.set(pendingKey, { token, promise: task });
+    this.activeRequests.add(task);
     return task;
   }
   private async request(
@@ -92,6 +108,7 @@ export class BatraceClient {
     key: string,
     ttl: number,
     options: RequestOptions,
+    canCache: () => boolean = () => true,
   ): Promise<DataResult> {
     let last: unknown;
     let attempts = 0;
@@ -168,7 +185,10 @@ export class BatraceClient {
         options.signal?.throwIfAborted();
         const at = this.now();
         this.report({ path, ok: true, ms: at - startedAt!, status: result.status }, options);
-        if (!options.health) this.db.saveCache(key, result.value, ttl, at);
+        if (!options.health && canCache()) {
+          if (options.cacheable?.(result.value) === false) this.db.removeCache(key);
+          else this.db.saveCache(key, result.value, ttl, at);
+        }
         return { value: result.value, source: 'network', at, attempts, status: result.status };
       } catch (error) {
         last = error;
@@ -183,12 +203,18 @@ export class BatraceClient {
       this.report(failedHealthCheck(path, this.now() - startedAt, last), options);
     if (options.fallback) {
       try {
-        const result = await this.request(options.fallback.path, key, ttl, {
-          ...options,
-          parse: options.fallback.parse,
-          fallback: undefined,
-          allowStale: false,
-        });
+        const result = await this.request(
+          options.fallback.path,
+          key,
+          ttl,
+          {
+            ...options,
+            parse: options.fallback.parse,
+            fallback: undefined,
+            allowStale: false,
+          },
+          canCache,
+        );
         return { ...result, attempts: attempts + (result.attempts ?? 0) };
       } catch (error) {
         if (this.lifetime.signal.aborted || options.signal?.aborted) throw error;
@@ -201,12 +227,31 @@ export class BatraceClient {
     throw Object.assign(last instanceof Error ? last : new Error(String(last)), { attempts });
   }
   analysisPlayer(id: string, force = false): Promise<DataResult> {
+    const key = `analysis:${id}`;
+    const cached = this.db.cache(key, true);
+    if (cached && !this.offline) {
+      try {
+        const sections = playerAnalysisSections(cached.value);
+        if (!sections.matches || !sections.maps) this.db.removeCache(key);
+      } catch {
+        this.db.removeCache(key);
+      }
+    }
     return this.get(
       `/api/analysis/player?stbid=${encodeURIComponent(id)}`,
-      `analysis:${id}`,
+      key,
       projectConfig.cache.ttlMs.player,
-      { force, allowStale: !force },
-    );
+      {
+        force,
+        allowStale: !force,
+        parse: (raw) => validatePlayerAnalysis(JSON.parse(raw)),
+        invalidMessage: 'BATrace returned incomplete player analysis',
+        cacheable: (value) => {
+          const sections = playerAnalysisSections(value);
+          return sections.matches && sections.maps;
+        },
+      },
+    ).then((result) => ({ ...result, value: validatePlayerAnalysis(result.value) }));
   }
   playerInfo(id: string, force = false): Promise<DataResult> {
     return this.get(
@@ -260,6 +305,6 @@ export class BatraceClient {
   async close(): Promise<void> {
     this.resultListeners.clear();
     this.lifetime.abort();
-    await Promise.allSettled([...this.pending.values()]);
+    await Promise.allSettled([...this.activeRequests]);
   }
 }

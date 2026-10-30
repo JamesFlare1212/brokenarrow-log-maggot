@@ -38,7 +38,7 @@ async function setup() {
       };
     },
   };
-  return { api, calls, completed };
+  return { api, calls, completed, bootstrap: await api.invoke('app.bootstrap', null) };
 }
 afterEach(async () => {
   cleanup();
@@ -77,7 +77,7 @@ describe('UI backed by the complete recorded BATrace service', () => {
     await waitFor(() =>
       expect(completed).toContainEqual({
         method: 'matches.detail',
-        input: { fid: '9227650', force: true },
+        input: { fid: '9227650', force: true, accountId: null },
       }),
     );
     expect(document.querySelectorAll('.match-player-cell')).toHaveLength(10);
@@ -88,7 +88,7 @@ describe('UI backed by the complete recorded BATrace service', () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected network'));
     const { data } = await loadRealData(source);
     const id = data.activeAccountId!;
-    const { api, calls, completed } = await setup();
+    const { api, calls, completed, bootstrap } = await setup();
     render(
       <AppProvider api={api}>
         <ProfileDialog id={id} name={id} />
@@ -96,7 +96,9 @@ describe('UI backed by the complete recorded BATrace service', () => {
     );
     const matchData = await screen.findByRole('table', { name: t('matchStatistics') });
     expect(within(matchData).getAllByRole('row')).toHaveLength(13);
-    expect(within(matchData).getAllByRole('columnheader')).toHaveLength(9);
+    expect(within(matchData).getAllByRole('columnheader')).toHaveLength(8);
+    expect(matchData.querySelectorAll('tbody [data-column="time"]')).toHaveLength(12);
+    expect(within(matchData).getAllByRole('button', { name: /^#\d+$/ })).toHaveLength(12);
     expect(screen.queryByRole('tab', { name: new RegExp(t('recent')) })).toBeNull();
     expect(screen.getAllByText(t('latestKd'))).toHaveLength(1);
     expect(screen.queryByRole('button', { name: t('maggot') })).toBeNull();
@@ -112,7 +114,15 @@ describe('UI backed by the complete recorded BATrace service', () => {
     expect(within(maggot).queryByRole('table')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: t('refresh') }));
     await waitFor(() => {
-      expect(completed).toContainEqual({ method: 'players.profile', input: { id, force: true } });
+      expect(completed).toContainEqual({
+        method: 'players.profile',
+        input: {
+          id,
+          force: true,
+          accountId: bootstrap.session.localPlayerId ?? null,
+          combined: bootstrap.config.multiAccountBond,
+        },
+      });
       expect(completed).toContainEqual({ method: 'players.report', input: { id, force: true } });
     });
     await waitFor(

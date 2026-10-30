@@ -33,7 +33,7 @@ export function mergeMatch(previous: Match, incoming: Match, fillOnly = false): 
   const lower = fillOnly || olderApi || (previous.source === 'api' && incoming.source !== 'api'),
     merged = { ...previous };
   for (const key of Object.keys(incoming) as Array<keyof Match>) {
-    if (key === 'players') continue;
+    if (key === 'players' || (olderApi && (key === 'warning' || key === 'warningCode'))) continue;
     const value = incoming[key];
     const existing = previous[key];
     const useful = value !== null && value !== '' && value !== undefined && value !== 'unknown';
@@ -56,6 +56,8 @@ export function mergeMatch(previous: Match, incoming: Match, fillOnly = false): 
     merged.durationSource = 'log';
   }
   if (incoming.source === 'api' && !olderApi) {
+    merged.warning = incoming.warning;
+    merged.warningCode = incoming.warningCode;
     merged.restarted = incoming.restarted;
     merged.updatedAt = incoming.updatedAt;
   }

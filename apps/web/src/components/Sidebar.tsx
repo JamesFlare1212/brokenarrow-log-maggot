@@ -139,7 +139,7 @@ export function SidebarItem({
   title,
   ...props
 }: ComponentPropsWithoutRef<'button'> & { icon: ReactNode; label: string; selected?: boolean }) {
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, closeMobileForNavigation } = useSidebar();
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
@@ -147,7 +147,7 @@ export function SidebarItem({
         size="workspace"
         onClick={(event) => {
           props.onClick?.(event);
-          if (isMobile) setOpenMobile(false);
+          if (isMobile && !event.defaultPrevented) closeMobileForNavigation();
         }}
         className={className}
         isActive={selected}

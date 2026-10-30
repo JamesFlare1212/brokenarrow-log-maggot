@@ -16,7 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -51,6 +51,9 @@ jobs:
         run: pnpm typecheck
 
       - name: Run regression tests
+        env:
+          BA_TEST_WORKERS: '1'
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm test
 
       - name: Build NSIS installer and portable executable

@@ -9,6 +9,9 @@ import { seedOfflineFixtureCaches } from './offline-fixtures';
 
 export const REAL_DATA_TABLES = [
   'players',
+  'game_observations',
+  'search_players',
+  'search_names',
   'player_names',
   'accounts',
   'matches',
@@ -132,6 +135,7 @@ export function seedRealData(db: Database, data: RealData, logDir: string): void
     });
     db.setState('activeAccountId', data.activeAccountId);
     db.setState('realDataFixture', { capturedAt: data.capturedAt });
+    db.rebuildGameObservations();
   });
 }
 

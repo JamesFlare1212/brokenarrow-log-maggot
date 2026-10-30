@@ -1,13 +1,14 @@
 'use client';
 
 import * as React from 'react';
+import { useTrackedOverlay } from '../overlay-activity';
 import { cn } from '@/lib/utils';
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui';
 
 import { Button } from '@/components/ui/button';
 
 function AlertDialog({ ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
+  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...useTrackedOverlay(props)} />;
 }
 
 function AlertDialogTrigger({

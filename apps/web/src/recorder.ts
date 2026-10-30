@@ -1,5 +1,6 @@
-import type { RecorderBridge } from '@ba/contracts';
+import type { RecorderBridge, RecorderConfig, RecordingAudioState } from '@ba/contracts';
 import { canvasSize } from '@ba/shared';
+import { RecordingAudioMonitor } from './recording/audio-monitor';
 import './recorder.css';
 const bridge = (window as unknown as { recorder: RecorderBridge }).recorder;
 let stream: MediaStream | null = null,
@@ -16,8 +17,39 @@ let stream: MediaStream | null = null,
   sequence = 0,
   startedAt = 0,
   token = '';
-const audioSources: MediaStreamAudioSourceNode[] = [];
+let recordedAudio = false;
+let audioMonitor: RecordingAudioMonitor | null = null;
+let captureConfig: RecorderConfig | null = null,
+  destination: MediaStreamAudioDestinationNode | null = null,
+  silence: ConstantSourceNode | null = null,
+  retrying = false;
+const sourceStreams: Partial<Record<keyof RecordingAudioState, MediaStream>> = {};
+const sourceNodes: Partial<Record<keyof RecordingAudioState, MediaStreamAudioSourceNode[]>> = {};
+function replaceAudio(source: keyof RecordingAudioState, media: MediaStream | null) {
+  const next: MediaStreamAudioSourceNode[] = [];
+  try {
+    if (media && audioContext && destination)
+      for (const track of media.getAudioTracks()) {
+        const node = audioContext.createMediaStreamSource(new MediaStream([track]));
+        next.push(node);
+        node.connect(destination);
+      }
+  } catch (error) {
+    next.forEach((node) => node.disconnect());
+    media?.getTracks().forEach((track) => track.stop());
+    throw error;
+  }
+  sourceNodes[source]?.forEach((node) => node.disconnect());
+  const previous = sourceStreams[source];
+  if (previous && previous !== media) previous.getAudioTracks().forEach((track) => track.stop());
+  if (media) sourceStreams[source] = media;
+  else delete sourceStreams[source];
+  sourceNodes[source] = next;
+  audioMonitor?.set(source, media);
+}
 function cleanup() {
+  stopRequested = true;
+  audioMonitor?.stop();
   if (draw) clearInterval(draw);
   if (preview) clearInterval(preview);
   draw = null;
@@ -26,7 +58,15 @@ function cleanup() {
   microphone?.getTracks().forEach((t) => t.stop());
   mixedAudio?.getTracks().forEach((t) => t.stop());
   output?.getTracks().forEach((t) => t.stop());
-  audioSources.splice(0).forEach((source) => source.disconnect());
+  Object.values(sourceStreams).forEach((media) =>
+    media.getTracks().forEach((track) => track.stop()),
+  );
+  Object.values(sourceNodes)
+    .flat()
+    .forEach((node) => node.disconnect());
+  silence?.stop();
+  silence?.disconnect();
+  silence = null;
   if (audioContext) {
     void audioContext.close().catch(() => {});
     audioContext = null;
@@ -40,14 +80,73 @@ const unsubscribe = bridge.stop((cancel) => {
   if (recorder?.state === 'recording') recorder.stop();
   else cleanup();
 });
+const unsubscribeAudio = bridge.retryAudio((requestId) => {
+  void (async () => {
+    if (!captureConfig || !audioMonitor || stopRequested) return;
+    if (!retrying) {
+      retrying = true;
+      try {
+        if (audioContext?.state === 'suspended') await audioContext.resume();
+        const before = audioMonitor.snapshot();
+        for (const source of ['system', 'microphone'] as const) {
+          if (stopRequested) break;
+          if (['active', 'off'].includes(before[source].state)) continue;
+          let media: MediaStream | null = null;
+          try {
+            media = await navigator.mediaDevices.getUserMedia(
+              source === 'microphone'
+                ? { audio: true, video: false }
+                : {
+                    audio: {
+                      mandatory: { chromeMediaSource: 'desktop' },
+                    } as unknown as MediaTrackConstraints,
+                    video: {
+                      mandatory: {
+                        chromeMediaSource: 'desktop',
+                        chromeMediaSourceId: captureConfig.sourceId,
+                        maxFrameRate: captureConfig.fps,
+                      },
+                    } as unknown as MediaTrackConstraints,
+                  },
+            );
+            if (stopRequested) {
+              media.getTracks().forEach((track) => track.stop());
+              break;
+            }
+            media.getVideoTracks().forEach((track) => track.stop());
+            replaceAudio(source, media);
+          } catch (error) {
+            media?.getTracks().forEach((track) => track.stop());
+            console.warn('Audio source retry unavailable', source, error);
+          }
+        }
+      } finally {
+        retrying = false;
+      }
+    }
+    if (!stopRequested) await bridge.audio(token, audioMonitor.snapshot(), requestId);
+  })().catch((error) => console.warn('Audio retry status unavailable', error));
+});
 window.addEventListener('beforeunload', () => {
   unsubscribe();
+  unsubscribeAudio();
   cleanup();
 });
 async function start() {
   try {
     const config = await bridge.config();
+    captureConfig = config;
     token = config.sessionId;
+    audioMonitor = new RecordingAudioMonitor(
+      config.audio === 'default',
+      config.audio === 'default' && config.microphone,
+      () =>
+        !audioContext ||
+        (audioContext.state === 'running' &&
+          !!mixedAudio
+            ?.getAudioTracks()
+            .some((track) => track.readyState === 'live' && track.enabled && !track.muted)),
+    );
     if (stopRequested) return;
     const video = document.getElementById('capture') as HTMLVideoElement;
     const constraints = {
@@ -102,29 +201,30 @@ async function start() {
     if (!ctx) throw new Error('Canvas unavailable');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     output = canvas.captureStream(config.fps);
-    const audioTracks = [...stream.getAudioTracks(), ...(microphone?.getAudioTracks() ?? [])];
-    if (audioTracks.length > 1) {
-      // MediaRecorder needs one mixed track to preserve both desktop and microphone audio.
+    if (config.audio === 'default') {
+      // Keep one output track so retries can replace inputs without restarting the encoder.
       const context = new AudioContext();
       audioContext = context;
-      const destination = context.createMediaStreamDestination();
+      destination = context.createMediaStreamDestination();
+      silence = context.createConstantSource();
+      silence.offset.value = 0;
+      silence.connect(destination);
+      silence.start();
       mixedAudio = destination.stream;
-      for (const track of audioTracks) {
-        const source = context.createMediaStreamSource(new MediaStream([track]));
-        audioSources.push(source);
-        source.connect(destination);
-      }
       await context.resume();
       if (stopRequested) {
         cleanup();
         return;
       }
       for (const track of mixedAudio.getAudioTracks()) output.addTrack(track);
-    } else if (audioTracks[0]) output.addTrack(audioTracks[0]);
-    const hasAudio = output.getAudioTracks().length > 0,
+      replaceAudio('system', stream);
+      replaceAudio('microphone', microphone);
+    }
+    const audio = audioMonitor.snapshot();
+    const hasAudio = Object.values(audio).some((source) => source.state === 'active'),
       mime =
         [
-          ...(hasAudio ? ['video/webm;codecs=vp8,opus'] : []),
+          ...(output.getAudioTracks().length ? ['video/webm;codecs=vp8,opus'] : []),
           'video/webm;codecs=vp8',
           'video/webm',
         ].find((type) => MediaRecorder.isTypeSupported(type)) ?? 'video/webm';
@@ -144,10 +244,13 @@ async function start() {
     recorder.onstop = () => {
       void (async () => {
         const duration = (performance.now() - startedAt) / 1000;
+        const audio = audioMonitor!.snapshot();
+        const hasRecordedAudio =
+          recordedAudio || Object.values(audio).some((source) => source.state === 'active');
         cleanup();
         if (discard) return;
         await queue;
-        await bridge.finish(token, duration, hasAudio);
+        await bridge.finish(token, duration, hasRecordedAudio, audio);
       })().catch((error) => bridge.failure(token, String(error)));
     };
     recorder.onerror = (event) => {
@@ -158,8 +261,16 @@ async function start() {
       );
     };
     recorder.start(1000);
+    recordedAudio = hasAudio;
     startedAt = performance.now();
-    await bridge.started(token, hasAudio);
+    await bridge.started(token, hasAudio, audio);
+    audioMonitor.start((state) => {
+      recordedAudio ||= Object.values(state).some((source) => source.state === 'active');
+      if (!stopRequested)
+        void bridge
+          .audio(token, state)
+          .catch((error) => console.warn('Audio status update unavailable', error));
+    });
     if (stopRequested) return;
     draw = setInterval(() => {
       if (stopRequested) return;
@@ -171,7 +282,14 @@ async function start() {
     preview = setInterval(() => {
       if (stopRequested) return;
       thumb.getContext('2d')?.drawImage(video, 0, 0, thumb.width, thumb.height);
-      bridge.preview(token, thumb.toDataURL('image/jpeg', 0.5), hasAudio);
+      const audio = audioMonitor!.snapshot();
+      recordedAudio ||= Object.values(audio).some((source) => source.state === 'active');
+      bridge.preview(
+        token,
+        thumb.toDataURL('image/jpeg', 0.5),
+        Object.values(audio).some((source) => source.state === 'active'),
+        audio,
+      );
     }, 1000);
   } catch (error) {
     cleanup();

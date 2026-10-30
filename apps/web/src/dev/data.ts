@@ -139,6 +139,7 @@ export function createDevelopmentData(
         style: null,
       };
   const bootstrap = structuredClone(base);
+  bootstrap.banAlerts = [];
   bootstrap.revision = 0;
   bootstrap.config = {
     ...bootstrap.config,
@@ -246,6 +247,7 @@ export function createDevelopmentData(
           teamId: 0,
           size: 8_000_000 + index * 3_000_000,
           createdAt: match.endedAt!,
+          dateSource: 'recording',
           durationSec: match.durationSec,
           test: true,
         })),
@@ -263,10 +265,14 @@ export function createDevelopmentData(
     },
     cache: empty
       ? {
+          at: now,
+          nextExpiryAt: null,
           api: { entries: 0, expired: 0, bytes: 0 },
           snapshots: { entries: 0, expired: 0, bytes: 0 },
         }
       : {
+          at: now,
+          nextExpiryAt: null,
           api: { entries: 240, expired: 80, bytes: 18_000_000 },
           snapshots: { entries: 12, expired: 3, bytes: 48000 },
         },

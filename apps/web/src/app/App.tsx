@@ -23,8 +23,9 @@ import { BrandLogo } from '../components/BrandLogo';
 import { TooltipButton } from '../components/Tooltip';
 import type { Panel } from '@ba/contracts';
 import { useApp } from './state';
+import { DialogNavigationContext } from '../components/dialog-navigation';
 import { useI18n } from '../hooks/useI18n';
-import { Badge, Button, Loading, Notice } from '../components/ui';
+import { Button, Loading, Notice } from '../components/ui';
 import { BatraceStatus } from '../components/BatraceStatus';
 import { PageToolbar } from '../components/PageToolbar';
 import {
@@ -44,6 +45,9 @@ import { BansPanel, BanAlertDialog } from '../features/bans/BansPanel';
 import { DecksPanel } from '../features/decks/DecksPanel';
 import { ReplaysPanel } from '../features/replays/ReplaysPanel';
 import { UpdateButton } from '../features/settings/UpdateButton';
+import { SettingsSaveIndicator } from '../features/settings/SettingsSaveIndicator';
+import { BanAlertsIndicator } from '../features/bans/BanAlertsIndicator';
+import { LogMonitoringIndicator } from '../components/LogMonitoringIndicator';
 import { AnalyticsConsentDialog } from '../features/settings/AnalyticsConsentDialog';
 import { hasAnalyticsChoice } from '@ba/contracts';
 import { cn } from '@/lib/utils';
@@ -70,6 +74,11 @@ const RecordingSettings = lazy(() =>
 );
 const ReplayDialog = lazy(() =>
   import('../features/replays/ReplayDialog').then((module) => ({ default: module.ReplayDialog })),
+);
+const HistoryRecoveryDialog = lazy(() =>
+  import('../features/history/HistoryRecoveryDialog').then((module) => ({
+    default: module.HistoryRecoveryDialog,
+  })),
 );
 const SettingsPage = lazy(() =>
   import('../features/settings/SettingsPage').then((module) => ({
@@ -128,25 +137,37 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function ModalRouter() {
+function ModalRouterContent() {
   const { modal } = useApp();
   if (!modal) return null;
   switch (modal.type) {
     case 'profile':
       return <ProfileDialog key={modal.id} id={modal.id} name={modal.name} />;
     case 'match':
-      return <MatchDialog key={modal.fid} fid={modal.fid} />;
+      return <MatchDialog key={modal.fid} fid={modal.fid} accountId={modal.accountId} />;
     case 'recordingSettings':
-      return <RecordingSettings enable={modal.enable} />;
+      return <RecordingSettings />;
+    case 'historyRecovery':
+      return <HistoryRecoveryDialog />;
     case 'replay':
       return <ReplayDialog key={modal.id} id={modal.id} title={modal.title} />;
     case 'banAlert':
-      return <BanAlertDialog players={modal.players} />;
+      return <BanAlertDialog batchId={modal.batchId} players={modal.players} />;
   }
 }
 
+function ModalRouter() {
+  const { modal } = useApp();
+  return (
+    <DialogNavigationContext.Provider value={modal?.returnState}>
+      <ModalRouterContent />
+    </DialogNavigationContext.Provider>
+  );
+}
+
 export function App() {
-  const { state, api, page, settingsTab, settings, openSettings, openModal } = useApp(),
+  const { state, api, page, modal, settingsTab, settings, openSettings, openModal, healthCheck } =
+      useApp(),
     { t } = useI18n();
   const [visited, setVisited] = useState<Panel[]>([page]);
   useEffect(() => {
@@ -185,16 +206,6 @@ export function App() {
     decks: <DecksPanel />,
     bans: <BansPanel />,
   };
-  const status =
-    state.watcher.error ||
-    t(
-      state.watcher.recovering
-        ? 'recovering'
-        : state.watcher.listening
-          ? 'listening'
-          : 'notListening',
-    );
-  const isListening = state.watcher.listening && !state.watcher.error;
   const title = t(page === 'current' ? 'commandCenter' : page);
   const account = state.session.localName || t('noAccount');
   const collapsed = settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed;
@@ -243,8 +254,8 @@ export function App() {
             />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem>Broken Arrow</BreadcrumbItem>
-                <BreadcrumbSeparator />
+                <BreadcrumbItem className="hidden sm:inline-flex">Broken Arrow</BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden sm:inline-flex" />
                 <BreadcrumbItem>
                   <BreadcrumbPage>{t(page === 'current' ? 'overview' : page)}</BreadcrumbPage>
                 </BreadcrumbItem>
@@ -252,11 +263,13 @@ export function App() {
             </Breadcrumb>
           </div>
           <div className="topbar-actions">
+            <LogMonitoringIndicator />
+            <BanAlertsIndicator />
+            {!settingsTab && modal?.type !== 'recordingSettings' && (
+              <SettingsSaveIndicator compact />
+            )}
             <div className="topbar-health">
-              <BatraceStatus
-                health={state.health}
-                onCheck={() => api.invoke('api.health', { force: true })}
-              />
+              <BatraceStatus health={state.health} request={healthCheck} />
             </div>
             <TooltipButton
               variant="ghost"
@@ -294,13 +307,6 @@ export function App() {
             <h1 id="page-title" className="sr-only">
               {title}
             </h1>
-            {page !== 'replays' && (
-              <span className="sr-only" role="status" data-log-status>
-                <Badge tone={isListening ? 'success' : state.watcher.error ? 'danger' : 'muted'}>
-                  {status}
-                </Badge>
-              </span>
-            )}
             {!state.config.logDir && page === 'current' && (
               <Notice>
                 <span>{t('noDirectory')}</span>
@@ -330,18 +336,6 @@ export function App() {
         {hasAnalyticsChoice(state.config) && <ModalRouter />}
       </Suspense>
       <AnalyticsConsentDialog />
-      {settings.error && !settingsTab && (
-        <div className="settings-save-alert">
-          <Notice error>
-            <strong>{t('settingsSaveFailed')}</strong>
-            <p>{settings.error}</p>
-            <div className="actions">
-              <Button onClick={() => void settings.flush()}>{t('settingsRetry')}</Button>
-              <Button onClick={() => void settings.discard()}>{t('settingsDiscard')}</Button>
-            </div>
-          </Notice>
-        </div>
-      )}
     </SidebarProvider>
   );
 }

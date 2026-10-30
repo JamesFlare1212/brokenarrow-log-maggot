@@ -7,7 +7,7 @@ import { Toggle as TogglePrimitive } from 'radix-ui';
 import { cardSurfaceClasses } from '@/components/ui/card';
 
 const toggleVariants = cva(
-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted data-[state=on]:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted data-[state=on]:bg-muted data-[state=checked]:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -15,10 +15,10 @@ const toggleVariants = cva(
         outline: 'border border-input bg-transparent hover:bg-muted',
         card: cn(
           cardSurfaceClasses,
-          'hover:border-foreground/20 hover:bg-(--glass-surface) aria-pressed:bg-(--glass-surface) data-[state=on]:border-(--appearance-selection) data-[state=on]:bg-(--glass-surface)',
+          'hover:border-foreground/20 hover:bg-(--glass-surface) aria-pressed:bg-(--glass-surface) data-[state=on]:border-(--appearance-selection) data-[state=on]:bg-(--glass-surface) data-[state=checked]:border-(--appearance-selection) data-[state=checked]:bg-(--glass-surface)',
         ),
         sphere:
-          'bg-transparent hover:bg-transparent data-[state=on]:bg-transparent aria-pressed:bg-transparent',
+          'bg-transparent hover:bg-transparent data-[state=on]:bg-transparent data-[state=checked]:bg-transparent aria-pressed:bg-transparent',
       },
       size: {
         default:

@@ -1,10 +1,16 @@
 import { appendFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import * as fileSystem from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { Database } from '../apps/server/src/storage/database';
 import { LogParser, type LogEvent } from '../apps/server/src/logs/parser';
 import { LogWatcher } from '../apps/server/src/logs/watcher';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return { ...actual, readdir: vi.fn(actual.readdir) };
+});
 
 describe('log format and session regressions', () => {
   it('recognizes tagged lobby events, clears old members, and coalesces duplicate exits', () => {
@@ -178,6 +184,44 @@ describe('log format and session regressions', () => {
 });
 
 describe('incremental log boundaries', () => {
+  it('starts the latest directory immediately after a superseded read finishes', async () => {
+    const first = await mkdtemp(join(tmpdir(), 'ba-logs-first-'));
+    const second = await mkdtemp(join(tmpdir(), 'ba-logs-second-'));
+    const parser = new LogParser(() => {});
+    const watcher = new LogWatcher(parser, () => {});
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const readDirectory = fileSystem.readdir;
+    vi.spyOn(fileSystem, 'readdir').mockImplementationOnce(async (...args) => {
+      entered();
+      await gate;
+      return Reflect.apply(readDirectory, undefined, args);
+    });
+    try {
+      await writeFile(join(first, 'Gamelog__first.log'), 'Log: GetPersonaName First\n');
+      await writeFile(join(second, 'Gamelog__second.log'), 'Log: GetPersonaName Second\n');
+      watcher.start(first);
+      await started;
+      watcher.start(second);
+      release();
+      await vi.waitFor(() => expect(parser.snapshot().localName).toBe('Second'), {
+        timeout: 800,
+        interval: 20,
+      });
+      expect(watcher.status().dir).toBe(second);
+    } finally {
+      release();
+      watcher.stop();
+      await rm(first, { recursive: true, force: true });
+      await rm(second, { recursive: true, force: true });
+    }
+  });
   it('keeps a partial historical start historical and reads the following start as live', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'ba-logs-'));
     const path = join(directory, 'Gamelog__test.log');

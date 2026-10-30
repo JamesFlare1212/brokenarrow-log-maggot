@@ -54,6 +54,79 @@ afterEach(async () => {
 });
 
 describe('desktop updates', () => {
+  it('publishes a blocked install attempt and retries the same verified download', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    await f.controller.check();
+    await f.controller.download();
+    f.canInstall.mockReturnValue(false);
+    expect(f.controller.install()).toMatchObject({
+      status: 'downloaded',
+      installBlocked: true,
+      availableVersion: '4.0.1',
+      downloadPercent: 100,
+    });
+    expect(f.emit).toHaveBeenLastCalledWith(expect.objectContaining({ installBlocked: true }));
+    expect(f.prepareInstall).not.toHaveBeenCalled();
+    expect(f.installFailed).not.toHaveBeenCalled();
+    f.canInstall.mockReturnValue(true);
+    expect(f.controller.install()).toMatchObject({ status: 'installing', installBlocked: false });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.prepareInstall).toHaveBeenCalledTimes(1);
+    expect(f.engine.quitAndInstall).toHaveBeenCalledTimes(1);
+  });
+  it('reports a scheduled activity rejection and releases the install action for retry', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    await f.controller.check();
+    await f.controller.download();
+    f.canInstall.mockReturnValueOnce(true).mockReturnValue(false);
+    expect(f.controller.install().status).toBe('installing');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.controller.status()).toMatchObject({ status: 'downloaded', installBlocked: true });
+    expect(f.prepareInstall).not.toHaveBeenCalled();
+    expect(f.engine.quitAndInstall).not.toHaveBeenCalled();
+    f.canInstall.mockReturnValue(true);
+    expect(f.controller.install().installBlocked).toBe(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.engine.quitAndInstall).toHaveBeenCalledTimes(1);
+  });
+  it('replaces an older preparation error with the latest blocked-attempt result', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    await f.controller.check();
+    await f.controller.download();
+    f.prepareInstall.mockRejectedValueOnce(new Error('Old preparation failure'));
+    f.controller.install();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.controller.status()).toMatchObject({
+      status: 'downloaded',
+      errorContext: 'install',
+      error: 'Old preparation failure',
+    });
+    f.canInstall.mockReturnValue(false);
+    expect(f.controller.install()).toMatchObject({
+      status: 'downloaded',
+      installBlocked: true,
+      error: null,
+      errorContext: null,
+    });
+    expect(f.installFailed).toHaveBeenCalledTimes(1);
+    f.canInstall.mockReturnValue(true);
+    f.controller.install();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.engine.quitAndInstall).toHaveBeenCalledTimes(1);
+  });
+  it('does not label invalid install requests as activity rejections', async () => {
+    for (const mode of ['installed', 'portable', 'disabled'] as const) {
+      const f = fixture(mode);
+      f.canInstall.mockReturnValue(false);
+      await f.controller.check();
+      expect(f.controller.install().installBlocked).toBe(false);
+      expect(f.canInstall).not.toHaveBeenCalled();
+      expect(f.engine.quitAndInstall).not.toHaveBeenCalled();
+    }
+  });
   it('checks after 15 seconds and every four minutes, without downloading or installing', async () => {
     vi.useFakeTimers();
     const f = fixture();

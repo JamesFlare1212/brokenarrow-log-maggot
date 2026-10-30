@@ -89,6 +89,36 @@ describe('BATrace match page parsing', () => {
 });
 
 describe('BATrace match detail fallback', () => {
+  it('marks stale match data with a presentation-independent warning code', async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const { db, client, now } = setup({ fetch: fetchImpl, offline: true });
+    db.saveCache(`match:${id}`, capturedData, 1, now - 60_000);
+    const tracker = new TrackerService(db, client, new Analyzer(client, db));
+    expect(await tracker.detail(id)).toMatchObject({
+      warningCode: 'batrace-cache',
+      warning: 'Cached match data; BATrace is unavailable',
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+  it.each([0, 60_000])(
+    'clears imported cache-warning metadata after a fresh response with a %i ms old snapshot',
+    async (age) => {
+      const { db, client, now } = setup({ fetch: async () => Response.json(capturedData) });
+      db.saveMatch({
+        ...normalizeMatch(capturedData, { id, localId: '75402', now: now - age }),
+        warningCode: 'batrace-cache',
+        warning: 'Cached match data; BATrace is unavailable',
+      });
+      const tracker = new TrackerService(db, client, new Analyzer(client, db));
+      const result = await tracker.detail(id, true);
+      expect(result.warningCode).toBeUndefined();
+      expect(result.warning).toBeUndefined();
+      expect(result.updatedAt).toBe(now);
+      expect(db.match(id)?.warningCode).toBeUndefined();
+      expect(db.match(id)?.warning).toBeUndefined();
+      expect(db.match(id)?.updatedAt).toBe(now);
+    },
+  );
   it('refreshes an existing unknown match after a Cloudflare block and saves the real result', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (url) =>
       String(url).includes('/api/')

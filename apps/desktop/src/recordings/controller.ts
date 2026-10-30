@@ -3,10 +3,20 @@ import { randomUUID } from 'node:crypto';
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { mkdir, rename, unlink, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Display, Match, PublicConfig, RecorderConfig, RecordingState } from '@ba/contracts';
-import { errorMessage } from '@ba/shared';
+import {
+  recordingAudioSchema,
+  type RecordingAudioState,
+  type Display,
+  type Match,
+  type PublicConfig,
+  type RecorderConfig,
+  type RecordingState,
+  type DisplayPreview,
+} from '@ba/contracts';
+import { errorMessage, object } from '@ba/shared';
 import { replayName } from '@ba/server';
 import { patchDurationFile } from './webm';
+import { displayChoices, selectDisplay } from './displays';
 interface Capture {
   token: string;
   generation: number;
@@ -23,6 +33,13 @@ interface Capture {
   reject: (error: Error) => void;
   stopped: boolean;
   hasAudio: boolean;
+  audio?: RecordingAudioState;
+  audioRetry?: {
+    id: string;
+    resolve: () => void;
+    reject: (error: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+  };
   test: boolean;
   startedAt: number;
   timer: ReturnType<typeof setTimeout> | null;
@@ -65,28 +82,29 @@ export class RecordingController {
         thumbnailSize: { width: 400, height: 225 },
       }),
       displays = screen.getAllDisplays();
-    return sources.map((s) => {
-      const d = displays.find((d) => String(d.id) === s.display_id);
-      // Electron display bounds use device-independent pixels, not physical pixels.
-      const width = d ? Math.round(d.bounds.width * d.scaleFactor) : 0;
-      const height = d ? Math.round(d.bounds.height * d.scaleFactor) : 0;
-      return {
-        id: s.id,
-        label: d ? `${d.label || 'Display'} · ${width}×${height}` : s.name,
-        thumbnail: s.thumbnail.toDataURL(),
-      };
-    });
+    return displayChoices(sources, displays).map((choice, index) => ({
+      id: choice.id,
+      label: choice.label,
+      thumbnail: sources[index]!.thumbnail.toDataURL(),
+    }));
   }
   async thumbnail(id: string): Promise<string | null> {
+    return (await this.displayPreview(id)).thumbnail;
+  }
+  async displayPreview(id: string): Promise<DisplayPreview> {
     const sources = await desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: { width: 640, height: 360 },
     });
-    return (
-      (
-        sources.find((s) => s.id === id || s.display_id === id) || sources[0]
-      )?.thumbnail.toDataURL() || null
+    const choices = displayChoices(sources, screen.getAllDisplays());
+    const { source, target } = selectDisplay(
+      sources,
+      choices,
+      id,
+      screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).id,
     );
+    const thumbnail = source?.thumbnail.toDataURL() || null;
+    return { ...target, thumbnail: thumbnail?.endsWith(',') ? null : thumbnail, displays: choices };
   }
   async start(match: Match, config: PublicConfig, test = false): Promise<void> {
     const generation = ++this.generation;
@@ -99,9 +117,21 @@ export class RecordingController {
       fid: match.fid,
       map: match.map,
       sourceId: '',
+      display: undefined,
       startedAt: null,
       error: null,
       hasAudio: false,
+      failure: null,
+      audio: {
+        system: { state: config.replayAudio === 'off' ? 'off' : 'starting', gap: false },
+        microphone: {
+          state: config.replayAudio === 'off' || !config.replayMicrophone ? 'off' : 'starting',
+          gap: false,
+        },
+      },
+      lastSavedName: undefined,
+      audioRetryPending: false,
+      audioRetryError: null,
     });
     try {
       const sources = await desktopCapturer.getSources({
@@ -109,14 +139,14 @@ export class RecordingController {
         thumbnailSize: { width: 1, height: 1 },
       });
       if (generation !== this.generation) return;
-      const cursor = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-      const source =
-        sources.find(
-          (s) => s.id === config.replayDisplayId || s.display_id === config.replayDisplayId,
-        ) ||
-        sources.find((s) => s.display_id === String(cursor.id)) ||
-        sources[0];
+      const { source, target } = selectDisplay(
+        sources,
+        displayChoices(sources, screen.getAllDisplays()),
+        config.replayDisplayId,
+        screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).id,
+      );
       if (!source) throw new Error('No display capture source');
+      this.update({ sourceId: source.id, display: target });
       const dir = this.directory();
       await mkdir(dir, { recursive: true });
       if (generation !== this.generation) return;
@@ -196,8 +226,14 @@ export class RecordingController {
       }
     } catch (error) {
       if (generation === this.generation) {
-        this.update({ phase: 'error', error: errorMessage(error), startedAt: null });
         if (this.current) await this.failCapture(this.current, errorMessage(error));
+        else
+          this.update({
+            phase: 'error',
+            error: errorMessage(error),
+            startedAt: null,
+            failure: { kind: 'start', discarded: true },
+          });
       }
       throw error;
     }
@@ -215,13 +251,17 @@ export class RecordingController {
   config(sender: number): RecorderConfig {
     return { ...this.owner(sender).config };
   }
-  ready(sender: number, token: string, hasAudio: boolean): void {
+  ready(sender: number, token: string, hasAudio: boolean, audio?: RecordingAudioState): void {
     const c = this.owner(sender, token);
     if (c.stopped) return;
+    const sourceAudio = audio ? this.validateAudio(c, audio) : undefined;
     if (c.timer) clearTimeout(c.timer);
     c.timer = c.test ? setTimeout(() => void this.stop(), 60000) : null;
     c.startedAt = Date.now();
-    c.hasAudio = hasAudio;
+    c.audio = sourceAudio;
+    c.hasAudio = c.audio
+      ? Object.values(c.audio).some((source) => source.state === 'active')
+      : hasAudio;
     this.update({
       phase: 'recording',
       sessionId: token,
@@ -229,8 +269,92 @@ export class RecordingController {
       map: c.match.map,
       sourceId: c.config.sourceId,
       startedAt: c.startedAt,
-      hasAudio,
+      hasAudio: c.hasAudio,
+      audio: c.audio,
     });
+  }
+  private validateAudio(c: Capture, value: RecordingAudioState): RecordingAudioState {
+    const audio = recordingAudioSchema.parse(value);
+    for (const source of ['system', 'microphone'] as const) {
+      const requested =
+        c.config.audio === 'default' && (source === 'system' || c.config.microphone);
+      if (!requested) {
+        if (audio[source].state !== 'off' || audio[source].gap)
+          throw new Error('Unrequested recording audio source');
+      } else if (audio[source].state === 'off')
+        throw new Error('Missing requested recording audio status');
+      audio[source].gap ||=
+        !!c.audio?.[source].gap || ['unavailable', 'muted', 'ended'].includes(audio[source].state);
+    }
+    return audio;
+  }
+  audio(sender: number, token: string, value: RecordingAudioState, retryId?: string): void {
+    const c = this.owner(sender, token);
+    if (c.stopped || this.state.phase !== 'recording') return;
+    const next = this.validateAudio(c, value);
+    if (JSON.stringify(next) !== JSON.stringify(c.audio)) {
+      c.audio = next;
+      c.hasAudio = Object.values(c.audio).some((source) => source.state === 'active');
+      this.update({
+        audio: c.audio,
+        hasAudio: c.hasAudio,
+        audioRetryError: Object.values(c.audio).every((source) =>
+          ['active', 'off'].includes(source.state),
+        )
+          ? null
+          : this.state.audioRetryError,
+      });
+    }
+    if (retryId && c.audioRetry?.id === retryId) {
+      const pending = c.audioRetry;
+      c.audioRetry = undefined;
+      clearTimeout(pending.timer);
+      const missing = Object.values(c.audio!).some(
+        (source) => !['active', 'off'].includes(source.state),
+      );
+      this.update({
+        audioRetryPending: false,
+        audioRetryError: missing ? 'RECORDING_AUDIO_UNAVAILABLE' : null,
+      });
+      if (missing) pending.reject(new Error('RECORDING_AUDIO_UNAVAILABLE'));
+      else pending.resolve();
+    }
+  }
+  async retryAudio(sessionId: string): Promise<void> {
+    const c = this.current;
+    if (
+      !c ||
+      c.token !== sessionId ||
+      c.stopped ||
+      this.state.phase !== 'recording' ||
+      c.config.audio === 'off' ||
+      !c.audio ||
+      Object.values(c.audio).every((source) => ['active', 'off'].includes(source.state))
+    )
+      throw new Error('RECORDING_AUDIO_RETRY_UNAVAILABLE');
+    if (c.audioRetry) throw new Error('RECORDING_AUDIO_RETRY_PENDING');
+    this.update({ audioRetryPending: true, audioRetryError: null });
+    await new Promise<void>((resolve, reject) => {
+      const id = randomUUID();
+      const timer = setTimeout(() => {
+        if (c.audioRetry?.id !== id) return;
+        c.audioRetry = undefined;
+        if (this.current === c)
+          this.update({
+            audioRetryPending: false,
+            audioRetryError: 'RECORDING_AUDIO_RETRY_TIMEOUT',
+          });
+        reject(new Error('RECORDING_AUDIO_RETRY_TIMEOUT'));
+      }, 30000);
+      c.audioRetry = { id, resolve, reject, timer };
+      c.win.webContents.send('ba:recording:retry-audio', id);
+    });
+  }
+  private cancelAudioRetry(c: Capture): void {
+    if (!c.audioRetry) return;
+    clearTimeout(c.audioRetry.timer);
+    c.audioRetry.reject(new Error('RECORDING_AUDIO_RETRY_UNAVAILABLE'));
+    c.audioRetry = undefined;
   }
   async chunk(sender: number, token: string, sequence: number, data: ArrayBuffer): Promise<void> {
     const c = this.owner(sender, token);
@@ -251,7 +375,13 @@ export class RecordingController {
     );
     await c.queue;
   }
-  preview(sender: number, token: string, dataUrl: string, hasAudio: boolean): void {
+  preview(
+    sender: number,
+    token: string,
+    dataUrl: string,
+    hasAudio: boolean,
+    audio?: RecordingAudioState,
+  ): void {
     const c = this.owner(sender, token);
     if (
       c.stopped ||
@@ -260,12 +390,20 @@ export class RecordingController {
       !dataUrl.startsWith('data:image/jpeg;base64,')
     )
       return;
-    this.previewed(token, dataUrl, hasAudio);
+    if (audio) this.audio(sender, token, audio);
+    this.previewed(token, dataUrl, c.audio ? c.hasAudio : hasAudio);
   }
-  async finish(sender: number, token: string, duration: number, hasAudio: boolean): Promise<void> {
+  async finish(
+    sender: number,
+    token: string,
+    duration: number,
+    hasAudio: boolean,
+    audio?: RecordingAudioState,
+  ): Promise<void> {
     const c = this.owner(sender, token);
     if (!Number.isFinite(duration) || duration < 0 || duration > 86400)
       throw new Error('Invalid recording duration');
+    if (audio) c.audio = this.validateAudio(c, audio);
     try {
       await c.queue;
       await new Promise<void>((resolve, reject) => {
@@ -286,10 +424,24 @@ export class RecordingController {
         final = join(c.dir, '.rec-final-' + c.token + '.webm');
       await patchDurationFile(c.part, final, duration);
       await rename(final, join(c.dir, name));
-      await unlink(c.part);
+      let warning: string | null = null;
+      try {
+        await unlink(c.part);
+      } catch (error) {
+        warning = errorMessage(error);
+      }
       c.hasAudio = hasAudio;
-      this.saved(name, duration, c.match);
-      this.complete(c);
+      try {
+        this.saved(name, duration, c.match);
+      } catch (error) {
+        warning = errorMessage(error);
+      }
+      this.complete(c, name);
+      if (warning && this.generation === c.generation)
+        this.update({
+          error: warning,
+          failure: { kind: 'metadata', discarded: false, savedName: name },
+        });
     } catch (error) {
       await this.failCapture(c, errorMessage(error));
       throw error;
@@ -298,7 +450,8 @@ export class RecordingController {
   async failure(sender: number, token: string, message: string): Promise<void> {
     await this.failCapture(this.owner(sender, token), message.slice(0, 1000));
   }
-  private complete(c: Capture): void {
+  private complete(c: Capture, name: string): void {
+    this.cancelAudioRetry(c);
     if (c.timer) clearTimeout(c.timer);
     if (this.current === c) {
       this.current = null;
@@ -308,9 +461,16 @@ export class RecordingController {
         fid: null,
         map: '',
         sourceId: '',
+        display: undefined,
         startedAt: null,
         seconds: 0,
         error: null,
+        failure: null,
+        audio: c.audio,
+        lastSavedName: name,
+        hasAudio: false,
+        audioRetryPending: false,
+        audioRetryError: null,
       });
     }
     if (!c.win.isDestroyed()) c.win.destroy();
@@ -318,13 +478,30 @@ export class RecordingController {
   }
   private async failCapture(c: Capture, message: string): Promise<void> {
     if (this.current !== c) return;
+    this.cancelAudioRetry(c);
     if (c.timer) clearTimeout(c.timer);
     this.current = null;
     c.writer.destroy();
+    if (!c.writer.closed) await new Promise<void>((resolve) => c.writer.once('close', resolve));
     if (!c.win.isDestroyed()) c.win.destroy();
-    await unlink(c.part).catch(() => {});
-    await unlink(join(c.dir, '.rec-final-' + c.token + '.webm')).catch(() => {});
-    this.update({ phase: 'error', error: message, startedAt: null, sessionId: null });
+    let discarded = true;
+    for (const file of [c.part, join(c.dir, '.rec-final-' + c.token + '.webm')]) {
+      try {
+        await unlink(file);
+      } catch (error) {
+        if (object(error).code !== 'ENOENT') discarded = false;
+      }
+    }
+    if (this.generation === c.generation && this.current === null)
+      this.update({
+        phase: 'error',
+        error: message,
+        startedAt: null,
+        sessionId: null,
+        failure: { kind: !c.startedAt ? 'start' : c.stopped ? 'save' : 'capture', discarded },
+        audioRetryPending: false,
+        audioRetryError: null,
+      });
     c.reject(new Error(message));
   }
   async stop(match?: Match): Promise<void> {
@@ -341,8 +518,9 @@ export class RecordingController {
       return;
     }
     if (!c.stopped) {
+      this.cancelAudioRetry(c);
       c.stopped = true;
-      this.update({ phase: 'stopping' });
+      this.update({ phase: 'stopping', audioRetryPending: false, audioRetryError: null });
       if (c.timer) clearTimeout(c.timer);
       c.timer = setTimeout(() => void this.failCapture(c, 'Saving the recording timed out'), 30000);
       c.win.webContents.send('ba:recording:stop', false);
@@ -352,6 +530,7 @@ export class RecordingController {
   private async discardCurrent(): Promise<void> {
     const c = this.current;
     if (c) {
+      this.cancelAudioRetry(c);
       this.current = null;
       if (c.timer) clearTimeout(c.timer);
       if (!c.win.isDestroyed()) {
@@ -369,9 +548,16 @@ export class RecordingController {
       fid: null,
       map: '',
       sourceId: '',
+      display: undefined,
       startedAt: null,
       seconds: 0,
       error: null,
+      failure: null,
+      audio: undefined,
+      lastSavedName: undefined,
+      hasAudio: false,
+      audioRetryPending: false,
+      audioRetryError: null,
     });
   }
   async abort(): Promise<void> {

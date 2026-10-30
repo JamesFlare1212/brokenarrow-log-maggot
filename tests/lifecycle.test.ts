@@ -4,7 +4,8 @@ import { appendFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AppEvent, RecordingState } from '@ba/contracts';
+import type { AppEvent, RecordingState, PlayerReport } from '@ba/contracts';
+import { rpcSchemas } from '@ba/contracts';
 import type { Platform } from '../apps/server/src/ports';
 
 vi.mock('../apps/server/src/config', async (importOriginal) => {
@@ -32,13 +33,16 @@ vi.mock('../apps/server/src/storage/database', async (importOriginal) => {
 });
 import { Application } from '../apps/server/src/app';
 import { UpdateController, type UpdateEngine } from '../apps/desktop/src/updates/controller';
+import { emptyMatch, emptyPlayer } from '@ba/shared';
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
-  const promise = new Promise<T>((done) => {
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((done, fail) => {
     resolve = done;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 function platform(fetchImpl: typeof fetch): Platform {
   const recording: RecordingState = {
@@ -67,6 +71,14 @@ function platform(fetchImpl: typeof fetch): Platform {
       abort: vi.fn(async () => {}),
       displays: vi.fn(async () => []),
       thumbnail: vi.fn(async () => null),
+      displayPreview: async (id) => ({
+        requestedId: id,
+        sourceId: null,
+        label: null,
+        selection: 'unavailable',
+        thumbnail: null,
+        displays: [],
+      }),
       playback: vi.fn(async () => 'ba-replay://fixture'),
     },
   };
@@ -87,13 +99,235 @@ afterEach(async () => {
   applications.clear();
 });
 
+describe('local match detail references', () => {
+  const localMatch = (id: string) => ({
+    ...emptyMatch(id, 1000),
+    map: 'Dam',
+    localPlayerId: '111',
+    localPersona: 'First account',
+    winnerTeamId: 0 as const,
+    mode: 'ranked' as const,
+    players: [
+      { ...emptyPlayer('111', 'First account'), teamId: 0 as const },
+      { ...emptyPlayer('222', 'Second account'), teamId: 1 as const },
+    ],
+  });
+  for (const prefix of ['local', 'legacy']) {
+    it.each([false, true])(
+      `reads ${prefix} detail without network, writes or events (force=%s)`,
+      async (force) => {
+        const fetcher = vi.fn<typeof fetch>(),
+          events: AppEvent[] = [];
+        const app = application(platform(fetcher), events);
+        const id = `${prefix}:stored-session`;
+        app.db.saveMatch({
+          ...localMatch(id),
+          warning: 'Old imported network warning',
+          warningCode: 'batrace-cache',
+        });
+        const before = app.db.match(id),
+          version = app.db.historyVersion(id);
+        const save = vi.spyOn(app.db, 'saveMatch'),
+          remote = vi.spyOn(app.client, 'match');
+        const value = await app.invoke('matches.detail', { fid: id, force, accountId: null });
+        expect(value).toMatchObject({ id, fid: null, map: 'Dam', localPlayerId: '111' });
+        expect(value.players.map((player) => player.id)).toEqual(['111', '222']);
+        expect(value.warning).toBeUndefined();
+        expect(value.warningCode).toBeUndefined();
+        expect(app.db.match(id)).toEqual(before);
+        expect(app.db.historyVersion(id)).toBe(version);
+        expect(save).not.toHaveBeenCalled();
+        expect(remote).not.toHaveBeenCalled();
+        expect(fetcher).not.toHaveBeenCalled();
+        expect(events).toEqual([]);
+      },
+    );
+    it(`projects the selected account without changing the saved ${prefix} perspective`, async () => {
+      const fetcher = vi.fn<typeof fetch>(),
+        app = application(platform(fetcher));
+      const id = `${prefix}:perspective`;
+      app.db.saveMatch(localMatch(id));
+      const before = app.db.match(id);
+      expect(
+        await app.invoke('matches.detail', { fid: id, force: true, accountId: '222' }),
+      ).toMatchObject({
+        localPlayerId: '222',
+        localPersona: 'Second account',
+        outcome: 'loss',
+      });
+      await expect(app.invoke('matches.detail', { fid: id, accountId: '999' })).rejects.toThrow(
+        'MATCH_PERSPECTIVE_UNAVAILABLE',
+      );
+      expect(app.db.match(id)).toEqual(before);
+      expect(fetcher).not.toHaveBeenCalled();
+    });
+    it(`reports missing ${prefix} records and recovers after storage is restored`, async () => {
+      const fetcher = vi.fn<typeof fetch>(),
+        events: AppEvent[] = [],
+        app = application(platform(fetcher), events);
+      const id = `${prefix}:restored`;
+      await expect(app.invoke('matches.detail', { fid: id })).rejects.toThrow(
+        'LOCAL_MATCH_UNAVAILABLE',
+      );
+      app.db.saveMatch(localMatch(id));
+      expect((await app.invoke('matches.detail', { fid: id })).map).toBe('Dam');
+      app.db.deleteMatch(id);
+      await expect(app.invoke('matches.detail', { fid: id, force: true })).rejects.toThrow(
+        'LOCAL_MATCH_UNAVAILABLE',
+      );
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(events).toEqual([]);
+    });
+  }
+  it('reads a stored local key without using its separately known online ID', async () => {
+    const fetcher = vi.fn<typeof fetch>(),
+      app = application(platform(fetcher));
+    const id = 'local:linked-online-id';
+    app.db.saveMatch({ ...localMatch(id), fid: '91001' });
+    expect(await app.invoke('matches.detail', { fid: id, force: true })).toMatchObject({
+      id,
+      fid: '91001',
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it.each([false, true])('preserves the numeric online query path (force=%s)', async (force) => {
+    const fetcher = vi.fn<typeof fetch>(),
+      app = application(platform(fetcher));
+    const remote = vi
+      .spyOn(app.client, 'match')
+      .mockRejectedValue(new Error('Controlled online failure'));
+    await expect(app.invoke('matches.detail', { fid: '91001', force })).rejects.toThrow(
+      'Controlled online failure',
+    );
+    expect(remote).toHaveBeenCalledExactlyOnceWith('91001', force);
+  });
+  it.each([
+    '',
+    'arbitrary',
+    'local:',
+    'legacy:',
+    'local:bad\nid',
+    'legacy:bad\u0000id',
+    'local:' + 'x'.repeat(123),
+    '1'.repeat(33),
+    '../outside',
+    '1e2',
+    'https://example.invalid',
+    '123\n',
+    '123\r',
+    'local:bad\n',
+    'legacy:bad\r',
+    'local:bad\u2028',
+    'local:bad\u0085',
+  ])('rejects malformed detail reference %j before any online request', async (fid) => {
+    const fetcher = vi.fn<typeof fetch>(),
+      app = application(platform(fetcher));
+    const remote = vi.spyOn(app.client, 'match');
+    expect(rpcSchemas['matches.detail'].safeParse({ fid }).success).toBe(false);
+    await expect(app.invoke('matches.detail', { fid })).rejects.toThrow();
+    expect(remote).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('keeps online-only operations and account identifiers numeric', async () => {
+    const fetcher = vi.fn<typeof fetch>(),
+      app = application(platform(fetcher));
+    await expect(app.invoke('matches.add', { fid: 'local:session' })).rejects.toThrow();
+    await expect(
+      app.invoke('matches.detail', { fid: 'local:session', accountId: 'local:account' }),
+    ).rejects.toThrow();
+    await expect(app.invoke('players.profile', { id: 'legacy:player' })).rejects.toThrow();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe('saved configuration confirmation', () => {
+  it.each([false, true])(
+    'publishes a versioned read without rewriting consent=%s',
+    async (enabled) => {
+      const fetcher = vi.fn<typeof fetch>();
+      const value = platform(fetcher);
+      const events: AppEvent[] = [];
+      const app = application(value, events);
+      app.db.updateConfig({ analyticsEnabled: enabled, analyticsChoiceSaved: true });
+      const before = app.db.config();
+      const write = vi.spyOn(app.db, 'updateConfig');
+      const first = await app.invoke('config.read', null);
+      const second = await app.invoke('config.read', null);
+      expect(first.config).toEqual(before);
+      expect(second.config).toEqual(before);
+      expect(second.revision).toBeGreaterThan(first.revision);
+      expect(events.filter((event) => event.type === 'config')).toEqual([
+        { type: 'config', config: before, revision: first.revision },
+        { type: 'config', config: before, revision: second.revision },
+      ]);
+      expect(write).not.toHaveBeenCalled();
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(value.recordings.start).not.toHaveBeenCalled();
+      expect(app.db.config()).toEqual(before);
+    },
+  );
+});
+
+describe('ban alert snapshots and acknowledgement', () => {
+  it('includes already published notifications in an equally current bootstrap snapshot', async () => {
+    const events: AppEvent[] = [];
+    const app = application(platform(vi.fn()), events);
+    app.db.observe([{ id: '123', name: 'Observed player' }], 1);
+    const newly = app.db.saveBans([
+      {
+        id: '123',
+        name: 'Observed player',
+        steamId: '',
+        rating: 2000,
+        firstSeenAt: 1,
+        lastSeenAt: 2,
+        encountered: true,
+      },
+    ]);
+    app.event({ type: 'bans', list: app.db.bans(), newly, alerts: app.db.banAlerts() });
+    const snapshot = await app.invoke('app.bootstrap', null);
+    expect(snapshot.revision).toBe(events.at(-1)!.revision);
+    expect(snapshot.banAlerts).toEqual(app.db.banAlerts());
+    expect(snapshot.banAlerts[0]!.players[0]!.id).toBe('123');
+  });
+  it('publishes an authoritative inbox after an idempotent exact-batch acknowledgement', async () => {
+    const events: AppEvent[] = [];
+    const app = application(platform(vi.fn()), events);
+    app.db.observe(
+      [
+        { id: '1', name: 'A' },
+        { id: '2', name: 'B' },
+      ],
+      1,
+    );
+    for (const id of ['1', '2'])
+      app.db.saveBans([
+        {
+          id,
+          name: id,
+          steamId: '',
+          rating: 2000,
+          firstSeenAt: 1,
+          lastSeenAt: 2,
+          encountered: true,
+        },
+      ]);
+    const [first, second] = app.db.banAlerts();
+    await app.invoke('bans.acknowledgeAlerts', { ids: [first!.id] });
+    await app.invoke('bans.acknowledgeAlerts', { ids: [first!.id] });
+    expect(events.at(-1)).toMatchObject({ type: 'banAlerts', alerts: [second] });
+    expect(app.snapshot().banAlerts).toEqual([second]);
+    expect(app.db.bans()).toHaveLength(2);
+  });
+});
+
 describe('concurrent room queries', () => {
   const players = [
     { id: '1', name: 'First player', teamId: 0 as const },
     { id: '2', name: 'Second player', teamId: 1 as const },
     { id: '3', name: 'Cached player', teamId: 1 as const },
   ];
-  const analysis = { matchCount: 1, trend: { points: [] } };
+  const analysis = { matchCount: 1, trend: { points: [] }, mapPerformance: [] };
 
   it('starts independent lookups together and publishes cached and faster players first', async () => {
     const first = deferred<Response>(),
@@ -115,11 +349,15 @@ describe('concurrent room queries', () => {
         expect(fetchImpl).toHaveBeenCalledTimes(2);
         expect(roster().map((event) => event.player.id)).toEqual(['3']);
       });
+      expect(events[0]).toMatchObject({ type: 'rosterQuery', pendingIds: ['1', '2', '3'] });
+      expect(app.snapshot().rosters?.previous.pendingIds).toEqual(['1', '2']);
+      expect(Object.keys(app.snapshot().rosters!.previous.rows)).toEqual(['3']);
       second.resolve(Response.json(analysis));
       await vi.waitFor(() => expect(roster().map((event) => event.player.id)).toEqual(['3', '2']));
       first.resolve(Response.json(analysis));
       expect(await request).toMatchObject({ queried: 3, skipped: 2, cancelled: false });
       expect(roster().map((event) => event.player.id)).toEqual(['3', '2', '1']);
+      expect(app.snapshot().rosters?.previous.pendingIds).toEqual([]);
     } finally {
       first.resolve(Response.json(analysis));
       second.resolve(Response.json(analysis));
@@ -210,6 +448,237 @@ describe('concurrent room queries', () => {
       expect(events.filter((event) => event.type === 'roster')).toEqual([]);
     } finally {
       pending.resolve(Response.json(analysis));
+      await request;
+    }
+  });
+});
+
+describe('bounded automatic room retry', () => {
+  async function fixture() {
+    const events: AppEvent[] = [];
+    const app = application(
+      platform(
+        vi.fn(async () =>
+          Response.json({ matchCount: 1, trend: { points: [] }, mapPerformance: [] }),
+        ),
+      ),
+      events,
+    );
+    const template = await app.invoke('players.report', { id: '2' });
+    const control = { available: false };
+    const analyzer = Reflect.get(app, 'analyzer') as { report(id: string): Promise<PlayerReport> };
+    const report = vi.spyOn(analyzer, 'report').mockImplementation(async (id) => {
+      if (id === '1' && !control.available) throw new Error('Transient room failure');
+      return { ...template, id, elo: id === '1' ? 2200 : 1800 };
+    });
+    Reflect.set(app, 'network', true);
+    const watcher = vi.spyOn(app.watcher, 'status').mockReturnValue({
+      ...app.watcher.status(),
+      live: true,
+      error: null,
+      checking: false,
+      recovering: false,
+    });
+    app.db.updateConfig({ autoQueryCurrentMatch: true });
+    const start = () =>
+      app.parser.feed([
+        'Log: [LOBBY] Enter to lobby (id: 1776). Status Pending',
+        'Log: Incoming client First:1 to lobby (id: 1776)',
+        'Log: Incoming client Second:2 to lobby (id: 1776)',
+      ]);
+    return { app, events, report, control, watcher, start };
+  }
+  it('retries only the failed player once after five seconds and retains successful rows', async () => {
+    const f = await fixture();
+    vi.useFakeTimers();
+    try {
+      f.start();
+      await vi.advanceTimersByTimeAsync(250);
+      const initial = f.app.snapshot().rosters!.current;
+      expect(initial.rows['1']?.error).toBe('Transient room failure');
+      expect(initial.rows['2']?.info?.elo).toBe(1800);
+      expect(initial.retryAt).toBe(Date.now() + 5000);
+      f.control.available = true;
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(f.report.mock.calls.map(([id]) => id)).toEqual(['1', '2']);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(f.report.mock.calls.map(([id]) => id)).toEqual(['1', '2', '1']);
+      expect(f.app.snapshot().rosters!.current).toMatchObject({
+        retryAt: null,
+        pendingIds: [],
+        rows: { '1': { error: null, info: { elo: 2200 } }, '2': { info: { elo: 1800 } } },
+      });
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(f.report).toHaveBeenCalledTimes(3);
+    } finally {
+      await f.app.stop();
+      vi.useRealTimers();
+    }
+  });
+  it('stops after a second failure even when unchanged room events keep arriving', async () => {
+    const f = await fixture();
+    vi.useFakeTimers();
+    try {
+      f.start();
+      await vi.advanceTimersByTimeAsync(5250);
+      expect(f.report.mock.calls.filter(([id]) => id === '1')).toHaveLength(2);
+      expect(f.app.snapshot().rosters!.current.retryAt).toBeNull();
+      for (let n = 0; n < 3; n++) {
+        f.app.parser.feed(['Log: Incoming client First:1 to lobby (id: 1776)']);
+        await vi.advanceTimersByTimeAsync(10000);
+      }
+      expect(f.report.mock.calls.filter(([id]) => id === '1')).toHaveLength(2);
+    } finally {
+      await f.app.stop();
+      vi.useRealTimers();
+    }
+  });
+  it('lets manual current-room refresh cancel the pending automatic retry', async () => {
+    const f = await fixture();
+    vi.useFakeTimers();
+    try {
+      f.start();
+      await vi.advanceTimersByTimeAsync(250);
+      f.control.available = true;
+      await f.app.invoke('session.query', { context: 'current', requestId: randomUUID() });
+      expect(f.app.snapshot().rosters!.current.retryAt).toBeNull();
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(f.report.mock.calls.filter(([id]) => id === '1')).toHaveLength(2);
+      expect(f.report.mock.calls.filter(([id]) => id === '2')).toHaveLength(2);
+    } finally {
+      await f.app.stop();
+      vi.useRealTimers();
+    }
+  });
+  for (const cancellation of ['room', 'reset', 'preference', 'watcher', 'shutdown'] as const) {
+    it(`cancels a pending retry on ${cancellation}`, async () => {
+      const f = await fixture();
+      vi.useFakeTimers();
+      try {
+        f.start();
+        await vi.advanceTimersByTimeAsync(250);
+        if (cancellation === 'room')
+          f.app.parser.feed(['Log: [LOBBY] Enter to lobby (id: 99). Status Pending']);
+        if (cancellation === 'reset') f.app.parser.reset();
+        if (cancellation === 'preference')
+          await f.app.invoke('config.update', { autoQueryCurrentMatch: false });
+        if (cancellation === 'watcher') {
+          const watcher = { ...f.app.watcher.status(), live: false, error: 'Log unavailable' };
+          f.watcher.mockReturnValue(watcher);
+          f.app.event({ type: 'watcher', watcher });
+        }
+        if (cancellation === 'shutdown') await f.app.stop();
+        await vi.advanceTimersByTimeAsync(10000);
+        expect(f.report).toHaveBeenCalledTimes(2);
+        if (cancellation !== 'shutdown')
+          expect(f.app.snapshot().rosters!.current.retryAt).toBeNull();
+      } finally {
+        await f.app.stop();
+        vi.useRealTimers();
+      }
+    });
+  }
+  it('keeps the current-room retry independent of a previous-match query', async () => {
+    const f = await fixture();
+    vi.useFakeTimers();
+    try {
+      f.start();
+      await vi.advanceTimersByTimeAsync(250);
+      f.control.available = true;
+      await f.app.invoke('session.query', {
+        context: 'previous',
+        requestId: randomUUID(),
+        players: [{ id: '1', name: 'First', teamId: 0 }],
+        fid: '10',
+      });
+      expect(f.app.snapshot().rosters!.current.retryAt).not.toBeNull();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(f.report.mock.calls.filter(([id]) => id === '1')).toHaveLength(3);
+      expect(f.app.snapshot().rosters!.current.rows['1']?.info?.elo).toBe(2200);
+    } finally {
+      await f.app.stop();
+      vi.useRealTimers();
+    }
+  });
+  it('does not schedule an automatic retry after its initial query was superseded manually', async () => {
+    const f = await fixture();
+    const pending = deferred<PlayerReport>();
+    f.report.mockImplementationOnce(() => pending.promise);
+    vi.useFakeTimers();
+    try {
+      f.start();
+      await vi.advanceTimersByTimeAsync(250);
+      f.control.available = true;
+      await f.app.invoke('session.query', { context: 'current', requestId: randomUUID() });
+      pending.reject(new Error('Superseded automatic failure'));
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(f.app.snapshot().rosters!.current.retryAt).toBeNull();
+      expect(
+        f.events.filter((event) => event.type === 'rosterRetry' && event.retryAt !== null),
+      ).toHaveLength(0);
+    } finally {
+      pending.resolve({} as PlayerReport);
+      await f.app.stop();
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('current roster identity', () => {
+  it('publishes start and completion state for a parser-triggered automatic query', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      Response.json({ matchCount: 1, trend: { points: [] }, mapPerformance: [] }),
+    );
+    const events: AppEvent[] = [];
+    const app = application(platform(fetchImpl), events);
+    Reflect.set(app, 'network', true);
+    vi.spyOn(app.watcher, 'status').mockReturnValue({
+      ...app.watcher.status(),
+      live: true,
+      error: null,
+      checking: false,
+    });
+    app.db.updateConfig({ autoQueryCurrentMatch: true });
+    app.parser.feed([
+      'Log: [LOBBY] Enter to lobby (id: 1776). Status Pending',
+      'Log: Incoming client First:1 to lobby (id: 1776)',
+    ]);
+    await vi.waitFor(() =>
+      expect(events.filter((event) => event.type === 'roster')).toHaveLength(1),
+    );
+    const starts = events.filter((event) => event.type === 'rosterQuery');
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toMatchObject({ context: 'current', pendingIds: ['1'] });
+    expect(app.snapshot().rosters?.current).toMatchObject({
+      requestId: starts[0]!.requestId,
+      sourceKey: starts[0]!.sourceKey,
+      pendingIds: [],
+    });
+    expect(app.snapshot().rosters?.current.rows['1']?.info).toBeTruthy();
+  });
+  it('cancels late results when membership changes within one generation', async () => {
+    const pending = deferred<Response>();
+    const fetchImpl = vi.fn<typeof fetch>(async () => (await pending.promise).clone());
+    const events: AppEvent[] = [];
+    const app = application(platform(fetchImpl), events);
+    app.parser.feed([
+      'Log: Start loading battle... map: Dam, scenario: Test',
+      'Log: Room: (GameRoom|123), Client: (First player|1)',
+      'Log: Room: (GameRoom|123), Client: (Second player|2)',
+    ]);
+    const generation = app.parser.snapshot().generation;
+    const request = app.invoke('session.query', { context: 'current', requestId: randomUUID() });
+    try {
+      await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+      expect(app.snapshot().rosters?.current.pendingIds).toHaveLength(2);
+      app.parser.feed(['Log: Room: (GameRoom|123), Client: (Third player|3)']);
+      expect(app.parser.snapshot().generation).toBe(generation);
+      expect(app.snapshot().rosters?.current.pendingIds).toEqual([]);
+      pending.resolve(Response.json({ matchCount: 1, trend: { points: [] }, mapPerformance: [] }));
+      expect(await request).toMatchObject({ queried: 0, cancelled: true });
+      expect(events.filter((event) => event.type === 'roster')).toEqual([]);
+    } finally {
+      pending.resolve(Response.json({}));
       await request;
     }
   });
@@ -520,6 +989,149 @@ it('keeps the app open after downloading and settles the install RPC before clos
 });
 
 describe('configuration updates', () => {
+  it.each(['starting', 'recording', 'stopping'] as const)(
+    'disables future recording without stopping the current %s capture',
+    async (phase) => {
+      const p = platform(vi.fn<typeof fetch>()),
+        app = application(p);
+      app.db.updateConfig({ replayEnabled: true });
+      Object.assign(p.recordings.status(), { phase, sessionId: 'reviewed-capture' });
+      expect((await app.invoke('config.update', { replayEnabled: false })).replayEnabled).toBe(
+        false,
+      );
+      expect(p.recordings.stop).not.toHaveBeenCalled();
+      expect(p.recordings.status().phase).toBe(phase);
+    },
+  );
+  it('waits for explicit stop completion against the reviewed capture', async () => {
+    const p = platform(vi.fn<typeof fetch>()),
+      app = application(p),
+      held = deferred<void>();
+    const status = p.recordings.status();
+    Object.assign(status, { phase: 'recording', sessionId: 'reviewed-capture' });
+    p.recordings.stop = vi.fn(async () => {
+      status.phase = 'stopping';
+      await held.promise;
+      status.phase = 'idle';
+      status.sessionId = null;
+    });
+    let finished = false;
+    const stopping = app
+      .invoke('replays.stop', { sessionId: 'reviewed-capture' })
+      .then((result) => {
+        finished = true;
+        return result;
+      });
+    await vi.waitFor(() => expect(p.recordings.stop).toHaveBeenCalledTimes(1));
+    expect(finished).toBe(false);
+    held.resolve();
+    expect((await stopping).phase).toBe('idle');
+  });
+  it.each(['another capture', 'already ended'] as const)(
+    'rejects a stale stop target: %s',
+    async (scenario) => {
+      const p = platform(vi.fn<typeof fetch>()),
+        app = application(p);
+      Object.assign(p.recordings.status(), {
+        phase: scenario === 'another capture' ? 'recording' : 'idle',
+        sessionId: scenario === 'another capture' ? 'new-capture' : null,
+      });
+      await expect(app.invoke('replays.stop', { sessionId: 'reviewed-capture' })).rejects.toThrow(
+        'RECORDING_TARGET_CHANGED',
+      );
+      expect(p.recordings.stop).not.toHaveBeenCalled();
+    },
+  );
+  function liveCaptureApplication() {
+    const p = platform(vi.fn<typeof fetch>()),
+      events: AppEvent[] = [],
+      app = application(p, events);
+    vi.spyOn(app.parser, 'snapshot').mockReturnValue({
+      ...app.parser.snapshot(),
+      current: emptyMatch('live-session'),
+      recovering: false,
+    });
+    vi.spyOn(app.watcher, 'status').mockReturnValue({ ...app.watcher.status(), live: true });
+    return { p, events, app };
+  }
+  it('returns a committed preference when capture startup fails and keeps the capture outcome separate', async () => {
+    const { p, events, app } = liveCaptureApplication();
+    app.db.updateConfig({ replayEnabled: false });
+    p.recordings.start = vi.fn(async () => {
+      Object.assign(p.recordings.status(), { phase: 'error', error: 'Controlled startup failure' });
+      throw new Error('Controlled startup failure');
+    });
+    expect((await app.invoke('config.update', { replayEnabled: true })).replayEnabled).toBe(true);
+    expect(app.db.config().replayEnabled).toBe(true);
+    expect(p.recordings.status().phase).toBe('error');
+    expect(events.some((event) => event.type === 'config' && event.config.replayEnabled)).toBe(
+      true,
+    );
+    expect(
+      events.some(
+        (event) => event.type === 'error' && event.message === 'Controlled startup failure',
+      ),
+    ).toBe(true);
+    await app.invoke('config.update', { replayEnabled: true });
+    expect(p.recordings.start).toHaveBeenCalledTimes(1);
+  });
+  it('re-enables automatic recording without replacing a capture that was allowed to finish', async () => {
+    const { p, app } = liveCaptureApplication();
+    app.db.updateConfig({ replayEnabled: false });
+    Object.assign(p.recordings.status(), { phase: 'recording', sessionId: 'kept-capture' });
+    await app.invoke('config.update', { replayEnabled: true });
+    expect(p.recordings.start).not.toHaveBeenCalled();
+    expect(p.recordings.status().sessionId).toBe('kept-capture');
+  });
+  it('restarts a failed live capture once and rejects overlapping retry requests', async () => {
+    const { p, app } = liveCaptureApplication(),
+      held = deferred<void>();
+    app.db.updateConfig({ replayEnabled: true });
+    Object.assign(p.recordings.status(), { phase: 'error', error: 'Earlier failure' });
+    p.recordings.start = vi.fn(async () => {
+      await held.promise;
+      Object.assign(p.recordings.status(), {
+        phase: 'recording',
+        sessionId: 'new-capture',
+        error: null,
+      });
+    });
+    const first = app.invoke('replays.retry', null);
+    await vi.waitFor(() => expect(p.recordings.start).toHaveBeenCalledTimes(1));
+    await expect(app.invoke('replays.retry', null)).rejects.toThrow('RECORDING_RETRY_UNAVAILABLE');
+    held.resolve();
+    expect((await first).sessionId).toBe('new-capture');
+  });
+  it.each([
+    'disabled',
+    'no match',
+    'offline watcher',
+    'watcher error',
+    'ended match',
+    'already recording',
+  ] as const)('rejects an unavailable recording retry: %s', async (condition) => {
+    const { p, app } = liveCaptureApplication();
+    app.db.updateConfig({ replayEnabled: condition !== 'disabled' });
+    Object.assign(p.recordings.status(), {
+      phase: condition === 'already recording' ? 'recording' : 'error',
+    });
+    if (condition === 'no match')
+      vi.mocked(app.parser.snapshot).mockReturnValue({ ...app.parser.snapshot(), current: null });
+    if (condition === 'offline watcher')
+      vi.mocked(app.watcher.status).mockReturnValue({ ...app.watcher.status(), live: false });
+    if (condition === 'watcher error')
+      vi.mocked(app.watcher.status).mockReturnValue({
+        ...app.watcher.status(),
+        error: 'Controlled read failure',
+      });
+    if (condition === 'ended match')
+      vi.mocked(app.parser.snapshot).mockReturnValue({
+        ...app.parser.snapshot(),
+        current: { ...app.parser.snapshot().current!, endedAt: 1700000060000 },
+      });
+    await expect(app.invoke('replays.retry', null)).rejects.toThrow('RECORDING_RETRY_UNAVAILABLE');
+    expect(p.recordings.start).not.toHaveBeenCalled();
+  });
   it('does not reset other settings or stop recording and input when changing language', async () => {
     const p = platform(vi.fn<typeof fetch>());
     const events: AppEvent[] = [];

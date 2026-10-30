@@ -29,9 +29,42 @@ afterEach(() => {
 });
 
 describe('cache management', () => {
+  it('reports the nearest future expiry across API responses and snapshots', () => {
+    const db = database();
+    db.saveCache('future', {}, 200, now);
+    db.saveSnapshot('1', summary(now - 21600000 + 99));
+    db.saveSnapshot('2', summary(now));
+    db.sql.exec(
+      "UPDATE player_snapshots SET payload=json_set(payload,'$.stale',json('true')) WHERE player_id='2'",
+    );
+    expect(db.cacheStats(now)).toMatchObject({ at: now, nextExpiryAt: now + 100 });
+    expect(db.cacheStats(now + 100)).toMatchObject({
+      at: now + 100,
+      nextExpiryAt: now + 200,
+      snapshots: { expired: 2 },
+    });
+    expect(db.clearCache('expired', now + 100)).toMatchObject({
+      removed: 2,
+      stats: { at: now + 100, nextExpiryAt: now + 200 },
+    });
+    expect(db.cacheStats(now + 200)).toMatchObject({ nextExpiryAt: null, api: { expired: 1 } });
+  });
+  it('recalculates the deadline after a cache entry is extended or removed', () => {
+    const db = database();
+    db.saveCache('one', {}, 100, now);
+    db.saveCache('two', {}, 200, now);
+    expect(db.cacheStats(now).nextExpiryAt).toBe(now + 100);
+    db.saveCache('one', {}, 300, now);
+    expect(db.cacheStats(now).nextExpiryAt).toBe(now + 200);
+    db.removeCache('two');
+    expect(db.cacheStats(now).nextExpiryAt).toBe(now + 300);
+    expect(db.clearCache('all', now).stats).toMatchObject({ at: now, nextExpiryAt: null });
+  });
   it('reports empty caches with zero counts and sizes', () => {
     const db = database();
     expect(db.cacheStats(now)).toEqual({
+      at: now,
+      nextExpiryAt: null,
       api: { entries: 0, expired: 0, bytes: 0 },
       snapshots: { entries: 0, expired: 0, bytes: 0 },
     });
@@ -48,6 +81,8 @@ describe('cache management', () => {
     db.saveSnapshot('1', fresh);
     db.saveSnapshot('2', expired);
     expect(db.cacheStats(now)).toEqual({
+      at: now,
+      nextExpiryAt: now + 1,
       api: { entries: 2, expired: 1, bytes: 2 * Buffer.byteLength(JSON.stringify(payload)) },
       snapshots: {
         entries: 2,
@@ -121,6 +156,8 @@ describe('cache management', () => {
     expect(result).toEqual({
       removed: 2,
       stats: {
+        at: now,
+        nextExpiryAt: null,
         api: { entries: 0, expired: 0, bytes: 0 },
         snapshots: { entries: 0, expired: 0, bytes: 0 },
       },

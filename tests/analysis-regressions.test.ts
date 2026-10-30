@@ -42,12 +42,191 @@ function ranking(ids = ['1', '2', '3', '4', '5']) {
   ];
 }
 function cacheMatches(db: Database, mvpRanking: unknown[], economy?: unknown) {
-  db.saveCache('analysis:1', { matchCount: 12, trend: { points: points.slice(0, 12) } }, 21600000);
+  db.saveCache(
+    'analysis:1',
+    { matchCount: 12, trend: { points: points.slice(0, 12) }, mapPerformance: [] },
+    21600000,
+  );
   for (const p of points.slice(0, 12))
     db.saveCache(`amatch:${p.matchId}`, { mvpRanking, economy }, 86400000);
 }
 
 describe('analysis report regressions', () => {
+  it.each([
+    {
+      name: 'missing losses',
+      stats: { fightsCountRt: 20, winCountRt: 6 },
+      wins: 6,
+      losses: null,
+      sample: null,
+      rate: null,
+      total: 20,
+    },
+    {
+      name: 'missing wins',
+      stats: { fightsCountRt: 20, lossCountRt: 4 },
+      wins: null,
+      losses: 4,
+      sample: null,
+      rate: null,
+      total: 20,
+    },
+    {
+      name: 'missing both outcomes',
+      stats: { fightsCountRt: 20 },
+      wins: null,
+      losses: null,
+      sample: null,
+      rate: null,
+      total: 20,
+    },
+    {
+      name: 'missing all counts',
+      stats: {},
+      wins: null,
+      losses: null,
+      sample: null,
+      rate: null,
+      total: null,
+    },
+    {
+      name: 'null losses',
+      stats: { fightsCountRt: 20, winCountRt: 6, lossCountRt: null },
+      wins: 6,
+      losses: null,
+      sample: null,
+      rate: null,
+      total: 20,
+    },
+    {
+      name: 'zero wins',
+      stats: { fightsCountRt: 20, winCountRt: 0, lossCountRt: 4 },
+      wins: 0,
+      losses: 4,
+      sample: 4,
+      rate: 0,
+      total: 20,
+    },
+    {
+      name: 'zero losses',
+      stats: { fightsCountRt: 20, winCountRt: 6, lossCountRt: 0 },
+      wins: 6,
+      losses: 0,
+      sample: 6,
+      rate: 100,
+      total: 20,
+    },
+    {
+      name: 'zero games',
+      stats: { fightsCountRt: 0, winCountRt: 0, lossCountRt: 0 },
+      wins: 0,
+      losses: 0,
+      sample: 0,
+      rate: null,
+      total: 0,
+    },
+    {
+      name: 'complete outcomes',
+      stats: { fightsCountRt: 20, winCountRt: 6, lossCountRt: 4 },
+      wins: 6,
+      losses: 4,
+      sample: 10,
+      rate: 60,
+      total: 20,
+    },
+    {
+      name: 'outcomes without a total',
+      stats: { winCountRt: 6, lossCountRt: 4 },
+      wins: 6,
+      losses: 4,
+      sample: 10,
+      rate: 60,
+      total: 10,
+    },
+    {
+      name: 'numeric strings',
+      stats: { fightsCountRt: '20', winCountRt: '6', lossCountRt: '4' },
+      wins: 6,
+      losses: 4,
+      sample: 10,
+      rate: 60,
+      total: 20,
+    },
+    {
+      name: 'negative losses',
+      stats: { fightsCountRt: 20, winCountRt: 6, lossCountRt: -1 },
+      wins: 6,
+      losses: null,
+      sample: null,
+      rate: null,
+      total: 20,
+    },
+    {
+      name: 'fractional losses',
+      stats: { fightsCountRt: 20, winCountRt: 6, lossCountRt: 1.5 },
+      wins: 6,
+      losses: null,
+      sample: null,
+      rate: null,
+      total: 20,
+    },
+  ])(
+    'preserves $name as distinct from explicit zero',
+    async ({ stats, wins, losses, sample, rate, total }) => {
+      const { db, analyzer } = setup(async (url) =>
+        Response.json(
+          String(url).includes('/analysis/player')
+            ? {}
+            : { info: { name: 'Player', rating: 1500 }, statInfo: stats },
+        ),
+      );
+      const report = await analyzer.report('1', true);
+      expect(report).toMatchObject({
+        fallback: true,
+        wins,
+        losses,
+        sampleCount: sample,
+        winRate: rate,
+        matchCount: total,
+      });
+      expect(db.snapshot('1')).toMatchObject({
+        fallback: true,
+        sampleCount: sample,
+        winRate: rate,
+        matchCount: total,
+      });
+    },
+  );
+  it('refreshes missing basic outcomes and replaces the unknown snapshot with complete counts', async () => {
+    let complete = false;
+    const { db, analyzer } = setup(async (url) =>
+      Response.json(
+        String(url).includes('/analysis/player')
+          ? {}
+          : {
+              info: { name: 'Player', rating: 1500 },
+              statInfo: {
+                fightsCountRt: 20,
+                winCountRt: 6,
+                ...(complete ? { lossCountRt: 4 } : {}),
+              },
+            },
+      ),
+    );
+    expect(await analyzer.report('1', true)).toMatchObject({
+      sampleCount: null,
+      winRate: null,
+      losses: null,
+    });
+    complete = true;
+    expect(await analyzer.report('1', true)).toMatchObject({
+      sampleCount: 10,
+      winRate: 60,
+      wins: 6,
+      losses: 4,
+    });
+    expect(db.snapshot('1')).toMatchObject({ sampleCount: 10, winRate: 60 });
+  });
   it.each([null, {}, { name: '' }])('rejects invalid fallback info %j', async (info) => {
     const { db, analyzer } = setup();
     db.saveCache('analysis:1', { error: 'Not found' }, 21600000);
@@ -61,6 +240,7 @@ describe('analysis report regressions', () => {
       'analysis:1',
       {
         matchCount: 82,
+        mapPerformance: [],
         trend: {
           points: [
             { matchId: '1', won: true, kdRatio: 1 },
@@ -223,10 +403,14 @@ describe('match sync regressions', () => {
       { Data: { '1': { Name: 'Old', TeamId: 1, OldRating: 100, NewRating: 90 } } },
       { id: '123', localId: '1', now: 100 },
     );
+    older.warning = 'Cached match data; BATrace is unavailable';
+    older.warningCode = 'batrace-cache';
     expect(mergeMatch(newer, older)).toMatchObject({
       outcome: 'win',
       updatedAt: 200,
       players: [{ name: 'New', teamId: 0, newRating: 110 }],
     });
+    expect(mergeMatch(newer, older).warning).toBeUndefined();
+    expect(mergeMatch(newer, older).warningCode).toBeUndefined();
   });
 });

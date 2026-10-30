@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { createPortal } from 'react-dom';
-import { FlaskConical, GripVertical, RefreshCw, Users, Video } from 'lucide-react';
+import { FlaskConical, GripVertical, RefreshCw, Users, Video, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toolStyles from './tools.css?inline';
 import { useDevelopmentLayer, useDevelopmentTheme, useToolPosition } from './layer';
@@ -42,8 +49,13 @@ function DevelopmentTools({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [focusVersion, setFocusVersion] = useState(0);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const pendingFocus = useRef<HTMLElement | null>(null);
+  const applicationFocus = useRef<HTMLElement | null>(null);
+  const dismissing = useRef(false);
   const escape = useCallback(() => {
     setOpen(false);
     trigger.current?.focus();
@@ -53,11 +65,65 @@ function DevelopmentTools({
   const { dock, position, handle } = useToolPosition(layer);
   const t = (key: string) => translate(snapshot.locale, key);
   const changeMode = (mode: DevelopmentMode) => {
+    const active = layer?.activeElement;
+    pendingFocus.current = active instanceof HTMLElement ? active : null;
     setError(null);
-    void runtime.controls.setMode(mode).catch((value) => setError(errorMessage(value)));
+    void runtime.controls
+      .setMode(mode)
+      .catch((value) =>
+        setError(
+          translate(snapshot.locale, 'devSceneChangeFailed', {
+            scene: t('devMode.' + mode),
+            error: errorMessage(value),
+          }),
+        ),
+      )
+      .finally(() => setFocusVersion((version) => version + 1));
+  };
+  useLayoutEffect(() => {
+    if (snapshot.pending) return;
+    const target = pendingFocus.current;
+    pendingFocus.current = null;
+    if (!open || !target?.isConnected || target.matches(':disabled')) return;
+    const active = layer?.activeElement ?? document.activeElement;
+    if (active === target || active === document.body || active === layer?.host) {
+      const committed =
+        target.getAttribute('role') === 'radio' && target.getAttribute('aria-checked') !== 'true'
+          ? (target
+              .closest('[role=radiogroup]')
+              ?.querySelector<HTMLElement>('[role=radio][aria-checked=true]') ?? target)
+          : target;
+      committed.focus({ preventScroll: true });
+      committed.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    }
+  }, [snapshot.pending, snapshot.generation, focusVersion, open, layer]);
+  useEffect(() => {
+    const remember = (event: FocusEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target !== document.body && target !== layer?.host)
+        applicationFocus.current = target;
+    };
+    document.addEventListener('focusin', remember);
+    return () => document.removeEventListener('focusin', remember);
+  }, [layer]);
+  const hide = () => {
+    dismissing.current = true;
+    pendingFocus.current = null;
+    setOpen(false);
+    setHidden(true);
+    const target = [
+      applicationFocus.current,
+      ...document.querySelectorAll<HTMLElement>('#settings-content,#main-content'),
+    ].find(
+      (element) =>
+        element?.isConnected &&
+        !element.closest('[hidden],[inert],[aria-hidden=true]') &&
+        !element.matches(':disabled'),
+    );
+    target?.focus({ preventScroll: true });
   };
   const local = snapshot.mode !== 'captured';
-  if (!layer) return null;
+  if (!layer || hidden) return null;
   return createPortal(
     <>
       <style>{toolStyles}</style>
@@ -88,12 +154,29 @@ function DevelopmentTools({
                 {t('devMoveToolsHint')}
               </span>
               <PopoverTrigger asChild>
-                <Button ref={trigger} variant="ghost" aria-label={t('devTools')}>
+                <Button
+                  ref={trigger}
+                  variant="ghost"
+                  aria-label={t('devTools')}
+                  title={t('devTools')}
+                >
                   <FlaskConical data-icon="inline-start" aria-hidden="true" />
-                  <span>{t('devTools')}</span>
                   <Badge variant="secondary">DEV</Badge>
                 </Button>
               </PopoverTrigger>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('devHideTools')}
+                aria-describedby="development-hide-hint"
+                title={t('devHideToolsHint')}
+                onClick={hide}
+              >
+                <X aria-hidden="true" />
+              </Button>
+              <span className="sr-only" id="development-hide-hint">
+                {t('devHideToolsHint')}
+              </span>
             </div>
             <PopoverContent
               align="end"
@@ -102,6 +185,9 @@ function DevelopmentTools({
               updatePositionStrategy="always"
               aria-labelledby="development-tools-title"
               className="development-tools-panel w-80 max-w-[calc(100vw-2rem)]"
+              onCloseAutoFocus={(event) => {
+                if (dismissing.current) event.preventDefault();
+              }}
             >
               <PopoverHeader>
                 <PopoverTitle id="development-tools-title">{t('devTools')}</PopoverTitle>
@@ -213,6 +299,17 @@ function DevelopmentTools({
   );
 }
 
+function DevelopmentWorkspace() {
+  useLayoutEffect(() => {
+    if (document.activeElement !== document.body) return;
+    const main = [
+      ...document.querySelectorAll<HTMLElement>('#settings-content,#main-content'),
+    ].find((element) => !element.closest('[hidden],[inert],[aria-hidden=true]'));
+    main?.focus({ preventScroll: true });
+  }, []);
+  return <App />;
+}
+
 export function DevelopmentApp({ api }: { api: Bridge }) {
   const [runtime] = useState(() => createDevelopmentRuntime(api));
   const snapshot = useSyncExternalStore(runtime.controls.subscribe, runtime.controls.getSnapshot);
@@ -220,7 +317,7 @@ export function DevelopmentApp({ api }: { api: Bridge }) {
   return (
     <>
       <AppProvider key={snapshot.generation} api={runtime.api}>
-        <App />
+        <DevelopmentWorkspace />
       </AppProvider>
       <DevelopmentTools runtime={runtime} snapshot={snapshot} />
     </>

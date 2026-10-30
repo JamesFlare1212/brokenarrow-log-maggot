@@ -4,7 +4,7 @@ import { emptyMatch, emptyPlayer, mapId, team } from '@ba/shared';
 export type LogEvent =
   | { type: 'session'; session: Session }
   | { type: 'started' | 'ended' | 'metadata'; match: Match; recovering: boolean }
-  | { type: 'reset'; generation: number };
+  | { type: 'reset'; generation: number; sourceChanged?: boolean; previous?: Match };
 export class LogParser {
   private session: Session = {
     generation: 0,
@@ -35,6 +35,7 @@ export class LogParser {
     return structuredClone(this.session);
   }
   reset(source = ''): void {
+    const previous = this.session.current ? structuredClone(this.session.current) : undefined;
     const generation = this.session.generation + 1;
     this.session = {
       generation,
@@ -57,7 +58,12 @@ export class LogParser {
     this.connection = '';
     this.connections.clear();
     this.listing = false;
-    this.emit({ type: 'reset', generation });
+    this.emit({
+      type: 'reset',
+      generation,
+      sourceChanged: true,
+      ...(previous ? { previous } : {}),
+    });
     this.emit({ type: 'session', session: this.snapshot() });
   }
   feed(lines: string[], recovering = false): void {
