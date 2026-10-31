@@ -4,7 +4,7 @@
 
 ```text
 apps/
-  desktop/    Electron 窗口、preload、系统目录、验证、输入钩子、录制、视频协议
+  desktop/    Electron windows, preload, system paths, verification, recording, video protocol
   server/     Node.js 业务、日志、HTTP 调度、分析、卡组、SQLite
   web/        React 功能模块、公共 UI、hooks、四语和主题
 packages/
@@ -25,7 +25,9 @@ Encounter queries load match payloads and account views in batches, preserving e
 account's outcome while avoiding repeated reads of the same match. Legacy encounter
 deduplication uses a set of match IDs.
 
-日志读取 64 KiB、StringDecoder、逐批让出循环。历史恢复不触发过去的录像、输入统计和卡组备份；新鲜进行中会话可以从当前时点恢复。
+Log reads use 64 KiB chunks and StringDecoder, yielding between batches. Historical
+recovery does not trigger recordings or deck backups for past matches; a fresh
+active session can resume from the current point.
 
 日志支持新旧大厅和名单格式，跨批次保留原始时间戳与历史半行的来源。无 FID 对局按日志来源和开局位置生成稳定身份，重复恢复不会新增档案。延迟网络时长优先按连接或 FID 关联，无法区分的事件不写入新局。
 

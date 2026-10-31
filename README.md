@@ -71,24 +71,36 @@ Electron 44 的运行时由 postinstall 显式安装。开发启动器先构建�
 pnpm dev:web
 ```
 
-打开终端显示的 `http://127.0.0.1:5174/`，支持 Vite 热更新，无需启动 Electron。页面通过仅在此开发模式启用的本地接口加载 `tests/fixtures/real` 的真实测试数据；每次启动在 `.test-data/web-dev/` 创建独立副本。查询只使用已录制的离线响应，缺失时显示错误。页面设置和数据修改只影响本次副本；本机目录选择、录屏、输入钩子和安装更新等桌面功能不可用。
+Open the terminal's `http://127.0.0.1:5174/` URL for Vite hot updates without
+Electron. A development-only local interface loads `tests/fixtures/real` into an
+isolated `.test-data/web-dev/` copy on each launch. Queries use recorded offline
+responses and report missing data as errors. Settings and data changes affect only
+that copy; native directory selection, recording, and update installation are
+unavailable in the browser.
 
-| 命令                | 用途                                                              |
-| ------------------- | ----------------------------------------------------------------- |
-| `pnpm dev`          | 使用仓库内真实样本启动离线桌面开发；每次创建隔离数据库            |
-| `pnpm dev:web`      | 浏览器前端开发，加载同一批真实测试样本，支持热更新，默认端口 5174 |
-| `pnpm data:import`  | 从本机应用数据库和 GameLogs 更新真实回归样本                      |
-| `pnpm test`         | 全部回归测试，默认包含仓库内的真实日志、档案和缓存数据            |
-| `pnpm smoke:real`   | 构建并在真实 Electron 中核对全部真实档案                          |
-| `pnpm check`        | 严格类型检查、回归测试、三个应用构建                              |
-| `pnpm smoke`        | 隔离数据目录的真实 Electron 冒烟；不联网、录屏或开输入钩子        |
-| `pnpm format:check` | 格式检查                                                          |
-| `pnpm pack:desktop` | Windows 解包目录                                                  |
-| `pnpm dist`         | NSIS 安装包与便携版                                               |
+| 命令                | 用途                                                                 |
+| ------------------- | -------------------------------------------------------------------- |
+| `pnpm dev`          | 使用仓库内真实样本启动离线桌面开发；每次创建隔离数据库               |
+| `pnpm dev:web`      | 浏览器前端开发，加载同一批真实测试样本，支持热更新，默认端口 5174    |
+| `pnpm data:import`  | 从本机应用数据库和 GameLogs 更新真实回归样本                         |
+| `pnpm test`         | 全部回归测试，默认包含仓库内的真实日志、档案和缓存数据               |
+| `pnpm smoke:real`   | 构建并在真实 Electron 中核对全部真实档案                             |
+| `pnpm check`        | 严格类型检查、回归测试、三个应用构建                                 |
+| `pnpm smoke`        | Run Electron with isolated data, without network access or recording |
+| `pnpm format:check` | 格式检查                                                             |
+| `pnpm pack:desktop` | Windows 解包目录                                                     |
+| `pnpm dist`         | NSIS 安装包与便携版                                                  |
 
 生产前端通过 sandboxed preload 的类型化 IPC 访问服务。`pnpm dev` 同时启动 Vite 和 Electron，通过原生服务加载真实样本的隔离副本；其 5173 端口在普通浏览器中访问 `/` 会提示使用桌面应用。`pnpm dev:web` 在 5174 端口为浏览器提供真实测试样本接口，不访问本机应用数据库。
 
-仓库已包含 258 份本地日志提取的 454 场真实对局，以及 13 场 API 档案、600 名玩家和 28 份缓存响应，压缩后约 301 KB。`pnpm dev` 使用这些固定样本，每次在 `.test-data/real-dev/` 新建可写副本，保留真实名字、ID 和评分。开发时离线运行，默认关闭录像和输入钩子；日志、卡组和录像目录均指向隔离副本。真实数据回归包含在 `pnpm test` / `pnpm check` 中；CI 额外执行真实数据桌面冒烟。来源校验、提取范围与重新导入方式见 [真实样本说明](tests/fixtures/real/README.md)。
+The repository includes 454 real matches extracted from 258 local logs, 13 API
+match archives, 600 players, and 28 cached responses, compressed to approximately
+301 KB. Each `pnpm dev` launch creates a writable `.test-data/real-dev/` copy that
+preserves recorded names, IDs, and ratings. Development runs offline with recording
+disabled by default; log, deck, and recording paths point to the isolated copy.
+Real-data regression coverage runs in `pnpm test` / `pnpm check`; CI also runs the
+real-data desktop smoke test. See the [fixture documentation](tests/fixtures/real/README.md)
+for provenance checks, extraction scope, and reimport instructions.
 
 ## 应用更新与发布
 
