@@ -2312,9 +2312,12 @@ describe('user interaction regressions', () => {
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => rows });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
     await screen.findByText('Grid map 0');
+    const gridToggle = screen.getByRole('radio', { name: '网格视图' });
+    expect(gridToggle.getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('list', { name: '对局档案' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: '列表视图' }));
     fireEvent.click(screen.getByRole('button', { name: 'ELO 变化' }));
     fireEvent.click(screen.getByRole('link', { name: '下一页' }));
-    const gridToggle = screen.getByRole('radio', { name: '网格视图' });
     fireEvent.click(gridToggle);
     const grid = screen.getByRole('list', { name: '对局档案' });
     expect(gridToggle.getAttribute('aria-checked')).toBe('true');
@@ -2422,7 +2425,9 @@ describe('user interaction regressions', () => {
     const pending = deferred<RpcOutputs['matches.list']>();
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => pending.promise });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
-    fireEvent.click(await screen.findByRole('radio', { name: '网格视图' }));
+    expect(
+      (await screen.findByRole('radio', { name: '网格视图' })).getAttribute('aria-checked'),
+    ).toBe('true');
     const viewport = document.querySelector<HTMLDivElement>('.archive-grid-viewport')!;
     expect(viewport.getAttribute('aria-busy')).toBe('true');
     expect(
@@ -2461,6 +2466,7 @@ describe('user interaction regressions', () => {
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => rows });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
     await screen.findByText('Sorted map 0');
+    fireEvent.click(screen.getByRole('radio', { name: '列表视图' }));
     fireEvent.click(screen.getByRole('link', { name: '下一页' }));
     await screen.findByText('Sorted map 54');
     const viewport = document.querySelector<HTMLDivElement>('.archive-table')!;
@@ -2529,6 +2535,7 @@ describe('user interaction regressions', () => {
       </AppProvider>,
     );
     await screen.findByText('Archive map 524');
+    fireEvent.click(screen.getByRole('radio', { name: '列表视图' }));
     expect(screen.getByRole('option', { name: 'Shared name · #1' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Shared name · #2' })).toBeTruthy();
     const table = document.querySelector<HTMLDivElement>('.archive-table')!;
@@ -2619,7 +2626,7 @@ describe('user interaction regressions', () => {
     await screen.findByText('Unknown result A');
     expect(toggle.getAttribute('aria-checked') === 'true').toBe(false);
     fireEvent.click(screen.getByRole('link', { name: '下一页' }));
-    const table = document.querySelector<HTMLDivElement>('.archive-table')!;
+    const table = document.querySelector<HTMLDivElement>('.archive-grid-viewport')!;
     table.scrollTop = 900;
     toggle.focus();
     await userEvent.setup().keyboard(' ');
@@ -3065,6 +3072,7 @@ describe('user interaction regressions', () => {
       'matches.delete': remove,
     });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
     const trigger = await screen.findByRole('button', { name: `操作: #${match.fid || match.id}` });
     const openConfirmation = async () => {
       await user.click(trigger);
@@ -3106,19 +3114,23 @@ describe('user interaction regressions', () => {
     const [playerId, titles] = Object.entries(match.titles).find(([, list]) => list.length > 0)!;
     const player = match.players.find((p) => p.id === playerId)!;
     const name = within(dialog).getByRole('button', { name: player.name });
-    fireEvent.click(name);
-    expect(name.getAttribute('aria-expanded')).toBe('true');
-    const expanded = dialog.querySelector('.match-player-details') as HTMLElement;
-    const title = within(expanded).getByRole('button', {
+    const heading = name.closest('.match-player-heading') as HTMLElement;
+    const title = within(heading).getByRole('button', {
       name: translate('zh', `title.${titles[0]!.id}`),
     });
+    expect(title.getAttribute('data-slot')).toBe('badge');
     fireEvent.click(title);
+    expect(name.getAttribute('aria-expanded')).toBe('false');
+    expect(dialog.querySelector('.match-player-details')).toBeNull();
     const tooltip = explanation();
     expect(tooltip.textContent).not.toMatch(/\{\w+\}/);
     expect(dialog.contains(tooltip)).toBe(false);
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull();
     expect(screen.getByRole('dialog')).toBe(dialog);
+    fireEvent.click(name);
+    expect(name.getAttribute('aria-expanded')).toBe('true');
+    expect(dialog.querySelectorAll('.match-player-metrics dt')).toHaveLength(13);
     expect(document.querySelector('button button')).toBeNull();
   });
 
@@ -4232,16 +4244,17 @@ describe('application loading layouts', () => {
     });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
     await screen.findByText('第 0–0 条，共 0 条');
-    const table = screen.getByRole('table');
+    const viewport = document.querySelector<HTMLElement>('.archive-grid-viewport')!;
+    const empty = within(viewport).getByText(translate('zh', 'noFilteredMatches'));
     fireEvent.click(screen.getByRole('button', { name: translate('zh', 'refresh') }));
-    await waitFor(() => expect(table.getAttribute('aria-busy')).toBe('true'));
-    expect(table.querySelector('[data-slot="skeleton"]')).toBeNull();
-    expect(table.querySelector('td[colspan="9"]')).toBeTruthy();
+    await waitFor(() => expect(viewport.getAttribute('aria-busy')).toBe('true'));
+    expect(viewport.querySelector('[data-slot="skeleton"]')).toBeNull();
+    expect(viewport.contains(empty)).toBe(true);
     expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
     await act(async () => refresh.reject(new Error('Archive refresh failed')));
-    expect(table.getAttribute('aria-busy')).toBe('false');
+    expect(viewport.getAttribute('aria-busy')).toBe('false');
     expect(screen.getByText('Archive refresh failed')).toBeTruthy();
-    expect(table.querySelector('[data-slot="skeleton"]')).toBeNull();
+    expect(viewport.querySelector('[data-slot="skeleton"]')).toBeNull();
   });
   it.each(['zh', 'en'] as const)(
     'reserves account rows in %s until the recognized-account request settles',
@@ -4372,6 +4385,8 @@ describe('application loading layouts', () => {
       render(kind === 'archive' ? <MatchArchive /> : <BansPanel />, {
         wrapper: wrapper(native.api),
       });
+      if (kind === 'archive')
+        fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
       const table = await screen.findByRole('table');
       const header = table.querySelector('thead');
       const columns = kind === 'archive' ? 9 : 5;
@@ -4503,6 +4518,7 @@ describe('match detail navigation and disclosure', () => {
     });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
     await screen.findByText('First victory');
+    fireEvent.click(screen.getByRole('radio', { name: '列表视图' }));
     fireEvent.click(screen.getByRole('radio', { name: '胜利' }));
     const table = screen.getByRole('table', { name: '对局档案' });
     const viewport = table.closest<HTMLElement>('.archive-table')!;
@@ -4529,6 +4545,7 @@ describe('match detail navigation and disclosure', () => {
     const match = matchFixture();
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [match] });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
     const map = await screen.findByText(match.map);
     expect(map.closest('button')).toBeNull();
     const selection = vi
@@ -4559,12 +4576,12 @@ describe('match detail navigation and disclosure', () => {
     fireEvent.click(
       within(document.querySelector('.match-details')!).getByRole('button', { name: '对局档案' }),
     );
-    expect(await screen.findByRole('table', { name: '对局档案' })).toBeTruthy();
+    expect(await screen.findByRole('list', { name: '对局档案' })).toBeTruthy();
     expect(location.hash).toBe('#archive');
     fireEvent.click(screen.getByRole('button', { name: /查看 .* 的对局详情/ }));
     await screen.findByRole('heading', { name: match.map });
     fireEvent.click(document.querySelector('.nav-item[aria-label="对局档案"]')!);
-    expect(await screen.findByRole('table', { name: '对局档案' })).toBeTruthy();
+    expect(await screen.findByRole('list', { name: '对局档案' })).toBeTruthy();
     expect(location.hash).toBe('#archive');
     expect(document.querySelector('.match-detail-page')).toBeNull();
   });
@@ -4672,14 +4689,31 @@ describe('match detail navigation and disclosure', () => {
     });
   });
 
-  it('offers a visible grid details action and returns from a player profile to the expanded player', async () => {
+  it('opens grid cards by click or keyboard and restores focus through detail and profile navigation', async () => {
     history.replaceState(null, '', '#archive');
     const match = matchFixture();
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [match] });
     render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByText(match.map);
-    fireEvent.click(screen.getByRole('radio', { name: '网格视图' }));
-    fireEvent.click(screen.getByRole('button', { name: '查看详情' }));
+    expect(screen.getByRole('radio', { name: '网格视图' }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    const grid = screen.getByRole('list', { name: '对局档案' });
+    const card = within(grid)
+      .getByRole('heading', { name: match.map })
+      .closest<HTMLElement>('.archive-card')!;
+    const cardOpener = within(card).getByRole('button', { name: /查看 .* 的对局详情/ });
+    expect(within(card).queryByText('查看详情')).toBeNull();
+    const viewport = grid.parentElement!;
+    viewport.scrollTop = 150;
+    fireEvent.click(card.querySelector('.archive-card-meta')!);
+    await screen.findByRole('heading', { name: match.map });
+    fireEvent.click(
+      within(document.querySelector('.match-details')!).getByRole('button', { name: '对局档案' }),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(cardOpener));
+    expect(viewport.scrollTop).toBe(150);
+    await userEvent.setup().keyboard('{Enter}');
     await screen.findByRole('heading', { name: match.map });
     const player = match.players.find((player) => capturedProfiles[player.id])!;
     fireEvent.click(screen.getByRole('button', { name: player.name }));

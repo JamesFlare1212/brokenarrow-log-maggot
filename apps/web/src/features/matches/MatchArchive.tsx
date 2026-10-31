@@ -57,7 +57,7 @@ export function MatchArchive() {
     [addDialog, setAddDialog] = useState(false),
     [scanning, setScanning] = useState(false),
     [hideUnknown, setHideUnknown] = useState(true),
-    [view, setView] = useState<'grid' | 'list'>('list'),
+    [view, setView] = useState<'grid' | 'list'>('grid'),
     [page, setPage] = useState(1),
     [sorting, setSorting] = useState<SortingState>([{ id: 'time', desc: true }]),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');

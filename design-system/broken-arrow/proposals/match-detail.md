@@ -19,13 +19,19 @@ profile dialogs and replay overlays.
 
 ## Archive entry
 
-- Render the map as ordinary text. Every row has a persistent `View details`
+- Default to grid view. Keep the grid/list toggle available and preserve the
+  selected view when returning from match details within the same workspace.
+- Render the map as ordinary text in list view. Every row has a persistent `View details`
   button with a trailing chevron and an accessible name containing map and time.
 - Clicking a noninteractive part of the row opens the same detail view. Preserve
   table semantics and a real button for keyboard access. Ignore text selections
   and clicks on menus, links, or other controls.
 - Keep refresh, BATrace, and delete in the existing overflow menu. They must not
-  trigger row navigation. Grid cards receive the same visible details action.
+  trigger row navigation.
+- Grid cards open details when clicking their noninteractive content, without a
+  separate footer button. Use a native, text-styled button in the map heading for
+  keyboard entry and focus restoration. Keep player-profile buttons independent
+  and ignore text selections. Cards without a match ID do not open details.
 - Restore account/result filters, sort order, pagination, scroll position, and
   initiating-button focus when returning. Previous/next follows that filtered
   and sorted sequence, including correct disabled boundaries.
@@ -54,16 +60,24 @@ semantics. Hide the personal summary if no local participant can be identified.
 | Combat  | Kills, damage dealt, damage received, D/L, ELO change |
 | Support | Supply, experience, medals, objectives, ELO change    |
 
-The name column stays consistent in all groups. Use shadcn Tabs for the metric
-group. Show five players per team at a 44–46px base row height. Highlight the
-local player with the theme's selected surface, a restrained leading marker,
-and a visible `You` badge. Numeric columns are right aligned and tabular.
+Keep the name column first in all groups and give it the remaining table width.
+Size numeric columns to their unwrapped headers and values instead of assigning
+percentages of the table. Preserve space for player names and award badges as
+the window grows. Use shadcn Tabs for the metric group. Show five players per
+team at a 44–46px base row height. Highlight the local player with the theme's
+selected surface, a restrained leading marker, and a visible `You` badge.
+Numeric columns are right aligned and tabular.
 
-Keep award pills out of the base row. A small medal button exposes all award names
-on hover/focus and opens the same inline expansion as the player disclosure.
+Show colored award badges beside each player name using the same `MatchAwards`
+component as Radar. Keep both title and score-label groups visible, with the same
+colors, limits, hover/focus explanations, and click-to-pin popovers. Let badges
+wrap within the player column and allow row heights to grow when needed. Award
+interactions remain independent of the player disclosure.
+
 Expanded content contains every original metric, before/after ELO where known,
-player ID, awards, and a production link to the existing player profile dialog.
-Close that dialog back to the same match and expanded player.
+player ID, and a production link to the existing player profile dialog. Keep
+award badges in the player heading without duplicating them in the expansion.
+Close the profile dialog back to the same match and expanded player.
 
 Derive team totals only when inputs are complete. Preserve missing values as an
 em dash and genuine zeroes as zero. Explain that D/L is destruction divided by
@@ -85,6 +99,14 @@ and preserve readable statistics through a contained horizontal table scroller.
 Do not shrink type to fit all twelve original columns. In production, use
 container queries for this breakpoint and sticky headers within the workspace
 scroll context.
+
+The detail-page scroll viewport fills the workspace below the titlebar, with its
+vertical scrollbar at the window's right edge. Keep page gutters inside that
+viewport and apply the readable width limit to the detail content only. Preserve
+the sticky detail toolbar and the archive's independent scroll position. Apply
+vertical gutters to the inner detail content, not the scroll viewport, so the
+toolbar sticks directly below the titlebar without exposing content above it.
+Verify the toolbar and scrollbar at intermediate and bottom scroll positions.
 
 ## Integration and validation
 

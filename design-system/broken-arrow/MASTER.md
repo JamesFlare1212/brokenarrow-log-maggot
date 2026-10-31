@@ -173,16 +173,20 @@ required by the current interface.
 - Overview and Radar retain their independent current/previous selection.
   Contextual match details and player details use the shared dialogs. The archive
   opens a dedicated workspace detail page at `#archive/match/{fid}` through an
-  explicit details button or a noninteractive row click. Preserve filters,
+  explicit list details button, a noninteractive row click, or a grid card click. Preserve filters,
   sorting, pagination, scroll position, and opener focus when returning.
 - Match details share one content component between the page and dialog. Show
   identity/outcome, recording actions, a compact personal summary, and core,
-  combat, and support tabs. Team tables use six columns with tabular numbers;
+  combat, and support tabs. Team tables use six columns with tabular numbers.
+  Size numeric columns to their headers and values, leaving the remaining width
+  for player names and awards instead of distributing extra space by percentage;
   place the local team first, show both teams side by side at a 73.75rem content
   width, and stack below it. Keep table overflow inside its own scroller.
   Highlight the local participant without inferring identity from their name.
-  Player disclosures contain every metric and existing award explanations;
-  a compact medal button provides access without increasing base row height.
+  Show the same colored title and score-label badges as Radar beside each player
+  name, with shared hover/focus explanations and click-to-pin popovers. Wrap badges
+  within the player column as needed. Player disclosures contain every metric and
+  the profile action; award interactions do not toggle the disclosure.
   Preserve unknown outcomes, observers, missing values, and saved ELO colors.
 - While a lazy dialog module loads, announce loading through an out-of-flow
   screen-reader status. Keep the underlying workspace geometry unchanged until
@@ -245,7 +249,9 @@ required by the current interface.
 - ELO color options sit directly under their section heading. Do not restore
   the removed explanatory paragraph or an additional wrapper card.
 - Quick tools keep their actions without an extra visible heading.
-- Archive filters and actions wrap as complete controls when space is limited.
+- Archive opens in grid view by default, with a toggle for list view. Preserve
+  the selected view when returning from match details. Filters and actions wrap
+  as complete controls when space is limited.
   Inline FieldGroup wrappers must use content sizing rather than inline-size
   containment, which would collapse their intrinsic width and overlap neighbors.
 - Settings categories are Appearance, General, Connection, Automation, and Cache.

@@ -869,6 +869,9 @@ button:not(:disabled),
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.archive-card-map {
+  white-space: normal;
+}
 .archive-card-meta {
   display: flex;
   flex-wrap: wrap;
@@ -1800,7 +1803,7 @@ button:not(:disabled),
 }
 .match-team-table table {
   min-width: 35rem;
-  table-layout: fixed;
+  table-layout: auto;
 }
 .match-team-table thead {
   position: sticky;
@@ -1837,28 +1840,25 @@ button:not(:disabled),
 .match-team-table [data-self] > td:first-child {
   box-shadow: inset 3px 0 var(--ring);
 }
-.match-player-column {
-  width: 34%;
+.match-metric-column {
+  width: 1%;
 }
-.match-rating-column {
-  width: 16%;
+.match-player-cell {
+  max-width: 0;
 }
 .match-player-heading {
   min-width: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 0.25rem;
 }
 .match-player-toggle {
   min-width: 0;
+  max-width: 100%;
   justify-content: flex-start;
   padding-inline: 0.125rem;
 }
-.match-player-toggle svg,
-.match-awards-toggle svg {
+.match-player-toggle svg {
   color: var(--muted-foreground);
-}
-.match-awards-toggle {
-  margin-left: auto;
 }
 .match-summary {
   display: grid;
@@ -1878,11 +1878,19 @@ button:not(:disabled),
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+#main-content:has(> .page-archive:not([hidden]) > .match-detail-page) {
+  max-width: none;
+  padding: 0;
+}
 .match-detail-page {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  padding-inline: 1.5rem;
   scrollbar-gutter: stable;
+}
+.match-detail-page > .match-details {
+  padding-block: 1.5rem;
 }
 .match-details {
   container: match-detail / inline-size;
@@ -1905,8 +1913,7 @@ button:not(:disabled),
 .match-section-heading,
 .match-team-identity,
 .match-detail-footnote,
-.match-player-details-heading,
-.match-player-awards {
+.match-player-details-heading {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -2091,10 +2098,6 @@ button:not(:disabled),
 .match-player-metrics dd {
   margin-top: 0.25rem;
   font-variant-numeric: tabular-nums;
-}
-.match-player-awards {
-  flex-wrap: wrap;
-  font-size: 0.75rem;
 }
 .archive-map-name {
   white-space: normal;
@@ -2710,6 +2713,12 @@ button:not(:disabled),
   #main-content,
   .settings-content {
     padding: 1.25rem;
+  }
+  .match-detail-page {
+    padding-inline: 1.25rem;
+  }
+  .match-detail-page > .match-details {
+    padding-block: 1.25rem;
   }
   .page-toolbar {
     padding-inline: 1.25rem;

@@ -1,5 +1,5 @@
 import { Fragment, useId } from 'react';
-import { ChevronRight, ExternalLink, Medal, Shield, Trophy } from 'lucide-react';
+import { ChevronRight, ExternalLink, Shield, Trophy } from 'lucide-react';
 import type { Match, MatchPlayer, MatchTitle } from '@ba/contracts';
 import { formatMetric, teamLabel } from '@ba/shared';
 import { Button } from '@/components/ui/button';
@@ -14,13 +14,11 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeletonRows } from '../../components/LoadingState';
-import { TooltipButton } from '../../components/Tooltip';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { cn } from '@/lib/utils';
 import { eloChangeClass } from '@/lib/elo';
 import { MatchAwards } from './MatchAwards';
-import { matchAwardGroups } from './award-model';
 import {
   matchMetricGroups,
   matchMetricLabels,
@@ -31,15 +29,7 @@ import {
   type MatchMetricGroup,
 } from './detail-model';
 
-function PlayerDetails({
-  player,
-  match,
-  titles,
-}: {
-  player: MatchPlayer;
-  match: Match;
-  titles: MatchTitle[];
-}) {
+function PlayerDetails({ player }: { player: MatchPlayer }) {
   const { t } = useI18n();
   const { openModal } = useApp();
   const metrics: MatchMetric[] = [
@@ -57,7 +47,6 @@ function PlayerDetails({
     'exp',
     'medals',
   ];
-  const scoreLabels = match.endedAt != null ? match.scoreLabels?.[player.id] : undefined;
   return (
     <div className="match-player-details">
       <div className="match-player-details-heading">
@@ -85,13 +74,6 @@ function PlayerDetails({
           </div>
         ))}
       </dl>
-      <div className="match-player-awards">
-        <span className="muted">{t('matchAwards')}</span>
-        <MatchAwards titles={titles} scoreLabels={scoreLabels} />
-        {!titles.length && !scoreLabels?.length && (
-          <span className="muted">{t('matchNoAwards')}</span>
-        )}
-      </div>
     </div>
   );
 }
@@ -175,12 +157,9 @@ export function MatchScoreboard({
             >
               <Table aria-label={t('matchTeamTable', { team: label })} aria-busy={loading}>
                 <colgroup>
-                  <col className="match-player-column" />
+                  <col />
                   {columns.map((metric) => (
-                    <col
-                      key={metric}
-                      className={metric === 'eloDelta' ? 'match-rating-column' : undefined}
-                    />
+                    <col key={metric} className="match-metric-column" />
                   ))}
                 </colgroup>
                 <TableHeader>
@@ -200,11 +179,6 @@ export function MatchScoreboard({
                 <TableBody>
                   {skeleton && <TableSkeletonRows columns={['player', ...columns]} />}
                   {team.players.map((player) => {
-                    const awards = matchAwardGroups(
-                      titles[player.id] ?? [],
-                      match?.endedAt != null ? (match.scoreLabels?.[player.id] ?? []) : [],
-                      t,
-                    ).flatMap((group) => group.awards);
                     const isOpen = expanded === player.id;
                     const id = `${regionId}-${player.id}`;
                     return (
@@ -230,23 +204,15 @@ export function MatchScoreboard({
                               {player.id === match?.localPlayerId && (
                                 <Badge variant="outline">{t('you')}</Badge>
                               )}
-                              {awards.length > 0 && (
-                                <TooltipButton
-                                  size="icon-xs"
-                                  variant="ghost"
-                                  className="match-awards-toggle"
-                                  aria-label={t('matchPlayerAwards', {
-                                    name: player.name,
-                                    count: awards.length,
-                                  })}
-                                  tooltip={awards.map((award) => award.name).join(' · ')}
-                                  aria-expanded={isOpen}
-                                  aria-controls={isOpen ? id : undefined}
-                                  onClick={() => onExpand(isOpen ? null : player.id)}
-                                >
-                                  <Medal aria-hidden="true" />
-                                </TooltipButton>
-                              )}
+                              <MatchAwards
+                                key={`${match?.id}:${player.id}`}
+                                titles={titles[player.id] ?? []}
+                                scoreLabels={
+                                  match?.endedAt != null
+                                    ? match.scoreLabels?.[player.id]
+                                    : undefined
+                                }
+                              />
                             </div>
                           </TableCell>
                           {columns.map((metric) => (
@@ -266,11 +232,7 @@ export function MatchScoreboard({
                           <TableRow className="match-player-expanded">
                             <TableCell colSpan={6}>
                               <div id={id}>
-                                <PlayerDetails
-                                  player={player}
-                                  match={match}
-                                  titles={titles[player.id] ?? []}
-                                />
+                                <PlayerDetails player={player} />
                               </div>
                             </TableCell>
                           </TableRow>

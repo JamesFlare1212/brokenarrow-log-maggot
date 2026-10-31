@@ -1,6 +1,7 @@
 import type { Match } from '@ba/contracts';
-import { formatDelta, formatMetric, teamLabel } from '@ba/shared';
+import { formatDelta, formatMetric, formatTime, teamLabel } from '@ba/shared';
 import { eloChangeClass } from '@/lib/elo';
+import { cn } from '@/lib/utils';
 import {
   Card,
   CardAction,
@@ -8,15 +9,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '../../app/state';
-import { Button } from '../../components/ui';
+import { Button } from '@/components/ui/button';
 import { useI18n } from '../../hooks/useI18n';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronRight } from 'lucide-react';
 
 export function MatchArchiveCardSkeleton() {
   return (
@@ -58,16 +57,50 @@ export function MatchArchiveCardSkeleton() {
 
 export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () => void }) {
   const { openModal } = useApp();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const mapName = match.map || '#' + match.id;
   const localTeam = match.players.find((player) => player.id === match.localPlayerId)?.teamId;
   const eloDelta =
     match.eloBefore !== null && match.eloAfter !== null ? match.eloAfter - match.eloBefore : null;
 
   return (
-    <Card className="archive-card">
+    <Card
+      className={cn('archive-card', match.fid && 'cursor-pointer')}
+      onClick={(event) => {
+        if (
+          !match.fid ||
+          event.button !== 0 ||
+          !(event.target instanceof Element) ||
+          event.target.closest(
+            'button, a, input, select, textarea, [role="menu"], [role="menuitem"]',
+          ) ||
+          window.getSelection()?.toString()
+        )
+          return;
+        onOpen();
+      }}
+    >
       <CardHeader>
-        <CardTitle role="heading" aria-level={3} className="archive-card-title">
-          {match.map || '#' + match.id}
+        <CardTitle
+          role="heading"
+          aria-level={3}
+          aria-label={mapName}
+          className="archive-card-title"
+        >
+          <Button
+            type="button"
+            variant="link"
+            className="archive-card-map"
+            data-match-open={match.id}
+            disabled={!match.fid}
+            aria-label={t('matchOpenDetail', {
+              map: mapName,
+              time: formatTime(match.endedAt ?? match.startedAt, locale),
+            })}
+            onClick={onOpen}
+          >
+            {mapName}
+          </Button>
         </CardTitle>
         <CardDescription className="archive-card-meta">
           <span>#{match.fid || match.id}</span>
@@ -110,6 +143,7 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
                     {players.map((player) => (
                       <li key={player.id}>
                         <Button
+                          type="button"
                           variant="link"
                           className="archive-card-player"
                           onClick={() =>
@@ -132,12 +166,6 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
           <p className="archive-card-roster-empty muted">{t('archiveRosterUnavailable')}</p>
         )}
       </CardContent>
-      <CardFooter variant="plain">
-        <Button size="sm" data-match-open={match.id} disabled={!match.fid} onClick={onOpen}>
-          {t('matchViewDetails')}
-          <ChevronRight data-icon="inline-end" aria-hidden="true" />
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
