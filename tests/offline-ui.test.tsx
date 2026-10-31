@@ -62,6 +62,11 @@ describe('UI backed by the complete recorded BATrace service', () => {
     );
     await screen.findByRole('heading', { name: 'Dam' });
     await waitFor(() => expect(document.querySelectorAll('.match-player-cell')).toHaveLength(10));
+    const match = await api.invoke('matches.detail', { fid: '9227650', force: false });
+    const awarded = match.players.find(
+      (player) => match.titles?.[player.id]?.length && match.scoreLabels?.[player.id]?.length,
+    )!;
+    fireEvent.click(screen.getByRole('button', { name: awarded.name }));
     expect(
       document.querySelectorAll('[data-award-source="title"] .match-award-button').length,
     ).toBeGreaterThan(0);

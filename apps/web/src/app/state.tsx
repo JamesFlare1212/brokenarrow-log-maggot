@@ -20,6 +20,7 @@ import { useMaggotRequests } from '../hooks/useMaggotRequests';
 import { useAppearance } from '../hooks/useAppearance';
 import { useSettingsAutosave } from '../hooks/useSettingsAutosave';
 import { settingsTabFromHash, type SettingsTab } from '../features/settings/routes';
+import { archiveMatchFromHash } from '../features/matches/routes';
 export type ModalRoute =
   | { type: 'profile'; id: string; name: string }
   | { type: 'match'; fid: string }
@@ -144,6 +145,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
   const [state, dispatch] = useReducer(reduce, null),
     [page, updatePage] = useState<Panel>(
       () =>
+        (archiveMatchFromHash(location.hash) ? 'archive' : undefined) ||
         PANELS.find((panel) => location.hash === `#${panel}`) ||
         PANELS.find((panel) => panel === history.state?.baSettingsFrom) ||
         'current',
@@ -168,6 +170,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     if (location.hash !== `#${next}`) history.pushState(null, '', `#${next}`);
     updateSettingsTab(null);
     updatePage(next);
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
   const openSettings = (tab: SettingsTab = 'appearance') => {
     const hash = `#settings/${tab}`;
@@ -190,7 +193,9 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
         if (from) updatePage(from);
         return;
       }
-      const panel = PANELS.find((candidate) => location.hash === `#${candidate}`);
+      const panel = archiveMatchFromHash(location.hash)
+        ? 'archive'
+        : PANELS.find((candidate) => location.hash === `#${candidate}`);
       if (panel || !location.hash) updatePage(panel || 'current');
     };
     navigate();

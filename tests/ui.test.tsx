@@ -2218,7 +2218,7 @@ describe('user interaction regressions', () => {
     await user.type(input, '9227650');
     await user.click(submit);
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(await screen.findByRole('button', { name: 'Added match' })).toBeTruthy();
+    expect(await screen.findByText('Added match')).toBeTruthy();
     expect(native.calls.filter((call) => call.method === 'matches.add')).toEqual([
       { method: 'matches.add', input: { fid: '9227650' } },
     ]);
@@ -2311,7 +2311,7 @@ describe('user interaction regressions', () => {
     );
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => rows });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
-    await screen.findByRole('button', { name: 'Grid map 0' });
+    await screen.findByText('Grid map 0');
     fireEvent.click(screen.getByRole('button', { name: 'ELO 变化' }));
     fireEvent.click(screen.getByRole('link', { name: '下一页' }));
     const gridToggle = screen.getByRole('radio', { name: '网格视图' });
@@ -2360,7 +2360,7 @@ describe('user interaction regressions', () => {
       </>,
       { wrapper: wrapper(native.api) },
     );
-    await screen.findByRole('button', { name: match.map });
+    await screen.findByText(match.map);
     fireEvent.click(screen.getByRole('radio', { name: '网格视图' }));
     const grid = within(screen.getByRole('list', { name: '对局档案' }));
     expect(grid.getByText('4 位玩家')).toBeTruthy();
@@ -2372,11 +2372,6 @@ describe('user interaction regressions', () => {
     expect(grid.getByText('1,876')).toBeTruthy();
     expect(grid.getAllByText('—')).toHaveLength(2);
     expect(grid.queryByRole('button', { name: /刷新/ })).toBeNull();
-    fireEvent.click(grid.getByRole('button', { name: match.map }));
-    expect(JSON.parse(screen.getByTestId('archive-modal').textContent!)).toEqual({
-      type: 'match',
-      fid: match.fid,
-    });
     fireEvent.click(grid.getByRole('button', { name: players[0]!.name }));
     expect(JSON.parse(screen.getByTestId('archive-modal').textContent!)).toEqual({
       type: 'profile',
@@ -2407,10 +2402,10 @@ describe('user interaction regressions', () => {
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => rows });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
     fireEvent.click(await screen.findByRole('radio', { name: '网格视图' }));
-    await screen.findByRole('button', { name: 'ELO map 0' });
+    await screen.findByText('ELO map 0');
     for (const [index, entry] of cases.entries()) {
       const card = screen
-        .getByRole('button', { name: `ELO map ${index}` })
+        .getByRole('heading', { name: `ELO map ${index}` })
         .closest('.archive-card')!;
       const badge = within(card as HTMLElement).getByLabelText(`ELO 变化: ${entry.value}`);
       expect(badge.textContent).toBe(entry.value);
@@ -2447,7 +2442,7 @@ describe('user interaction regressions', () => {
     expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '清除筛选' }));
     expect(screen.getByRole('list', { name: '对局档案' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '#' + match.id })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '#' + match.id })).toBeTruthy();
     expect(screen.getByText('暂无玩家数据')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /我方队伍|对方队伍/ })).toBeNull();
     expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(1);
@@ -2465,9 +2460,9 @@ describe('user interaction regressions', () => {
     );
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => rows });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
-    await screen.findByRole('button', { name: 'Sorted map 0' });
+    await screen.findByText('Sorted map 0');
     fireEvent.click(screen.getByRole('link', { name: '下一页' }));
-    await screen.findByRole('button', { name: 'Sorted map 54' });
+    await screen.findByText('Sorted map 54');
     const viewport = document.querySelector<HTMLDivElement>('.archive-table')!;
     fireEvent.scroll(viewport, { target: { scrollTop: 180 } });
     const sort = screen.getByRole('button', { name: 'ELO 变化' });
@@ -2533,7 +2528,7 @@ describe('user interaction regressions', () => {
         <MatchArchive />
       </AppProvider>,
     );
-    await screen.findByRole('button', { name: 'Archive map 524' });
+    await screen.findByText('Archive map 524');
     expect(screen.getByRole('option', { name: 'Shared name · #1' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Shared name · #2' })).toBeTruthy();
     const table = document.querySelector<HTMLDivElement>('.archive-table')!;
@@ -2546,11 +2541,11 @@ describe('user interaction regressions', () => {
     ).toBe(true);
     fireEvent.click(screen.getByRole('link', { name: '下一页' }));
     expect(screen.getByRole('link', { name: '第 2 页' }).getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('button', { name: 'Archive map 474' })).toBeTruthy();
+    expect(screen.getByText('Archive map 474')).toBeTruthy();
     expect(table.scrollTop).toBe(0);
     expect(screen.getByText('第 51–100 条，共 525 条')).toBeTruthy();
     fireEvent.click(screen.getByRole('link', { name: '第 11 页' }));
-    expect(screen.getByRole('button', { name: 'Archive map 0' })).toBeTruthy();
+    expect(screen.getByText('Archive map 0')).toBeTruthy();
     expect(screen.getAllByRole('row')).toHaveLength(26);
     expect(
       screen.getByRole('link', { name: '下一页' }).getAttribute('aria-disabled') === 'true',
@@ -2615,13 +2610,13 @@ describe('user interaction regressions', () => {
       ],
     });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
-    await screen.findByRole('button', { name: 'Known result 0' });
+    await screen.findByText('Known result 0');
     const toggle = screen.getByRole('switch', { name: '隐藏未知结果' }) as HTMLInputElement;
     expect(toggle.getAttribute('aria-checked')).toBe('true');
-    expect(screen.queryByRole('button', { name: 'Unknown result A' })).toBeNull();
+    expect(screen.queryByText('Unknown result A')).toBeNull();
     expect(screen.getByText('样本数: 13')).toBeTruthy();
     fireEvent.click(toggle);
-    await screen.findByRole('button', { name: 'Unknown result A' });
+    await screen.findByText('Unknown result A');
     expect(toggle.getAttribute('aria-checked') === 'true').toBe(false);
     fireEvent.click(screen.getByRole('link', { name: '下一页' }));
     const table = document.querySelector<HTMLDivElement>('.archive-table')!;
@@ -2644,9 +2639,9 @@ describe('user interaction regressions', () => {
     ).toBe(true);
     expect(within(pagination).queryByRole('combobox', { name: '页码' }) === null).toBe(true);
     expect(within(pagination).getByRole('link', { name: '第 1 页' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Unknown result A' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Unknown result B' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Spectator result' })).toBeTruthy();
+    expect(screen.queryByText('Unknown result A')).toBeNull();
+    expect(screen.queryByText('Unknown result B')).toBeNull();
+    expect(screen.getByText('Spectator result')).toBeTruthy();
     fireEvent.click(screen.getByRole('radio', { name: '胜利' }));
     expect(screen.getByText('样本数: 6')).toBeTruthy();
     expect(toggle.getAttribute('aria-checked') === 'true').toBe(true);
@@ -2656,7 +2651,7 @@ describe('user interaction regressions', () => {
     expect(screen.getByRole('navigation', { name: '对局档案分页' })).toBeTruthy();
     expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '清除筛选' }));
-    await screen.findByRole('button', { name: 'Unknown result A' });
+    await screen.findByText('Unknown result A');
     expect(toggle.getAttribute('aria-checked') === 'true').toBe(false);
     expect(screen.getByText('样本数: 63')).toBeTruthy();
     expect(screen.getByRole('link', { name: '第 2 页' })).toBeTruthy();
@@ -3103,16 +3098,18 @@ describe('user interaction regressions', () => {
     render(<MatchDialog fid={match.fid!} />, { wrapper: wrapper(native.api) });
     const map = await screen.findByRole('heading', { name: match.map });
     const dialog = map.closest('[role="dialog"]') as HTMLElement;
-    const summary = dialog.querySelector('.match-summary') as HTMLElement;
-    expect(within(summary).getByText(match.localPersona)).toBeTruthy();
-    expect(within(summary).getByText(formatDuration(match.durationSec))).toBeTruthy();
-    expect(within(summary).getByText(formatTime(match.endedAt, 'zh'))).toBeTruthy();
+    const overview = dialog.querySelector('.match-overview') as HTMLElement;
+    expect(overview.textContent).toContain(match.localPersona);
+    expect(within(overview).getByText(formatDuration(match.durationSec))).toBeTruthy();
+    expect(within(overview).getByText(formatTime(match.endedAt, 'zh'))).toBeTruthy();
     expect(dialog.querySelectorAll('tbody tr')).toHaveLength(match.players.length);
     const [playerId, titles] = Object.entries(match.titles).find(([, list]) => list.length > 0)!;
     const player = match.players.find((p) => p.id === playerId)!;
     const name = within(dialog).getByRole('button', { name: player.name });
-    const heading = name.closest('.match-player-heading') as HTMLElement;
-    const title = within(heading).getByRole('button', {
+    fireEvent.click(name);
+    expect(name.getAttribute('aria-expanded')).toBe('true');
+    const expanded = dialog.querySelector('.match-player-details') as HTMLElement;
+    const title = within(expanded).getByRole('button', {
       name: translate('zh', `title.${titles[0]!.id}`),
     });
     fireEvent.click(title);
@@ -4239,7 +4236,7 @@ describe('application loading layouts', () => {
     fireEvent.click(screen.getByRole('button', { name: translate('zh', 'refresh') }));
     await waitFor(() => expect(table.getAttribute('aria-busy')).toBe('true'));
     expect(table.querySelector('[data-slot="skeleton"]')).toBeNull();
-    expect(table.querySelector('td[colspan="8"]')).toBeTruthy();
+    expect(table.querySelector('td[colspan="9"]')).toBeTruthy();
     expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
     await act(async () => refresh.reject(new Error('Archive refresh failed')));
     expect(table.getAttribute('aria-busy')).toBe('false');
@@ -4377,7 +4374,7 @@ describe('application loading layouts', () => {
       });
       const table = await screen.findByRole('table');
       const header = table.querySelector('thead');
-      const columns = kind === 'archive' ? 8 : 5;
+      const columns = kind === 'archive' ? 9 : 5;
       expect(table.getAttribute('aria-busy')).toBe('true');
       expect(table.querySelectorAll('th')).toHaveLength(columns);
       expect(table.querySelectorAll('tbody tr')).toHaveLength(5);
@@ -4465,12 +4462,236 @@ describe('application loading layouts', () => {
     const overview = dialog.querySelector('.match-overview');
     expect(dialog.querySelectorAll('.match-summary dt')).toHaveLength(4);
     for (const table of dialog.querySelectorAll('.match-team-table table')) {
-      expect(table.querySelectorAll('th')).toHaveLength(12);
-      expect(table.querySelectorAll('tbody td')).toHaveLength(60);
+      expect(table.querySelectorAll('th')).toHaveLength(6);
+      expect(table.querySelectorAll('tbody td')).toHaveLength(30);
     }
     await act(async () => pending.resolve(matchFixture()));
     expect(dialog.querySelector('.match-overview')).toBe(overview);
     expect(dialog.querySelector('[data-slot="skeleton"]')).toBeNull();
+  });
+});
+
+describe('match detail navigation and disclosure', () => {
+  it('opens explicit details with the keyboard, follows filtered sorting, and restores archive focus and scroll', async () => {
+    history.replaceState(null, '', '#archive');
+    const rows = [
+      matchFixture({
+        id: 'nav-a',
+        fid: '101',
+        map: 'First victory',
+        outcome: 'win',
+        endedAt: 3000,
+      }),
+      matchFixture({
+        id: 'nav-b',
+        fid: '102',
+        map: 'Hidden defeat',
+        outcome: 'loss',
+        endedAt: 2000,
+      }),
+      matchFixture({
+        id: 'nav-c',
+        fid: '103',
+        map: 'Second victory',
+        outcome: 'win',
+        endedAt: 1000,
+      }),
+    ];
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => rows,
+      'matches.detail': ({ fid }) => rows.find((match) => match.fid === fid)!,
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    await screen.findByText('First victory');
+    fireEvent.click(screen.getByRole('radio', { name: '胜利' }));
+    const table = screen.getByRole('table', { name: '对局档案' });
+    const viewport = table.closest<HTMLElement>('.archive-table')!;
+    viewport.scrollTop = 120;
+    const opener = within(table).getByRole('button', { name: /查看 First victory/ });
+    opener.focus();
+    await userEvent.setup().keyboard('{Enter}');
+    const heading = await screen.findByRole('heading', { name: 'First victory' });
+    expect(document.activeElement).toBe(heading);
+    expect(screen.queryByRole('table', { name: '对局档案' })).toBeNull();
+    expect(screen.getByRole('button', { name: '上一局' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '下一局' }));
+    await screen.findByRole('heading', { name: 'Second victory' });
+    expect(screen.getByRole('button', { name: '下一局' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '对局档案' }));
+    await screen.findByRole('table', { name: '对局档案' });
+    expect(screen.getByRole('radio', { name: '胜利' }).getAttribute('aria-checked')).toBe('true');
+    expect(viewport.scrollTop).toBe(120);
+    expect(document.activeElement).toBe(opener);
+    expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(1);
+  });
+
+  it('ignores selection and secondary controls but opens a noninteractive archive row', async () => {
+    const match = matchFixture();
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [match] });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    const map = await screen.findByText(match.map);
+    expect(map.closest('button')).toBeNull();
+    const selection = vi
+      .spyOn(window, 'getSelection')
+      .mockReturnValue({ toString: () => match.map } as Selection);
+    fireEvent.click(map);
+    expect(native.calls.some((call) => call.method === 'matches.detail')).toBe(false);
+    selection.mockRestore();
+    const row = map.closest('tr')!;
+    await userEvent.setup().click(within(row).getByRole('button', { name: /^操作:/ }));
+    expect(screen.getByRole('menu')).toBeTruthy();
+    expect(native.calls.some((call) => call.method === 'matches.detail')).toBe(false);
+    await userEvent.setup().keyboard('{Escape}');
+    fireEvent.click(map);
+    await screen.findByRole('heading', { name: match.map });
+    expect(native.calls.filter((call) => call.method === 'matches.detail')).toHaveLength(1);
+  });
+
+  it('loads a direct archive detail route and returns through both its back action and sidebar', async () => {
+    const match = matchFixture();
+    history.replaceState(null, '', `#archive/match/${match.fid}`);
+    const initial = bootstrapForApp();
+    initial.config.panelOrder = ['current', 'archive'];
+    const native = nativeFixture(initial, { 'matches.list': () => [match] });
+    render(<App />, { wrapper: wrapper(native.api) });
+    const heading = await screen.findByRole('heading', { name: match.map });
+    expect(heading.closest('.match-detail-page')).toBeTruthy();
+    fireEvent.click(
+      within(document.querySelector('.match-details')!).getByRole('button', { name: '对局档案' }),
+    );
+    expect(await screen.findByRole('table', { name: '对局档案' })).toBeTruthy();
+    expect(location.hash).toBe('#archive');
+    fireEvent.click(screen.getByRole('button', { name: /查看 .* 的对局详情/ }));
+    await screen.findByRole('heading', { name: match.map });
+    fireEvent.click(document.querySelector('.nav-item[aria-label="对局档案"]')!);
+    expect(await screen.findByRole('table', { name: '对局档案' })).toBeTruthy();
+    expect(location.hash).toBe('#archive');
+    expect(document.querySelector('.match-detail-page')).toBeNull();
+  });
+
+  it('does not replace the next match with a late response from the previous one', async () => {
+    const pending = deferred<RpcOutputs['matches.detail']>();
+    const first = matchFixture({ id: 'race-a', fid: '201', map: 'Pending match', endedAt: 2000 });
+    const second = matchFixture({ id: 'race-b', fid: '202', map: 'Current match', endedAt: 1000 });
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => [first, second],
+      'matches.detail': ({ fid }) => (fid === first.fid ? pending.promise : second),
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: /查看 Pending match/ }));
+    fireEvent.click(screen.getByRole('button', { name: '下一局' }));
+    await screen.findByRole('heading', { name: 'Current match' });
+    await act(async () => pending.resolve(first));
+    expect(screen.queryByRole('heading', { name: 'Pending match' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Current match' })).toBeTruthy();
+  });
+
+  it('keeps local Bravo first, preserves unknown results and distinguishes missing values from zero', async () => {
+    const match = matchFixture({ outcome: 'unknown', winnerTeamId: null });
+    const local = match.players.find((player) => player.teamId === 1)!;
+    match.localPlayerId = local.id;
+    local.lossesScore = 0;
+    local.destructionScore = 100;
+    local.objectivesCaptured = 0;
+    match.players.find((player) => player.teamId === 0)!.destructionScore = null;
+    const native = nativeFixture(bootstrapForApp(), { 'matches.detail': () => match });
+    render(<MatchDialog fid={match.fid!} />, { wrapper: wrapper(native.api) });
+    await screen.findByRole('heading', { name: match.map });
+    const teams = document.querySelectorAll('.match-team');
+    expect(teams[0]!.getAttribute('aria-label')).toBe('Bravo');
+    expect(teams[0]!.querySelector('.match-team-heading')!.textContent).toContain('未知');
+    expect(teams[1]!.querySelector('.match-team-total')!.textContent).toContain('—');
+    const row = screen.getByRole('button', { name: local.name }).closest('tr')!;
+    expect(row.hasAttribute('data-self')).toBe(true);
+    expect(row.textContent).toContain('∞');
+    expect(within(row).getAllByText('0').length).toBeGreaterThan(0);
+    expect(screen.queryByText('胜利')).toBeNull();
+    expect(screen.queryByText('失败')).toBeNull();
+  });
+
+  it('preserves expanded statistics and the selected group through a failed refresh and supports all recordings', async () => {
+    const match = matchFixture();
+    const local = match.players[0]!;
+    let detailCalls = 0;
+    let replayCalls = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.detail': () => {
+        if (++detailCalls > 1) throw new Error('Detail refresh failed');
+        return match;
+      },
+      'replays.list': () => {
+        if (++replayCalls === 1) throw new Error('Recording service unavailable');
+        return ['First camera', 'Second camera'].map((name, index) => ({
+          id: `replay-${index}`,
+          fid: match.fid,
+          map: match.map,
+          uploaderId: null,
+          uploaderName: name,
+          teamId: 0,
+          size: 100,
+          createdAt: 0,
+          durationSec: 60,
+          test: false,
+        }));
+      },
+    });
+    function ModalProbe() {
+      const { modal } = useApp();
+      return <output data-testid="replay-route">{JSON.stringify(modal)}</output>;
+    }
+    render(
+      <>
+        <MatchDialog fid={match.fid!} />
+        <ModalProbe />
+      </>,
+      { wrapper: wrapper(native.api) },
+    );
+    await screen.findByRole('heading', { name: match.map });
+    await screen.findByText(/Recording service unavailable/);
+    const user = userEvent.setup();
+    screen.getByRole('tab', { name: '核心战绩' }).focus();
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '战斗数据' }).getAttribute('aria-selected')).toBe(
+        'true',
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: local.name }));
+    const expansion = document.querySelector('.match-player-details')!;
+    expect(expansion.querySelectorAll('dt')).toHaveLength(13);
+    fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    await screen.findByText('Detail refresh failed');
+    expect(document.querySelector('.match-player-details')).toBe(expansion);
+    expect(screen.getByRole('tab', { name: '战斗数据' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    fireEvent.click(await screen.findByRole('button', { name: '观看录像 · Second camera' }));
+    expect(JSON.parse(screen.getByTestId('replay-route').textContent!)).toMatchObject({
+      type: 'replay',
+      id: 'replay-1',
+    });
+  });
+
+  it('offers a visible grid details action and returns from a player profile to the expanded player', async () => {
+    history.replaceState(null, '', '#archive');
+    const match = matchFixture();
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [match] });
+    render(<App />, { wrapper: wrapper(native.api) });
+    await screen.findByText(match.map);
+    fireEvent.click(screen.getByRole('radio', { name: '网格视图' }));
+    fireEvent.click(screen.getByRole('button', { name: '查看详情' }));
+    await screen.findByRole('heading', { name: match.map });
+    const player = match.players.find((player) => capturedProfiles[player.id])!;
+    fireEvent.click(screen.getByRole('button', { name: player.name }));
+    const opener = screen.getByRole('button', { name: '查看玩家资料' });
+    await userEvent.setup().click(opener);
+    const profile = await screen.findByRole('dialog');
+    fireEvent.click(within(profile).getByRole('button', { name: '关闭' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: player.name }).getAttribute('aria-expanded')).toBe(
+      'true',
+    );
+    await waitFor(() => expect(document.activeElement).toBe(opener));
   });
 });
 
