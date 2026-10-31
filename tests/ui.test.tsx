@@ -29,6 +29,7 @@ import { App } from '../apps/web/src/app/App';
 import { AppProvider, useApp } from '../apps/web/src/app/state';
 import {
   capturedAccounts,
+  capturedLocalMatch,
   capturedMatches,
   capturedPlayers,
   capturedReports,
@@ -94,6 +95,11 @@ function nativeFixture(
       const match = capturedMatches.find((match) => match.fid === fid);
       if (!match) throw new Error('No recorded match fixture for ' + fid);
       return structuredClone(match);
+    },
+    'matches.local': ({ id }) => {
+      if (id !== capturedLocalMatch.id)
+        throw new Error('No recorded local match fixture for ' + id);
+      return structuredClone(capturedLocalMatch);
     },
     'accounts.list': () => structuredClone(capturedAccounts),
     'players.search': ({ query }) => ({
@@ -2482,7 +2488,13 @@ describe('user interaction regressions', () => {
     ).toBe(true);
     expect(viewport.querySelectorAll('.archive-card')).toHaveLength(6);
     expect(viewport.querySelectorAll('.archive-card-players')).toHaveLength(12);
-    const match = matchFixture({ fid: null, map: '', players: [], outcome: 'unknown' });
+    const match = matchFixture({
+      id: 'local:empty',
+      fid: null,
+      map: '',
+      players: [],
+      outcome: 'unknown',
+    });
     await act(async () => pending.resolve([match]));
     expect(viewport.getAttribute('aria-busy')).toBe('false');
     expect(screen.getByRole('switch', { name: '隐藏未知结果' }).getAttribute('aria-checked')).toBe(
@@ -2492,7 +2504,8 @@ describe('user interaction regressions', () => {
     expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '清除筛选' }));
     expect(screen.getByRole('list', { name: '对局档案' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: '#' + match.id })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '未记录' })).toBeTruthy();
+    expect(screen.queryByText(match.id)).toBeNull();
     expect(screen.getByText('暂无玩家数据')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /我方队伍|对方队伍/ })).toBeNull();
     expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(1);
@@ -4521,7 +4534,7 @@ describe('application loading layouts', () => {
   it('mounts the match summary and both full team tables before details arrive', async () => {
     const pending = deferred<RpcOutputs['matches.detail']>();
     const native = nativeFixture(bootstrapForApp(), { 'matches.detail': () => pending.promise });
-    render(<MatchDialog fid="loading-match" />, { wrapper: wrapper(native.api) });
+    render(<MatchDialog fid="1234567" />, { wrapper: wrapper(native.api) });
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => expect(dialog.querySelectorAll('.match-team-table table')).toHaveLength(2));
     const overview = dialog.querySelector('.match-overview');
@@ -4621,20 +4634,25 @@ describe('match archive row actions', () => {
   });
 
   it('disables remote actions without a match ID but still allows confirmed deletion', async () => {
-    const match = matchFixture({ fid: null, outcome: 'win' });
+    const match = capturedLocalMatch;
     const remove = vi.fn(() => ({ removed: true }));
     const native = nativeFixture(bootstrapForApp(), {
       'matches.list': () => [match],
       'matches.delete': remove,
     });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('switch', { name: '隐藏未知结果' }));
     fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
     const row = (await screen.findByText(match.map)).closest('tr')!;
-    expect(within(row).getByRole('button', { name: /^刷新/ }).hasAttribute('disabled')).toBe(true);
+    expect(within(row).getByRole('button', { name: /^查看/ }).hasAttribute('disabled')).toBe(false);
     const user = userEvent.setup();
     await user.click(within(row).getByRole('button', { name: /^更多操作/ }));
-    for (const name of ['查看详情', '在 BATrace 打开'])
-      expect(screen.getByRole('menuitem', { name }).getAttribute('aria-disabled')).toBe('true');
+    expect(
+      screen.getByRole('menuitem', { name: '查看详情' }).getAttribute('aria-disabled'),
+    ).not.toBe('true');
+    expect(
+      screen.getByRole('menuitem', { name: '在 BATrace 打开' }).getAttribute('aria-disabled'),
+    ).toBe('true');
     expect(native.calls.some((call) => call.method === 'matches.detail')).toBe(false);
     await user.click(screen.getByRole('menuitem', { name: '删除' }));
     const dialog = await screen.findByRole('alertdialog', { name: '删除对局记录？' });
@@ -4645,6 +4663,120 @@ describe('match archive row actions', () => {
 });
 
 describe('match detail navigation and disclosure', () => {
+  it('opens a local grid card and navigates between local and online records', async () => {
+    const local = capturedLocalMatch;
+    const remote = capturedMatches[0]!;
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [remote, local] });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('switch', { name: '隐藏未知结果' }));
+    const opener = await screen.findByRole('button', {
+      name: translate('zh', 'matchOpenDetail', {
+        map: local.map,
+        time: formatTime(local.endedAt ?? local.startedAt, 'zh'),
+      }),
+    });
+    expect(opener.hasAttribute('disabled')).toBe(false);
+    const card = within(opener.closest('.archive-card')! as HTMLElement);
+    await user.click(card.getByText('本地日志'));
+    const page = within(document.querySelector('.match-detail-page')! as HTMLElement);
+    await page.findByText(formatMetric(local.points));
+    await user.click(page.getByRole('button', { name: '上一局' }));
+    await waitFor(() =>
+      expect(native.calls).toContainEqual({
+        method: 'matches.detail',
+        input: { fid: remote.fid, force: false },
+      }),
+    );
+    expect(page.queryByText('本地日志')).toBeNull();
+    await user.click(page.getByRole('button', { name: '下一局' }));
+    await page.findByText(formatMetric(local.points));
+    expect(location.hash).toBe('#archive/match/' + encodeURIComponent(local.id));
+    await user.click(page.getByRole('button', { name: '对局档案' }));
+    await waitFor(() => expect(document.querySelector('.match-detail-page')).toBeNull());
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it.each(['zh', 'en'] as const)(
+    'opens recorded local details from the %s list and preserves missing values',
+    async (locale) => {
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const match = capturedLocalMatch;
+      const native = nativeFixture(initial, { 'matches.list': () => [match] });
+      render(<MatchArchive />, { wrapper: wrapper(native.api) });
+      const user = userEvent.setup();
+      await user.click(
+        await screen.findByRole('switch', { name: translate(locale, 'hideUnknownResults') }),
+      );
+      await user.click(screen.getByRole('radio', { name: translate(locale, 'listView') }));
+      const row = (await screen.findByText(match.map)).closest('tr')!;
+      expect(within(row).getAllByText(translate(locale, 'matchUnrecorded'))).toHaveLength(2);
+      const open = within(row).getByRole('button', {
+        name: translate(locale, 'matchOpenDetail', {
+          map: match.map,
+          time: formatTime(match.endedAt ?? match.startedAt, locale),
+        }),
+      });
+      await user.click(open);
+      await waitFor(() =>
+        expect(native.calls).toContainEqual({ method: 'matches.local', input: { id: match.id } }),
+      );
+      const page = within(document.querySelector('.match-detail-page')! as HTMLElement);
+      expect(await page.findByText(translate(locale, 'matchLocalOnlyHint'))).toBeTruthy();
+      expect(page.getByText(translate(locale, 'matchLocalOnly'))).toBeTruthy();
+      const points = page.getByText(translate(locale, 'matchLogPoints')).closest('div')!;
+      expect(points.textContent).toContain(formatMetric(match.points));
+      const scoreboard = page.getByRole('region', { name: translate(locale, 'matchScoreboard') });
+      expect(scoreboard.querySelectorAll('.match-player-toggle')).toHaveLength(
+        match.players.length,
+      );
+      expect(
+        page.getByRole('button', { name: translate(locale, 'refresh') }).hasAttribute('disabled'),
+      ).toBe(true);
+      expect(
+        page
+          .getByRole('button', { name: translate(locale, 'openBatrace') })
+          .hasAttribute('disabled'),
+      ).toBe(true);
+      expect(page.queryByRole('button', { name: translate(locale, 'matchCopyId') })).toBeNull();
+      expect(page.queryByText(match.id)).toBeNull();
+      expect(page.queryByText(translate(locale, 'loading'))).toBeNull();
+      expect(
+        native.calls.some(
+          (call) =>
+            call.method === 'matches.detail' ||
+            call.method === 'external.open' ||
+            call.method === 'replays.list',
+        ),
+      ).toBe(false);
+      expect(location.hash).toBe('#archive/match/' + encodeURIComponent(match.id));
+      await user.click(page.getByRole('button', { name: translate(locale, 'archive') }));
+      await waitFor(() => expect(document.querySelector('.match-detail-page')).toBeNull());
+      expect(document.activeElement).toBe(open);
+    },
+  );
+
+  it('loads a local-only detail deep link without a summary and returns a missing record error locally', async () => {
+    const match = capturedLocalMatch;
+    history.replaceState(null, '', '#archive/match/' + encodeURIComponent(match.id));
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [] });
+    const mounted = render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    await screen.findByText(translate('zh', 'matchLocalOnlyHint'));
+    const page = within(document.querySelector('.match-detail-page')! as HTMLElement);
+    expect(await page.findByText(translate('zh', 'matchLocalOnlyHint'))).toBeTruthy();
+    await page.findByText(formatMetric(match.points));
+    expect(native.calls.some((call) => call.method === 'matches.detail')).toBe(false);
+    mounted.unmount();
+    history.replaceState(null, '', '#archive/match/' + encodeURIComponent('local:missing'));
+    const missing = nativeFixture(bootstrapForApp(), { 'matches.list': () => [] });
+    render(<MatchArchive />, { wrapper: wrapper(missing.api) });
+    expect(
+      await screen.findByText(/No recorded local match fixture for local:missing/),
+    ).toBeTruthy();
+    expect(missing.calls.some((call) => call.method === 'matches.detail')).toBe(false);
+  });
+
   it('opens details from the keyboard menu, follows filtered sorting, and restores archive focus and scroll', async () => {
     history.replaceState(null, '', '#archive');
     const rows = [

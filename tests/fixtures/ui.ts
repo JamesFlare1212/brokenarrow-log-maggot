@@ -8,9 +8,23 @@ import { Database } from '../../apps/server/src/storage/database';
 import { TrackerService } from '../../apps/server/src/players/tracker';
 import { seedRecordedMatchCaches } from '../../apps/server/src/dev/match-fixtures';
 import { seedOfflineFixtureCaches } from '../../apps/server/src/dev/offline-fixtures';
+import { LogParser } from '../../apps/server/src/logs/parser';
 
 // Load the checksum-verified capture once, using only an in-memory database and offline responses.
 const { data } = await loadRealData(resolve('tests/fixtures/real'));
+export const capturedLocalMatch = (() => {
+  const log = data.logs.find((log) => log.path === 'Gamelog__2025_06_18__05_28.log')!;
+  let match: Match | undefined;
+  const parser = new LogParser((event) => {
+    if ((event.type === 'ended' || event.type === 'metadata') && event.match.map === 'Airport')
+      match = event.match;
+  });
+  parser.reset(log.path);
+  parser.feed(log.content.split('\n'), true);
+  if (!match || match.fid || match.players.length !== 10)
+    throw new Error('Missing recorded local match fixture');
+  return match;
+})();
 const captured = await (async () => {
   const db = new Database(':memory:');
   const client = new BatraceClient(

@@ -107,6 +107,10 @@ Real-data regression coverage runs in `pnpm test` / `pnpm check`; CI also runs t
 real-data desktop smoke test. See the [fixture documentation](tests/fixtures/real/README.md)
 for provenance checks, extraction scope, and reimport instructions.
 
+Older matches without an online match ID can still open local log details. Saved
+players, duration, total points, and decks are shown where available; unrecorded
+values are labeled clearly. BATrace refresh and links require an online match ID.
+
 ## 应用更新与发布
 
 Windows 正式版启动 15 秒后检查 GitHub Releases，此后每 4 分钟检查。设置和“关于”页面均有更新入口；下载和重启安装由用户主动操作，普通退出不会自动安装。安装前关闭后台任务、保存录像并关闭 SQLite；对局或录制进行中不能重启安装。更新失败可重试或打开下载页面，上次安装未生效会显示提示。

@@ -177,8 +177,7 @@ export function Dashboard() {
                   <Button
                     variant="ghost"
                     className="recent-match h-auto w-full justify-start"
-                    disabled={!match.fid}
-                    onClick={() => match.fid && openModal({ type: 'match', fid: match.fid })}
+                    onClick={() => openModal({ type: 'match', fid: match.fid || match.id })}
                   >
                     <ItemContent>
                       <ItemTitle>{match.map || `#${match.id}`}</ItemTitle>

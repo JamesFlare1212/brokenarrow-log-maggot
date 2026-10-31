@@ -18,6 +18,7 @@ const methods = new Set<RpcMethod>([
   'session.query',
   'matches.list',
   'matches.scan',
+  'matches.local',
   'matches.detail',
   'matches.add',
   'matches.delete',

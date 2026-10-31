@@ -11,10 +11,10 @@ export function MatchDialog({ fid }: { fid: string }) {
       open
       onClose={closeModal}
       onBack={backModal}
-      title={`${t('matchDetail')} · #${fid}`}
+      title={`${t('matchDetail')} · ${/^\d+$/.test(fid) ? '#' + fid : t('matchLocalOnly')}`}
       className="dialog-wide match-dialog"
     >
-      <MatchDetails key={fid} fid={fid} />
+      <MatchDetails key={fid} matchId={fid} />
     </Dialog>
   );
 }

@@ -44,6 +44,14 @@ describe('browser development with repository fixtures', () => {
     const before = (await service.invoke('cache.stats', null)) as CacheStats;
     expect(before.api.entries).toBeGreaterThan(0);
     const matches = (await service.invoke('matches.list', {})) as Match[];
+    const local = matches.find((match) => !match.fid)!;
+    expect(local).toBeDefined();
+    expect(await service.invoke('matches.local', { id: local.id })).toMatchObject({
+      id: local.id,
+      fid: null,
+      players: local.players,
+    });
+    await expect(service.invoke('matches.local', { id: '' })).rejects.toThrow();
     const result = (await service.invoke('cache.clear', {
       mode: 'all',
     })) as RpcOutputs['cache.clear'];

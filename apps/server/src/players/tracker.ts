@@ -66,6 +66,11 @@ export class TrackerService {
       scoreLabelRule: SCORE_LABEL_RULE,
     };
   }
+  localDetail(id: string): Match {
+    const match = this.db.match(id);
+    if (!match) throw new Error('Local match not found');
+    return this.withAwards(match);
+  }
   async detail(fid: string, force = false): Promise<Match> {
     const previous = this.db.match(fid);
     if (previous?.mode === 'pve') return this.withAwards(previous);

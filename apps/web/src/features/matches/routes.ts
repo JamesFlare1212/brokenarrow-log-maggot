@@ -8,6 +8,6 @@ export function archiveMatchFromHash(hash: string): string | null {
   }
 }
 
-export function archiveMatchHash(fid: string): string {
-  return `#archive/match/${encodeURIComponent(fid)}`;
+export function archiveMatchHash(matchId: string): string {
+  return `#archive/match/${encodeURIComponent(matchId)}`;
 }

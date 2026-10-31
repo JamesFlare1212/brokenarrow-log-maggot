@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MaggotRow, Match } from '@ba/contracts';
+import { rpcSchemas } from '@ba/contracts';
 import {
   emptyMatch,
   emptyPlayer,
@@ -108,6 +109,15 @@ function cachedAnalyzer(db: Database): Analyzer {
 }
 
 describe('canonical BATrace match data', () => {
+  it('validates local lookup separately from numeric online match queries', () => {
+    const id = 'local:' + 'a'.repeat(32);
+    expect(rpcSchemas['matches.local'].parse({ id })).toEqual({ id });
+    expect(rpcSchemas['matches.local'].safeParse({ id: '' }).success).toBe(false);
+    expect(rpcSchemas['matches.local'].safeParse({ id: 'a'.repeat(129) }).success).toBe(false);
+    expect(rpcSchemas['matches.local'].safeParse({ id, force: true }).success).toBe(false);
+    expect(rpcSchemas['matches.detail'].safeParse({ fid: id }).success).toBe(false);
+  });
+
   it('preserves PvE evidence across legacy and API normalization without using rating changes as wins', () => {
     const previous = {
       ...emptyMatch('9483782'),

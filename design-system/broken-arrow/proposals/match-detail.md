@@ -1,6 +1,6 @@
 # Match archive and detail redesign
 
-Status: approved and implemented on 2026-10-30; list actions updated on 2026-10-31.
+Status: approved and implemented on 2026-10-30; list actions and local details updated on 2026-10-31.
 Archive navigation uses the workspace detail page; contextual entry points
 retain the shared dialog.
 Both use [MatchDetails](../../../apps/web/src/features/matches/MatchDetails.tsx)
@@ -30,8 +30,9 @@ profile dialogs and replay overlays.
   Right-align the menu and retain the existing deletion confirmation.
 - Disable refresh while its request is pending and show a spinning refresh icon.
   Preserve the row and reject duplicate requests; report failures and allow retry.
-  Without a match ID, disable refresh, details, and BATrace while leaving deletion
-  available. Disable deletion while refreshing.
+  Without an online match ID, replace the main action with `View` to open local
+  details. Keep the details menu item and deletion available; disable the BATrace
+  link. Disable deletion while refreshing.
 - Clicking a noninteractive part of the row opens the same detail view. Preserve
   table semantics and a real button for keyboard access. Ignore text selections
   and clicks on menus, links, or other controls.
@@ -41,10 +42,20 @@ profile dialogs and replay overlays.
 - Grid cards open details when clicking their noninteractive content, without a
   separate footer button. Use a native, text-styled button in the map heading for
   keyboard entry and focus restoration. Keep player-profile buttons independent
-  and ignore text selections. Cards without a match ID do not open details.
+  and ignore text selections. Cards without an online match ID open their local
+  details using the saved record ID.
 - Restore account/result filters, sort order, pagination, scroll position, and
   initiating-button focus when returning. Previous/next follows that filtered
   and sorted sequence, including correct disabled boundaries.
+
+Local-only details show a `Local log` badge and an inline explanation that the
+log has no online match ID. Use `Not recorded` for absent mode and outcome, and
+an em dash for missing numeric metrics. Keep the saved roster and team membership;
+show logged total points and the deck name in the personal summary. Do not show
+the internal local record ID or an ID-copy action. Disable online refresh and the
+BATrace link. Do not associate recordings by a shared null match ID. Local-only
+records participate in previous/next navigation, reloadable deep links, and opener
+focus restoration just like online records.
 
 ## Archive column sizing
 
@@ -54,8 +65,8 @@ stays compact even on wide windows. Column widths include cell padding:
 
 | Column   | Chinese (px) | English (px) |
 | -------- | ------------ | ------------ |
-| Result   | 84           | 104          |
-| Mode     | 84           | 104          |
+| Result   | 84           | 120          |
+| Mode     | 84           | 120          |
 | Map      | 160 minimum  | 160 minimum  |
 | ELO      | 112          | 128          |
 | Duration | 88           | 112          |
@@ -63,7 +74,7 @@ stays compact even on wide windows. Column widths include cell padding:
 | Account  | 120          | 120          |
 | Actions  | 128          | 144          |
 
-Use the column-size total as the table minimum width: 944px in Chinese and 1056px
+Use the column-size total as the table minimum width: 944px in Chinese and 1088px
 in English. Smaller viewports scroll horizontally within the table; wider
 viewports expand only the map column. Preserve the full date, signed ELO values,
 sort buttons, and split action control. Map names may wrap; account names truncate

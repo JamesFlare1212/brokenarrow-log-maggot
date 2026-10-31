@@ -201,6 +201,13 @@ required by the current interface.
   scenarios, using the existing mode Badge in lists and details. PvE match details
   and refresh use local log evidence. Show an unknown outcome when the log has no
   explicit winner; a PvE mode label does not imply a victory or defeat.
+- Old matches without an online ID remain viewable as local log details. Their
+  list action is `View`, and grid cards and detail-menu items stay interactive.
+  Identify the source with a `Local log` Badge and a shared informational Alert;
+  label missing modes and outcomes `Not recorded` and numeric metrics with an em
+  dash. Present logged total points and the deck in the personal summary. Keep
+  local record identifiers out of the visible UI, disable remote-only actions,
+  and preserve navigation, filters, scrolling, and initiating-button focus.
 - While a lazy dialog module loads, announce loading through an out-of-flow
   screen-reader status. Keep the underlying workspace geometry unchanged until
   the dialog portal mounts; do not add loading columns to the application shell.

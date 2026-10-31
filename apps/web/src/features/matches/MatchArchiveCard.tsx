@@ -1,7 +1,6 @@
 import type { Match } from '@ba/contracts';
 import { formatDelta, formatMetric, formatTime, teamLabel } from '@ba/shared';
 import { eloChangeClass } from '@/lib/elo';
-import { cn } from '@/lib/utils';
 import {
   Card,
   CardAction,
@@ -58,17 +57,16 @@ export function MatchArchiveCardSkeleton() {
 export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () => void }) {
   const { openModal } = useApp();
   const { t, locale } = useI18n();
-  const mapName = match.map || '#' + match.id;
+  const mapName = match.map || (match.fid ? '#' + match.fid : t('matchUnrecorded'));
   const localTeam = match.players.find((player) => player.id === match.localPlayerId)?.teamId;
   const eloDelta =
     match.eloBefore !== null && match.eloAfter !== null ? match.eloAfter - match.eloBefore : null;
 
   return (
     <Card
-      className={cn('archive-card', match.fid && 'cursor-pointer')}
+      className="archive-card cursor-pointer"
       onClick={(event) => {
         if (
-          !match.fid ||
           event.button !== 0 ||
           !(event.target instanceof Element) ||
           event.target.closest(
@@ -92,7 +90,6 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
             variant="link"
             className="archive-card-map"
             data-match-open={match.id}
-            disabled={!match.fid}
             aria-label={t('matchOpenDetail', {
               map: mapName,
               time: formatTime(match.endedAt ?? match.startedAt, locale),
@@ -103,9 +100,9 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
           </Button>
         </CardTitle>
         <CardDescription className="archive-card-meta">
-          <span>#{match.fid || match.id}</span>
+          <span>{match.fid ? '#' + match.fid : t('matchLocalOnly')}</span>
           <span aria-hidden="true">·</span>
-          <span>{t(match.mode)}</span>
+          <span>{t(!match.fid && match.mode === 'unknown' ? 'matchUnrecorded' : match.mode)}</span>
           <span aria-hidden="true">·</span>
           <span>{t('playersCount', { n: match.players.length })}</span>
         </CardDescription>

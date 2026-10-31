@@ -29,6 +29,12 @@ recorded scenario names. Their outcomes remain unknown because no explicit winne
 was logged. Golden parser facts include mode classification, and the real-data
 regressions verify all four FIDs without relying on BATrace match availability.
 
+All 329 records without a FID can be read through the local-detail service without
+network access. The archive displays their saved roster, duration, total points,
+and deck where recorded, with clear missing-data labels and disabled remote-only
+actions. The captured 2025 Airport match also covers local list navigation, direct
+links, source notices, and unavailable-action behavior in both UI languages.
+
 Export reads only allowed game-data tables. Browser profiles, cookies, login
 tokens, private headers, original settings, and migration JSON are excluded.
 Absolute paths are removed and network addresses are consistently replaced with

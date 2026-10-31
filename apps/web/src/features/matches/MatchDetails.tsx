@@ -17,6 +17,7 @@ import {
   errorMessage,
   formatDelta,
   formatDuration,
+  formatMetric,
   formatTime,
   matchTitles,
   teamLabel,
@@ -43,7 +44,7 @@ import {
 } from './detail-model';
 
 export function MatchDetails({
-  fid,
+  matchId,
   summary,
   onBack,
   onPrevious,
@@ -51,7 +52,7 @@ export function MatchDetails({
   position,
   total,
 }: {
-  fid: string;
+  matchId: string;
   summary?: Match;
   onBack?: () => void;
   onPrevious?: () => void;
@@ -66,19 +67,30 @@ export function MatchDetails({
   const [group, setGroup] = useState<MatchMetricGroup>('core');
   const [expanded, setExpanded] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const localRequest = !/^\d+$/.test(matchId);
   useEffect(() => {
-    void request.load(() => api.invoke('matches.detail', { fid, force: false }));
-  }, [api, fid, request.load]);
+    void request.load(() =>
+      localRequest
+        ? api.invoke('matches.local', { id: matchId })
+        : api.invoke('matches.detail', { fid: matchId, force: false }),
+    );
+  }, [api, matchId, localRequest, request.load]);
   useEffect(() => {
     void replayRequest.load(
-      async () => (await api.invoke('replays.list', null)).filter((replay) => replay.fid === fid),
+      async () =>
+        localRequest
+          ? []
+          : (await api.invoke('replays.list', null)).filter((replay) => replay.fid === matchId),
       true,
     );
-  }, [api, fid, state.replaysRevision, replayRequest.load]);
+  }, [api, matchId, localRequest, state.replaysRevision, replayRequest.load]);
   useEffect(() => {
     if (onBack) heading.current?.focus({ preventScroll: true });
-  }, [fid]);
+  }, [matchId]);
   const match = request.data ?? summary ?? null;
+  const localOnly = match ? !match.fid : localRequest;
+  const remoteFid = match?.fid || (!localRequest ? matchId : null);
+  const canOpenBatrace = !localOnly && !!remoteFid && match?.mode !== 'pve';
   const loading = !request.data && (request.pending || !request.error);
   const local = match?.players.find((player) => player.id === match.localPlayerId);
   const participant = local && (local.teamId === 0 || local.teamId === 1) ? local : null;
@@ -88,15 +100,18 @@ export function MatchDetails({
       ? match.eloAfter - match.eloBefore
       : null;
   const refresh = () => {
-    void request.load(() => api.invoke('matches.detail', { fid, force: true }), true);
+    if (localOnly) return;
+    void request.load(() => api.invoke('matches.detail', { fid: remoteFid!, force: true }), true);
     void replayRequest.load(
-      async () => (await api.invoke('replays.list', null)).filter((replay) => replay.fid === fid),
+      async () =>
+        (await api.invoke('replays.list', null)).filter((replay) => replay.fid === remoteFid),
       true,
     );
   };
   const copyId = async () => {
     try {
-      await navigator.clipboard.writeText(fid);
+      if (!remoteFid) return;
+      await navigator.clipboard.writeText(remoteFid);
       notify(t('copied'));
     } catch (error) {
       notify(errorMessage(error), true);
@@ -105,7 +120,15 @@ export function MatchDetails({
   const outcome = match?.outcome ?? 'unknown';
   const resultLabel = match?.restarted
     ? t('restarted')
-    : t(outcome === 'win' ? 'matchVictory' : outcome === 'loss' ? 'matchDefeat' : outcome);
+    : t(
+        outcome === 'win'
+          ? 'matchVictory'
+          : outcome === 'loss'
+            ? 'matchDefeat'
+            : localOnly && outcome === 'unknown'
+              ? 'matchUnrecorded'
+              : outcome,
+      );
   const personalMetrics = [
     'destructionScore',
     'lossesScore',
@@ -151,7 +174,8 @@ export function MatchDetails({
             variant="ghost"
             size="icon-sm"
             aria-label={t('refresh')}
-            disabled={request.pending || replayRequest.pending}
+            disabled={localOnly || request.pending || replayRequest.pending}
+            tooltip={localOnly ? t('matchLocalOnlyHint') : t('refresh')}
             aria-busy={request.pending || replayRequest.pending}
             onClick={refresh}
           >
@@ -162,25 +186,37 @@ export function MatchDetails({
       {request.pending && <LoadingStatus />}
       {request.error && <Notice error>{request.error}</Notice>}
       {match?.warning && <Notice>{match.warning}</Notice>}
+      {localOnly && <Notice>{t('matchLocalOnlyHint')}</Notice>}
       <div className="match-overview">
         <div className="match-overview-heading">
           <div className="match-identity">
             <div className="match-kicker">
-              {t('matchDetail')} <span>#{fid}</span>
-              <TooltipButton
-                variant="ghost"
-                size="icon-xs"
-                aria-label={t('matchCopyId')}
-                onClick={() => void copyId()}
-              >
-                <Copy aria-hidden="true" />
-              </TooltipButton>
+              {t('matchDetail')}
+              {localOnly ? (
+                <Badge variant="outline">{t('matchLocalOnly')}</Badge>
+              ) : (
+                <>
+                  <span>#{remoteFid}</span>
+                  <TooltipButton
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={t('matchCopyId')}
+                    onClick={() => void copyId()}
+                  >
+                    <Copy aria-hidden="true" />
+                  </TooltipButton>
+                </>
+              )}
             </div>
             <h2 ref={heading} tabIndex={-1}>
               {!match && loading ? <Skeleton className="h-8 w-56" /> : match?.map || '—'}
             </h2>
             <div className="match-metadata">
-              <Badge variant="secondary">{match ? t(match.mode) : '—'}</Badge>
+              <Badge variant="secondary">
+                {match
+                  ? t(localOnly && match.mode === 'unknown' ? 'matchUnrecorded' : match.mode)
+                  : '—'}
+              </Badge>
               <span>
                 <Clock3 aria-hidden="true" />
                 {!match && loading ? (
@@ -239,9 +275,10 @@ export function MatchDetails({
           {!replayRequest.data && replayRequest.pending && <Skeleton className="h-8 w-28" />}
           <Button
             variant="outline"
+            disabled={!canOpenBatrace}
             onClick={() =>
               void api
-                .invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${fid}` })
+                .invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${remoteFid}` })
                 .catch((error) => notify(errorMessage(error), true))
             }
           >
@@ -250,9 +287,16 @@ export function MatchDetails({
           </Button>
           {replayRequest.data && (
             <span className="muted match-replay-caption">
-              {t(replayRequest.data.length ? 'matchReplayCount' : 'matchNoReplay', {
-                count: replayRequest.data.length,
-              })}
+              {t(
+                localOnly
+                  ? 'matchLocalReplayUnavailable'
+                  : replayRequest.data.length
+                    ? 'matchReplayCount'
+                    : 'matchNoReplay',
+                {
+                  count: replayRequest.data.length,
+                },
+              )}
             </span>
           )}
         </div>
@@ -261,7 +305,9 @@ export function MatchDetails({
             {t('matchReplayError')}: {replayRequest.error}
           </Notice>
         )}
-        {(participant || (!match && loading)) && (
+        {(participant ||
+          (!match && loading) ||
+          (localOnly && match && (match.points !== null || match.localDeck))) && (
           <Card size="sm" className="match-personal-card">
             <CardHeader>
               <CardTitle>
@@ -274,18 +320,31 @@ export function MatchDetails({
             </CardHeader>
             <CardContent>
               <dl className="match-summary">
-                {personalMetrics.map((metric) => (
-                  <div key={metric}>
-                    <dt>{t(matchMetricLabels[metric])}</dt>
-                    <dd>
-                      {!participant || (loading && participant[metric] === null) ? (
-                        <Skeleton className="h-7 w-16" />
-                      ) : (
-                        playerMetric(participant, metric)
-                      )}
-                    </dd>
-                  </div>
-                ))}
+                {localOnly ? (
+                  <>
+                    <div>
+                      <dt>{t('matchLogPoints')}</dt>
+                      <dd>{formatMetric(match?.points ?? null)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('matchLocalDeck')}</dt>
+                      <dd>{match?.localDeck || t('matchUnrecorded')}</dd>
+                    </div>
+                  </>
+                ) : (
+                  personalMetrics.map((metric) => (
+                    <div key={metric}>
+                      <dt>{t(matchMetricLabels[metric])}</dt>
+                      <dd>
+                        {!participant || (loading && participant[metric] === null) ? (
+                          <Skeleton className="h-7 w-16" />
+                        ) : (
+                          playerMetric(participant, metric)
+                        )}
+                      </dd>
+                    </div>
+                  ))
+                )}
               </dl>
             </CardContent>
           </Card>

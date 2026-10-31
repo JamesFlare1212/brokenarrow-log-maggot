@@ -220,6 +220,22 @@ describe('captured local real data', () => {
     expect(db.matches()).toHaveLength(manifest.expected.logMatches);
     expect(db.matches().filter((match) => match.fid)).toHaveLength(manifest.expected.uniqueFids);
     expect(db.matches().filter((match) => !match.fid)).toHaveLength(manifest.expected.withoutFid);
+    const fetchImpl = vi.fn<typeof fetch>();
+    const client = new BatraceClient(db, { fetch: fetchImpl }, '4.5.4');
+    clients.push(client);
+    const tracker = new TrackerService(db, client, new Analyzer(client, db));
+    for (const match of db.matches().filter((match) => !match.fid))
+      expect(tracker.localDetail(match.id)).toMatchObject({
+        id: match.id,
+        fid: null,
+        players: match.players,
+        points: match.points,
+        durationSec: match.durationSec,
+        outcome: match.outcome,
+        mode: match.mode,
+      });
+    expect(() => tracker.localDetail('local:missing')).toThrow('Local match not found');
+    expect(fetchImpl).not.toHaveBeenCalled();
     const ids = db.matches().map((match) => match.id);
     await new LogArchive(db, changed).scan(dir);
     expect(db.matches().map((match) => match.id)).toEqual(ids);

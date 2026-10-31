@@ -116,6 +116,45 @@ export async function verifyMatchDetails(window: BrowserWindow) {
       };
     })()`);
     Object.assign(checks, archiveActions);
+    const localDetails = await window.webContents.executeJavaScript(`(async () => {
+      const waitFor = async (find) => {
+        const deadline = Date.now() + 5000;
+        while (Date.now() < deadline) {
+          const result = find();
+          if (result) return result;
+          await new Promise(resolve => setTimeout(resolve, 25));
+        }
+        throw new Error('Local archive detail smoke did not initialize');
+      };
+      const matches = await window.assistant.invoke('matches.list', {});
+      const local = matches.find(match => !match.fid && match.points !== null && match.players.length === 10);
+      if (!local) throw new Error('No recorded local match for smoke validation');
+      history.pushState(null, '', '#archive/match/' + encodeURIComponent(local.id));
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+      const page = await waitFor(() => {
+        const page = document.querySelector('.match-detail-page');
+        return page?.querySelectorAll('.match-player-toggle').length === local.players.length &&
+          !page.querySelector('[data-slot="skeleton"]') && page;
+      });
+      const remote = Array.from(page.querySelectorAll('button')).find(button => button.textContent.includes('BATrace'));
+      const refresh = page.querySelector('button[aria-label="刷新"], button[aria-label="Refresh"]');
+      const points = new Intl.NumberFormat('en', { maximumFractionDigits: 2 }).format(local.points);
+      const result = {
+        localArchiveDetail: /本地日志|Local log/.test(page.textContent),
+        localArchivePoints: page.textContent.includes(points),
+        localArchiveRoster: page.querySelectorAll('.match-player-toggle').length === local.players.length,
+        localArchiveRemoteDisabled: remote?.disabled === true && refresh?.disabled === true,
+        localArchiveIdentityHidden: !page.textContent.includes(local.id),
+      };
+      page.querySelector('.match-detail-toolbar button').click();
+      await waitFor(() => !document.querySelector('.match-detail-page'));
+      const unknownFilter = document.querySelector('.archive-panel [role="switch"]');
+      if (unknownFilter?.getAttribute('aria-checked') === 'true') unknownFilter.click();
+      document.querySelector('.archive-table thead th:nth-child(6) button').click();
+      await waitFor(() => /未记录|Not recorded/.test(document.querySelector('.archive-table tbody tr')?.textContent ?? ''));
+      return result;
+    })()`);
+    Object.assign(checks, localDetails);
     const originalLocale = await window.webContents.executeJavaScript(
       "window.assistant.invoke('app.bootstrap', null).then(state => state.config.lang)",
     );

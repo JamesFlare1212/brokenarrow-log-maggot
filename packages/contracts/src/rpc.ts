@@ -179,6 +179,7 @@ export const rpcSchemas = {
   }),
   'matches.list': z.object({ accountId: id.optional() }),
   'matches.scan': empty,
+  'matches.local': z.object({ id: z.string().min(1).max(128) }).strict(),
   'matches.detail': z.object({ fid: id, force: z.boolean().default(false) }),
   'matches.add': z.object({ fid: id }),
   'matches.delete': z.object({ id: z.string().min(1).max(128) }),
@@ -226,6 +227,7 @@ export interface RpcOutputs {
   'session.query': { requestId: string; queried: number; skipped: number; cancelled: boolean };
   'matches.list': Match[];
   'matches.scan': null;
+  'matches.local': Match;
   'matches.detail': Match;
   'matches.add': Match;
   'matches.delete': { removed: boolean };

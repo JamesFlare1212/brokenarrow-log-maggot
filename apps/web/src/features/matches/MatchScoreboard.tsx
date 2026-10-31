@@ -131,7 +131,9 @@ export function MatchScoreboard({
                         ? 'matchVictory'
                         : team.outcome === 'loss'
                           ? 'matchDefeat'
-                          : 'unknown',
+                          : !match?.fid
+                            ? 'matchUnrecorded'
+                            : 'unknown',
                     )}
                   </Badge>
                 )}

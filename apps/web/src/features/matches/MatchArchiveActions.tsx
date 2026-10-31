@@ -32,7 +32,7 @@ export function MatchArchiveActions({
   const refreshInFlight = useRef(false);
   const openingDetails = useRef(false);
   const context = {
-    map: match.map || match.id,
+    map: match.map || (match.fid ? '#' + match.fid : t('matchUnrecorded')),
     time: formatTime(match.endedAt ?? match.startedAt, locale),
   };
 
@@ -56,7 +56,7 @@ export function MatchArchiveActions({
       !(await confirm({
         title: t('confirmation.deleteMatch'),
         description: t('confirmation.deleteHint'),
-        detail: `${match.map} · #${match.fid || match.id}`,
+        detail: match.fid ? `${match.map} · #${match.fid}` : `${context.map} · ${context.time}`,
         confirmLabel: t('delete'),
       }))
     )
@@ -73,23 +73,28 @@ export function MatchArchiveActions({
     <div
       className="inline-flex"
       role="group"
-      aria-label={`${t('actions')}: #${match.fid || match.id}`}
+      aria-label={`${t('actions')}: ${match.fid ? '#' + match.fid : context.map + ' · ' + context.time}`}
       onClick={(event) => event.stopPropagation()}
     >
       <Button
         size="sm"
         className="rounded-r-none"
-        disabled={!match.fid || refreshing}
+        disabled={refreshing}
         aria-busy={refreshing}
-        aria-label={t('matchRefresh', context)}
-        onClick={() => void refresh()}
+        aria-label={t(match.fid ? 'matchRefresh' : 'matchOpenDetail', context)}
+        data-match-open={!match.fid ? match.id : undefined}
+        onClick={() => (match.fid ? void refresh() : onOpen())}
       >
-        <RefreshCw
-          data-icon="inline-start"
-          className={cn(refreshing && 'animate-spin')}
-          aria-hidden="true"
-        />
-        {t('refresh')}
+        {match.fid ? (
+          <RefreshCw
+            data-icon="inline-start"
+            className={cn(refreshing && 'animate-spin')}
+            aria-hidden="true"
+          />
+        ) : (
+          <FileText data-icon="inline-start" aria-hidden="true" />
+        )}
+        {t(match.fid ? 'refresh' : 'matchViewLocalDetails')}
       </Button>
       <DropdownMenu
         modal={false}
@@ -119,7 +124,6 @@ export function MatchArchiveActions({
         >
           <DropdownMenuGroup>
             <DropdownMenuItem
-              disabled={!match.fid}
               onSelect={() => {
                 openingDetails.current = true;
                 onOpen();
@@ -129,7 +133,7 @@ export function MatchArchiveActions({
               {t('matchViewDetails')}
             </DropdownMenuItem>
             <DropdownMenuItem
-              disabled={!match.fid}
+              disabled={!match.fid || match.mode === 'pve'}
               onSelect={() =>
                 void api
                   .invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${match.fid}` })

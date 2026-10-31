@@ -63,7 +63,11 @@ export function MatchArchive() {
   const detailPage = useRef<HTMLDivElement>(null);
   const [detailId, setDetailId] = useState(() => archiveMatchFromHash(location.hash));
   const previousDetail = useRef(detailId);
-  const returnState = useRef({ id: '', scrollTop: 0 });
+  const returnState = useRef<{ id: string; scrollTop: number; opener: HTMLElement | null }>({
+    id: '',
+    scrollTop: 0,
+    opener: null,
+  });
   useEffect(() => {
     const navigate = () => setDetailId(archiveMatchFromHash(location.hash));
     window.addEventListener('popstate', navigate);
@@ -80,22 +84,26 @@ export function MatchArchive() {
       const opener = Array.from(
         panel.current?.querySelectorAll<HTMLButtonElement>('[data-match-open]') ?? [],
       ).find((button) => button.dataset.matchOpen === returnState.current.id);
-      (opener ?? panel.current)?.focus({ preventScroll: true });
+      (returnState.current.opener?.isConnected
+        ? returnState.current.opener
+        : (opener ?? panel.current)
+      )?.focus({ preventScroll: true });
     }
     previousDetail.current = detailId;
   }, [detailId]);
-  const openMatch = useCallback(
-    (match: Match) => {
-      if (!match.fid) {
-        notify(t('offline'));
-        return;
-      }
-      returnState.current = { id: match.id, scrollTop: table.current?.scrollTop ?? 0 };
-      history.pushState({ baArchiveDetail: true }, '', archiveMatchHash(match.fid));
-      setDetailId(match.fid);
-    },
-    [notify, locale],
-  );
+  const openMatch = useCallback((match: Match) => {
+    const matchId = match.fid || match.id;
+    const active = document.activeElement;
+    const triggerId = active?.closest('[role="menu"]')?.getAttribute('aria-labelledby');
+    const opener = triggerId
+      ? document.getElementById(triggerId)
+      : active instanceof HTMLElement && active.dataset.matchOpen === match.id
+        ? active
+        : null;
+    returnState.current = { id: match.id, scrollTop: table.current?.scrollTop ?? 0, opener };
+    history.pushState({ baArchiveDetail: true }, '', archiveMatchHash(matchId));
+    setDetailId(matchId);
+  }, []);
   const returnToArchive = () => {
     if (history.state?.baArchiveDetail) history.back();
     else {
@@ -103,9 +111,9 @@ export function MatchArchive() {
       setDetailId(null);
     }
   };
-  const navigateMatch = (fid: string) => {
-    history.replaceState(history.state, '', archiveMatchHash(fid));
-    setDetailId(fid);
+  const navigateMatch = (matchId: string) => {
+    history.replaceState(history.state, '', archiveMatchHash(matchId));
+    setDetailId(matchId);
   };
   const validFid = /^\d+$/.test(fid.trim());
   const fidError = addError || (fid.trim() && !validFid ? t('matchIdInvalid') : null);
@@ -152,10 +160,16 @@ export function MatchArchive() {
         id: 'result',
         accessorKey: 'outcome',
         header: t('result'),
-        size: locale === 'en' ? 104 : 84,
+        size: locale === 'en' ? 120 : 84,
         cell: ({ row }) => (
           <Badge tone={outcomeTone(row.original.outcome)}>
-            {row.original.restarted ? t('restarted') : t(row.original.outcome)}
+            {t(
+              row.original.restarted
+                ? 'restarted'
+                : !row.original.fid && row.original.outcome === 'unknown'
+                  ? 'matchUnrecorded'
+                  : row.original.outcome,
+            )}
           </Badge>
         ),
       },
@@ -163,8 +177,16 @@ export function MatchArchive() {
         id: 'mode',
         accessorKey: 'mode',
         header: t('mode'),
-        size: locale === 'en' ? 104 : 84,
-        cell: ({ row }) => <Badge>{t(row.original.mode)}</Badge>,
+        size: locale === 'en' ? 120 : 84,
+        cell: ({ row }) => (
+          <Badge>
+            {t(
+              !row.original.fid && row.original.mode === 'unknown'
+                ? 'matchUnrecorded'
+                : row.original.mode,
+            )}
+          </Badge>
+        ),
       },
       {
         id: 'map',
@@ -172,7 +194,9 @@ export function MatchArchive() {
         header: t('map'),
         size: 160,
         cell: ({ row }) => (
-          <span className="archive-map-name">{row.original.map || '#' + row.original.id}</span>
+          <span className="archive-map-name">
+            {row.original.map || (row.original.fid ? '#' + row.original.fid : t('matchUnrecorded'))}
+          </span>
         ),
       },
       {
@@ -257,14 +281,11 @@ export function MatchArchive() {
     getPaginationRowModel: getPaginationRowModel(),
     autoResetPageIndex: false,
   });
-  const sequence = dataTable
-    .getPrePaginationRowModel()
-    .rows.map((row) => row.original)
-    .filter((match) => match.fid);
-  const detailIndex = sequence.findIndex((match) => match.fid === detailId);
+  const sequence = dataTable.getPrePaginationRowModel().rows.map((row) => row.original);
+  const detailIndex = sequence.findIndex((match) => (match.fid || match.id) === detailId);
   const previous = sequence[detailIndex - 1];
   const next = detailIndex >= 0 ? sequence[detailIndex + 1] : undefined;
-  const detailSummary = matches.data?.find((match) => match.fid === detailId);
+  const detailSummary = matches.data?.find((match) => (match.fid || match.id) === detailId);
   const empty = (
     <Empty
       icon={<Icon icon={faBoxArchive} size={26} />}
@@ -531,11 +552,11 @@ export function MatchArchive() {
         <div className="match-detail-page" ref={detailPage}>
           <MatchDetails
             key={detailId}
-            fid={detailId}
+            matchId={detailId}
             summary={detailSummary}
             onBack={returnToArchive}
-            onPrevious={previous?.fid ? () => navigateMatch(previous.fid!) : undefined}
-            onNext={next?.fid ? () => navigateMatch(next.fid!) : undefined}
+            onPrevious={previous ? () => navigateMatch(previous.fid || previous.id) : undefined}
+            onNext={next ? () => navigateMatch(next.fid || next.id) : undefined}
             position={detailIndex + 1}
             total={sequence.length}
           />

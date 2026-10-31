@@ -254,6 +254,11 @@ export function createDevelopmentRuntime(
       if (!match) throw new Error('Development match not found.');
       return match;
     },
+    'matches.local': ({ id }) => {
+      const match = data().matches.find((match) => match.id === id);
+      if (!match) throw new Error('Local match not found');
+      return match;
+    },
     'matches.scan': () => null,
     'matches.add': (input) => {
       const scene = data(),

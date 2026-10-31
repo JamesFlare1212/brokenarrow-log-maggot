@@ -45,6 +45,14 @@ once to update previously stored unknown modes while preserving deletion markers
 
 Database startup removes retired input-statistics tables and the obsolete collection setting. Saved navigation filters retired pages while preserving other preferences.
 
+`matches.local` reads a saved match by its bounded local record ID and never calls
+BATrace, including when the record is missing. The existing `matches.detail` RPC
+retains numeric online-ID validation. Archive routes accept encoded local record
+IDs for reloadable basic details, using the same roster view and navigation.
+No-ID records retain their logged facts and unknown values, show an availability
+explanation, and expose neither a copyable online ID nor remote refresh/link
+actions. Recordings are not matched through a null FID.
+
 玩家报告区分总场次、已知胜负样本和最近一场指标；未知胜负不进入胜率分母。蛆指数校验双方各五名唯一玩家，同分共享平均名次；重试失败也计入报告请求数。刷新贯通报告与调查，兜底档案同样刷新并保存快照。对局先保存近期列表再补全详情，较旧 API 数据只能补缺。自定义局仅依据明确胜方字段判胜负，不使用摧毁分猜测。
 
 录制有独立 token、sender、sequence 和写盘队列；逐片等待确认，停止等待尾片与落盘。时长取真实经过时间。播放器用短期 token 和 Range，不整文件跨 IPC。
