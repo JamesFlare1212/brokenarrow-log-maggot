@@ -9,7 +9,9 @@ import { errorMessage, formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { Icon } from '../../components/Icon';
-import { Button, Loading, Notice, Stats } from '../../components/ui';
+import { Button, Notice, Stats } from '../../components/ui';
+import { LoadingStatus } from '../../components/LoadingState';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -61,9 +63,14 @@ export function CacheSettings() {
     expired = stats ? stats.api.expired + stats.snapshots.expired : 0,
     busy = request.pending || clearing !== null;
   const count = (value: number) => value.toLocaleString(locale);
+  const loading = !stats && (request.pending || !request.error);
   return (
     <>
-      <section className="settings-section" aria-labelledby="cache-usage-heading">
+      <section
+        className="settings-section"
+        aria-labelledby="cache-usage-heading"
+        aria-busy={request.pending || loading}
+      >
         <div className="cache-section-heading">
           <h3 id="cache-usage-heading">{t('cacheUsage')}</h3>
           <Button
@@ -79,44 +86,57 @@ export function CacheSettings() {
             {t('refresh')}
           </Button>
         </div>
-        {request.pending && !stats && <Loading />}
+        {loading && <LoadingStatus />}
         {request.error && <Notice error>{request.error}</Notice>}
-        {stats && (
-          <>
-            <Stats
-              items={[
-                { label: t('cacheEntries'), value: count(entries) },
-                { label: t('cacheExpired'), value: count(expired) },
-                {
-                  label: t('cacheDataSize'),
-                  value: formatSize(stats.api.bytes + stats.snapshots.bytes),
-                },
-              ]}
-            />
-            <div className="cache-category-grid">
-              {(['api', 'snapshots'] as const).map((category) => (
-                <Item variant="outline" className="cache-category" key={category}>
-                  <ItemContent>
-                    <ItemTitle>{t('cacheCategory.' + category)}</ItemTitle>
-                    <ItemDescription>{t('cacheCategoryHint.' + category)}</ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <div className="cache-category-usage">
-                      <strong>{formatSize(stats[category].bytes)}</strong>
-                      <span>
-                        {t('cacheEntrySummary', {
+        <>
+          <Stats
+            items={[
+              { label: t('cacheEntries'), value: stats ? count(entries) : '—', pending: loading },
+              { label: t('cacheExpired'), value: stats ? count(expired) : '—', pending: loading },
+              {
+                label: t('cacheDataSize'),
+                value: stats ? formatSize(stats.api.bytes + stats.snapshots.bytes) : '—',
+                pending: loading,
+              },
+            ]}
+          />
+          <div className="cache-category-grid">
+            {(['api', 'snapshots'] as const).map((category) => (
+              <Item variant="outline" className="cache-category" key={category}>
+                <ItemContent>
+                  <ItemTitle>{t('cacheCategory.' + category)}</ItemTitle>
+                  <ItemDescription>{t('cacheCategoryHint.' + category)}</ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <div className="cache-category-usage">
+                    <strong>
+                      {loading ? (
+                        <Skeleton className="h-6 w-24" aria-hidden="true" />
+                      ) : stats ? (
+                        formatSize(stats[category].bytes)
+                      ) : (
+                        '—'
+                      )}
+                    </strong>
+                    <span>
+                      {loading ? (
+                        <Skeleton className="h-4 w-40" aria-hidden="true" />
+                      ) : stats ? (
+                        t('cacheEntrySummary', {
                           entries: count(stats[category].entries),
                           expired: count(stats[category].expired),
-                        })}
-                      </span>
-                    </div>
-                  </ItemActions>
-                </Item>
-              ))}
-            </div>
-            <p>{t('cacheSizeHint')}</p>
-          </>
-        )}
+                        })
+                      ) : (
+                        '—'
+                      )}
+                    </span>
+                  </div>
+                </ItemActions>
+              </Item>
+            ))}
+          </div>
+          <p>{t('cacheSizeHint')}</p>
+        </>
       </section>
       <Card aria-labelledby="cache-cleanup-heading">
         <CardHeader>

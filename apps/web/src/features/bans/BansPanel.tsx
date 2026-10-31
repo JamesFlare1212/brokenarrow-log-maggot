@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Loading, Notice, Empty, Badge, Dialog } from '../../components/ui';
+import { Button, Notice, Empty, Badge, Dialog } from '../../components/ui';
+import { LoadingStatus, TableSkeletonRows } from '../../components/LoadingState';
 import { Pagination } from '../../components/Pagination';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Item } from '@/components/ui/item';
@@ -39,6 +40,7 @@ export function BansPanel() {
   }, [request.data, query]);
   const currentPage = Math.min(page, Math.max(1, Math.ceil(bans.length / pageSize)));
   const visible = bans.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const loading = !request.data && (request.pending || !request.error);
   useEffect(() => {
     const viewport = list.current;
     if (!viewport) return;
@@ -120,6 +122,7 @@ export function BansPanel() {
         </Button>
       </div>
       {request.error && <Notice error>{request.error}</Notice>}
+      {loading && <LoadingStatus />}
       <div className="data-table-surface">
         <div
           className="table-wrap data-table-scroll bans-table ban-list-paged"
@@ -127,7 +130,14 @@ export function BansPanel() {
           tabIndex={0}
           aria-busy={request.pending}
         >
-          <Table aria-label={t('bans')}>
+          <Table aria-label={t('bans')} aria-busy={request.pending || loading}>
+            <colgroup>
+              <col />
+              <col className="ban-id-column" />
+              <col className="ban-rating-column" />
+              <col className="ban-time-column" />
+              <col className="ban-time-column" />
+            </colgroup>
             <TableHeader>
               <TableRow>
                 <TableHead>{t('banPlayer')}</TableHead>
@@ -174,24 +184,25 @@ export function BansPanel() {
                     </TableCell>
                   </TableRow>
                 ))
+              ) : loading ? (
+                <TableSkeletonRows
+                  columns={['player', 'id', 'elo', 'encounter', 'firstSeen']}
+                  alignRight={['elo']}
+                />
               ) : (
                 <TableRow>
                   <TableCell colSpan={5}>
-                    {request.pending ? (
-                      <Loading />
-                    ) : (
-                      <Empty
-                        icon={<ShieldCheck />}
-                        description={t('bansDescription')}
-                        action={
-                          query ? (
-                            <Button onClick={() => setQuery('')}>{t('clearFilters')}</Button>
-                          ) : undefined
-                        }
-                      >
-                        {t('empty')}
-                      </Empty>
-                    )}
+                    <Empty
+                      icon={<ShieldCheck />}
+                      description={t('bansDescription')}
+                      action={
+                        query ? (
+                          <Button onClick={() => setQuery('')}>{t('clearFilters')}</Button>
+                        ) : undefined
+                      }
+                    >
+                      {t('empty')}
+                    </Empty>
                   </TableCell>
                 </TableRow>
               )}

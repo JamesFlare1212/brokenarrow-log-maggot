@@ -277,7 +277,7 @@ export function Loading() {
   return (
     <div className="flex flex-col gap-4 py-4" role="status">
       <span className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner />
+        <Spinner aria-hidden="true" />
         {t('loading')}
       </span>
       <Skeleton className="h-12 w-full" />

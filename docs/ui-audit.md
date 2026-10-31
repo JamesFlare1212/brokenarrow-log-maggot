@@ -190,3 +190,71 @@ tests across 42 files without skipped tests, and all production builds.
 `pnpm format:check`, `pnpm smoke`, and `pnpm smoke:real` passed; the real-data smoke
 loaded 454 recorded matches offline through the native bridge. `git diff --check`
 also passed.
+
+## Application-wide loading patterns
+
+Date: 2026-10-30. The follow-up audit covered fourteen page groups and sixteen
+views. Eleven groups needed changes; the fixed room layout, display-preview
+frame, and unknown-layout startup fallback already used appropriate patterns.
+The implementation now follows the shared
+[asynchronous content specification](../design-system/broken-arrow/MASTER.md#asynchronous-content-and-reserved-space).
+
+| Area                | Updated loading behavior                                                                                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview            | Unknown metrics use value placeholders; three Item rows reserve recent matches. The known room count remains visible.                                                              |
+| Player search       | Five Item rows reserve names, IDs, ratings, and actions inside the existing result scroll container.                                                                               |
+| Player report       | The report shell, metrics, preferences, analysis, and detail sections mount immediately. Dependent analysis waits for the report; map details retain their collapsed presentation. |
+| Match archive       | Eight-column Skeleton rows preserve the table header and alignment; grid placeholders use archive cards with team rosters. Unknown sample and pagination totals are placeholders.  |
+| Ban tracking        | Five-column Skeleton rows replace the spanning generic loader.                                                                                                                     |
+| Decks and backups   | Both file panels, paths, selection summaries, and disabled actions appear before discovery completes.                                                                              |
+| Replay library      | Grid and list placeholders share the real thumbnail, title, metadata, and action slots. Unknown counts and storage sizes no longer display zero.                                   |
+| Match details       | Summary labels and two five-player, twelve-column tables appear immediately with shared column widths.                                                                             |
+| Replay playback     | A responsive 16:9 stage reserves space before metadata. Loading, retry, and failure feedback overlay that stage.                                                                   |
+| Cache settings      | Three metrics and two category items remain mounted; values fill their existing slots.                                                                                             |
+| Recognized accounts | An outlined Item reserves the account identity, summary, and action positions.                                                                                                     |
+
+Shared row placeholders compose the existing shadcn Table, Item, and Skeleton
+primitives. Standalone Spinner labels use the selected locale; decorative
+spinners no longer create nested or duplicate loading announcements. Refreshes
+retain available values and rows. A confirmed empty archive also remains empty
+during a refresh and after a refresh failure instead of flashing placeholders.
+
+The before/after comparison used the same offline development data and sixteen
+views at 1440px, 760px, and 375px, with Chinese and English and both appearances:
+96 scenarios. Every applicable refresh retained its data, pending table rows
+matched their headers, and only the unknown-layout startup state retained the
+generic loader. No unexpected RPC calls or renderer errors were recorded.
+Thirty-three screenshots were captured on each side, including playback retry.
+An additional column-width check found content-driven horizontal movement in
+archive, ban, and recent-report tables. They now use fixed table layout with the
+archive's existing column definitions and explicit rating, ID, and time widths.
+Long player and map names can wrap inside their columns. All measured pending
+and loaded column widths were identical in the final 96-scenario run.
+
+The cache cleanup section previously shifted by 128.6px on desktop, 369.2px at
+760px, and 410.2px or 431.2px on phones, depending on the locale. Its displacement
+is now 0px in all six configurations. Replay-stage growth on initial load fell
+from 417.3px on desktop and 196.1px at 760px to 0px. Retry previously added
+143.1px, 164px, or 144.1px at the three widths; it now adds 0px. Deck-panel heights
+and display-preview dimensions also stayed unchanged between waiting and loaded
+states in this fixture set.
+
+These measurements do not assert that every page has a fixed final height. The
+report fixture has more recent results than its five-row initial budget: its
+remaining growth is approximately 164px to 237px. Real rows, wrapping labels,
+and larger result sets remain accessible and can exceed an initial reservation.
+Reduced-motion emulation shortened Skeleton pulse duration from 2s to 0.00001s
+without changing its background or radius.
+
+Final validation: `pnpm check` passed type checking, the UI design guard, all
+994 regression tests across 42 files without skipped tests, and production
+builds. `pnpm smoke` and `pnpm smoke:real` passed; the latter loaded 454 recorded
+matches offline through the native bridge. During development, a sandboxed
+Vitest launch failed with `spawn EPERM`; the permitted elevated run succeeded.
+Outdated generic-loader assertions and an assertion against a detached failed
+search panel were corrected before the final passing run. A later full run hit
+the real-corpus test's 10-second timeout and exposed an immediate assertion on
+asynchronous analysis queueing. The assertion now waits for the queued state;
+the final isolated `pnpm check` passed all 994 tests without changing the timeout.
+One repeat Electron audit launch stalled before any scenario; a fresh isolated
+profile completed the remaining run. Formatting and `git diff --check` also passed.

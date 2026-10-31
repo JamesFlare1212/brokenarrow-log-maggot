@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '../hooks/useI18n';
+import { Skeleton } from './ui/skeleton';
 import {
   Pagination as PrimitivePagination,
   PaginationContent,
@@ -36,6 +37,7 @@ export function Pagination({
   onPageChange,
   reserveSpace = false,
   showSinglePage = false,
+  pending = false,
 }: {
   page: number;
   pageSize: number;
@@ -44,6 +46,7 @@ export function Pagination({
   onPageChange: (page: number) => void;
   reserveSpace?: boolean;
   showSinglePage?: boolean;
+  pending?: boolean;
 }) {
   const { t } = useI18n();
   const pages = Math.max(1, Math.ceil(total / pageSize)),
@@ -52,29 +55,40 @@ export function Pagination({
   const current = Math.max(1, Math.min(page, pages));
   const navigate = (event: MouseEvent<HTMLAnchorElement>, next: number) => {
     event.preventDefault();
-    if (!hidden && next >= 1 && next <= pages && next !== current) onPageChange(next);
+    if (!pending && !hidden && next >= 1 && next <= pages && next !== current) onPageChange(next);
   };
   return (
     <PrimitivePagination
       className={cn('flex-wrap justify-between gap-3 py-3', hidden && 'invisible')}
       aria-label={label}
       aria-hidden={hidden || undefined}
+      aria-busy={pending}
     >
-      <p className="text-xs text-muted-foreground sm:text-sm" role="status">
-        {t('paginationRange', {
-          start: total === 0 ? 0 : (current - 1) * pageSize + 1,
-          end: Math.min(current * pageSize, total),
-          total,
-        })}
-      </p>
+      <div
+        className="text-xs text-muted-foreground sm:text-sm"
+        role={pending ? undefined : 'status'}
+      >
+        {pending ? (
+          <>
+            <span className="sr-only">{t('loading')}</span>
+            <Skeleton className="h-5 w-44" aria-hidden="true" />
+          </>
+        ) : (
+          t('paginationRange', {
+            start: total === 0 ? 0 : (current - 1) * pageSize + 1,
+            end: Math.min(current * pageSize, total),
+            total,
+          })
+        )}
+      </div>
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
             href="#"
             text={t('previousPage')}
             aria-label={t('previousPage')}
-            aria-disabled={hidden || current === 1}
-            tabIndex={hidden || current === 1 ? -1 : undefined}
+            aria-disabled={pending || hidden || current === 1}
+            tabIndex={pending || hidden || current === 1 ? -1 : undefined}
             className={cn((hidden || current === 1) && 'pointer-events-none opacity-50')}
             onClick={(event) => navigate(event, current - 1)}
           />
@@ -95,7 +109,8 @@ export function Pagination({
                 href="#"
                 aria-label={t('goToPage', { page: item })}
                 isActive={item === current}
-                tabIndex={hidden ? -1 : undefined}
+                aria-disabled={pending || undefined}
+                tabIndex={pending || hidden ? -1 : undefined}
                 onClick={(event) => navigate(event, item)}
               >
                 {item}
@@ -110,8 +125,8 @@ export function Pagination({
             href="#"
             text={t('nextPage')}
             aria-label={t('nextPage')}
-            aria-disabled={hidden || current === pages}
-            tabIndex={hidden || current === pages ? -1 : undefined}
+            aria-disabled={pending || hidden || current === pages}
+            tabIndex={pending || hidden || current === pages ? -1 : undefined}
             className={cn((hidden || current === pages) && 'pointer-events-none opacity-50')}
             onClick={(event) => navigate(event, current + 1)}
           />

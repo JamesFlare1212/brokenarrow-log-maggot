@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Dialog, Button, Loading, Notice } from '../../components/ui';
+import { Dialog, Button, Notice } from '../../components/ui';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 export function ReplayDialog({ id, title }: { id: string; title: string }) {
   const { api, closeModal, backModal } = useApp(),
@@ -33,7 +35,10 @@ export function ReplayDialog({ id, title }: { id: string; title: string }) {
       title={title || t('play')}
       className="dialog-wide"
     >
-      <div className="replay-stage" aria-busy={request.pending}>
+      <div
+        className="replay-stage"
+        aria-busy={request.pending || (!request.data && !request.error)}
+      >
         {request.data && (
           <>
             <video
@@ -50,10 +55,16 @@ export function ReplayDialog({ id, title }: { id: string; title: string }) {
             />
           </>
         )}
-        {request.pending && (
-          <div className="replay-status">
-            <Loading />
-          </div>
+        {(request.pending || (!request.data && !request.error)) && (
+          <>
+            {!request.data && (
+              <Skeleton className="absolute inset-0 size-full" aria-hidden="true" />
+            )}
+            <div className="replay-status" role="status">
+              <Spinner aria-hidden="true" />
+              <span>{t('loading')}</span>
+            </div>
+          </>
         )}
         {(request.error || error) && (
           <div className="replay-status">

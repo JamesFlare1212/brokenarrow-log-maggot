@@ -69,7 +69,7 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
   }
   const icon =
     busy && update.status !== 'downloading' ? (
-      <Spinner data-icon="inline-start" />
+      <Spinner data-icon="inline-start" aria-hidden="true" />
     ) : (
       <UpdateIcon data-icon="inline-start" />
     );

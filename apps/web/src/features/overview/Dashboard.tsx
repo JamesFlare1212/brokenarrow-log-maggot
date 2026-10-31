@@ -18,7 +18,9 @@ import { eloChangeClass } from '@/lib/elo';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Card, Empty, Loading, Notice } from '../../components/ui';
+import { Button, Card, Empty, Notice } from '../../components/ui';
+import { LoadingStatus, ListSkeletonRows } from '../../components/LoadingState';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Card as MetricCard,
   CardAction,
@@ -43,11 +45,13 @@ function Metric({
   value,
   detail,
   icon,
+  pending = false,
 }: {
   label: string;
   value: ReactNode;
   detail: ReactNode;
   icon: ReactNode;
+  pending?: boolean;
 }) {
   return (
     <MetricCard size="sm">
@@ -56,8 +60,12 @@ function Metric({
         <CardAction>{icon}</CardAction>
       </CardHeader>
       <CardContent className="metric-content flex items-baseline justify-between gap-3">
-        <strong className="text-3xl font-semibold tracking-tight tabular-nums">{value}</strong>
-        <p className="text-xs text-muted-foreground">{detail}</p>
+        <strong className="text-3xl font-semibold tracking-tight tabular-nums" aria-busy={pending}>
+          {pending ? <Skeleton className="h-9 w-20" aria-hidden="true" /> : value}
+        </strong>
+        <div className="metric-detail text-xs text-muted-foreground">
+          {pending ? <Skeleton className="h-4 w-20" aria-hidden="true" /> : detail}
+        </div>
       </CardContent>
     </MetricCard>
   );
@@ -73,6 +81,7 @@ export function Dashboard() {
   const all = [...(data || [])].sort(
     (a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0),
   );
+  const loading = !data && (pending || !error);
   const personal = all.filter(
     (match) => state.session.localPlayerId && match.localPlayerId === state.session.localPlayerId,
   );
@@ -100,15 +109,18 @@ export function Dashboard() {
           : 'recordingOff';
   return (
     <div className="dashboard">
+      {loading && <LoadingStatus />}
       <div className="metrics-grid" aria-label={t('sessionOverview')}>
         <Metric
           label={t('recentRating')}
+          pending={loading}
           value={formatMetric(latest?.eloAfter ?? null, 0)}
           detail={t('completedMatch')}
           icon={<Crosshair size={16} aria-hidden="true" />}
         />
         <Metric
           label={t('recentWinRate')}
+          pending={loading}
           value={recent.length ? `${Math.round((wins / recent.length) * 100)}%` : '—'}
           detail={
             recent.length ? t('winLossCount', { wins, losses: recent.length - wins }) : t('empty')
@@ -117,6 +129,7 @@ export function Dashboard() {
         />
         <Metric
           label={t('archiveCount')}
+          pending={loading}
           value={data === null ? '—' : all.length}
           detail={t('localArchive')}
           icon={<Archive size={16} aria-hidden="true" />}
@@ -155,8 +168,8 @@ export function Dashboard() {
             </Button>
           }
         >
-          {pending && !data ? (
-            <Loading />
+          {loading ? (
+            <ListSkeletonRows className="recent-matches" rowClassName="recent-match-loading" />
           ) : all.length ? (
             <ItemGroup className="recent-matches">
               {all.slice(0, 3).map((match) => (

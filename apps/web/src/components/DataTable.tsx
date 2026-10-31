@@ -4,12 +4,13 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Loading } from './ui';
+import { LoadingStatus, TableSkeletonRows } from './LoadingState';
 
 export function DataTable<T>({
   table,
   label,
   pending,
+  loading = false,
   empty,
   scrollRef,
   className,
@@ -17,6 +18,7 @@ export function DataTable<T>({
   table: TableModel<T>;
   label: string;
   pending: boolean;
+  loading?: boolean;
   empty: ReactNode;
   scrollRef?: Ref<HTMLDivElement>;
   className?: string;
@@ -28,7 +30,8 @@ export function DataTable<T>({
       tabIndex={0}
       aria-busy={pending}
     >
-      <Table aria-label={label}>
+      {pending && <LoadingStatus />}
+      <Table aria-label={label} aria-busy={pending}>
         <colgroup>
           {table.getAllLeafColumns().map((column) => (
             <col key={column.id} style={{ width: column.columnDef.size }} />
@@ -94,11 +97,20 @@ export function DataTable<T>({
                 ))}
               </TableRow>
             ))
+          ) : loading ? (
+            <TableSkeletonRows
+              columns={table.getVisibleLeafColumns().map((column) => column.id)}
+              alignRight={table
+                .getVisibleLeafColumns()
+                .filter(
+                  (column) =>
+                    (column.columnDef.meta as { align?: string } | undefined)?.align === 'right',
+                )
+                .map((column) => column.id)}
+            />
           ) : (
             <TableRow>
-              <TableCell colSpan={table.getAllLeafColumns().length}>
-                {pending ? <Loading /> : empty}
-              </TableCell>
+              <TableCell colSpan={table.getAllLeafColumns().length}>{empty}</TableCell>
             </TableRow>
           )}
         </TableBody>

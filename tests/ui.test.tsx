@@ -55,6 +55,10 @@ import { UpdateButton } from '../apps/web/src/features/settings/UpdateButton';
 import { MatchArchive } from '../apps/web/src/features/matches/MatchArchive';
 import { BansPanel } from '../apps/web/src/features/bans/BansPanel';
 import { MatchDialog } from '../apps/web/src/features/matches/MatchDialog';
+import { CacheSettings } from '../apps/web/src/features/settings/CacheSettings';
+import { Dashboard } from '../apps/web/src/features/overview/Dashboard';
+import { Loading } from '../apps/web/src/components/ui';
+import { Spinner } from '../apps/web/src/components/ui/spinner';
 import { DevelopmentApp } from '../apps/web/src/dev/DevelopmentApp';
 
 type Handler<K extends RpcMethod> = (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
@@ -2426,7 +2430,13 @@ describe('user interaction regressions', () => {
     fireEvent.click(await screen.findByRole('radio', { name: '网格视图' }));
     const viewport = document.querySelector<HTMLDivElement>('.archive-grid-viewport')!;
     expect(viewport.getAttribute('aria-busy')).toBe('true');
-    expect(within(viewport).getByText(translate('zh', 'loading'))).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole('status')
+        .some((status) => status.textContent === translate('zh', 'loading')),
+    ).toBe(true);
+    expect(viewport.querySelectorAll('.archive-card')).toHaveLength(6);
+    expect(viewport.querySelectorAll('.archive-card-players')).toHaveLength(12);
     const match = matchFixture({ fid: null, map: '', players: [], outcome: 'unknown' });
     await act(async () => pending.resolve([match]));
     expect(viewport.getAttribute('aria-busy')).toBe('false');
@@ -3252,7 +3262,7 @@ describe('user interaction regressions', () => {
     ).toBe('6');
     fireEvent.click(screen.getByRole('button', { name: /^Second Player/ }));
     await screen.findByRole('heading', { name: `Second Player #${secondPlayer.id}` });
-    expect(screen.getAllByText('等待计算').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('等待计算')).length).toBeGreaterThan(0);
     expect(
       within(screen.getByRole('region', { name: '蛐指数' }))
         .getByRole('progressbar')
@@ -4212,6 +4222,255 @@ describe('UX failure recovery', () => {
       cleanup();
       vi.useRealTimers();
     }
+  });
+});
+
+describe('application loading layouts', () => {
+  it('retains a confirmed empty archive during a background refresh and refresh failure', async () => {
+    const refresh = deferred<RpcOutputs['matches.list']>();
+    let calls = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => (++calls === 1 ? [] : refresh.promise),
+      'matches.scan': () => null,
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    await screen.findByText('第 0–0 条，共 0 条');
+    const table = screen.getByRole('table');
+    fireEvent.click(screen.getByRole('button', { name: translate('zh', 'refresh') }));
+    await waitFor(() => expect(table.getAttribute('aria-busy')).toBe('true'));
+    expect(table.querySelector('[data-slot="skeleton"]')).toBeNull();
+    expect(table.querySelector('td[colspan="8"]')).toBeTruthy();
+    expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
+    await act(async () => refresh.reject(new Error('Archive refresh failed')));
+    expect(table.getAttribute('aria-busy')).toBe('false');
+    expect(screen.getByText('Archive refresh failed')).toBeTruthy();
+    expect(table.querySelector('[data-slot="skeleton"]')).toBeNull();
+  });
+  it.each(['zh', 'en'] as const)(
+    'reserves account rows in %s until the recognized-account request settles',
+    async (locale) => {
+      window.history.replaceState(null, '', '#settings/accounts');
+      const pending = deferred<RpcOutputs['accounts.list']>();
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const native = nativeFixture(initial, { 'accounts.list': () => pending.promise });
+      render(<App />, { wrapper: wrapper(native.api) });
+      const panel = await screen.findByRole('tabpanel', { name: translate(locale, 'accounts') });
+      await waitFor(() =>
+        expect(panel.querySelector('.account-list [data-slot="skeleton"]')).toBeTruthy(),
+      );
+      expect(within(panel).queryByText(translate(locale, 'accountsEmpty'))).toBeNull();
+      expect(within(panel).queryByRole('button', { name: translate(locale, 'delete') })).toBeNull();
+      await act(async () => pending.resolve([]));
+      expect(panel.querySelector('[data-slot="skeleton"]')).toBeNull();
+      expect(within(panel).getByText(translate(locale, 'accountsEmpty'))).toBeTruthy();
+    },
+  );
+
+  it.each([false, true])(
+    'reserves the first player search rows and removes them when failure is %s',
+    async (fails) => {
+      const pending = deferred<RpcOutputs['players.search']>();
+      const native = nativeFixture(bootstrapForApp(), { 'players.search': () => pending.promise });
+      render(<PlayersPanel />, { wrapper: wrapper(native.api) });
+      fireEvent.change(await screen.findByLabelText(translate('zh', 'searchLabel')), {
+        target: { value: 'loading-player' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: translate('zh', 'search') }));
+      const viewport = document.querySelector('.player-results-viewport')!;
+      expect(viewport.getAttribute('aria-busy')).toBe('true');
+      expect(viewport.querySelectorAll('.player-result-loading')).toHaveLength(5);
+      expect(screen.queryByText(translate('zh', 'searchEmpty'))).toBeNull();
+      await act(async () => {
+        if (fails) pending.reject(new Error('Search unavailable'));
+        else pending.resolve({ source: 'local', players: [] });
+      });
+      expect(document.querySelector('.player-results-viewport [data-slot="skeleton"]')).toBeNull();
+      if (fails) {
+        expect(viewport.isConnected).toBe(false);
+        expect(screen.getByText('Search unavailable')).toBeTruthy();
+      } else {
+        expect(viewport.getAttribute('aria-busy')).toBe('false');
+        expect(screen.getByText(translate('zh', 'searchEmpty'))).toBeTruthy();
+      }
+    },
+  );
+  it.each(['zh', 'en'] as const)(
+    'localizes shared loading feedback in %s without nested announcements',
+    async (locale) => {
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const native = nativeFixture(initial);
+      const view = render(<Loading />, { wrapper: wrapper(native.api) });
+      await waitFor(() =>
+        expect(screen.getByRole('status').textContent).toBe(translate(locale, 'loading')),
+      );
+      expect(screen.getAllByRole('status')).toHaveLength(1);
+      expect(document.querySelector('[data-slot="spinner"]')?.getAttribute('aria-hidden')).toBe(
+        'true',
+      );
+      view.rerender(<Spinner />);
+      expect(screen.getByRole('status', { name: translate(locale, 'loading') })).toBeTruthy();
+    },
+  );
+
+  it('keeps cache sections mounted, reserves unknown values and retains usage while refreshing', async () => {
+    const first = deferred<RpcOutputs['cache.stats']>();
+    const next = deferred<RpcOutputs['cache.stats']>();
+    let calls = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'cache.stats': () => (++calls === 1 ? first.promise : next.promise),
+    });
+    render(<CacheSettings />, { wrapper: wrapper(native.api) });
+    const cleanupHeading = await screen.findByText(translate('zh', 'cacheCleanup'));
+    const usage = document.querySelector('.stats')!;
+    expect(usage.querySelectorAll('[aria-busy="true"]')).toHaveLength(3);
+    expect(document.querySelectorAll('.cache-category')).toHaveLength(2);
+    expect(usage.textContent).not.toMatch(/\b0\b/);
+    expect(
+      screen
+        .getByRole('button', { name: translate('zh', 'cacheClearAll') })
+        .hasAttribute('disabled'),
+    ).toBe(true);
+    const data = {
+      api: { entries: 3, expired: 2, bytes: 2048 },
+      snapshots: { entries: 2, expired: 1, bytes: 1024 },
+    };
+    await act(async () => first.resolve(data));
+    expect(usage.querySelector('[data-slot="skeleton"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: translate('zh', 'refresh') }));
+    expect(document.querySelector('.stats')).toBe(usage);
+    expect(usage.querySelector('[data-slot="skeleton"]')).toBeNull();
+    expect(cleanupHeading.isConnected).toBe(true);
+    expect(screen.getByText('3 KB')).toBeTruthy();
+    await act(async () => next.reject(new Error('Usage refresh failed')));
+    expect(screen.getByText('Usage refresh failed')).toBeTruthy();
+    expect(screen.getByText('3 KB')).toBeTruthy();
+  });
+
+  it('keeps overview metrics unknown until history arrives and preserves the known room count', async () => {
+    const pending = deferred<RpcOutputs['matches.list']>();
+    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => pending.promise });
+    render(<Dashboard />, { wrapper: wrapper(native.api) });
+    await waitFor(() =>
+      expect(document.querySelectorAll('.metric-content strong[aria-busy="true"]')).toHaveLength(3),
+    );
+    expect(document.querySelectorAll('.recent-match-loading')).toHaveLength(3);
+    expect(document.querySelectorAll('.metric-content strong[aria-busy="false"]')).toHaveLength(1);
+    expect(screen.queryByText(translate('zh', 'noMatchesHint'))).toBeNull();
+    await act(async () => pending.resolve([]));
+    expect(document.querySelector('.recent-match-loading')).toBeNull();
+    expect(screen.getByText(translate('zh', 'noMatchesHint'))).toBeTruthy();
+  });
+
+  it.each(['archive', 'bans'] as const)(
+    'keeps the %s table headers and column structure while waiting',
+    async (kind) => {
+      const matches = deferred<RpcOutputs['matches.list']>();
+      const bans = deferred<RpcOutputs['bans.list']>();
+      const native = nativeFixture(bootstrapForApp(), {
+        'matches.list': () => matches.promise,
+        'bans.list': () => bans.promise,
+      });
+      render(kind === 'archive' ? <MatchArchive /> : <BansPanel />, {
+        wrapper: wrapper(native.api),
+      });
+      const table = await screen.findByRole('table');
+      const header = table.querySelector('thead');
+      const columns = kind === 'archive' ? 8 : 5;
+      expect(table.getAttribute('aria-busy')).toBe('true');
+      expect(table.querySelectorAll('th')).toHaveLength(columns);
+      expect(table.querySelectorAll('tbody tr')).toHaveLength(5);
+      for (const row of table.querySelectorAll('tbody tr')) {
+        expect(row.querySelectorAll('td')).toHaveLength(columns);
+        expect(row.querySelector('[colspan]')).toBeNull();
+      }
+      expect(screen.queryByText('第 0–0 条，共 0 条')).toBeNull();
+      await act(async () => {
+        if (kind === 'archive') matches.resolve(capturedMatches);
+        else bans.resolve([bannedPlayer()]);
+      });
+      expect(table.querySelector('thead')).toBe(header);
+      expect(table.querySelector('[data-slot="skeleton"]')).toBeNull();
+      expect(table.getAttribute('aria-busy')).toBe('false');
+    },
+  );
+
+  it('reserves both deck file panels and disables file actions before discovery settles', async () => {
+    const pending = deferred<RpcOutputs['decks.list']>();
+    const native = nativeFixture(bootstrapForApp(), { 'decks.list': () => pending.promise });
+    render(<DecksPanel />, { wrapper: wrapper(native.api) });
+    await waitFor(() =>
+      expect(document.querySelectorAll('.deck-columns [data-slot="card"]')).toHaveLength(2),
+    );
+    expect(document.querySelectorAll('.deck-file-list[aria-busy="true"]')).toHaveLength(2);
+    for (const button of document.querySelectorAll<HTMLButtonElement>('.deck-columns button'))
+      expect(button.disabled).toBe(true);
+    await act(async () =>
+      pending.resolve({ found: false, decksDir: '', backupsDir: '', decks: [], backups: [] }),
+    );
+    expect(document.querySelector('.deck-columns [data-slot="skeleton"]')).toBeNull();
+    expect(screen.getByRole('button', { name: translate('zh', 'settings') })).toBeTruthy();
+  });
+
+  it.each(['grid', 'list'] as const)(
+    'reserves replay %s entries and avoids unknown zero counts',
+    async (view) => {
+      const pending = deferred<RpcOutputs['replays.list']>();
+      const native = nativeFixture(bootstrapForApp(), { 'replays.list': () => pending.promise });
+      render(<ReplaysPanel />, { wrapper: wrapper(native.api) });
+      fireEvent.click(
+        await screen.findByRole('radio', {
+          name: translate('zh', view === 'grid' ? 'gridView' : 'listView'),
+        }),
+      );
+      const library = document.querySelector('.replay-library')!;
+      expect(library.querySelectorAll('.replay-row')).toHaveLength(6);
+      expect(library.textContent).not.toContain('0 B');
+      expect(within(library as HTMLElement).queryByRole('button', { name: /^播放:/ })).toBeNull();
+      await act(async () => pending.resolve([]));
+      expect(library.querySelector('[data-slot="skeleton"]')).toBeNull();
+      expect(within(library as HTMLElement).getByText(translate('zh', 'empty'))).toBeTruthy();
+    },
+  );
+
+  it('mounts the complete report shell without starting analysis before the report arrives', async () => {
+    const native = nativeFixture(bootstrapForApp());
+    const view = render(
+      <ReportView report={null} pending id={localPlayer.id} name={localPlayer.name} />,
+      { wrapper: wrapper(native.api) },
+    );
+    const report = await screen.findByRole('heading', { name: localPlayer.name });
+    const units = screen.getByRole('table', { name: translate('zh', 'units') });
+    expect(document.querySelectorAll('.stats dd[aria-busy="true"]')).toHaveLength(4);
+    expect(screen.getByRole('button', { name: translate('zh', 'mapStatistics') })).toBeTruthy();
+    expect(native.calls.some((call) => call.method === 'players.maggot')).toBe(false);
+    view.rerender(
+      <ReportView report={reportFixture({ id: localPlayer.id, name: localPlayer.name })} />,
+    );
+    await waitFor(() =>
+      expect(native.calls.some((call) => call.method === 'players.maggot')).toBe(true),
+    );
+    expect(report.isConnected).toBe(true);
+    expect(screen.getByRole('table', { name: translate('zh', 'units') })).toBe(units);
+    expect(document.querySelector('.stats [data-slot="skeleton"]')).toBeNull();
+  });
+
+  it('mounts the match summary and both full team tables before details arrive', async () => {
+    const pending = deferred<RpcOutputs['matches.detail']>();
+    const native = nativeFixture(bootstrapForApp(), { 'matches.detail': () => pending.promise });
+    render(<MatchDialog fid="loading-match" />, { wrapper: wrapper(native.api) });
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(dialog.querySelectorAll('.match-team-table table')).toHaveLength(2));
+    const overview = dialog.querySelector('.match-overview');
+    expect(dialog.querySelectorAll('.match-summary dt')).toHaveLength(4);
+    for (const table of dialog.querySelectorAll('.match-team-table table')) {
+      expect(table.querySelectorAll('th')).toHaveLength(12);
+      expect(table.querySelectorAll('tbody td')).toHaveLength(60);
+    }
+    await act(async () => pending.resolve(matchFixture()));
+    expect(dialog.querySelector('.match-overview')).toBe(overview);
+    expect(dialog.querySelector('[data-slot="skeleton"]')).toBeNull();
   });
 });
 

@@ -26,17 +26,9 @@ import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import {
-  Card,
-  Button,
-  Toggle,
-  Notice,
-  Loading,
-  Empty,
-  Badge,
-  Menu,
-  Field,
-} from '../../components/ui';
+import { LoadingStatus } from '../../components/LoadingState';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, Button, Toggle, Notice, Empty, Badge, Menu, Field } from '../../components/ui';
 function ReplaySurface({
   view,
   title,
@@ -57,6 +49,30 @@ function ReplaySurface({
     <>{children}</>
   );
 }
+function ReplaySkeleton({ view }: { view: 'grid' | 'list' }) {
+  return (
+    <li className={cn('replay-row', view === 'grid' && 'replay-grid-item')} aria-hidden="true">
+      <ReplaySurface view={view} title="">
+        <div className="replay-play">
+          <Skeleton className="replay-thumbnail" />
+          <div className="replay-description">
+            <strong>
+              <Skeleton className="h-5 w-32 max-w-full" />
+            </strong>
+            <div className="replay-metadata">
+              <Skeleton className="replay-uploader h-4 w-20" />
+              <Skeleton className="replay-created h-4 w-28" />
+              <Skeleton className="replay-file-size h-4 w-12" />
+            </div>
+          </div>
+        </div>
+        <div className="replay-actions">
+          <Skeleton className="size-8" />
+        </div>
+      </ReplaySurface>
+    </li>
+  );
+}
 export function ReplaysPanel() {
   const confirm = useConfirmation();
   const { api, state, openModal, patchConfig, notify } = useApp(),
@@ -69,7 +85,8 @@ export function ReplaysPanel() {
   }, [api, state.replaysRevision, state.config.replaySaveDir]);
   const list = request.data || [],
     total = list.reduce((sum, r) => sum + r.size, 0),
-    recording = state.recording;
+    recording = state.recording,
+    loading = !request.data && (request.pending || !request.error);
   return (
     <div className="replays-panel">
       {recording.error && <Notice error>{recording.error}</Notice>}
@@ -179,7 +196,12 @@ export function ReplaysPanel() {
       <Card
         title={t('recordingLibrary')}
         className="replay-library"
-        description={t('storageUsed') + ' ' + formatSize(total)}
+        description={
+          <span className="inline-flex items-center gap-2">
+            {t('storageUsed')}
+            {loading ? <Skeleton className="h-4 w-16" aria-hidden="true" /> : formatSize(total)}
+          </span>
+        }
         actions={
           <>
             <ToggleGroup
@@ -198,7 +220,11 @@ export function ReplaysPanel() {
                 <List aria-hidden="true" />
               </ToggleGroupItem>
             </ToggleGroup>
-            <Badge>{list.length}</Badge>
+            {loading ? (
+              <Skeleton className="h-5 w-8" aria-hidden="true" />
+            ) : (
+              <Badge>{list.length}</Badge>
+            )}
             <div className="actions">
               <Button
                 onClick={() =>
@@ -254,9 +280,19 @@ export function ReplaysPanel() {
           </>
         }
       >
-        {request.pending && !request.data && <Loading />}
+        {loading && <LoadingStatus />}
         {request.error && <Notice error>{request.error}</Notice>}
-        {list.length ? (
+        {loading ? (
+          <ul
+            className={cn('replay-list', view === 'grid' && 'replay-grid')}
+            aria-busy="true"
+            aria-label={t('recordingLibrary')}
+          >
+            {Array.from({ length: 6 }, (_, index) => (
+              <ReplaySkeleton key={index} view={view} />
+            ))}
+          </ul>
+        ) : list.length ? (
           <ul
             className={cn('replay-list', view === 'grid' && 'replay-grid')}
             aria-label={t('recordingLibrary')}

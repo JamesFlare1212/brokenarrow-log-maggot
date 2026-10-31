@@ -14,6 +14,8 @@ import {
   InputGroupButton,
 } from '@/components/ui/input-group';
 import { Item, ItemContent, ItemTitle, ItemActions } from '@/components/ui/item';
+import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingStatus } from '../../components/LoadingState';
 import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -629,7 +631,20 @@ export function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     {accountsLoading ? (
-                      <p role="status">{t('loading')}</p>
+                      <>
+                        <LoadingStatus />
+                        <div className="account-list" aria-hidden="true">
+                          <Item variant="outline">
+                            <ItemContent>
+                              <Skeleton className="h-5 w-32" />
+                              <Skeleton className="h-5 w-48 max-w-full" />
+                            </ItemContent>
+                            <ItemActions>
+                              <Skeleton className="h-8 w-16" />
+                            </ItemActions>
+                          </Item>
+                        </div>
+                      </>
                     ) : accounts.length === 0 ? (
                       <Empty
                         icon={<Icon icon={faUsers} size={26} aria-hidden="true" />}

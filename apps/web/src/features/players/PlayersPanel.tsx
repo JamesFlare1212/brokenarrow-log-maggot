@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Empty, Loading, Notice } from '../../components/ui';
+import { Empty, Notice } from '../../components/ui';
+import { LoadingStatus, ListSkeletonRows } from '../../components/LoadingState';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -114,7 +115,7 @@ export function PlayersPanel() {
                 aria-busy={results.pending}
               >
                 {results.pending ? (
-                  <Spinner data-icon="inline-start" />
+                  <Spinner data-icon="inline-start" aria-hidden="true" />
                 ) : (
                   <Search data-icon="inline-start" />
                 )}
@@ -147,7 +148,7 @@ export function PlayersPanel() {
               <CardTitle>{t('searchResults')}</CardTitle>
               <CardAction>
                 {results.pending ? (
-                  <Spinner aria-label={t('loading')} />
+                  <Spinner aria-hidden="true" />
                 ) : (
                   <Badge variant="secondary">{results.data?.players.length}</Badge>
                 )}
@@ -164,8 +165,16 @@ export function PlayersPanel() {
             </CardHeader>
             <CardContent>
               <div className="player-results-viewport" aria-busy={results.pending}>
-                {results.pending && !results.data && <Loading />}
                 <div className="player-results-scroll">
+                  {results.pending && !results.data && (
+                    <>
+                      <ListSkeletonRows
+                        rows={5}
+                        className="search-results"
+                        rowClassName="player-result-loading"
+                      />
+                    </>
+                  )}
                   <ItemGroup className="search-results">
                     {results.data?.players.length ? (
                       results.data.players.map((player) => (
@@ -213,15 +222,23 @@ export function PlayersPanel() {
           </Card>
         )}
         <div className="player-report-panel" hidden={noResults}>
-          {report.pending && <Loading />}
+          {report.pending && <LoadingStatus />}
           {report.error && (
             <Notice error>
               {report.error}
               {selectedId && <Button onClick={() => selectPlayer(selectedId)}>{t('retry')}</Button>}
             </Notice>
           )}
-          {report.data ? (
-            <ReportView report={report.data} />
+          {report.data || (report.pending && selectedId) ? (
+            <ReportView
+              report={report.data}
+              pending={report.pending && !report.data}
+              id={selectedId ?? undefined}
+              name={
+                results.data?.players.find((player) => player.id === selectedId)?.name ??
+                roster.find((player) => player.id === selectedId)?.name
+              }
+            />
           ) : (
             !report.pending &&
             !report.error && (

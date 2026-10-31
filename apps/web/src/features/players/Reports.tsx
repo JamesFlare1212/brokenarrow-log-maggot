@@ -34,6 +34,7 @@ import { PlayerPreferences } from './PlayerPreferences';
 import { MaggotCard } from './MaggotCard';
 import { ProfileTableSkeleton } from './ProfileTableSkeleton';
 import { MapPerformanceGrid } from './MapPerformanceGrid';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function ReportCopyButton({ report }: { report: PlayerReport | null }) {
   const { t } = useI18n(),
@@ -78,35 +79,59 @@ function ReportDetails({
 export function ReportView({
   report,
   embedded = false,
+  pending = false,
+  id,
+  name,
 }: {
-  report: PlayerReport;
+  report: PlayerReport | null;
   embedded?: boolean;
+  pending?: boolean;
+  id?: string;
+  name?: string;
 }) {
   const { t, locale } = useI18n(),
     { api, openModal, notify } = useApp();
+  const playerId = report?.id ?? id ?? '';
   const ReportContainer = embedded ? 'div' : ReportCard;
   const ReportContent = embedded ? 'div' : CardContent;
   return (
-    <ReportContainer className={cn('report', embedded && 'report-embedded')}>
+    <ReportContainer className={cn('report', embedded && 'report-embedded')} aria-busy={pending}>
       {!embedded && (
         <CardHeader className="report-heading">
           <div className="min-w-0">
-            <CardTitle role="heading" aria-level={3} aria-label={`${report.name} #${report.id}`}>
-              {report.name}
+            <CardTitle
+              role="heading"
+              aria-level={3}
+              aria-label={report ? `${report.name} #${report.id}` : undefined}
+            >
+              {report?.name ?? name ?? <Skeleton className="h-6 w-40" aria-hidden="true" />}
             </CardTitle>
             <CardDescription className="report-identity-meta">
-              <span>#{report.id}</span>
+              <span>#{playerId}</span>
               <span>
-                {t('totalMatches')} {report.matchCount}
+                {t('totalMatches')}{' '}
+                {report ? (
+                  report.matchCount
+                ) : (
+                  <Skeleton className="inline-block h-3 w-8" aria-hidden="true" />
+                )}
               </span>
               <span>
-                {t('samples')} {report.sampleCount}
+                {t('samples')}{' '}
+                {report ? (
+                  report.sampleCount
+                ) : (
+                  <Skeleton className="inline-block h-3 w-8" aria-hidden="true" />
+                )}
               </span>
             </CardDescription>
           </div>
           <CardAction className="actions">
             <Button
-              onClick={() => openModal({ type: 'profile', id: report.id, name: report.name })}
+              disabled={!report}
+              onClick={() =>
+                report && openModal({ type: 'profile', id: report.id, name: report.name })
+              }
             >
               {t('investigate')}
             </Button>
@@ -115,50 +140,55 @@ export function ReportView({
         </CardHeader>
       )}
       <ReportContent className="report-content">
-        {report.stale && (
+        {report?.stale && (
           <Notice>
             {t('stale')} · {formatTime(report.updatedAt, locale)}
           </Notice>
         )}
         <Stats
           items={[
-            { label: 'ELO', value: formatMetric(report.elo, 0) },
-            { label: t('latestKd'), value: formatMetric(report.kd) },
-            { label: t('latestDmr'), value: formatMetric(report.dmr) },
+            { label: 'ELO', value: formatMetric(report?.elo ?? null, 0), pending },
+            { label: t('latestKd'), value: formatMetric(report?.kd ?? null), pending },
+            { label: t('latestDmr'), value: formatMetric(report?.dmr ?? null), pending },
             {
-              label: t(report.fallback ? 'winRate' : 'recentWinRate'),
-              value: formatMetric(report.winRate, 0) + '%',
+              label: t(report?.fallback ? 'winRate' : 'recentWinRate'),
+              value: report?.winRate == null ? '—' : formatMetric(report.winRate, 0) + '%',
+              pending,
             },
             ...(embedded
               ? [
-                  { label: t('totalMatches'), value: report.matchCount },
-                  { label: t('samples'), value: report.sampleCount },
+                  { label: t('totalMatches'), value: report?.matchCount ?? '—', pending },
+                  { label: t('samples'), value: report?.sampleCount ?? '—', pending },
                 ]
               : []),
           ]}
         />
-        {(report.categories.length > 0 || report.favUnits.length > 0 || report.style) && (
-          <PlayerPreferences id={report.id} report={report} showMaggot={false} />
-        )}
-        {!embedded && <MaggotCard id={report.id} />}
-        {report.mapStats.length > 0 && (
+        <PlayerPreferences id={playerId} report={report} pending={pending} showMaggot={false} />
+        {!embedded && <MaggotCard id={playerId} enabled={Boolean(report)} />}
+        {(pending || Boolean(report?.mapStats.length)) && (
           <ReportDetails embedded label={t('mapStatistics')}>
-            <MapPerformanceGrid maps={report.mapStats} />
+            <MapPerformanceGrid maps={report?.mapStats ?? []} pending={pending} />
           </ReportDetails>
         )}
-        {!!report.recentMatches.length && (
+        {(pending || Boolean(report?.recentMatches.length)) && (
           <ReportDetails embedded={embedded} label={t('matchStatistics')}>
-            <ReportMatchTable report={report} label={t(embedded ? 'matchStatistics' : 'recent')} />
+            <ReportMatchTable
+              report={report}
+              pending={pending}
+              label={t(embedded ? 'matchStatistics' : 'recent')}
+            />
           </ReportDetails>
         )}
         {!embedded && (
           <Button
             variant="ghost"
             className="self-start"
+            disabled={!report}
             onClick={() =>
+              report &&
               void api
                 .invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${report.id}` })
-                .catch((e) => notify(String(e), true))
+                .catch((error) => notify(String(error), true))
             }
           >
             {t('openBatrace')}

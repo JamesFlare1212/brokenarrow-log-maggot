@@ -35,19 +35,11 @@ import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import {
-  Button,
-  Badge,
-  Field,
-  Notice,
-  Empty,
-  Menu,
-  Toggle,
-  Dialog,
-  Loading,
-} from '../../components/ui';
+import { Button, Badge, Field, Notice, Empty, Menu, Toggle, Dialog } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
-import { MatchArchiveCard } from './MatchArchiveCard';
+import { MatchArchiveCard, MatchArchiveCardSkeleton } from './MatchArchiveCard';
+import { LoadingStatus } from '../../components/LoadingState';
+import { Skeleton } from '@/components/ui/skeleton';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
   const confirm = useConfirmation();
@@ -82,6 +74,7 @@ export function MatchArchive() {
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages);
+  const loading = !matches.data && (matches.pending || !matches.error);
   useLayoutEffect(() => {
     if (table.current) table.current.scrollTop = 0;
   }, [currentPage, account, outcome, hideUnknown, sorting, view]);
@@ -339,8 +332,9 @@ export function MatchArchive() {
           />
         </div>
         <div className="archive-results-actions">
-          <small className="muted">
-            {t('samples')}: {filtered.length}
+          <small className="muted inline-flex items-center gap-2">
+            {t('samples')}:{' '}
+            {loading ? <Skeleton className="h-4 w-8" aria-hidden="true" /> : filtered.length}
           </small>
           <ToggleGroup
             type="single"
@@ -393,8 +387,17 @@ export function MatchArchive() {
                 </li>
               ))}
             </ul>
-          ) : matches.pending ? (
-            <Loading />
+          ) : loading ? (
+            <>
+              <LoadingStatus />
+              <ul className="archive-grid" aria-label={t('archive')} aria-busy="true">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <li key={index}>
+                    <MatchArchiveCardSkeleton />
+                  </li>
+                ))}
+              </ul>
+            </>
           ) : (
             empty
           )}
@@ -404,7 +407,8 @@ export function MatchArchive() {
           <DataTable
             table={dataTable}
             label={t('archive')}
-            pending={matches.pending}
+            pending={matches.pending || loading}
+            loading={loading}
             scrollRef={table}
             className="archive-table"
             empty={empty}
@@ -419,6 +423,7 @@ export function MatchArchive() {
           label={t('archivePagination')}
           onPageChange={(value) => dataTable.setPageIndex(value - 1)}
           showSinglePage
+          pending={loading}
         />
       </div>
       <Dialog
@@ -489,7 +494,7 @@ export function MatchArchive() {
               aria-busy={adding}
             >
               {adding ? (
-                <Spinner data-icon="inline-start" />
+                <Spinner data-icon="inline-start" aria-hidden="true" />
               ) : (
                 <Icon icon={faPlus} data-icon="inline-start" />
               )}

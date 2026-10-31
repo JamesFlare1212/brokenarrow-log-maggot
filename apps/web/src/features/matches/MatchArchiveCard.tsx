@@ -14,6 +14,45 @@ import { Badge } from '@/components/ui/badge';
 import { useApp } from '../../app/state';
 import { Button } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export function MatchArchiveCardSkeleton() {
+  return (
+    <Card className="archive-card" aria-hidden="true">
+      <CardHeader>
+        <CardTitle className="archive-card-title">
+          <Skeleton className="h-7 w-36" />
+        </CardTitle>
+        <CardDescription className="archive-card-meta">
+          <Skeleton className="h-4 w-48" />
+        </CardDescription>
+        <CardAction>
+          <Skeleton className="h-6 w-16" />
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <Separator />
+        <div className="archive-card-teams">
+          {[0, 1].map((team) => (
+            <section className="archive-card-team" key={team}>
+              <h4 className="archive-card-team-title">
+                <Skeleton className="h-4 w-24" />
+              </h4>
+              <ul className="archive-card-players">
+                {Array.from({ length: 5 }, (_, index) => (
+                  <li key={index}>
+                    <Skeleton className="h-7 w-28 max-w-full" />
+                    <Skeleton className="h-4 w-10" />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function MatchArchiveCard({ match }: { match: Match }) {
   const { openModal, notify } = useApp();

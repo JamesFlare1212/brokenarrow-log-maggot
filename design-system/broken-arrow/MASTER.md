@@ -255,6 +255,46 @@ Keep cached names visible; leave unavailable metrics as placeholders until their
 request settles, then use an em dash for missing metrics. Never infer zero values
 or numeric category percentages from a cached name.
 
+Use the existing shadcn components and semantic tokens for every known content
+shape. Shared row placeholders and localized loading announcements live in
+`apps/web/src/components/LoadingState.tsx`.
+
+- Metrics keep their labels and value line heights; only unknown values and
+  dependent descriptions use Skeleton. Keep independently available values,
+  such as the current room count, visible.
+- Tables keep their headers, column definitions, alignment, and scroll container.
+  Render a Skeleton cell in each visible column of each pending row. A single
+  spanning cell with generic blocks is reserved for a settled empty state, not
+  the initial request. Match details reserve both five-player team tables.
+- Lists and grids use Item or the actual Card composition, including the final
+  title, metadata, action, and thumbnail slots. Initial budgets are three recent
+  matches, five search/table rows, six archive/replay cards, four deck file rows
+  per panel, and one recognized-account row. Budgets do not cap real results.
+- Media owns a responsive frame before a URL, thumbnail, or metadata arrives.
+  Replay playback reserves a 16:9 stage with a 12rem minimum and a 65svh maximum;
+  loading, retry, and failure feedback overlay this frame. Keep the video and
+  playback-speed controls in place during retries. Display previews retain their
+  existing frame and Skeleton.
+
+Unknown sample counts, pagination totals, file counts, and storage sizes use a
+placeholder rather than a fabricated zero. A confirmed zero or empty state may
+appear only after the corresponding request settles. Disable actions that need
+unknown data. Mount report metrics, preferences, analysis, and detail section
+shells while the report is pending; start dependent analysis after it arrives.
+Preserve the existing collapsed detail sections.
+
+Background refreshes retain existing rows, values, selected views, filters, and
+scroll positions. Show progress on the initiating control without replacing
+available content with Skeleton. Retain those values if a refresh fails and show
+the error with its recovery action. Initial failures and confirmed empty results
+must end the loading state.
+
+Provide one localized status announcement for each request and mark decorative
+spinners and placeholder rows as hidden from assistive technology. Standalone
+Spinner labels use the current locale. Skeleton animation uses the shared
+reduced-motion rules. The generic Spinner-and-block fallback is suitable for
+startup or lazy modules whose content shape is not available yet.
+
 Player preferences reserve a minimum of fifteen unit rows and seven category rows
 in every state, including sparse, empty, and failed reports. The reservation counts
 also drive the initial placeholder rows, and shared CSS row sizes and gaps drive
@@ -275,6 +315,10 @@ layout checks compare section positions and the table header's offset from its t
 panel at desktop and narrow widths. Element presence alone does not verify layout
 stability. Large reports or long names may exceed their reserved budget; verify
 that this growth stays inside the dialog and preserves access to every value.
+For application-wide reviews, use the same data and pending/loaded/refresh phases
+at 1440px, 760px, and 375px in Chinese and English, with both appearances. Compare
+known section positions and media dimensions separately from natural growth due
+to unknown result counts; do not hide real results to obtain a zero-height delta.
 
 ## Accessibility and validation
 

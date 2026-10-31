@@ -24,7 +24,9 @@ import {
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Dialog, Loading, Notice, Badge } from '../../components/ui';
+import { Button, Dialog, Notice, Badge } from '../../components/ui';
+import { LoadingStatus, TableSkeletonRows } from '../../components/LoadingState';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipButton } from '../../components/Tooltip';
 import { MatchAwards } from './MatchAwards';
 import { eloChangeClass } from '@/lib/elo';
@@ -40,7 +42,8 @@ export function MatchDialog({ fid }: { fid: string }) {
       .invoke('replays.list', null)
       .then((list) => setReplays(list.filter((r) => r.fid === fid)));
   }, [api, fid]);
-  const match = request.data;
+  const match = request.data,
+    loading = !match && (request.pending || !request.error);
   const eloDelta =
     match && match.eloAfter !== null && match.eloBefore !== null
       ? match.eloAfter - match.eloBefore
@@ -98,53 +101,95 @@ export function MatchDialog({ fid }: { fid: string }) {
           </Button>
         ))}
       </div>
-      {request.pending && !match && <Loading />}
+      {loading && <LoadingStatus />}
       {request.error && <Notice error>{request.error}</Notice>}
-      {match && (
+      {(match || loading) && (
         <>
-          {match.warning && <Notice>{match.warning}</Notice>}
-          <div className="match-overview">
+          {match?.warning && <Notice>{match.warning}</Notice>}
+          <div className="match-overview" aria-busy={loading}>
             <div className="match-overview-heading">
               <div className="match-map">
                 <span className="muted">{t('map')}</span>
-                <h3>{match.map || '—'}</h3>
+                <h3>
+                  {loading ? (
+                    <Skeleton className="h-7 w-40" aria-hidden="true" />
+                  ) : (
+                    match?.map || '—'
+                  )}
+                </h3>
               </div>
               <div className="match-overview-badges">
-                <Badge tone={outcomeTone(match.outcome)}>{t(match.outcome)}</Badge>
-                <Badge>{t(match.mode)}</Badge>
+                {match ? (
+                  <>
+                    <Badge tone={outcomeTone(match.outcome)}>{t(match.outcome)}</Badge>
+                    <Badge>{t(match.mode)}</Badge>
+                  </>
+                ) : (
+                  <Skeleton className="h-5 w-24" aria-hidden="true" />
+                )}
               </div>
             </div>
             <dl className="match-summary">
               <div>
                 <dt>{t('duration')}</dt>
-                <dd>{formatDuration(match.durationSec)}</dd>
+                <dd>
+                  {loading ? (
+                    <Skeleton className="h-5 w-20" aria-hidden="true" />
+                  ) : (
+                    formatDuration(match?.durationSec ?? null)
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>{t('eloDelta')}</dt>
-                <dd className={eloChangeClass(eloDelta)}>{formatDelta(eloDelta)}</dd>
+                <dd className={eloChangeClass(eloDelta)}>
+                  {loading ? (
+                    <Skeleton className="h-5 w-16" aria-hidden="true" />
+                  ) : (
+                    formatDelta(eloDelta)
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>{t('account')}</dt>
-                <dd>{match.localPersona || '—'}</dd>
+                <dd>
+                  {loading ? (
+                    <Skeleton className="h-5 w-28" aria-hidden="true" />
+                  ) : (
+                    match?.localPersona || '—'
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>{t('time')}</dt>
-                <dd>{formatTime(match.endedAt, locale)}</dd>
+                <dd>
+                  {loading ? (
+                    <Skeleton className="h-5 w-36" aria-hidden="true" />
+                  ) : (
+                    formatTime(match?.endedAt ?? null, locale)
+                  )}
+                </dd>
               </div>
             </dl>
           </div>
-          {[match.winnerTeamId === 1 ? 1 : 0, match.winnerTeamId === 1 ? 0 : 1, 100, null].map(
+          {[match?.winnerTeamId === 1 ? 1 : 0, match?.winnerTeamId === 1 ? 0 : 1, 100, null].map(
             (team) => {
-              const players = match.players.filter((p) => p.teamId === team);
-              if (!players.length) return null;
+              const players = match?.players.filter((p) => p.teamId === team) ?? [];
+              if (!players.length && (!loading || (team !== 0 && team !== 1))) return null;
               return (
                 <section className={`match-team match-team-${team}`} key={String(team)}>
                   <div className="match-team-heading">
                     <h3>{teamLabel(team as 0 | 1 | 100 | null)}</h3>
-                    <span className="muted">{t('playersCount', { n: players.length })}</span>
+                    <span className="muted">
+                      {loading ? (
+                        <Skeleton className="h-5 w-12" aria-hidden="true" />
+                      ) : (
+                        t('playersCount', { n: players.length })
+                      )}
+                    </span>
                   </div>
                   <div className="table-wrap match-team-table">
-                    <Table>
+                    <Table aria-busy={request.pending || loading}>
                       <TableCaption className="sr-only">
                         {teamLabel(team as 0 | 1 | 100 | null)}
                       </TableCaption>
@@ -169,6 +214,7 @@ export function MatchDialog({ fid }: { fid: string }) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
+                        {loading && <TableSkeletonRows columns={columns} />}
                         {players.map((p) => (
                           <TableRow key={p.id}>
                             <TableCell className="match-player-cell">
@@ -184,10 +230,10 @@ export function MatchDialog({ fid }: { fid: string }) {
                                   <span className="player-name">{p.name}</span>
                                 </TooltipButton>
                                 <MatchAwards
-                                  key={`${match.id}:${p.id}`}
+                                  key={`${match?.id}:${p.id}`}
                                   titles={titles[p.id] ?? []}
                                   scoreLabels={
-                                    match.endedAt !== null ? match.scoreLabels?.[p.id] : undefined
+                                    match?.endedAt != null ? match.scoreLabels?.[p.id] : undefined
                                   }
                                 />
                               </div>

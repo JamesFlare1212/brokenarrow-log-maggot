@@ -301,11 +301,11 @@ button:not(:disabled),
   flex-shrink: 0;
   white-space: nowrap;
 }
-.metric-content > p {
+.metric-detail {
   white-space: nowrap;
 }
 @container metric (max-width: 16rem) {
-  .metric-content > p {
+  .metric-detail {
     display: none;
   }
 }
@@ -322,6 +322,13 @@ button:not(:disabled),
 }
 .recent-matches {
   gap: 0.25rem;
+}
+.recent-match,
+.recent-match-loading {
+  min-height: 4.25rem;
+}
+.recent-match-loading {
+  padding: 0.625rem 0.75rem;
 }
 .recent-match [data-slot='item-content'] {
   min-width: 0;
@@ -662,6 +669,9 @@ button:not(:disabled),
   justify-content: flex-start;
   padding: 0.5rem;
 }
+.player-result-loading {
+  min-height: 4rem;
+}
 .player-result-identity {
   display: flex;
   min-width: 0;
@@ -805,6 +815,7 @@ button:not(:disabled),
 }
 .archive-table table {
   min-width: 52rem;
+  table-layout: fixed;
 }
 .archive-table [data-slot='table-header'] {
   position: sticky;
@@ -918,6 +929,32 @@ button:not(:disabled),
 .report-match-table {
   container: match-data / inline-size;
 }
+.report-match-table table {
+  table-layout: fixed;
+}
+.report-match-table th[data-column='matchId'],
+.report-match-table th[data-column='result'],
+.report-match-table th[data-column='losses'] {
+  width: 6rem;
+}
+.report-match-table th[data-column='eloDelta'] {
+  width: 7rem;
+}
+.report-match-table th[data-column='K/D'] {
+  width: 4rem;
+}
+.report-match-table th[data-column='DMR'] {
+  width: 5rem;
+}
+.report-match-table th[data-column='destruction'] {
+  width: 9rem;
+}
+.report-match-table th[data-column='objectives'] {
+  width: 8rem;
+}
+.report-match-table th[data-column='time'] {
+  width: 12.5rem;
+}
 @container match-data (max-width: 60rem) {
   .report-match-table [data-column='matchId'] {
     display: none;
@@ -974,6 +1011,17 @@ button:not(:disabled),
   gap: 0.5rem;
   padding: 0.75rem;
 }
+.bans-table table {
+  min-width: 48rem;
+  table-layout: fixed;
+}
+.ban-id-column,
+.ban-rating-column {
+  width: 6rem;
+}
+.ban-time-column {
+  width: 12.5rem;
+}
 .ban-row {
   display: grid;
   grid-template-columns: minmax(12rem, 1fr) 6rem 7rem 10rem;
@@ -983,6 +1031,15 @@ button:not(:disabled),
 .ban-player-button {
   min-width: 0;
   justify-content: flex-start;
+}
+.archive-open-match,
+.ban-player-button {
+  max-width: 100%;
+  min-height: 2rem;
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 .ban-row time {
   color: var(--muted-foreground);
@@ -1198,14 +1255,34 @@ button:not(:disabled),
 }
 .replay-stage {
   position: relative;
-  min-height: 12rem;
-}
-.replay-video {
-  display: block;
   width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 12rem;
   max-height: 65svh;
+  flex-shrink: 0;
+  overflow: hidden;
   border-radius: var(--radius-lg);
   background: var(--muted);
+}
+.replay-video {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.replay-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  overflow: auto;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--background) 85%, transparent);
 }
 .replay-directory {
   display: flex;
@@ -1714,6 +1791,16 @@ button:not(:disabled),
 }
 .match-team-table table {
   min-width: 68rem;
+  table-layout: fixed;
+}
+.match-team-table tbody tr {
+  height: 4rem;
+}
+.match-player-column {
+  width: 15rem;
+}
+.match-rating-column {
+  width: 7rem;
 }
 .match-player-cell {
   min-width: 15rem;
@@ -1733,6 +1820,9 @@ button:not(:disabled),
   font-size: 0.75rem;
 }
 .match-summary dd {
+  display: flex;
+  min-height: 1.5rem;
+  align-items: center;
   margin-top: 0.375rem;
   font-weight: 500;
 }
@@ -1769,6 +1859,11 @@ button:not(:disabled),
   min-width: 0;
   flex-direction: column;
   gap: 0.875rem;
+}
+.deck-columns .path {
+  display: flex;
+  min-height: 1.125rem;
+  align-items: center;
 }
 
 .settings-page {
@@ -1912,11 +2007,17 @@ button:not(:disabled),
   gap: 0.25rem;
 }
 .cache-category-usage > strong {
+  display: flex;
+  min-height: 1.875rem;
+  align-items: center;
   font-size: 1.25rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .cache-category-usage > span {
+  display: flex;
+  min-height: 1.125rem;
+  align-items: center;
   color: var(--muted-foreground);
   font-size: 0.75rem;
 }
@@ -1962,9 +2063,6 @@ button:not(:disabled),
 }
 .data-table-scroll [data-slot='table-cell'] {
   padding-block: 0.625rem;
-}
-.bans-table table {
-  min-width: 40rem;
 }
 .ban-search {
   max-width: 17rem;

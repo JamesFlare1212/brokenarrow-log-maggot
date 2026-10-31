@@ -13,7 +13,9 @@ import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Dialog, Field, Notice, Loading, Empty } from '../../components/ui';
+import { Button, Dialog, Field, Notice, Empty } from '../../components/ui';
+import { LoadingStatus } from '../../components/LoadingState';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from '@/components/ui/card';
 import {
@@ -30,6 +32,7 @@ function DeckFiles({
   selected,
   onChange,
   actions,
+  pending = false,
 }: {
   id: string;
   title: string;
@@ -37,10 +40,12 @@ function DeckFiles({
   selected: string[];
   onChange: (names: string[]) => void;
   actions?: ReactNode;
+  pending?: boolean;
 }) {
   const { t } = useI18n();
   const selectedCount = files.filter((file) => selected.includes(file.name)).length;
   const allSelected = files.length > 0 && selectedCount === files.length;
+  const rows = pending ? Array.from({ length: 4 }, () => null) : files;
   return (
     <Card>
       <CardHeader>
@@ -55,37 +60,53 @@ function DeckFiles({
           <div
             id={id}
             className="deck-file-list"
+            aria-busy={pending}
             tabIndex={0}
             onKeyDown={(e) => {
+              if (pending) return;
               if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
                 e.preventDefault();
                 onChange(files.map((f) => f.name));
               }
             }}
           >
-            {files.length ? (
+            {rows.length ? (
               <FieldGroup>
-                {files.map((f, index) => (
-                  <PrimitiveField orientation="horizontal" key={f.name}>
-                    <Checkbox
-                      id={`${id}-${index}`}
-                      checked={selected.includes(f.name)}
-                      onCheckedChange={(checked) =>
-                        onChange(
-                          checked === true
-                            ? [...selected, f.name]
-                            : selected.filter((name) => name !== f.name),
-                        )
-                      }
-                    />
+                {rows.map((f, index) => (
+                  <PrimitiveField
+                    orientation="horizontal"
+                    key={f?.name ?? index}
+                    aria-hidden={!f || undefined}
+                  >
+                    {f ? (
+                      <Checkbox
+                        id={`${id}-${index}`}
+                        checked={selected.includes(f.name)}
+                        onCheckedChange={(checked) =>
+                          onChange(
+                            checked === true
+                              ? [...selected, f.name]
+                              : selected.filter((name) => name !== f.name),
+                          )
+                        }
+                      />
+                    ) : (
+                      <Skeleton className="size-4" />
+                    )}
                     <FieldLabel
                       htmlFor={`${id}-${index}`}
                       className="flex min-w-0 flex-1 items-center gap-2"
                     >
                       <Icon icon={faFileLines} aria-hidden="true" />
-                      <span className="truncate">{f.name}</span>
+                      {f ? (
+                        <span className="truncate">{f.name}</span>
+                      ) : (
+                        <Skeleton className="h-5 w-40 max-w-full" />
+                      )}
                     </FieldLabel>
-                    <small className="shrink-0 text-muted-foreground">{formatSize(f.size)}</small>
+                    <small className="shrink-0 text-muted-foreground">
+                      {f ? formatSize(f.size) : <Skeleton className="h-4 w-12" />}
+                    </small>
                   </PrimitiveField>
                 ))}
               </FieldGroup>
@@ -100,11 +121,17 @@ function DeckFiles({
               onCheckedChange={(checked) =>
                 onChange(checked === true ? files.map((file) => file.name) : [])
               }
-              disabled={!files.length}
+              disabled={pending || !files.length}
             />
             <FieldLabel htmlFor={`${id}-all`}>{t('selectAll')}</FieldLabel>
             <small className="muted">
-              {selectedCount} / {files.length}
+              {pending ? (
+                <Skeleton className="h-4 w-12" aria-hidden="true" />
+              ) : (
+                <>
+                  {selectedCount} / {files.length}
+                </>
+              )}
             </small>
           </PrimitiveField>
         </FieldSet>
@@ -142,6 +169,8 @@ export function DecksPanel() {
     }
   };
   const list = request.data;
+  const loading = !list && (request.pending || !request.error);
+  const content = list ?? { found: true, decks: [], backups: [], decksDir: '', backupsDir: '' };
   const refreshButton = (
     <Button disabled={request.pending || busy} aria-busy={request.pending} onClick={refresh}>
       <Icon icon={faArrowsRotate} size={15} spin={request.pending} aria-hidden="true" />
@@ -150,7 +179,7 @@ export function DecksPanel() {
   );
   return (
     <div className="decks-panel">
-      {!list?.found && <div className="deck-toolbar">{refreshButton}</div>}
+      {!loading && !list?.found && <div className="deck-toolbar">{refreshButton}</div>}
       {state.deckAlert && (
         <Notice>
           <span>{t('deckSwitch', { name: state.deckAlert.from })}</span>
@@ -167,7 +196,7 @@ export function DecksPanel() {
           </div>
         </Notice>
       )}
-      {request.pending && !list && <Loading />}
+      {loading && <LoadingStatus />}
       {request.error && <Notice error>{request.error}</Notice>}
       {list && !list.found ? (
         <Card>
@@ -185,21 +214,24 @@ export function DecksPanel() {
           </CardContent>
         </Card>
       ) : (
-        list && (
+        (list?.found || loading) && (
           <div className="deck-columns">
             <section>
               <DeckFiles
                 id="front-decks"
                 title={t('frontDecks')}
-                files={list.decks}
+                files={content.decks}
+                pending={loading}
                 selected={front}
                 onChange={setFront}
                 actions={refreshButton}
               />
-              <small className="path">{list.decksDir}</small>
+              <small className="path">
+                {loading ? <Skeleton className="h-4 w-48" aria-hidden="true" /> : content.decksDir}
+              </small>
               <div className="actions">
                 <Button
-                  disabled={busy || !front.length}
+                  disabled={loading || busy || !front.length}
                   onClick={() => {
                     setPackageName('decks-' + new Date().toISOString().slice(0, 10));
                     setBackupNames(front);
@@ -209,15 +241,16 @@ export function DecksPanel() {
                   {t('backupSelected')}
                 </Button>
                 <Button
-                  disabled={busy || !list.decks.length}
+                  disabled={loading || busy || !content.decks.length}
                   onClick={() => {
                     setPackageName('decks-' + new Date().toISOString().slice(0, 10));
-                    setBackupNames(list.decks.map((d) => d.name));
+                    setBackupNames(content.decks.map((d) => d.name));
                   }}
                 >
                   {t('backupAll')}
                 </Button>
                 <Button
+                  disabled={loading}
                   onClick={() => void operate(() => api.invoke('decks.open', { kind: 'decks' }))}
                 >
                   <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
@@ -248,15 +281,22 @@ export function DecksPanel() {
               <DeckFiles
                 id="back-decks"
                 title={t('backups')}
-                files={list.backups}
+                files={content.backups}
+                pending={loading}
                 selected={back}
                 onChange={setBack}
                 actions={refreshButton}
               />
-              <small className="path">{list.backupsDir}</small>
+              <small className="path">
+                {loading ? (
+                  <Skeleton className="h-4 w-48" aria-hidden="true" />
+                ) : (
+                  content.backupsDir
+                )}
+              </small>
               <div className="actions">
                 <Button
-                  disabled={busy || back.length !== 1}
+                  disabled={loading || busy || back.length !== 1}
                   variant="default"
                   onClick={async () => {
                     if (
@@ -274,6 +314,7 @@ export function DecksPanel() {
                   {t('deploy')}
                 </Button>
                 <Button
+                  disabled={loading}
                   onClick={() => void operate(() => api.invoke('decks.open', { kind: 'backups' }))}
                 >
                   {t('folder')}
