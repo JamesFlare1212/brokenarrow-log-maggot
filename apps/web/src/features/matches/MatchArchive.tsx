@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { BATRACE_ORIGIN } from '@ba/contracts';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
@@ -26,26 +25,24 @@ import {
   RefreshCw as faArrowsRotate,
   LayoutGrid,
   List,
-  ChevronRight,
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
 import { formatTime, formatDelta, formatDuration, outcomeTone } from '@ba/shared';
 import { eloChangeClass } from '@/lib/elo';
 import { useApp } from '../../app/state';
-import { useConfirmation } from '../../components/Confirmation';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Button, Badge, Field, Notice, Empty, Menu, Toggle, Dialog } from '../../components/ui';
+import { Button, Badge, Field, Notice, Empty, Toggle, Dialog } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
 import { MatchArchiveCard, MatchArchiveCardSkeleton } from './MatchArchiveCard';
+import { MatchArchiveActions } from './MatchArchiveActions';
 import { LoadingStatus } from '../../components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MatchDetails } from './MatchDetails';
 import { archiveMatchFromHash, archiveMatchHash } from './routes';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
-  const confirm = useConfirmation();
   const { api, state, notify } = useApp(),
     { t, locale } = useI18n(),
     matches = useRequest<Match[]>(),
@@ -130,10 +127,7 @@ export function MatchArchive() {
     if (table.current) table.current.scrollTop = 0;
   }, [currentPage, account, outcome, hideUnknown, sorting, view]);
   const refresh = () =>
-    void matches.load(
-      () => api.invoke('matches.list', account ? { accountId: account } : {}),
-      true,
-    );
+    matches.load(() => api.invoke('matches.list', account ? { accountId: account } : {}), true);
   const scan = async () => {
     setScanning(true);
     try {
@@ -158,7 +152,7 @@ export function MatchArchive() {
         id: 'result',
         accessorKey: 'outcome',
         header: t('result'),
-        size: 76,
+        size: locale === 'en' ? 104 : 84,
         cell: ({ row }) => (
           <Badge tone={outcomeTone(row.original.outcome)}>
             {row.original.restarted ? t('restarted') : t(row.original.outcome)}
@@ -169,7 +163,7 @@ export function MatchArchive() {
         id: 'mode',
         accessorKey: 'mode',
         header: t('mode'),
-        size: 84,
+        size: locale === 'en' ? 104 : 84,
         cell: ({ row }) => <Badge>{t(row.original.mode)}</Badge>,
       },
       {
@@ -188,7 +182,7 @@ export function MatchArchive() {
             ? match.eloAfter - match.eloBefore
             : undefined,
         header: t('eloDelta'),
-        size: 110,
+        size: locale === 'en' ? 128 : 112,
         meta: { align: 'right' },
         sortUndefined: 'last',
         cell: ({ row }) => {
@@ -204,101 +198,43 @@ export function MatchArchive() {
         id: 'duration',
         accessorKey: 'durationSec',
         header: t('duration'),
-        size: 100,
+        size: locale === 'en' ? 112 : 88,
         cell: ({ row }) => formatDuration(row.original.durationSec),
       },
       {
         id: 'time',
         accessorFn: (match) => match.endedAt ?? match.startedAt ?? 0,
         header: t('time'),
-        size: 160,
+        size: locale === 'en' ? 184 : 168,
         cell: ({ row }) => formatTime(row.original.endedAt ?? row.original.startedAt, locale),
       },
       {
         id: 'account',
         accessorKey: 'localPersona',
         header: t('account'),
-        size: 150,
-        cell: ({ row }) => row.original.localPersona || '—',
-      },
-      {
-        id: 'details',
-        header: '',
         size: 120,
-        enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            data-match-open={row.original.id}
-            disabled={!row.original.fid}
-            aria-label={t('matchOpenDetail', {
-              map: row.original.map || row.original.id,
-              time: formatTime(row.original.endedAt ?? row.original.startedAt, locale),
-            })}
-            onClick={() => openMatch(row.original)}
-          >
-            {t('matchViewDetails')}
-            <ChevronRight data-icon="inline-end" aria-hidden="true" />
-          </Button>
+          <span className="block truncate" title={row.original.localPersona || undefined}>
+            {row.original.localPersona || '—'}
+          </span>
         ),
       },
       {
         id: 'actions',
         header: t('actions'),
-        size: 64,
+        size: locale === 'en' ? 144 : 128,
+        meta: { align: 'right' },
         enableSorting: false,
-        cell: ({ row }) => {
-          const match = row.original;
-          return (
-            <Menu label={`${t('actions')}: #${match.fid || match.id}`}>
-              {match.fid && (
-                <>
-                  <Button
-                    onClick={() =>
-                      void api
-                        .invoke('matches.detail', { fid: match.fid || '', force: true })
-                        .then(() => refresh())
-                        .catch((error) => notify(String(error), true))
-                    }
-                  >
-                    {t('refresh')}
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      void api
-                        .invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${match.fid}` })
-                        .catch((error) => notify(String(error), true))
-                    }
-                  >
-                    {t('openBatrace')}
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="destructive"
-                onClick={async () => {
-                  if (
-                    await confirm({
-                      title: t('confirmation.deleteMatch'),
-                      description: t('confirmation.deleteHint'),
-                      detail: `${match.map} · #${match.fid || match.id}`,
-                      confirmLabel: t('delete'),
-                    })
-                  )
-                    void api
-                      .invoke('matches.delete', { id: match.id })
-                      .then(() => refresh())
-                      .catch((error) => notify(String(error), true));
-                }}
-              >
-                {t('delete')}
-              </Button>
-            </Menu>
-          );
-        },
+        cell: ({ row }) => (
+          <MatchArchiveActions
+            match={row.original}
+            onOpen={() => openMatch(row.original)}
+            onUpdated={refresh}
+          />
+        ),
       },
     ],
-    [api, account, locale, openMatch, notify, confirm, matches.load],
+    [api, account, locale, openMatch, matches.load],
   );
   const dataTable = useReactTable({
     data: filtered,
@@ -487,6 +423,7 @@ export function MatchArchive() {
               loading={loading}
               scrollRef={table}
               className="archive-table"
+              fillColumn="map"
               empty={empty}
               onRowOpen={openMatch}
             />

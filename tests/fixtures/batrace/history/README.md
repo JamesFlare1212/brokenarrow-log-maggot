@@ -1,6 +1,6 @@
 # Recorded historical BATrace responses
 
-This corpus was captured from the local application history using a read-only SQLite transaction. It is separate from the older GameLogs fixture in `tests/fixtures/real`: the live database contained four more matches at capture time.
+This corpus was captured from the local application history on October 19, 2026, using a read-only SQLite transaction. At capture time, the live database contained four more matches than the GameLogs fixture. The historical audit remains frozen independently of `tests/fixtures/real`, which now contains 496 matches after its October 31 log expansion. Compatible historical response caches are retained.
 
 - 458 historical matches: 129 unique FIDs and 329 records without a FID.
 - 114 complete match responses: 101 retained from the application cache, with their original timestamps, and 13 fetched from BATrace.

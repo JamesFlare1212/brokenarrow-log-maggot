@@ -75,6 +75,50 @@ afterAll(async () => {
 });
 
 describe('complete recorded BATrace development archive', () => {
+  it('retains the compatible pre-expansion API captures byte-for-byte after the live schema audit', async () => {
+    const compatibility = JSON.parse(
+      await readFile(join(directory, 'compatibility.json'), 'utf8'),
+    ) as {
+      version: number;
+      checkedAt: number;
+      probes: Array<{
+        key: string;
+        at: number;
+        status: number;
+        previousValueSha256: string;
+        previousSchemaSha256: string;
+        liveSchemaSha256: string;
+      }>;
+      retained: {
+        endpoints: number;
+        files: Array<{ path: string; sha256: string; records: number }>;
+      };
+    };
+    expect(compatibility.version).toBe(1);
+    expect(compatibility.probes.map((probe) => probe.key).sort()).toEqual([
+      'amatch:9227650',
+      'analysis:75402',
+      'info:75402',
+      'match:9227650',
+      'myMatches:75402:10',
+    ]);
+    for (const probe of compatibility.probes) {
+      expect(probe.status).toBe(200);
+      expect(probe.at).toBeGreaterThanOrEqual(compatibility.checkedAt);
+      expect(probe.previousSchemaSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(probe.liveSchemaSha256).toBe(probe.previousSchemaSha256);
+      expect(records.get(probe.key)?.valueHash).toBe(probe.previousValueSha256);
+    }
+    expect(compatibility.retained.endpoints).toBe(11189);
+    expect(compatibility.retained.files).toHaveLength(44);
+    expect(compatibility.retained.files.reduce((count, file) => count + file.records, 0)).toBe(
+      compatibility.retained.endpoints,
+    );
+    for (const file of compatibility.retained.files)
+      expect(manifest.files.find((current) => current.path === file.path)).toMatchObject(file);
+    expect(records.size).toBeGreaterThan(compatibility.retained.endpoints);
+  });
+
   it('covers all original log players, known players, match rosters, and fixture match IDs', async () => {
     const { data } = await loadRealData(resolve('tests/fixtures/real'));
     const ids = new Set(manifest.players.map((player) => player.id));
@@ -209,6 +253,53 @@ describe('complete recorded BATrace development archive', () => {
     }
     expect(fetchImpl).not.toHaveBeenCalled();
   }, 30000);
+
+  it('opens and refreshes the newest PvE matches locally despite recorded BATrace failures', async () => {
+    const { data } = await loadRealData(resolve('tests/fixtures/real'));
+    const log = data.logs.find((log) => log.path === 'Gamelog__2026_10_30__21_15.log')!;
+    const target = new Database(':memory:');
+    const offline = new BatraceClient(target, { fetch: fetchImpl, offline: true }, '4.5.4');
+    const ids = ['9483280', '9483782', '9484215', '9484264'];
+    try {
+      seedRealData(target, data, '');
+      const parser = new LogParser((event) => {
+        if (event.type === 'ended' || event.type === 'metadata') target.saveMatch(event.match);
+      });
+      parser.reset(log.path);
+      parser.feed(log.content.split('\n'), true);
+      await seedOfflineFixtureCaches(target, directory, {
+        playerIds: new Set(),
+        matchIds: new Set(ids),
+      });
+      const service = new TrackerService(target, offline, new Analyzer(offline, target));
+      const original = ids.map((id) => target.match(id)!);
+      expect(original.map((match) => match.players.length)).toEqual([4, 2, 2, 2]);
+      expect(original.every((match) => match.source === 'log' && match.mode === 'pve')).toBe(true);
+      expect(original[2]?.points).toBeNull();
+      for (const match of original) {
+        expect(target.cache('match:' + match.fid, true)).toBeNull();
+        expect(service.list().find((entry) => entry.fid === match.fid)).toMatchObject({
+          source: 'log',
+          mode: 'pve',
+          players: match.players,
+          points: match.points,
+          durationSec: match.durationSec,
+        });
+        for (const force of [false, true])
+          expect(await service.detail(match.fid!, force)).toMatchObject({
+            source: 'log',
+            mode: 'pve',
+            players: match.players,
+            outcome: 'unknown',
+          });
+        expect(target.match(match.id)).toEqual(match);
+      }
+      expect(fetchImpl).not.toHaveBeenCalled();
+    } finally {
+      await offline.close();
+      target.close();
+    }
+  });
 
   it('enriches a historical log-only row from its captured match without changing the stored log facts', async () => {
     const full = await tracker.detail('9227650', true);

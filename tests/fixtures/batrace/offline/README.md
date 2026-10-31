@@ -1,14 +1,26 @@
 # Complete offline BATrace development archive
 
-This archive covers the people and match IDs referenced by the committed local GameLogs, original database fixture, static player-page fixture, and historical BATrace match corpus. Its target inventory includes 139 match IDs, the complete historical log rosters, and all participants in the recorded root match details and analyses. Each match has detail and analysis records; each player has basic information, analysis, and the ten most recent matches. The manifest accounts for every endpoint result, including recorded failures.
+This archive covers the people and match IDs referenced by the committed local GameLogs, original database fixture, static player-page fixture, and historical BATrace match corpus. Its target inventory includes 177 match IDs, the complete historical log rosters, and all participants in the recorded root match details and analyses. Each match has detail and analysis records; each player has basic information, analysis, and the ten most recent matches. The manifest accounts for every endpoint result, including recorded failures.
 
 The target set is fixed before capture. Recent-game summaries returned by player queries remain available for navigation. They do not recursively add their opponents to the target player inventory. The 329 original history records without a FID retain their local log evidence and cannot be looked up as remote matches.
 
-The completed 2026-10-19 capture contains 11,189 endpoint records for 139 match IDs and 3,637 players in 44 shards (41.29 MiB compressed). All 3,637 player-information and recent-match requests are available. Player analysis is available for 2,631 players; BATrace explicitly returned `No valid matches` for the other 1,006. Match details and analyses are available for 124 match IDs, with actual unavailable responses retained for the other 15. All 11 initial analysis timeouts were recovered in the retry pass.
+The original October 19 capture contains 11,189 endpoint records for 139 match IDs and 3,637 players in 44 shards. The October 31 expansion adds 697 records for 38 additional match IDs and 207 additional players, bringing the archive to 11,886 records for 177 matches and 3,844 players in 47 shards (45.77 MiB compressed). It reuses 230 additional responses from the local application's read-only API cache, retaining their original timestamps. The remaining 467 new endpoints are captured through the production BATrace client.
+
+All 3,844 player-information and recent-match responses are available. Player analysis is available for 2,838 players, while the original 1,006 `No valid matches` failures remain recorded. Match details and analyses are available for 153 match IDs; the other 24 retain their actual unavailable responses. The capture recovered its rate-limited request and has no unresolved transport failures.
+
+Live probes of all five endpoint kinds found identical recursive field paths and value types to the saved examples. Match `9227650` and its analysis were also identical in content; player `75402` had updated statistics with the same structure. [`compatibility.json`](compatibility.json) records probe paths, timestamps, response and schema hashes, and the hashes of the 44 retained shards. All 11,189 previous responses remain byte-for-byte unchanged, including captured failures and HTTP evidence. These are representative compatibility probes, not an exhaustive schema guarantee for every possible response.
+
+Nine newly covered FIDs are unavailable upstream: `9304471`, `9305394`, `9305465`, `9330947`, `9347015`, `9483280`, `9483782`, `9484215`, and `9484264`. Their API requests returned 404; match-page fallbacks also lacked complete match data. Both endpoint failures are retained for each FID. Their local log matches, including the small custom rosters, remain available without fabricated remote statistics.
+
+The last four FIDs are recognized PvE scenarios. Once their local logs have been
+scanned, match details and force refresh return the local PvE archive directly;
+they do not request BATrace match or analysis endpoints. The captured 404 records
+remain unchanged as upstream evidence and are still replayed by raw client tests.
 
 ## Stored data
 
 - `manifest.json` identifies the source fixture checksums, all target IDs, endpoint availability, and every compressed response shard.
+- `compatibility.json` records the live compatibility audit and the unchanged pre-expansion shards.
 - `responses-*.json.gz` retain complete parsed endpoint results and the recorded request paths, timestamps, HTTP statuses, content types, and response bodies. Records reused from prior captures retain their original provenance and available HTTP evidence.
 - Missing, deleted, and incomplete responses retain their actual errors. An unavailable response is never converted into a successful empty player or match.
 
@@ -37,7 +49,9 @@ pnpm data:capture
 pnpm data:capture --retry-transient
 ```
 
-Capture is the explicit network operation. It uses the production BATrace client with four workers by default, shared request spacing of at least two seconds, adaptive backoff, retry behavior, and page fallbacks. `pnpm data:capture --workers 8` overlaps up to eight responses under the same shared rate limit. HTTP transport timeouts begin after the rate-limit queue. A rate limit pauses the entire queue for at least one minute. Existing archived responses and checkpoints are reused; a fresh checkout can restore its checkpoints from the checksum-verified archive. Every completed endpoint is atomically checkpointed under `.test-data/offline-capture/records`; rerunning the command resumes the remaining endpoints. A process lock prevents duplicate collectors. A completed pass writes the compressed shards and manifest into this directory.
+Capture is the explicit network operation. It uses the production BATrace client with four workers by default, shared request spacing of at least two seconds, adaptive backoff, retry behavior, and page fallbacks. `pnpm data:capture --workers 8` overlaps up to eight responses under the same shared rate limit. HTTP transport timeouts begin after the rate-limit queue. A rate limit pauses the entire queue for at least one minute. Existing archived responses and checkpoints are reused; a fresh checkout can restore its checkpoints from the checksum-verified archive. Every completed endpoint is atomically checkpointed under `.test-data/offline-capture/records`; rerunning the command resumes the remaining endpoints. A process lock prevents duplicate collectors. A completed pass retains unchanged shards, appends new endpoint shards, and updates the manifest. Retried records rewrite only their containing shards. Previous target IDs remain in the inventory even if the current source no longer references them.
+
+For a log expansion, first run `pnpm data:import --logs-only` to preserve the original database fixture, then `pnpm data:capture`. Recheck representative live API structures before replacing older captures; the capture command itself reuses existing records rather than refreshing them by age. Ordinary development and tests never run the live compatibility probes.
 
 The live application database and game logs are not changed. Review the manifest, failures, and fixture diffs after a refresh, then run `pnpm check`, `pnpm format:check`, `pnpm smoke`, and `pnpm smoke:real`.
 

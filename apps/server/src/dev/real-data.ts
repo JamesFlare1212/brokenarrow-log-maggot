@@ -59,6 +59,7 @@ export function realMatchFacts(matches: Iterable<Match>): string {
       fid: match.fid,
       map: match.map,
       scenario: match.scenario,
+      mode: match.mode,
       localPlayerId: match.localPlayerId,
       localPersona: match.localPersona,
       localDeck: match.localDeck,

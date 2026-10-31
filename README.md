@@ -83,6 +83,7 @@ unavailable in the browser.
 | `pnpm dev`          | 使用仓库内真实样本启动离线桌面开发；每次创建隔离数据库               |
 | `pnpm dev:web`      | 浏览器前端开发，加载同一批真实测试样本，支持热更新，默认端口 5174    |
 | `pnpm data:import`  | 从本机应用数据库和 GameLogs 更新真实回归样本                         |
+| `pnpm data:capture` | Capture missing BATrace fixture responses and retain existing data   |
 | `pnpm test`         | 全部回归测试，默认包含仓库内的真实日志、档案和缓存数据               |
 | `pnpm smoke:real`   | 构建并在真实 Electron 中核对全部真实档案                             |
 | `pnpm check`        | 严格类型检查、回归测试、三个应用构建                                 |
@@ -93,9 +94,13 @@ unavailable in the browser.
 
 生产前端通过 sandboxed preload 的类型化 IPC 访问服务。`pnpm dev` 同时启动 Vite 和 Electron，通过原生服务加载真实样本的隔离副本；其 5173 端口在普通浏览器中访问 `/` 会提示使用桌面应用。`pnpm dev:web` 在 5174 端口为浏览器提供真实测试样本接口，不访问本机应用数据库。
 
-The repository includes 454 real matches extracted from 258 local logs, 13 API
+The repository includes 496 real matches extracted from 272 local logs, 13 API
 match archives, 600 players, and 28 cached responses, compressed to approximately
-301 KB. Each `pnpm dev` launch creates a writable `.test-data/real-dev/` copy that
+311 KiB. The separate BATrace archive supplies recorded endpoints for fixture
+players and match IDs. `pnpm data:import --logs-only` updates the logs while keeping
+the original database snapshot; `pnpm data:capture` fills missing endpoints and
+preserves unchanged response shards. Each `pnpm dev` launch creates a writable
+`.test-data/real-dev/` copy that
 preserves recorded names, IDs, and ratings. Development runs offline with recording
 disabled by default; log, deck, and recording paths point to the isolated copy.
 Real-data regression coverage runs in `pnpm test` / `pnpm check`; CI also runs the

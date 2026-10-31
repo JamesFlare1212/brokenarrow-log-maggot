@@ -814,7 +814,6 @@ button:not(:disabled),
   overflow: visible;
 }
 .archive-table table {
-  min-width: 52rem;
   table-layout: fixed;
 }
 .archive-table [data-slot='table-header'] {

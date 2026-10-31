@@ -7,9 +7,9 @@ import { DatabaseSync } from 'node:sqlite';
 import { StringDecoder } from 'node:string_decoder';
 import { gzipSync } from 'node:zlib';
 
-const { LogParser, REAL_DATA_TABLES, realMatchFacts } = createRequire(import.meta.url)(
-  '../apps/server/dist/index.cjs',
-);
+const { LogParser, REAL_DATA_TABLES, loadRealData, realMatchFacts } = createRequire(
+  import.meta.url,
+)('../apps/server/dist/index.cjs');
 const option = (name) => {
   const index = process.argv.indexOf(name);
   if (index < 0) return undefined;
@@ -21,6 +21,7 @@ const userDirectory = resolve(
   option('--user-data') || join(process.env.APPDATA || '', 'broken-arrow-log-assistant'),
 );
 const output = resolve(option('--out') || 'tests/fixtures/real');
+const preserved = process.argv.includes('--logs-only') ? (await loadRealData(output)).data : null;
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 // The export has no Chromium profile, settings secrets, legacy raw JSON or arbitrary app_state.
@@ -38,33 +39,38 @@ function sanitize(value) {
   return value;
 }
 
-const source = new DatabaseSync(join(userDirectory, 'assistant.sqlite'), { readOnly: true });
+const source =
+  preserved && option('--logs')
+    ? null
+    : new DatabaseSync(join(userDirectory, 'assistant.sqlite'), { readOnly: true });
 let data;
 let configuredLogs;
 try {
   // One read transaction includes committed WAL data without copying or changing the live DB.
-  source.exec('BEGIN');
-  const settings = source.prepare("SELECT value FROM settings WHERE key='public'").get();
+  source?.exec('BEGIN');
+  const settings = source?.prepare("SELECT value FROM settings WHERE key='public'").get();
   const config = settings ? JSON.parse(settings.value) : {};
   configuredLogs = config.logDir;
-  const preferences = Object.fromEntries(
-    [
-      'theme',
-      'lang',
-      'panelOrder',
-      'hiddenPanels',
-      'collapsedPanels',
-      'multiAccountBond',
-      'banCardVisible',
-      'replayQuality',
-      'replayFps',
-      'replayBitrateMbps',
-    ]
-      .filter((key) => config[key] !== undefined)
-      .map((key) => [key, config[key]]),
-  );
-  const tables = {};
-  for (const table of REAL_DATA_TABLES) {
+  const preferences =
+    preserved?.preferences ??
+    Object.fromEntries(
+      [
+        'theme',
+        'lang',
+        'panelOrder',
+        'hiddenPanels',
+        'collapsedPanels',
+        'multiAccountBond',
+        'banCardVisible',
+        'replayQuality',
+        'replayFps',
+        'replayBitrateMbps',
+      ]
+        .filter((key) => config[key] !== undefined)
+        .map((key) => [key, config[key]]),
+    );
+  const tables = preserved?.tables ?? {};
+  for (const table of preserved ? [] : REAL_DATA_TABLES) {
     const exists = source
       .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")
       .get(table);
@@ -82,18 +88,22 @@ try {
           )
       : [];
   }
-  const active = source.prepare("SELECT value FROM app_state WHERE key='activeAccountId'").get();
+  const active = source?.prepare("SELECT value FROM app_state WHERE key='activeAccountId'").get();
   data = {
     version: 1,
     capturedAt: Date.now(),
     preferences,
-    activeAccountId: active ? JSON.parse(active.value) : null,
+    activeAccountId: preserved
+      ? preserved.activeAccountId
+      : active
+        ? JSON.parse(active.value)
+        : null,
     tables,
     logs: [],
   };
-  source.exec('COMMIT');
+  source?.exec('COMMIT');
 } finally {
-  source.close();
+  source?.close();
 }
 if (!option('--logs') && !configuredLogs)
   throw new Error('Specify --logs or configure a GameLogs directory in the app');

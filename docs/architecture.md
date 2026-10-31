@@ -33,6 +33,16 @@ active session can resume from the current point.
 
 Historical archives use a separate LogParser and recursively scan `.log` and `.txt` files at startup, after directory changes, every 30 seconds, and on manual refresh. Scans do not follow symbolic links or change the live session, recording, or deck state. SQLite checkpoints track file identity, size, and modification time; matches and checkpoints commit in one transaction. Unchanged files are skipped and failed scans can retry. Matches without end events keep an unknown end time. Deletion markers prevent rescans from restoring removed matches. Queries return the full archive, with 50 matches per page and page navigation in the UI.
 
+Log scenario names containing a standalone `PvE` marker, or the exact known
+`Zombie Survival` name after removing the leading separator, classify the match
+as `pve`. Classification is case-insensitive and applies both at match start and
+when scenario metadata arrives after a room entry. Other scenarios keep their
+existing mode. PvE classification survives API/legacy normalization and merging;
+rating changes do not supply PvE winner evidence. Known PvE details and explicit
+refreshes use the local archive, and background match completion excludes them
+from BATrace requests. Version 2 archive checkpoints reprocess unchanged logs
+once to update previously stored unknown modes while preserving deletion markers.
+
 Database startup removes retired input-statistics tables and the obsolete collection setting. Saved navigation filters retired pages while preserving other preferences.
 
 玩家报告区分总场次、已知胜负样本和最近一场指标；未知胜负不进入胜率分母。蛆指数校验双方各五名唯一玩家，同分共享平均名次；重试失败也计入报告请求数。刷新贯通报告与调查，兜底档案同样刷新并保存快照。对局先保存近期列表再补全详情，较旧 API 数据只能补缺。自定义局仅依据明确胜方字段判胜负，不使用摧毁分猜测。

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Match, Session, TeamId } from '@ba/contracts';
-import { emptyMatch, emptyPlayer, mapId, team } from '@ba/shared';
+import { emptyMatch, emptyPlayer, mapId, modeFromScenario, team } from '@ba/shared';
 export type LogEvent =
   | { type: 'session'; session: Session }
   | { type: 'started' | 'ended' | 'metadata'; match: Match; recovering: boolean }
@@ -121,6 +121,7 @@ export class LogParser {
     match.map = map;
     match.mapId = mapId(map);
     match.scenario = scenario;
+    match.mode = modeFromScenario(scenario);
     match.localDeck = this.session.localDeck;
     match.localPersona = this.session.localName;
     this.session.current = match;
@@ -229,6 +230,7 @@ export class LogParser {
         current.map = m[1]?.trim() || '';
         current.mapId = mapId(current.map);
         current.scenario = m[2]?.trim() || '';
+        current.mode = modeFromScenario(current.scenario);
         return;
       }
       this.start(m[1]?.trim() || '', m[2]?.trim() || '', recovering);

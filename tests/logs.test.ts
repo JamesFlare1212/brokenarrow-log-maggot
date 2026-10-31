@@ -7,6 +7,39 @@ import { LogParser, type LogEvent } from '../apps/server/src/logs/parser';
 import { LogWatcher } from '../apps/server/src/logs/watcher';
 
 describe('log format and session regressions', () => {
+  it.each([
+    ['- Zombie Survival', 'pve'],
+    ['- PvE (1-4p) Zombie invasion', 'pve'],
+    ['- pVe cooperative defense', 'pve'],
+    ['- PvP Zombie Survival', 'unknown'],
+    ['- Coast_network', 'unknown'],
+    ['- PvEvergreen', 'unknown'],
+  ])('classifies scenario %s as %s without inventing an outcome', (scenario, mode) => {
+    const events: LogEvent[] = [];
+    const parser = new LogParser((event) => events.push(event));
+    parser.feed([`Log: Start loading battle... map: Coast, scenario: ${scenario}`]);
+    expect(events.find((event) => event.type === 'started')).toMatchObject({
+      match: { mode, scenario, outcome: 'unknown', winnerTeamId: null },
+    });
+    parser.feed(['Log: GameController dispose called']);
+    expect(events.find((event) => event.type === 'ended')).toMatchObject({
+      match: { mode, outcome: 'unknown', eloBefore: null, eloAfter: null },
+    });
+  });
+
+  it('classifies late PvE metadata during recovery and resets mode for the next match', () => {
+    const parser = new LogParser(() => {});
+    parser.feed(['Log: [NET_ROOM] GameRoom entered, fight id: 9483782'], true);
+    const sessionId = parser.snapshot().current?.sessionId;
+    parser.feed(
+      ['Log: Start loading battle... map: Oil refinery, scenario: - PvE (1-4p) Zombie invasion'],
+      true,
+    );
+    expect(parser.snapshot().current).toMatchObject({ fid: '9483782', sessionId, mode: 'pve' });
+    parser.feed(['Log: Start loading battle... map: Coast, scenario: - Coast_network'], true);
+    expect(parser.snapshot().current).toMatchObject({ mode: 'unknown' });
+  });
+
   it('recognizes tagged lobby events, clears old members, and coalesces duplicate exits', () => {
     const events: LogEvent[] = [];
     const parser = new LogParser((event) => events.push(event));

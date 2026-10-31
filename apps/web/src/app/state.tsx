@@ -141,6 +141,12 @@ export function useApp(): AppContextValue {
   if (!value) throw new Error('App provider missing');
   return value;
 }
+
+function notify(message: string, error = false) {
+  if (error) toast.error(message);
+  else toast.success(message);
+}
+
 export function AppProvider({ api, children }: { api: Bridge; children: ReactNode }) {
   const [state, dispatch] = useReducer(reduce, null),
     [page, updatePage] = useState<Panel>(
@@ -260,10 +266,6 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
         <Loading />
       </div>
     );
-  const notify = (message: string, error = false) => {
-    if (error) toast.error(message);
-    else toast.success(message);
-  };
   const value: AppContextValue = {
     api,
     state,

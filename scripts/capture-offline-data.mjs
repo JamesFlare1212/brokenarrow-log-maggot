@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { unlinkSync } from 'node:fs';
-import { access, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -62,12 +62,11 @@ if (previousArchive) {
   if (previousArchive.version !== 1)
     throw new Error('Unsupported existing offline BATrace archive');
   let restored = 0;
+  const checkpointFiles = new Set(await readdir(recordsDirectory));
   for await (const record of readOfflineFixtureRecords(output, previousArchive)) {
-    const destination = join(recordsDirectory, record.kind + '-' + record.id + '.json.gz');
-    try {
-      await access(destination);
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+    const name = record.kind + '-' + record.id + '.json.gz';
+    if (!checkpointFiles.has(name)) {
+      const destination = join(recordsDirectory, name);
       await atomic(destination, gzipSync(JSON.stringify(record), { level: 9 }));
       restored++;
     }
@@ -86,8 +85,11 @@ const history = await unpack(
   historyManifest.sha256,
 );
 const medals = await unpack(join(root, 'batrace/history/analyses.json.gz'), medalManifest.sha256);
-const players = new Map();
-const matches = new Set(history.matches.map((match) => match.id));
+const players = new Map(previousArchive?.players.map(({ id, name }) => [id, name]));
+const matches = new Set([
+  ...(previousArchive?.matches ?? []),
+  ...history.matches.map((match) => match.id),
+]);
 const addPlayer = (id, name) => {
   if (/^[1-9]\d*$/.test(String(id)))
     players.set(String(id), name || players.get(String(id)) || String(id));
@@ -420,12 +422,8 @@ if (stopped) {
 } else {
   const files = [];
   const counts = {};
-  for (let offset = 0; offset < tasks.length; offset += 256) {
-    const records = await Promise.all(
-      tasks
-        .slice(offset, offset + 256)
-        .map((task) => unpack(join(recordsDirectory, filename(task) + '.json.gz'))),
-    );
+  const archivedKeys = new Set();
+  const countRecords = (records) => {
     for (const record of records) {
       const count = (counts[record.kind] ??= {
         recorded: 0,
@@ -437,6 +435,32 @@ if (stopped) {
       count[record.error ? 'unavailable' : 'available']++;
       count.requests += record.requests.length;
     }
+  };
+  // Keep unchanged shards byte-for-byte, including their response timestamps and HTTP evidence.
+  for (const file of previousArchive?.files ?? []) {
+    const previous = await unpack(join(output, file.path), file.sha256);
+    const records = await Promise.all(
+      previous.map((record) =>
+        unpack(join(recordsDirectory, record.kind + '-' + record.id + '.json.gz')),
+      ),
+    );
+    for (const record of records) archivedKeys.add(record.key);
+    countRecords(records);
+    if (JSON.stringify(previous) === JSON.stringify(records)) files.push(file);
+    else {
+      const bytes = gzipSync(JSON.stringify(records), { level: 9 });
+      await atomic(join(output, file.path), bytes);
+      files.push({ ...file, sha256: hash(bytes) });
+    }
+  }
+  const added = tasks.filter((task) => !archivedKeys.has(task.key));
+  for (let offset = 0; offset < added.length; offset += 256) {
+    const records = await Promise.all(
+      added
+        .slice(offset, offset + 256)
+        .map((task) => unpack(join(recordsDirectory, filename(task) + '.json.gz'))),
+    );
+    countRecords(records);
     const bytes = gzipSync(JSON.stringify(records), { level: 9 });
     const path = 'responses-' + String(files.length).padStart(3, '0') + '.json.gz';
     await atomic(join(output, path), bytes);

@@ -1,4 +1,4 @@
-import { appendFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -37,6 +37,33 @@ afterEach(async () => {
 });
 
 describe('complete local match archive', () => {
+  it('reprocesses unchanged v1 logs to classify stored PvE matches without restoring deletions', async () => {
+    const dir = await directory();
+    const path = join(dir, 'Gamelog__pve.log');
+    await writeFile(
+      path,
+      (log('9483280') + log('9483782')).replaceAll('scenario: Test', 'scenario: - Zombie Survival'),
+    );
+    const info = await stat(path);
+    const db = database();
+    db.setState(
+      `logArchive:v1:${path}`,
+      `${info.ino}:${info.birthtimeMs}:${info.size}:${info.mtimeMs}`,
+    );
+    db.saveMatch(emptyMatch('9483280'));
+    db.saveMatch(emptyMatch('9483782'));
+    db.deleteMatch('9483782');
+    const changed = vi.fn();
+    await new LogArchive(db, changed).scan(dir);
+    expect(db.matches()).toHaveLength(1);
+    expect(db.match('9483280')).toMatchObject({ mode: 'pve', outcome: 'unknown' });
+    expect(db.match('9483782')).toBeNull();
+    expect(changed).toHaveBeenCalledTimes(1);
+    await new LogArchive(db, changed).scan(dir);
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(db.matches()).toHaveLength(1);
+  });
+
   it('imports all log files and nested history, including multiple matches and a final line without newline', async () => {
     const dir = await directory();
     await mkdir(join(dir, 'history'));

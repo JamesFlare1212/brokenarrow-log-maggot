@@ -15,6 +15,7 @@ export function DataTable<T>({
   scrollRef,
   className,
   onRowOpen,
+  fillColumn,
 }: {
   table: TableModel<T>;
   label: string;
@@ -24,6 +25,7 @@ export function DataTable<T>({
   scrollRef?: Ref<HTMLDivElement>;
   className?: string;
   onRowOpen?: (value: T) => void;
+  fillColumn?: string;
 }) {
   return (
     <div
@@ -33,10 +35,17 @@ export function DataTable<T>({
       aria-busy={pending}
     >
       {pending && <LoadingStatus />}
-      <Table aria-label={label} aria-busy={pending}>
+      <Table
+        aria-label={label}
+        aria-busy={pending}
+        style={fillColumn ? { minWidth: table.getTotalSize() } : undefined}
+      >
         <colgroup>
           {table.getAllLeafColumns().map((column) => (
-            <col key={column.id} style={{ width: column.columnDef.size }} />
+            <col
+              key={column.id}
+              style={{ width: column.id === fillColumn ? undefined : column.columnDef.size }}
+            />
           ))}
         </colgroup>
         <TableHeader>

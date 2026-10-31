@@ -52,6 +52,113 @@ afterEach(async () => {
 });
 
 describe('captured local real data', () => {
+  it('includes the October 2026 log expansion without replacing the original database snapshot', () => {
+    expect(manifest.source).toEqual({
+      logFiles: 272,
+      logBytes: 448035631,
+      databaseMatches: 13,
+      databasePlayers: 600,
+    });
+    expect(manifest.expected).toEqual({
+      sessions: 496,
+      uniqueFids: 167,
+      withoutFid: 329,
+      logMatches: 496,
+      seededMatches: 496,
+    });
+    expect(data.tables.api_cache).toHaveLength(28);
+    expect(data.logs.at(-1)?.path).toBe('Gamelog__2026_10_30__21_15.log');
+  });
+
+  it('preserves the latest small rosters, game without points, and estimated duration as recorded', () => {
+    const log = data.logs.find((log) => log.path === 'Gamelog__2026_10_30__21_15.log')!;
+    const matches = new Map<string, Match>();
+    const parser = new LogParser((event) => {
+      if (event.type === 'ended' || event.type === 'metadata')
+        matches.set(event.match.sessionId, event.match);
+    });
+    parser.reset(log.path);
+    parser.feed(log.content.split('\n'), true);
+    const current = parser.snapshot().current;
+    if (current) matches.set(current.sessionId, current);
+    const pve = [...matches.values()].filter((match) => match.mode === 'pve');
+    expect(pve.map((match) => match.fid)).toEqual(['9483280', '9483782', '9484215', '9484264']);
+    for (const match of pve)
+      expect(match).toMatchObject({
+        outcome: 'unknown',
+        winnerTeamId: null,
+        eloBefore: null,
+        eloAfter: null,
+      });
+    expect(
+      [...matches.values()].map((match) => ({
+        fid: match.fid,
+        map: match.map,
+        players: match.players.length,
+        durationSec: match.durationSec,
+        durationSource: match.durationSource,
+        points: match.points,
+      })),
+    ).toEqual([
+      {
+        fid: '9483280',
+        map: 'Coast',
+        players: 4,
+        durationSec: 2910,
+        durationSource: 'log',
+        points: 1389.607,
+      },
+      {
+        fid: '9483782',
+        map: 'Oil refinery',
+        players: 2,
+        durationSec: 2070,
+        durationSource: 'log',
+        points: 2778.667,
+      },
+      {
+        fid: '9484215',
+        map: 'Coast',
+        players: 2,
+        durationSec: 50,
+        durationSource: 'log',
+        points: null,
+      },
+      {
+        fid: '9484264',
+        map: 'Coast',
+        players: 2,
+        durationSec: 2901,
+        durationSource: 'log',
+        points: 1425.692,
+      },
+      {
+        fid: '9484902',
+        map: 'Coal Mountain',
+        players: 10,
+        durationSec: 1155,
+        durationSource: 'log',
+        points: 5109.309,
+      },
+      {
+        fid: '9485138',
+        map: 'Baltiisk',
+        players: 10,
+        durationSec: 1556,
+        durationSource: 'log',
+        points: 6532.247,
+      },
+      {
+        fid: '9485454',
+        map: 'River',
+        players: 10,
+        durationSec: 934,
+        durationSource: 'estimated',
+        points: 3985.521,
+      },
+    ]);
+  });
+
   it('matches the frozen parser facts for every original log and contains no credentials or local paths', () => {
     expect(data.logs).toHaveLength(manifest.source.logFiles);
     expect(manifest.source.logBytes).toBeGreaterThan(400_000_000);

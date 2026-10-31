@@ -48,6 +48,7 @@ export function mergeMatch(previous: Match, incoming: Match, fillOnly = false): 
       Object.assign(merged, { [key]: value });
   }
   merged.players = mergePlayers(previous.players, incoming.players, lower);
+  if (previous.mode === 'pve' || incoming.mode === 'pve') merged.mode = 'pve';
   if (
     incoming.durationSource === 'log' &&
     (previous.durationSource === 'estimated' || previous.durationSec === null)

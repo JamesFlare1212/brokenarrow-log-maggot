@@ -28,6 +28,10 @@ export function mapId(name: string): number | null {
   const numeric = /^map:(\d+)$/.exec(name);
   return hit ? Number(hit[0]) : numeric ? Number(numeric[1]) : null;
 }
+export function modeFromScenario(scenario: string): Mode {
+  const name = scenario.replace(/^\s*-\s*/, '').trim();
+  return /\bpve\b/i.test(name) || /^zombie survival$/i.test(name) ? 'pve' : 'unknown';
+}
 export function emptyPlayer(id: string, name = id): MatchPlayer {
   return {
     id,
@@ -172,17 +176,21 @@ export function normalizeMatch(
         })
       : playersFromData(p.Data, base.players);
   const players = mergePlayers(base.players, incoming);
-  const mode: Mode = legacy
-    ? p.mode === 'ranked' || p.mode === 'custom'
-      ? p.mode
-      : p.custom === true
-        ? 'custom'
-        : p.custom === false
+  const scenario = text(p.scenario, base.scenario);
+  const mode: Mode =
+    base.mode === 'pve' || (legacy && p.mode === 'pve') || modeFromScenario(scenario) === 'pve'
+      ? 'pve'
+      : legacy
+        ? p.mode === 'ranked' || p.mode === 'custom'
+          ? p.mode
+          : p.custom === true
+            ? 'custom'
+            : p.custom === false
+              ? 'ranked'
+              : base.mode
+        : p.Type == null
           ? 'ranked'
-          : base.mode
-    : p.Type == null
-      ? 'ranked'
-      : 'custom';
+          : 'custom';
   const localId = text(p.localPlayerId, options.localId ?? base.localPlayerId ?? '') || null;
   const winner = team(p.winnerTeamId ?? p.winnerTeam ?? p.WinnerTeam) as 0 | 1 | 100 | null;
   const result = determineOutcome(
@@ -216,7 +224,7 @@ export function normalizeMatch(
     eloAfter: result.after ?? number(p.localEloAfter) ?? base.eloAfter,
     map: map || base.map,
     mapId: number(p.mapId ?? p.MapId) ?? mapId(map) ?? base.mapId,
-    scenario: text(p.scenario, base.scenario),
+    scenario,
     startedAt: legacy ? (number(p.startedAt ?? p.startTime) ?? base.startedAt) : base.startedAt,
     endedAt: legacy
       ? (number(p.endedAt ?? p.endTime ?? p.archivedAt) ?? base.endedAt)

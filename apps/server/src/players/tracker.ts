@@ -68,6 +68,7 @@ export class TrackerService {
   }
   async detail(fid: string, force = false): Promise<Match> {
     const previous = this.db.match(fid);
+    if (previous?.mode === 'pve') return this.withAwards(previous);
     let result;
     try {
       result = await this.client.match(fid, force);
@@ -193,7 +194,7 @@ export class TrackerService {
     if (result.stale) return;
     const pending = this.db
       .matches()
-      .filter((m) => m.fid && m.outcome === 'unknown')
+      .filter((m) => m.fid && m.mode !== 'pve' && m.outcome === 'unknown')
       .slice(0, 20);
     // Save the recent snapshot before fetching richer, potentially newer details.
     this.db.transaction(() => {

@@ -1,7 +1,8 @@
 # Match archive and detail redesign
 
-Status: approved and implemented on 2026-10-30. Archive navigation uses the
-workspace detail page; contextual entry points retain the shared dialog.
+Status: approved and implemented on 2026-10-30; list actions updated on 2026-10-31.
+Archive navigation uses the workspace detail page; contextual entry points
+retain the shared dialog.
 Both use [MatchDetails](../../../apps/web/src/features/matches/MatchDetails.tsx)
 and [MatchScoreboard](../../../apps/web/src/features/matches/MatchScoreboard.tsx).
 
@@ -21,13 +22,22 @@ profile dialogs and replay overlays.
 
 - Default to grid view. Keep the grid/list toggle available and preserve the
   selected view when returning from match details within the same workspace.
-- Render the map as ordinary text in list view. Every row has a persistent `View details`
-  button with a trailing chevron and an accessible name containing map and time.
+- Render the map as ordinary text in list view. Merge the details and overflow
+  columns into one Actions column with a connected, outlined shadcn control.
+  Its main `Refresh` button refreshes that match directly; the trailing arrow
+  opens `View details`, `Open BATrace`, and a separated destructive `Delete` item.
+  Give both buttons localized accessible names containing the map and time.
+  Right-align the menu and retain the existing deletion confirmation.
+- Disable refresh while its request is pending and show a spinning refresh icon.
+  Preserve the row and reject duplicate requests; report failures and allow retry.
+  Without a match ID, disable refresh, details, and BATrace while leaving deletion
+  available. Disable deletion while refreshing.
 - Clicking a noninteractive part of the row opens the same detail view. Preserve
   table semantics and a real button for keyboard access. Ignore text selections
   and clicks on menus, links, or other controls.
-- Keep refresh, BATrace, and delete in the existing overflow menu. They must not
-  trigger row navigation.
+- Refresh and menu interactions must not trigger row navigation. Opening details
+  from the menu focuses the detail heading; returning restores the arrow button.
+  Cancelling deletion also restores the arrow button without opening details.
 - Grid cards open details when clicking their noninteractive content, without a
   separate footer button. Use a native, text-styled button in the map heading for
   keyboard entry and focus restoration. Keep player-profile buttons independent
@@ -35,6 +45,30 @@ profile dialogs and replay overlays.
 - Restore account/result filters, sort order, pagination, scroll position, and
   initiating-button focus when returning. Previous/next follows that filtered
   and sorted sequence, including correct disabled boundaries.
+
+## Archive column sizing
+
+Keep the existing shadcn Table and fixed layout. Give the map column the remaining
+width instead of distributing extra space across every column. The account column
+stays compact even on wide windows. Column widths include cell padding:
+
+| Column   | Chinese (px) | English (px) |
+| -------- | ------------ | ------------ |
+| Result   | 84           | 104          |
+| Mode     | 84           | 104          |
+| Map      | 160 minimum  | 160 minimum  |
+| ELO      | 112          | 128          |
+| Duration | 88           | 112          |
+| Time     | 168          | 184          |
+| Account  | 120          | 120          |
+| Actions  | 128          | 144          |
+
+Use the column-size total as the table minimum width: 944px in Chinese and 1056px
+in English. Smaller viewports scroll horizontally within the table; wider
+viewports expand only the map column. Preserve the full date, signed ELO values,
+sort buttons, and split action control. Map names may wrap; account names truncate
+with the complete name available on hover and in the accessibility tree. Keep the
+same column geometry while loading, sorting, filtering, or paginating.
 
 ## Detail hierarchy
 

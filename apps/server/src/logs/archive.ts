@@ -50,7 +50,7 @@ export class LogArchive {
           else if (entry.isFile() && /\.(log|txt)$/i.test(entry.name)) {
             const info = await stat(path);
             const fingerprint = `${info.ino}:${info.birthtimeMs}:${info.size}:${info.mtimeMs}`;
-            const key = `logArchive:v1:${path}`;
+            const key = `logArchive:v2:${path}`;
             if (this.db.state(key, '') === fingerprint) continue;
             const matches = await this.readFile(path, info.size, signal);
             if (signal.aborted) return;

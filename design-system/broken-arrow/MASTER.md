@@ -172,9 +172,18 @@ required by the current interface.
   the underlying lobby member data. Keep player ELO and query results aligned.
 - Overview and Radar retain their independent current/previous selection.
   Contextual match details and player details use the shared dialogs. The archive
-  opens a dedicated workspace detail page at `#archive/match/{fid}` through an
-  explicit list details button, a noninteractive row click, or a grid card click. Preserve filters,
-  sorting, pagination, scroll position, and opener focus when returning.
+  opens a dedicated workspace detail page at `#archive/match/{fid}` through a
+  list action menu, a noninteractive row click, or a grid card click. List rows
+  combine actions into one outlined control: Refresh acts directly, and its arrow
+  opens View details, Open BATrace, and a separated Delete item. Keep pending and
+  missing-ID actions disabled, preserve deletion confirmation, and restore the
+  arrow's focus after returning from details. Preserve filters, sorting,
+  pagination, and scroll position when returning.
+- Archive list columns keep compact widths sized for their localized labels and
+  values. Only the map column absorbs additional window width; the account column
+  stays at 120px, truncates long names, and exposes their full text on hover.
+  Derive the table's minimum width from its column sizes and keep horizontal
+  scrolling within the table viewport. Loading and populated rows share widths.
 - Match details share one content component between the page and dialog. Show
   identity/outcome, recording actions, a compact personal summary, and core,
   combat, and support tabs. Team tables use six columns with tabular numbers.
@@ -188,6 +197,10 @@ required by the current interface.
   within the player column as needed. Player disclosures contain every metric and
   the profile action; award interactions do not toggle the disclosure.
   Preserve unknown outcomes, observers, missing values, and saved ELO colors.
+- Mode labels use `PvE` in both Chinese and English for recognized cooperative
+  scenarios, using the existing mode Badge in lists and details. PvE match details
+  and refresh use local log evidence. Show an unknown outcome when the log has no
+  explicit winner; a PvE mode label does not imply a victory or defeat.
 - While a lazy dialog module loads, announce loading through an out-of-flow
   screen-reader status. Keep the underlying workspace geometry unchanged until
   the dialog portal mounts; do not add loading columns to the application shell.

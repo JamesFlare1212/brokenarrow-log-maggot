@@ -108,6 +108,30 @@ function cachedAnalyzer(db: Database): Analyzer {
 }
 
 describe('canonical BATrace match data', () => {
+  it('preserves PvE evidence across legacy and API normalization without using rating changes as wins', () => {
+    const previous = {
+      ...emptyMatch('9483782'),
+      mode: 'pve' as const,
+      scenario: '- PvE (1-4p) Zombie invasion',
+    };
+    const raw = { ...matchInfo, WinnerTeam: undefined };
+    expect(normalizeMatch(raw, { id: '9483782', localId: '8863', previous })).toMatchObject({
+      mode: 'pve',
+      outcome: 'unknown',
+      winnerTeamId: null,
+    });
+    expect(normalizeMatch({ mode: 'pve' }, { id: '9483782', legacy: true }).mode).toBe('pve');
+    expect(
+      normalizeMatch(
+        { scenario: '- Zombie Survival' },
+        {
+          id: '9483782',
+          legacy: true,
+        },
+      ).mode,
+    ).toBe('pve');
+  });
+
   it('keeps zero ratings, dictionary IDs, missing Alpha and the full metric mapping', () => {
     const match = normalizeMatch({ matchInfo }, { id: '8049993', localId: '8863' });
     expect(match).toMatchObject({
@@ -203,6 +227,21 @@ describe('canonical BATrace match data', () => {
 });
 
 describe('SQLite merging and account views', () => {
+  it('keeps log-derived PvE classification when API or legacy records are merged', () => {
+    const db = database();
+    const remote = normalizeMatch(matchInfo, { id: '9483782' });
+    const local = {
+      ...emptyMatch('9483782'),
+      mode: 'pve' as const,
+      scenario: '- Zombie Survival',
+    };
+    db.saveMatch(remote);
+    db.saveMatch(local);
+    expect(db.match('9483782')).toMatchObject({ mode: 'pve', source: 'api' });
+    db.saveMatch({ ...remote, mode: 'custom' });
+    expect(db.match('9483782')?.mode).toBe('pve');
+  });
+
   it('does not downgrade API facts when the same historical log is replayed', () => {
     const db = database();
     const previous = normalizeMatch(matchInfo, { id: '123', localId: '8863', now: 1_000 });
@@ -611,6 +650,35 @@ describe('player reports and Maggot Index', () => {
       eloDelta: 10,
     });
     expect(progress).toHaveBeenLastCalledWith(12, 13);
+  });
+
+  it('serves known PvE details and force refresh locally in online mode', async () => {
+    const db = database();
+    const local = {
+      ...emptyMatch('9483782'),
+      mode: 'pve' as const,
+      scenario: '- PvE (1-4p) Zombie invasion',
+    };
+    db.saveMatch(local);
+    db.setState('activeAccountId', '8863');
+    db.saveCache('myMatches:8863:10', { matches: [] }, 86400000);
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('', { status: 404 }));
+    const client = new BatraceClient(db, { fetch: fetchImpl }, '4.5.4');
+    const tracker = new TrackerService(db, client, new Analyzer(client, db));
+    try {
+      for (const force of [false, true])
+        expect(await tracker.detail(local.id, force)).toMatchObject({
+          mode: 'pve',
+          source: 'log',
+          outcome: 'unknown',
+          scenario: local.scenario,
+        });
+      await tracker.sync();
+      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(db.match(local.id)).toEqual(local);
+    } finally {
+      await client.close();
+    }
   });
 
   it('rejects an empty match response without creating a phantom archive row', async () => {

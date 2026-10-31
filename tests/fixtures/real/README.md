@@ -1,21 +1,42 @@
-# 本地真实数据样本
+# Captured local game data
 
-The [complete offline BATrace archive](../batrace/offline/README.md) supplements these logs with recorded match details and analyses plus player information, analysis, and recent games for all fixture players. Both development modes and service-backed UI tests load the same archive. `pnpm data:capture` captures missing endpoints with resumable checkpoints; normal development and test commands remain offline.
+This corpus comes from the user's authorized local Broken Arrow GameLogs and
+application SQLite database. Names, player IDs, match IDs, deck names, and recorded
+ratings remain real. The [offline BATrace archive](../batrace/offline/README.md)
+adds match details and analyses, player information, analysis, and recent games.
+Desktop development, browser development, and service-backed UI tests use the same
+recorded sources.
 
-Recorded match and analysis caches in the sibling `batrace/history` corpus are also loaded into isolated development and real-data smoke profiles. Their checksums are verified before import. This enables the integrated score labels and titles offline while keeping this snapshot and its original 454-match archive unchanged. See the [score-label integration notes](../../../../docs/title-medal-comparison.md#integrated-score-label-display).
+- 272 original logs totaling 448,035,631 bytes, covering 2025 through October 30, 2026.
+- 496 identifiable matches: 167 with a FID and 329 without one.
+- The original database snapshot retains 13 API match archives, 600 players, account
+  views, name histories, bans, map names, player snapshots, and 28 API cache entries.
+- All 13 database matches also occur in the logs; the merged archive has 496 matches.
 
-本目录的数据来自用户授权导入的本机 Broken Arrow GameLogs 和应用 SQLite，不是随机生成或演示数据。保留玩家名字、玩家 ID、对局 ID、卡组名及已有真实评分。
+The October 31 expansion added 14 logs and 42 matches. The previous 258 logs,
+database tables, preferences, and active account were preserved exactly. It also
+covers startup-only logs, two- and four-player rosters, a short match without
+points, and estimated durations where no authoritative network duration exists.
 
-- 258 份原始日志，合计 444,014,406 字节，覆盖 2025–2026 年。
-- 454 场可识别对局：125 场有 FID、329 场没有 FID。
-- SQLite 中 13 场 API 档案、600 名玩家、账号视角、改名历史、封禁、地图名、玩家快照和 28 份 API 缓存。
-- 原数据库的 13 场已包含在日志中，完整合并后仍为 454 场。
+`snapshot.json.gz` stores portable database rows and extracted match events.
+`manifest.json` records the capture timestamp, compressed SHA-256, original file
+hashes, byte and line counts, event hashes, and frozen parser facts. Tests verify
+the compressed snapshot and each log's map, roster, local identity, deck, points,
+mode, and authoritative duration before replaying the full archive and deduplication.
 
-`snapshot.json.gz` 保存可移植的数据库行和全部日志中的对局事件；`manifest.json` 保存捕获时间、压缩包 SHA-256、逐文件原始 SHA-256、字节数、行数、提取结果校验和及固定解析基准。测试在加载前校验压缩包，再核对每份日志的地图、名单、归属、卡组、分数和真实网络时长等解析结果。
+The four October 30 zombie scenarios are classified as `pve` directly from their
+recorded scenario names. Their outcomes remain unknown because no explicit winner
+was logged. Golden parser facts include mode classification, and the real-data
+regressions verify all four FIDs without relying on BATrace match availability.
 
-导出只读取允许的游戏数据表，不包含 Chromium 配置、Cookie、登录令牌、私有请求头、原始设置或迁移 JSON。本机绝对路径去除，连接地址一致替换为测试网段地址；名字和数字 ID 保留。日志只保留当前解析器消费的对局事件和相应原始时间戳；提取时同时解析完整原始日志和提取结果，逐文件比较对局事实，任何差异均终止导入。444 MB 原始全文仍在本机游戏目录，不写入 Git。
+Export reads only allowed game-data tables. Browser profiles, cookies, login
+tokens, private headers, original settings, and migration JSON are excluded.
+Absolute paths are removed and network addresses are consistently replaced with
+test addresses. Event extraction parses both each complete original
+log and its compact copy, then requires identical match facts. Original log files
+remain on the user's machine and are never added to Git.
 
-## 使用
+## Offline development and tests
 
 ```sh
 pnpm test
@@ -24,26 +45,60 @@ pnpm dev:web
 pnpm smoke:real
 ```
 
-`pnpm dev` creates a fresh `.test-data/real-dev/run-*/` directory with extracted GameLogs and an isolated SQLite database. The application reads captured cache responses only; cache misses report an error without contacting BATrace or generating replacement ratings. Recording, background queries, and synchronization are disabled by default. Deck and recording paths do not point to real local directories. Refreshes, deletions, and setting changes affect only the current copy. Restarting creates a clean copy and leaves committed fixtures unchanged.
+Each development launch creates an independent writable profile under
+`.test-data/real-dev/` or `.test-data/web-dev/`, containing extracted logs and SQLite.
+Queries and force refreshes use recorded responses; missing endpoints report an
+error. Background queries, synchronization, and recording are disabled by default.
+Deck and recording paths point to the isolated copy. Changes affect only that
+profile; restarting creates a new one.
 
-`pnpm dev:web` 在浏览器中展示同一批真实样本，默认地址为 `http://127.0.0.1:5174/`，支持前端热更新，无需 Electron。每次启动在 `.test-data/web-dev/run-*/` 创建离线副本，页面查询使用真实服务和缓存响应，缺少缓存时明确报错。目录选择、录屏、输入钩子等桌面功能不可用；路径设置不可修改，页面偏好和对局修改仅影响开发副本。
+`pnpm dev` starts Vite and Electron on port 5173. `pnpm dev:web` serves the same
+real data through the browser development interface on port 5174, with hot updates.
+Native directory selection, recording, update installation, and path changes are
+unavailable in browser mode. UI unit tests select the needed records through
+`tests/fixtures/ui.ts`; unconfigured RPC calls fail explicitly.
 
-`pnpm test` 默认包含本目录真实样本的回归，无需单独的真实数据测试命令。`pnpm dev` 同时启动 Vite 和 Electron，默认使用真实样本，其 5173 端口在普通浏览器中直接访问 `/` 会提示使用桌面应用。`pnpm dev:web` 在 5174 端口为浏览器提供本目录的真实测试样本。
+The sibling historical match and analysis captures are also checksum-verified and
+loaded into development and real-data smoke profiles. They supply title and
+score-label evidence without inserting additional archive rows. See the
+[score-label integration notes](../../../../docs/title-medal-comparison.md#integrated-score-label-display).
 
-UI 测试通过 `tests/fixtures/ui.ts` 加载同一份经过校验的样本，在内存数据库中读取对局、账号和离线玩家分析。更新、录制、请求时序及错误等测试场景由各用例显式构造；未配置的 RPC 调用会使测试失败，不生成替代的玩家或对局数据。
+## Update the corpus
 
-## 更新样本
+To update logs while retaining the existing database fixture:
 
-默认从 `%APPDATA%/broken-arrow-log-assistant/assistant.sqlite` 只读导出，并使用其设置中的 GameLogs 目录：
+```sh
+pnpm data:import --logs-only
+pnpm data:capture
+```
+
+`--logs-only` requires an existing checksum-valid snapshot. It preserves its
+database tables, preferences, and active account, then extracts all current logs.
+The default source is the GameLogs directory configured in the local application.
+The capture command fills missing BATrace endpoints, retaining existing responses
+and unchanged response shards. Review current API structure before deciding
+whether older captures need replacement; the latest audit is recorded in
+[`compatibility.json`](../batrace/offline/compatibility.json).
+
+To replace both the database snapshot and logs from the current application:
 
 ```sh
 pnpm data:import
+pnpm data:capture
 ```
 
-也可显式指定来源：
+The default database is `%APPDATA%/broken-arrow-log-assistant/assistant.sqlite`.
+Explicit sources can be supplied with either import mode:
 
 ```sh
-pnpm data:import --user-data "C:/path/to/app-data" --logs "F:/path/to/GameLogs"
+pnpm data:import --logs-only --user-data "C:/path/to/app-data" --logs "F:/path/to/GameLogs"
 ```
 
-导入使用 SQLite 只读事务，包含已经提交到 WAL 的记录，不修改原数据库及游戏日志。更新后运行 `pnpm test` 和 `pnpm smoke:real`，检查样本变化，再提交压缩包和清单。原始数据不参与 CI，其他开发者无需安装游戏或提供账号即可运行完整回归。
+With `--logs-only` and an explicit `--logs` path, no local application database is
+required; only the existing fixture and selected logs are read.
+
+Import uses a read-only SQLite transaction, including committed WAL data, and
+never changes the application database or original logs. After updating both
+corpora, review the fixture diff and run `pnpm check`, `pnpm format:check`,
+`pnpm smoke`, and `pnpm smoke:real`. CI uses the committed compact data and requires
+neither a game installation nor network access.

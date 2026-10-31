@@ -23,7 +23,7 @@ import type {
   RpcMethod,
   RpcOutputs,
 } from '@ba/contracts';
-import { configSchema } from '@ba/contracts';
+import { BATRACE_ORIGIN, configSchema } from '@ba/contracts';
 import { formatMetric, formatDuration, formatTime, matchTitles, summarizeMaggot } from '@ba/shared';
 import { App } from '../apps/web/src/app/App';
 import { AppProvider, useApp } from '../apps/web/src/app/state';
@@ -2156,6 +2156,51 @@ describe('user interaction regressions', () => {
     expect(native.calls.filter((call) => call.method === 'config.update')).toEqual([]);
   });
 
+  it.each(['zh', 'en'] as const)(
+    'shows the PvE mode in the %s archive and match detail',
+    async (locale) => {
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const pve = matchFixture({
+        mode: 'pve',
+        source: 'log',
+        outcome: 'unknown',
+        winnerTeamId: null,
+        scenario: '- Zombie Survival',
+        eloBefore: null,
+        eloAfter: null,
+      });
+      const native = nativeFixture(initial, {
+        'matches.list': () => [pve],
+        'matches.detail': () => pve,
+      });
+      render(<MatchArchive />, { wrapper: wrapper(native.api) });
+      fireEvent.click(
+        await screen.findByRole('switch', {
+          name: translate(locale, 'hideUnknownResults'),
+        }),
+      );
+      expect(await screen.findByText('PvE')).toBeTruthy();
+      fireEvent.click(
+        await screen.findByRole('button', {
+          name: translate(locale, 'matchOpenDetail', {
+            map: pve.map,
+            time: formatTime(pve.endedAt ?? pve.startedAt, locale),
+          }),
+        }),
+      );
+      await waitFor(() =>
+        expect(native.calls.some((call) => call.method === 'matches.detail')).toBe(true),
+      );
+      expect(
+        await screen.findByText('PvE', {
+          selector: '.match-detail-page [data-slot="badge"]',
+        }),
+      ).toBeTruthy();
+      expect(location.hash).toBe('#archive/match/' + pve.fid);
+    },
+  );
+
   it('retains an invalid match draft, associates errors and allows retry without dismissing a pending save', async () => {
     const pending = deferred<RpcOutputs['matches.add']>();
     let attempts = 0;
@@ -3073,7 +3118,12 @@ describe('user interaction regressions', () => {
     });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
     fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
-    const trigger = await screen.findByRole('button', { name: `操作: #${match.fid || match.id}` });
+    const trigger = await screen.findByRole('button', {
+      name: translate('zh', 'matchActions', {
+        map: match.map,
+        time: formatTime(match.endedAt ?? match.startedAt, 'zh'),
+      }),
+    });
     const openConfirmation = async () => {
       await user.click(trigger);
       await user.click(await screen.findByRole('menuitem', { name: '删除' }));
@@ -4389,7 +4439,7 @@ describe('application loading layouts', () => {
         fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
       const table = await screen.findByRole('table');
       const header = table.querySelector('thead');
-      const columns = kind === 'archive' ? 9 : 5;
+      const columns = kind === 'archive' ? 8 : 5;
       expect(table.getAttribute('aria-busy')).toBe('true');
       expect(table.querySelectorAll('th')).toHaveLength(columns);
       expect(table.querySelectorAll('tbody tr')).toHaveLength(5);
@@ -4486,8 +4536,116 @@ describe('application loading layouts', () => {
   });
 });
 
+describe('match archive row actions', () => {
+  it.each(['zh', 'en'] as const)(
+    'refreshes a match directly in %s, rejects repeated clicks, and keeps the row while reloading',
+    async (locale) => {
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const match = matchFixture({ outcome: 'win' });
+      const detail = deferred<RpcOutputs['matches.detail']>();
+      const list = deferred<RpcOutputs['matches.list']>();
+      let listCalls = 0;
+      const native = nativeFixture(initial, {
+        'matches.list': () => (++listCalls === 1 ? [match] : list.promise),
+        'matches.detail': () => detail.promise,
+      });
+      render(<MatchArchive />, { wrapper: wrapper(native.api) });
+      fireEvent.click(await screen.findByRole('radio', { name: translate(locale, 'listView') }));
+      const row = (await screen.findByText(match.map)).closest('tr')!;
+      const refresh = within(row).getByRole('button', { name: /^(刷新|Refresh)/ });
+      fireEvent.click(refresh);
+      fireEvent.click(refresh);
+      fireEvent.click(refresh.parentElement!);
+      expect(native.calls.filter((call) => call.method === 'matches.detail')).toEqual([
+        { method: 'matches.detail', input: { fid: match.fid, force: true } },
+      ]);
+      expect(refresh.hasAttribute('disabled')).toBe(true);
+      expect(refresh.getAttribute('aria-busy')).toBe('true');
+      act(() =>
+        native.emit({
+          type: 'watcher',
+          watcher: native.backend.watcher,
+          revision: native.backend.revision + 1,
+        }),
+      );
+      const currentRefresh = within(row).getByRole('button', { name: /^(刷新|Refresh)/ });
+      expect(currentRefresh.hasAttribute('disabled')).toBe(true);
+      fireEvent.click(currentRefresh);
+      expect(native.calls.filter((call) => call.method === 'matches.detail')).toHaveLength(1);
+      expect(screen.queryByRole('menu')).toBeNull();
+      expect(document.querySelector('.match-detail-page')).toBeNull();
+      const user = userEvent.setup();
+      await user.click(within(row).getByRole('button', { name: /^(更多操作|More actions)/ }));
+      expect(
+        screen
+          .getByRole('menuitem', { name: translate(locale, 'delete') })
+          .getAttribute('aria-disabled'),
+      ).toBe('true');
+      await user.keyboard('{Escape}');
+      await act(async () => detail.resolve(match));
+      expect(listCalls).toBe(2);
+      expect(refresh.hasAttribute('disabled')).toBe(true);
+      expect(screen.getByText(match.map).closest('tr')).toBe(row);
+      expect(row.querySelector('[data-slot="skeleton"]')).toBeNull();
+      await act(async () => list.resolve([match]));
+      expect(refresh.hasAttribute('disabled')).toBe(false);
+      expect(refresh.getAttribute('aria-busy')).toBe('false');
+      expect(document.querySelector('.match-detail-page')).toBeNull();
+    },
+  );
+
+  it('keeps a failed refresh in the archive, reports the error, and allows retry', async () => {
+    const match = matchFixture({ outcome: 'win' });
+    const pending = deferred<RpcOutputs['matches.detail']>();
+    let attempts = 0;
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => [match],
+      'matches.detail': () => (++attempts === 1 ? pending.promise : match),
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
+    const row = (await screen.findByText(match.map)).closest('tr')!;
+    const refresh = within(row).getByRole('button', { name: /^刷新/ });
+    fireEvent.click(refresh);
+    await act(async () => pending.reject(new Error('Match refresh unavailable')));
+    expect(await screen.findByText('Error: Match refresh unavailable')).toBeTruthy();
+    expect(refresh.hasAttribute('disabled')).toBe(false);
+    expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(1);
+    expect(screen.getByText(match.map).closest('tr')).toBe(row);
+    fireEvent.click(refresh);
+    await waitFor(() => expect(refresh.getAttribute('aria-busy')).toBe('false'));
+    expect(attempts).toBe(2);
+    expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(2);
+    expect(document.querySelector('.match-detail-page')).toBeNull();
+  });
+
+  it('disables remote actions without a match ID but still allows confirmed deletion', async () => {
+    const match = matchFixture({ fid: null, outcome: 'win' });
+    const remove = vi.fn(() => ({ removed: true }));
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => [match],
+      'matches.delete': remove,
+    });
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
+    const row = (await screen.findByText(match.map)).closest('tr')!;
+    expect(within(row).getByRole('button', { name: /^刷新/ }).hasAttribute('disabled')).toBe(true);
+    const user = userEvent.setup();
+    await user.click(within(row).getByRole('button', { name: /^更多操作/ }));
+    for (const name of ['查看详情', '在 BATrace 打开'])
+      expect(screen.getByRole('menuitem', { name }).getAttribute('aria-disabled')).toBe('true');
+    expect(native.calls.some((call) => call.method === 'matches.detail')).toBe(false);
+    await user.click(screen.getByRole('menuitem', { name: '删除' }));
+    const dialog = await screen.findByRole('alertdialog', { name: '删除对局记录？' });
+    expect(remove).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: '删除' }));
+    await waitFor(() => expect(remove).toHaveBeenCalledExactlyOnceWith({ id: match.id }));
+  });
+});
+
 describe('match detail navigation and disclosure', () => {
-  it('opens explicit details with the keyboard, follows filtered sorting, and restores archive focus and scroll', async () => {
+  it('opens details from the keyboard menu, follows filtered sorting, and restores archive focus and scroll', async () => {
     history.replaceState(null, '', '#archive');
     const rows = [
       matchFixture({
@@ -4523,9 +4681,12 @@ describe('match detail navigation and disclosure', () => {
     const table = screen.getByRole('table', { name: '对局档案' });
     const viewport = table.closest<HTMLElement>('.archive-table')!;
     viewport.scrollTop = 120;
-    const opener = within(table).getByRole('button', { name: /查看 First victory/ });
+    const opener = within(table).getByRole('button', { name: /更多操作：First victory/ });
     opener.focus();
-    await userEvent.setup().keyboard('{Enter}');
+    const user = userEvent.setup();
+    await user.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(await screen.findByRole('menuitem', { name: '查看详情' }));
+    await user.keyboard('{Enter}');
     const heading = await screen.findByRole('heading', { name: 'First victory' });
     expect(document.activeElement).toBe(heading);
     expect(screen.queryByRole('table', { name: '对局档案' })).toBeNull();
@@ -4543,7 +4704,11 @@ describe('match detail navigation and disclosure', () => {
 
   it('ignores selection and secondary controls but opens a noninteractive archive row', async () => {
     const match = matchFixture();
-    const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [match] });
+    const openExternal = vi.fn(() => null);
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => [match],
+      'external.open': openExternal,
+    });
     render(<MatchArchive />, { wrapper: wrapper(native.api) });
     fireEvent.click(await screen.findByRole('radio', { name: '列表视图' }));
     const map = await screen.findByText(match.map);
@@ -4555,10 +4720,14 @@ describe('match detail navigation and disclosure', () => {
     expect(native.calls.some((call) => call.method === 'matches.detail')).toBe(false);
     selection.mockRestore();
     const row = map.closest('tr')!;
-    await userEvent.setup().click(within(row).getByRole('button', { name: /^操作:/ }));
+    await userEvent.setup().click(within(row).getByRole('button', { name: /^更多操作/ }));
     expect(screen.getByRole('menu')).toBeTruthy();
     expect(native.calls.some((call) => call.method === 'matches.detail')).toBe(false);
-    await userEvent.setup().keyboard('{Escape}');
+    await userEvent.setup().click(screen.getByRole('menuitem', { name: '在 BATrace 打开' }));
+    expect(openExternal).toHaveBeenCalledExactlyOnceWith({
+      url: `${BATRACE_ORIGIN}/match/${match.fid}`,
+    });
+    expect(document.querySelector('.match-detail-page')).toBeNull();
     fireEvent.click(map);
     await screen.findByRole('heading', { name: match.map });
     expect(native.calls.filter((call) => call.method === 'matches.detail')).toHaveLength(1);
