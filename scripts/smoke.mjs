@@ -61,13 +61,16 @@ if (
   (process.platform === 'win32' &&
     (!result.windowChrome ||
       Object.values(result.windowChrome).some((passed) => passed !== true))) ||
-  (realData && result.matches !== expectedMatches)
+  (realData &&
+    (result.matches !== expectedMatches ||
+      !result.matchDetails ||
+      Object.values(result.matchDetails).some((passed) => passed !== true)))
 ) {
   console.error(errors || 'Electron smoke test failed to initialize');
   process.exitCode = 1;
 } else
   console.log(
     realData
-      ? `Electron real-data smoke passed: ${result.matches} real matches loaded through the native bridge, offline.`
+      ? `Electron real-data smoke passed: ${result.matches} real matches loaded offline; match navigation, disclosures, and responsive scoreboards verified.`
       : 'Electron smoke passed: SQLite service, sandboxed preload, React renderer and integrated window chrome initialized.',
   );

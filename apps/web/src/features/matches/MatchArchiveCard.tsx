@@ -8,6 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ import { useApp } from '../../app/state';
 import { Button } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ChevronRight } from 'lucide-react';
 
 export function MatchArchiveCardSkeleton() {
   return (
@@ -54,8 +56,8 @@ export function MatchArchiveCardSkeleton() {
   );
 }
 
-export function MatchArchiveCard({ match }: { match: Match }) {
-  const { openModal, notify } = useApp();
+export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () => void }) {
+  const { openModal } = useApp();
   const { t } = useI18n();
   const localTeam = match.players.find((player) => player.id === match.localPlayerId)?.teamId;
   const eloDelta =
@@ -65,15 +67,7 @@ export function MatchArchiveCard({ match }: { match: Match }) {
     <Card className="archive-card">
       <CardHeader>
         <CardTitle role="heading" aria-level={3} className="archive-card-title">
-          <Button
-            variant="link"
-            className="archive-card-map"
-            onClick={() =>
-              match.fid ? openModal({ type: 'match', fid: match.fid }) : notify(t('offline'))
-            }
-          >
-            {match.map || '#' + match.id}
-          </Button>
+          {match.map || '#' + match.id}
         </CardTitle>
         <CardDescription className="archive-card-meta">
           <span>#{match.fid || match.id}</span>
@@ -138,6 +132,12 @@ export function MatchArchiveCard({ match }: { match: Match }) {
           <p className="archive-card-roster-empty muted">{t('archiveRosterUnavailable')}</p>
         )}
       </CardContent>
+      <CardFooter variant="plain">
+        <Button size="sm" data-match-open={match.id} disabled={!match.fid} onClick={onOpen}>
+          {t('matchViewDetails')}
+          <ChevronRight data-icon="inline-end" aria-hidden="true" />
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

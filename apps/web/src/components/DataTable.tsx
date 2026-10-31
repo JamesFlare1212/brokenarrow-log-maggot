@@ -14,6 +14,7 @@ export function DataTable<T>({
   empty,
   scrollRef,
   className,
+  onRowOpen,
 }: {
   table: TableModel<T>;
   label: string;
@@ -22,6 +23,7 @@ export function DataTable<T>({
   empty: ReactNode;
   scrollRef?: Ref<HTMLDivElement>;
   className?: string;
+  onRowOpen?: (value: T) => void;
 }) {
   return (
     <div
@@ -83,7 +85,26 @@ export function DataTable<T>({
         <TableBody>
           {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow
+                key={row.id}
+                data-row-action={onRowOpen ? true : undefined}
+                onClick={
+                  onRowOpen
+                    ? (event) => {
+                        if (
+                          event.button !== 0 ||
+                          !(event.target instanceof Element) ||
+                          event.target.closest(
+                            'button, a, input, select, textarea, [role="menu"], [role="menuitem"]',
+                          ) ||
+                          window.getSelection()?.toString()
+                        )
+                          return;
+                        onRowOpen(row.original);
+                      }
+                    : undefined
+                }
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
                     key={cell.id}

@@ -18,7 +18,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { BATRACE_ORIGIN } from '@ba/contracts';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Archive as faBoxArchive,
@@ -26,6 +26,7 @@ import {
   RefreshCw as faArrowsRotate,
   LayoutGrid,
   List,
+  ChevronRight,
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
@@ -40,10 +41,12 @@ import { Pagination } from '../../components/Pagination';
 import { MatchArchiveCard, MatchArchiveCardSkeleton } from './MatchArchiveCard';
 import { LoadingStatus } from '../../components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MatchDetails } from './MatchDetails';
+import { archiveMatchFromHash, archiveMatchHash } from './routes';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
   const confirm = useConfirmation();
-  const { api, state, openModal, notify } = useApp(),
+  const { api, state, notify } = useApp(),
     { t, locale } = useI18n(),
     matches = useRequest<Match[]>(),
     [accounts, setAccounts] = useState<Account[]>([]),
@@ -59,6 +62,54 @@ export function MatchArchive() {
     [sorting, setSorting] = useState<SortingState>([{ id: 'time', desc: true }]),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
   const table = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLElement>(null);
+  const detailPage = useRef<HTMLDivElement>(null);
+  const [detailId, setDetailId] = useState(() => archiveMatchFromHash(location.hash));
+  const previousDetail = useRef(detailId);
+  const returnState = useRef({ id: '', scrollTop: 0 });
+  useEffect(() => {
+    const navigate = () => setDetailId(archiveMatchFromHash(location.hash));
+    window.addEventListener('popstate', navigate);
+    window.addEventListener('hashchange', navigate);
+    return () => {
+      window.removeEventListener('popstate', navigate);
+      window.removeEventListener('hashchange', navigate);
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (detailId && detailPage.current) detailPage.current.scrollTop = 0;
+    if (previousDetail.current && !detailId) {
+      if (table.current) table.current.scrollTop = returnState.current.scrollTop;
+      const opener = Array.from(
+        panel.current?.querySelectorAll<HTMLButtonElement>('[data-match-open]') ?? [],
+      ).find((button) => button.dataset.matchOpen === returnState.current.id);
+      (opener ?? panel.current)?.focus({ preventScroll: true });
+    }
+    previousDetail.current = detailId;
+  }, [detailId]);
+  const openMatch = useCallback(
+    (match: Match) => {
+      if (!match.fid) {
+        notify(t('offline'));
+        return;
+      }
+      returnState.current = { id: match.id, scrollTop: table.current?.scrollTop ?? 0 };
+      history.pushState({ baArchiveDetail: true }, '', archiveMatchHash(match.fid));
+      setDetailId(match.fid);
+    },
+    [notify, locale],
+  );
+  const returnToArchive = () => {
+    if (history.state?.baArchiveDetail) history.back();
+    else {
+      history.replaceState(null, '', '#archive');
+      setDetailId(null);
+    }
+  };
+  const navigateMatch = (fid: string) => {
+    history.replaceState(history.state, '', archiveMatchHash(fid));
+    setDetailId(fid);
+  };
   const validFid = /^\d+$/.test(fid.trim());
   const fidError = addError || (fid.trim() && !validFid ? t('matchIdInvalid') : null);
   const filtered = useMemo(
@@ -127,18 +178,7 @@ export function MatchArchive() {
         header: t('map'),
         size: 160,
         cell: ({ row }) => (
-          <Button
-            variant="link"
-            size="sm"
-            className="archive-open-match"
-            onClick={() =>
-              row.original.fid
-                ? openModal({ type: 'match', fid: row.original.fid })
-                : notify(t('offline'))
-            }
-          >
-            {row.original.map || '#' + row.original.id}
-          </Button>
+          <span className="archive-map-name">{row.original.map || '#' + row.original.id}</span>
         ),
       },
       {
@@ -180,6 +220,27 @@ export function MatchArchive() {
         header: t('account'),
         size: 150,
         cell: ({ row }) => row.original.localPersona || '—',
+      },
+      {
+        id: 'details',
+        header: '',
+        size: 120,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Button
+            size="sm"
+            data-match-open={row.original.id}
+            disabled={!row.original.fid}
+            aria-label={t('matchOpenDetail', {
+              map: row.original.map || row.original.id,
+              time: formatTime(row.original.endedAt ?? row.original.startedAt, locale),
+            })}
+            onClick={() => openMatch(row.original)}
+          >
+            {t('matchViewDetails')}
+            <ChevronRight data-icon="inline-end" aria-hidden="true" />
+          </Button>
+        ),
       },
       {
         id: 'actions',
@@ -237,7 +298,7 @@ export function MatchArchive() {
         },
       },
     ],
-    [api, account, locale, openModal, notify, confirm, matches.load],
+    [api, account, locale, openMatch, notify, confirm, matches.load],
   );
   const dataTable = useReactTable({
     data: filtered,
@@ -260,6 +321,14 @@ export function MatchArchive() {
     getPaginationRowModel: getPaginationRowModel(),
     autoResetPageIndex: false,
   });
+  const sequence = dataTable
+    .getPrePaginationRowModel()
+    .rows.map((row) => row.original)
+    .filter((match) => match.fid);
+  const detailIndex = sequence.findIndex((match) => match.fid === detailId);
+  const previous = sequence[detailIndex - 1];
+  const next = detailIndex >= 0 ? sequence[detailIndex + 1] : undefined;
+  const detailSummary = matches.data?.find((match) => match.fid === detailId);
   const empty = (
     <Empty
       icon={<Icon icon={faBoxArchive} size={26} />}
@@ -283,235 +352,258 @@ export function MatchArchive() {
     </Empty>
   );
   return (
-    <section className="archive-panel" aria-label={t('archive')}>
-      <div className="archive-toolbar">
-        <div className="archive-filters">
-          <Field id="archive-account" label={t('account')} labelHidden>
-            <NativeSelect
-              id="archive-account"
-              value={account}
-              onChange={(e) => {
-                setAccount(e.target.value);
+    <>
+      <section
+        className="archive-panel"
+        aria-label={t('archive')}
+        hidden={Boolean(detailId)}
+        ref={panel}
+        tabIndex={-1}
+      >
+        <div className="archive-toolbar">
+          <div className="archive-filters">
+            <Field id="archive-account" label={t('account')} labelHidden>
+              <NativeSelect
+                id="archive-account"
+                value={account}
+                onChange={(e) => {
+                  setAccount(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <NativeSelectOption value="">{t('allAccounts')}</NativeSelectOption>
+                {accounts.map((a) => (
+                  <NativeSelectOption key={a.id} value={a.id}>
+                    {a.name} · #{a.id}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={outcome}
+              onValueChange={(value) => {
+                if (value) {
+                  setOutcome(value as typeof outcome);
+                  setPage(1);
+                }
+              }}
+              aria-label={t('result')}
+            >
+              {(['all', 'win', 'loss'] as const).map((value) => (
+                <ToggleGroupItem value={value} key={value}>
+                  {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+            <Toggle
+              id="archive-hide-unknown"
+              label={t('hideUnknownResults')}
+              checked={hideUnknown}
+              onChange={(value) => {
+                setHideUnknown(value);
                 setPage(1);
               }}
-            >
-              <NativeSelectOption value="">{t('allAccounts')}</NativeSelectOption>
-              {accounts.map((a) => (
-                <NativeSelectOption key={a.id} value={a.id}>
-                  {a.name} · #{a.id}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </Field>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            value={outcome}
-            onValueChange={(value) => {
-              if (value) {
-                setOutcome(value as typeof outcome);
-                setPage(1);
-              }
-            }}
-            aria-label={t('result')}
-          >
-            {(['all', 'win', 'loss'] as const).map((value) => (
-              <ToggleGroupItem value={value} key={value}>
-                {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-          <Toggle
-            id="archive-hide-unknown"
-            label={t('hideUnknownResults')}
-            checked={hideUnknown}
-            onChange={(value) => {
-              setHideUnknown(value);
-              setPage(1);
-            }}
-          />
-        </div>
-        <div className="archive-results-actions">
-          <small className="muted inline-flex items-center gap-2">
-            {t('samples')}:{' '}
-            {loading ? <Skeleton className="h-4 w-8" aria-hidden="true" /> : filtered.length}
-          </small>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            aria-label={t('archiveView')}
-            value={view}
-            onValueChange={(value) => {
-              if (value === 'grid' || value === 'list') setView(value);
-            }}
-          >
-            <ToggleGroupItem value="grid" aria-label={t('gridView')}>
-              <LayoutGrid aria-hidden="true" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label={t('listView')}>
-              <List aria-hidden="true" />
-            </ToggleGroupItem>
-          </ToggleGroup>
-          <Button
-            disabled={matches.pending || scanning}
-            onClick={() => void scan()}
-            aria-busy={scanning}
-          >
-            <Icon
-              icon={faArrowsRotate}
-              size={15}
-              spin={matches.pending || scanning}
-              aria-hidden="true"
             />
-            {t(scanning ? 'scanningLogs' : 'refresh')}
-          </Button>
-          <Button variant="default" onClick={() => setAddDialog(true)}>
-            <Icon icon={faPlus} />
-            {t('addMatch')}
-          </Button>
+          </div>
+          <div className="archive-results-actions">
+            <small className="muted inline-flex items-center gap-2">
+              {t('samples')}:{' '}
+              {loading ? <Skeleton className="h-4 w-8" aria-hidden="true" /> : filtered.length}
+            </small>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              aria-label={t('archiveView')}
+              value={view}
+              onValueChange={(value) => {
+                if (value === 'grid' || value === 'list') setView(value);
+              }}
+            >
+              <ToggleGroupItem value="grid" aria-label={t('gridView')}>
+                <LayoutGrid aria-hidden="true" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label={t('listView')}>
+                <List aria-hidden="true" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button
+              disabled={matches.pending || scanning}
+              onClick={() => void scan()}
+              aria-busy={scanning}
+            >
+              <Icon
+                icon={faArrowsRotate}
+                size={15}
+                spin={matches.pending || scanning}
+                aria-hidden="true"
+              />
+              {t(scanning ? 'scanningLogs' : 'refresh')}
+            </Button>
+            <Button variant="default" onClick={() => setAddDialog(true)}>
+              <Icon icon={faPlus} />
+              {t('addMatch')}
+            </Button>
+          </div>
         </div>
-      </div>
-      {matches.error && <Notice error>{matches.error}</Notice>}
-      {view === 'grid' ? (
-        <div
-          className="archive-grid-viewport scroll-fade scroll-fade-4"
-          ref={table}
-          tabIndex={0}
-          aria-busy={matches.pending}
-        >
-          {dataTable.getRowModel().rows.length ? (
-            <ul className="archive-grid" aria-label={t('archive')}>
-              {dataTable.getRowModel().rows.map((row) => (
-                <li key={row.id}>
-                  <MatchArchiveCard match={row.original} />
-                </li>
-              ))}
-            </ul>
-          ) : loading ? (
-            <>
-              <LoadingStatus />
-              <ul className="archive-grid" aria-label={t('archive')} aria-busy="true">
-                {Array.from({ length: 6 }, (_, index) => (
-                  <li key={index}>
-                    <MatchArchiveCardSkeleton />
+        {matches.error && <Notice error>{matches.error}</Notice>}
+        {view === 'grid' ? (
+          <div
+            className="archive-grid-viewport scroll-fade scroll-fade-4"
+            ref={table}
+            tabIndex={0}
+            aria-busy={matches.pending}
+          >
+            {dataTable.getRowModel().rows.length ? (
+              <ul className="archive-grid" aria-label={t('archive')}>
+                {dataTable.getRowModel().rows.map((row) => (
+                  <li key={row.id}>
+                    <MatchArchiveCard match={row.original} onOpen={() => openMatch(row.original)} />
                   </li>
                 ))}
               </ul>
-            </>
-          ) : (
-            empty
-          )}
+            ) : loading ? (
+              <>
+                <LoadingStatus />
+                <ul className="archive-grid" aria-label={t('archive')} aria-busy="true">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <li key={index}>
+                      <MatchArchiveCardSkeleton />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              empty
+            )}
+          </div>
+        ) : (
+          <div className="data-table-surface">
+            <DataTable
+              table={dataTable}
+              label={t('archive')}
+              pending={matches.pending || loading}
+              loading={loading}
+              scrollRef={table}
+              className="archive-table"
+              empty={empty}
+              onRowOpen={openMatch}
+            />
+          </div>
+        )}
+        <div className="results-pagination">
+          <Pagination
+            page={currentPage}
+            pageSize={PAGE_SIZE}
+            total={filtered.length}
+            label={t('archivePagination')}
+            onPageChange={(value) => dataTable.setPageIndex(value - 1)}
+            showSinglePage
+            pending={loading}
+          />
         </div>
-      ) : (
-        <div className="data-table-surface">
-          <DataTable
-            table={dataTable}
-            label={t('archive')}
-            pending={matches.pending || loading}
-            loading={loading}
-            scrollRef={table}
-            className="archive-table"
-            empty={empty}
+        <Dialog
+          open={addDialog}
+          title={t('addMatch')}
+          dismissible={!adding}
+          onClose={() => {
+            if (!adding) {
+              setAddDialog(false);
+              setAddError(null);
+            }
+          }}
+        >
+          <form
+            className="add-match-form"
+            aria-busy={adding}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (adding || !validFid) return;
+              setAdding(true);
+              setAddError(null);
+              void api
+                .invoke('matches.add', { fid: fid.trim() })
+                .then(() => {
+                  setFid('');
+                  setAddDialog(false);
+                  notify(t('success'));
+                  refresh();
+                })
+                .catch((e) => setAddError(String(e)))
+                .finally(() => setAdding(false));
+            }}
+          >
+            <FieldGroup>
+              <FormField
+                data-invalid={Boolean(fidError) || undefined}
+                data-disabled={adding || undefined}
+              >
+                <FieldLabel htmlFor="match-id">{t('matchId')}</FieldLabel>
+                <Input
+                  id="match-id"
+                  autoFocus
+                  autoComplete="off"
+                  disabled={adding}
+                  inputMode="numeric"
+                  placeholder="8050000"
+                  value={fid}
+                  onChange={(e) => {
+                    setFid(e.target.value);
+                    setAddError(null);
+                  }}
+                  maxLength={32}
+                  aria-invalid={Boolean(fidError) || undefined}
+                  aria-describedby={fidError ? 'match-id-error' : 'match-id-hint'}
+                />
+                {fidError ? (
+                  <FieldError id="match-id-error">{fidError}</FieldError>
+                ) : (
+                  <FieldDescription id="match-id-hint">{t('matchIdHint')}</FieldDescription>
+                )}
+              </FormField>
+            </FieldGroup>
+            <div className="actions">
+              <Button
+                variant="default"
+                type="submit"
+                disabled={adding || !validFid}
+                aria-busy={adding}
+              >
+                {adding ? (
+                  <Spinner data-icon="inline-start" aria-hidden="true" />
+                ) : (
+                  <Icon icon={faPlus} data-icon="inline-start" />
+                )}
+                {t(adding ? 'loading' : 'addMatch')}
+              </Button>
+              <Button
+                disabled={adding}
+                onClick={() => {
+                  setAddDialog(false);
+                  setAddError(null);
+                }}
+              >
+                {t('cancel')}
+              </Button>
+            </div>
+          </form>
+        </Dialog>
+      </section>
+      {detailId && (
+        <div className="match-detail-page" ref={detailPage}>
+          <MatchDetails
+            key={detailId}
+            fid={detailId}
+            summary={detailSummary}
+            onBack={returnToArchive}
+            onPrevious={previous?.fid ? () => navigateMatch(previous.fid!) : undefined}
+            onNext={next?.fid ? () => navigateMatch(next.fid!) : undefined}
+            position={detailIndex + 1}
+            total={sequence.length}
           />
         </div>
       )}
-      <div className="results-pagination">
-        <Pagination
-          page={currentPage}
-          pageSize={PAGE_SIZE}
-          total={filtered.length}
-          label={t('archivePagination')}
-          onPageChange={(value) => dataTable.setPageIndex(value - 1)}
-          showSinglePage
-          pending={loading}
-        />
-      </div>
-      <Dialog
-        open={addDialog}
-        title={t('addMatch')}
-        dismissible={!adding}
-        onClose={() => {
-          if (!adding) {
-            setAddDialog(false);
-            setAddError(null);
-          }
-        }}
-      >
-        <form
-          className="add-match-form"
-          aria-busy={adding}
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (adding || !validFid) return;
-            setAdding(true);
-            setAddError(null);
-            void api
-              .invoke('matches.add', { fid: fid.trim() })
-              .then(() => {
-                setFid('');
-                setAddDialog(false);
-                notify(t('success'));
-                refresh();
-              })
-              .catch((e) => setAddError(String(e)))
-              .finally(() => setAdding(false));
-          }}
-        >
-          <FieldGroup>
-            <FormField
-              data-invalid={Boolean(fidError) || undefined}
-              data-disabled={adding || undefined}
-            >
-              <FieldLabel htmlFor="match-id">{t('matchId')}</FieldLabel>
-              <Input
-                id="match-id"
-                autoFocus
-                autoComplete="off"
-                disabled={adding}
-                inputMode="numeric"
-                placeholder="8050000"
-                value={fid}
-                onChange={(e) => {
-                  setFid(e.target.value);
-                  setAddError(null);
-                }}
-                maxLength={32}
-                aria-invalid={Boolean(fidError) || undefined}
-                aria-describedby={fidError ? 'match-id-error' : 'match-id-hint'}
-              />
-              {fidError ? (
-                <FieldError id="match-id-error">{fidError}</FieldError>
-              ) : (
-                <FieldDescription id="match-id-hint">{t('matchIdHint')}</FieldDescription>
-              )}
-            </FormField>
-          </FieldGroup>
-          <div className="actions">
-            <Button
-              variant="default"
-              type="submit"
-              disabled={adding || !validFid}
-              aria-busy={adding}
-            >
-              {adding ? (
-                <Spinner data-icon="inline-start" aria-hidden="true" />
-              ) : (
-                <Icon icon={faPlus} data-icon="inline-start" />
-              )}
-              {t(adding ? 'loading' : 'addMatch')}
-            </Button>
-            <Button
-              disabled={adding}
-              onClick={() => {
-                setAddDialog(false);
-                setAddError(null);
-              }}
-            >
-              {t('cancel')}
-            </Button>
-          </div>
-        </form>
-      </Dialog>
-    </section>
+    </>
   );
 }

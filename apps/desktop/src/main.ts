@@ -339,10 +339,13 @@ async function start(): Promise<void> {
       }
       if (failures.length) result.windowGeometry = failures;
     }
-    if (offline)
+    if (offline) {
       result.matches = await window.webContents.executeJavaScript(
         "window.assistant.invoke('matches.list', {}).then(matches => matches.length)",
       );
+      const { verifyMatchDetails } = await import('./match-smoke');
+      result.matchDetails = await verifyMatchDetails(window);
+    }
     console.log('SMOKE_RESULT', JSON.stringify(result));
     await shutdown();
   }

@@ -72,6 +72,21 @@ live in `apps/web/src/styles/layout.css`. Card and full-size card choices share
 the [UI design system](../design-system/broken-arrow/MASTER.md) and
 [component audit](ui-audit.md) for the current rules and deliberate exceptions.
 
+Match archive details use `#archive/match/{fid}` within the existing workspace.
+The mounted archive retains its account/result filters, sorted row model,
+pagination, and scroll state while details are visible. Explicit row/card buttons
+provide keyboard access; noninteractive row clicks open the same page. Browser
+Back and the detail back action restore the initiating control. Previous/next
+uses the filtered, sorted sequence before pagination and replaces the detail
+history entry. Contextual match dialogs reuse the same detail component.
+
+Match statistics are grouped into core, combat, and support tables. Player
+disclosures retain all metrics and award evidence. Match and recording requests
+settle independently; refresh errors preserve cached content and the active tab.
+Local team membership comes from the player ID, outcomes come from recorded
+results, and incomplete team totals remain unavailable. No new backend schema
+or statistical inference is introduced by the layout.
+
 ## Optional anonymous analytics
 
 The main process sends explicit Aptabase events after the user saves an enabled

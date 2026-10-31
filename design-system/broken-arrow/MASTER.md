@@ -7,6 +7,10 @@ The implementation files below are the source of token values and component APIs
 
 ## Sources of truth
 
+The implemented [match archive and detail specification](proposals/match-detail.md)
+documents the approved redesign. Its isolated prototype remains a historical
+design reference; application components are the source of current behavior.
+
 | Concern                                                                   | Implementation                                                                                                                   |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Theme primitives, semantic colors, glass tokens, typography, radius scale | [index.css](../../apps/web/src/styles/index.css)                                                                                 |
@@ -167,7 +171,19 @@ required by the current interface.
   match states. Pre-match parties reuse Alpha's presentation without modifying
   the underlying lobby member data. Keep player ELO and query results aligned.
 - Overview and Radar retain their independent current/previous selection.
-  Full match details and player details use the shared dialogs.
+  Contextual match details and player details use the shared dialogs. The archive
+  opens a dedicated workspace detail page at `#archive/match/{fid}` through an
+  explicit details button or a noninteractive row click. Preserve filters,
+  sorting, pagination, scroll position, and opener focus when returning.
+- Match details share one content component between the page and dialog. Show
+  identity/outcome, recording actions, a compact personal summary, and core,
+  combat, and support tabs. Team tables use six columns with tabular numbers;
+  place the local team first, show both teams side by side at a 73.75rem content
+  width, and stack below it. Keep table overflow inside its own scroller.
+  Highlight the local participant without inferring identity from their name.
+  Player disclosures contain every metric and existing award explanations;
+  a compact medal button provides access without increasing base row height.
+  Preserve unknown outcomes, observers, missing values, and saved ELO colors.
 - While a lazy dialog module loads, announce loading through an out-of-flow
   screen-reader status. Keep the underlying workspace geometry unchanged until
   the dialog portal mounts; do not add loading columns to the application shell.
