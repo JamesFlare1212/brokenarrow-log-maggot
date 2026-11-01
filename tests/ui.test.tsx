@@ -3208,6 +3208,62 @@ describe('user interaction regressions', () => {
     expect(document.querySelector('button button')).toBeNull();
   });
 
+  it('loads the overview recording count and refreshes it after library and folder changes', async () => {
+    const pending = deferred<RpcOutputs['replays.directory']>();
+    let count = 3;
+    const directory = vi
+      .fn(async () => ({ dir: 'test-profile/recordings', count }))
+      .mockImplementationOnce(() => pending.promise);
+    const native = nativeFixture(bootstrapForApp(), {
+      'replays.directory': directory,
+    });
+    render(<Dashboard />, { wrapper: wrapper(native.api) });
+    const metrics = await screen.findByLabelText('房间概览');
+    const metric = within(metrics)
+      .getByText('对局录像')
+      .closest('[data-slot="card"]') as HTMLElement;
+    expect(within(metric).getByText('对局录像')).toBeTruthy();
+    expect(metric.querySelector('[aria-busy="true"] [data-slot="skeleton"]')).toBeTruthy();
+    expect(screen.queryByText('房间玩家')).toBeNull();
+    await act(async () => pending.resolve({ dir: 'test-profile/recordings', count }));
+    expect(within(metric).getByText('3')).toBeTruthy();
+
+    count = 4;
+    act(() => native.emit({ type: 'replays', revision: 1 }));
+    await within(metric).findByText('4');
+    count = 2;
+    act(() => native.emit({ type: 'replays', revision: 2 }));
+    await within(metric).findByText('2');
+    count = 0;
+    act(() =>
+      native.emit({
+        type: 'config',
+        config: { ...native.backend.config, replaySaveDir: 'test-profile/other-recordings' },
+        revision: 3,
+      }),
+    );
+    await within(metric).findByText('0');
+    expect(directory).toHaveBeenCalledTimes(4);
+  });
+
+  it('shows an unavailable recording count and retries without reporting an empty library', async () => {
+    const directory = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Recording directory unavailable'))
+      .mockResolvedValue({ dir: 'test-profile/recordings', count: 5 });
+    const native = nativeFixture(bootstrapForApp(), { 'replays.directory': directory });
+    render(<Dashboard />, { wrapper: wrapper(native.api) });
+    const notice = await screen.findByText('Recording directory unavailable');
+    const metric = screen.getByText('录像库').closest('[data-slot="card"]') as HTMLElement;
+    expect(within(metric).getByText('—')).toBeTruthy();
+    expect(within(metric).queryByText('0')).toBeNull();
+    fireEvent.click(
+      within(notice.closest('[role="alert"]')!).getByRole('button', { name: '重试' }),
+    );
+    await within(metric).findByText('5');
+    expect(screen.queryByText('Recording directory unavailable')).toBeNull();
+  });
+
   it('summarizes eligible completed matches for the current account', async () => {
     const win = structuredClone(capturedMatches.find((m) => m.outcome === 'win')!);
     const loss = structuredClone(capturedMatches.find((m) => m.outcome === 'loss')!);

@@ -8,7 +8,6 @@ import {
   Settings,
   ShieldCheck,
   Trophy,
-  Users,
   Video,
 } from 'lucide-react';
 import type { Match } from '@ba/contracts';
@@ -75,9 +74,19 @@ export function Dashboard() {
   const { api, state, setPage, openModal } = useApp(),
     { t, locale } = useI18n();
   const { data, pending, error, load } = useRequest<Match[]>();
+  const {
+    data: replayCount,
+    pending: replaysPending,
+    error: replaysError,
+    load: loadReplayCount,
+  } = useRequest<number>();
   useEffect(() => {
     void load(() => api.invoke('matches.list', {}), true);
   }, [api, state.matchesRevision, load]);
+  const fetchReplayCount = () => api.invoke('replays.directory', null).then(({ count }) => count);
+  useEffect(() => {
+    void loadReplayCount(fetchReplayCount, true);
+  }, [api, state.replaysRevision, state.config.replaySaveDir, loadReplayCount]);
   const all = [...(data || [])].sort(
     (a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0),
   );
@@ -94,7 +103,6 @@ export function Dashboard() {
     .slice(0, 12);
   const wins = recent.filter((match) => match.outcome === 'win').length;
   const latest = personal.find((match) => match.endedAt !== null && match.eloAfter !== null);
-  const roster = state.session.current?.players ?? state.session.lobbyPlayers;
   const recording = state.recording;
   const recordingActive = recording.phase === 'recording';
   const recordingLabel = recordingActive
@@ -134,16 +142,11 @@ export function Dashboard() {
           icon={<Archive size={16} aria-hidden="true" />}
         />
         <Metric
-          label={t('livePlayers')}
-          value={roster.length}
-          detail={t(
-            state.session.phase === 'match'
-              ? 'liveMatch'
-              : state.session.phase === 'lobby'
-                ? 'partyLobby'
-                : 'waiting',
-          )}
-          icon={<Users size={16} aria-hidden="true" />}
+          label={t('replays')}
+          pending={replayCount === null && (replaysPending || !replaysError)}
+          value={replayCount ?? '—'}
+          detail={t('recordingLibrary')}
+          icon={<Video size={16} aria-hidden="true" />}
         />
       </div>
       {error && (
@@ -152,6 +155,12 @@ export function Dashboard() {
           <Button onClick={() => void load(() => api.invoke('matches.list', {}), true)}>
             {t('retry')}
           </Button>
+        </Notice>
+      )}
+      {replaysError && (
+        <Notice error>
+          {replaysError}
+          <Button onClick={() => void loadReplayCount(fetchReplayCount, true)}>{t('retry')}</Button>
         </Notice>
       )}
       <SessionPanel />

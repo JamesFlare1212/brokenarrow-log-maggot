@@ -172,6 +172,10 @@ required by the current interface.
   closed. Keep that account through idle session events, and replace it when a
   new local player ID is resolved. Never select an account from archive ordering
   or combine different accounts' results; missing personal data stays unknown.
+  The fourth metric shows the recording library's file count with the Video
+  icon. Load it independently from match statistics, refresh it on recording
+  library events and save-folder changes, and distinguish loading or unavailable
+  counts from a confirmed zero.
 - Room panels reserve the standard responsive 5v5 height in empty, party, and
   match states. Pre-match parties reuse Alpha's presentation without modifying
   the underlying lobby member data. Keep player ELO and query results aligned.
