@@ -3230,6 +3230,70 @@ describe('user interaction regressions', () => {
     expect(within(archive).getByText('4')).toBeTruthy();
   });
 
+  it('restores personal overview metrics in an empty room without using another archived account', async () => {
+    const bootstrap = bootstrapForApp();
+    bootstrap.session.phase = 'idle';
+    bootstrap.session.localPlayerId = null;
+    bootstrap.session.current = null;
+    bootstrap.session.lobbyPlayers = [];
+    const personal = matchFixture({ endedAt: 1000, outcome: 'win', eloAfter: 1962 });
+    const otherAccount = matchFixture({
+      id: 'other-account',
+      localPlayerId: secondPlayer.id,
+      endedAt: 2000,
+      outcome: 'loss',
+      eloAfter: 2200,
+    });
+    const native = nativeFixture(bootstrap, {
+      'matches.list': () => [otherAccount, personal],
+    });
+    render(<Dashboard />, { wrapper: wrapper(native.api) });
+    await screen.findByText('1 胜 · 0 负');
+    const rating = screen.getByText('最近 ELO').closest('[data-slot="card"]') as HTMLElement;
+    expect(within(rating).getByText(formatMetric(personal.eloAfter, 0))).toBeTruthy();
+    const winRate = screen.getByText('近期胜率').closest('[data-slot="card"]') as HTMLElement;
+    expect(within(winRate).getByText('100%')).toBeTruthy();
+    const archive = screen.getByText('已收录对局').closest('[data-slot="card"]') as HTMLElement;
+    expect(within(archive).getByText('2')).toBeTruthy();
+
+    const switched = { ...bootstrap.session, localPlayerId: secondPlayer.id };
+    act(() => native.emit({ type: 'session', session: switched, revision: 1 }));
+    await screen.findByText('0 胜 · 1 负');
+    expect(within(rating).getByText(formatMetric(otherAccount.eloAfter, 0))).toBeTruthy();
+
+    act(() => native.emit({ type: 'session', session: bootstrap.session, revision: 2 }));
+    expect(within(rating).getByText(formatMetric(otherAccount.eloAfter, 0))).toBeTruthy();
+    expect(within(winRate).getByText('0%')).toBeTruthy();
+
+    act(() =>
+      native.emit({
+        type: 'session',
+        session: { ...switched, localPlayerId: 'unrecorded-account' },
+        revision: 3,
+      }),
+    );
+    expect(within(rating).getByText('—')).toBeTruthy();
+    expect(within(winRate).getByText('—')).toBeTruthy();
+  });
+
+  it('keeps overview metrics unknown when no current or remembered account is available', async () => {
+    const bootstrap = bootstrapForApp();
+    bootstrap.activeAccountId = null;
+    bootstrap.session.localPlayerId = null;
+    bootstrap.session.current = null;
+    bootstrap.session.lobbyPlayers = [];
+    const native = nativeFixture(bootstrap);
+    render(<Dashboard />, { wrapper: wrapper(native.api) });
+    const archive = (await screen.findByText('已收录对局')).closest(
+      '[data-slot="card"]',
+    ) as HTMLElement;
+    await within(archive).findByText(String(capturedMatches.length));
+    for (const label of ['最近 ELO', '近期胜率']) {
+      const metric = screen.getByText(label).closest('[data-slot="card"]') as HTMLElement;
+      expect(within(metric).getByText('—')).toBeTruthy();
+    }
+  });
+
   it('keeps the initial empty room height after showing a taller previous-match roster', async () => {
     const bootstrap = structuredClone(fixtureBootstrap);
     bootstrap.session.phase = 'idle';

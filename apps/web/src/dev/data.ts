@@ -200,6 +200,7 @@ export function createDevelopmentData(
         },
     recovering: false,
   };
+  bootstrap.activeAccountId = bootstrap.session.localPlayerId;
   bootstrap.watcher = {
     dir: bootstrap.config.logDir,
     file: empty ? null : 'Gamelog__development.log',

@@ -393,11 +393,14 @@ export class Application {
     );
   }
   snapshot(): Bootstrap {
+    const session = this.parser.snapshot();
     return {
       updates: this.platform.updates?.status() ?? initialUpdateState(this.platform.version),
       revision: this.revision,
       config: this.db.config(),
-      session: this.parser.snapshot(),
+      session,
+      activeAccountId:
+        session.localPlayerId ?? this.db.state<string | null>('activeAccountId', null),
       watcher: this.watcher.status(),
       recording: this.platform.recordings.status(),
       health: this.statuses.health(),

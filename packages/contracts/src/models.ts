@@ -311,6 +311,7 @@ export interface Bootstrap {
   revision: number;
   config: PublicConfig;
   session: Session;
+  activeAccountId: Id | null;
   watcher: WatcherStatus;
   recording: RecordingState;
   health: ApiHealth;

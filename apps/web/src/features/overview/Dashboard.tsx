@@ -82,9 +82,8 @@ export function Dashboard() {
     (a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0),
   );
   const loading = !data && (pending || !error);
-  const personal = all.filter(
-    (match) => state.session.localPlayerId && match.localPlayerId === state.session.localPlayerId,
-  );
+  const accountId = state.session.localPlayerId ?? state.activeAccountId;
+  const personal = all.filter((match) => accountId && match.localPlayerId === accountId);
   const recent = personal
     .filter(
       (match) =>

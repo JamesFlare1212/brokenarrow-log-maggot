@@ -167,6 +167,11 @@ required by the current interface.
 - Overview has four equal summary columns, followed by a full-width room panel
   and the recent-results/tools grid. Summary details hide when their individual
   cards are too narrow; primary values stay on one line.
+  Latest ELO and recent win rate use the current session's player ID, falling
+  back to the persisted active account while the room is empty or the game is
+  closed. Keep that account through idle session events, and replace it when a
+  new local player ID is resolved. Never select an account from archive ordering
+  or combine different accounts' results; missing personal data stays unknown.
 - Room panels reserve the standard responsive 5v5 height in empty, party, and
   match states. Pre-match parties reuse Alpha's presentation without modifying
   the underlying lobby member data. Keep player ELO and query results aligned.

@@ -92,6 +92,7 @@ export function reportFixture(overrides: Partial<PlayerReport> = {}): PlayerRepo
 export const fixtureBootstrap: Bootstrap = {
   updates: initialUpdateState('4.0.0'),
   revision: 0,
+  activeAccountId: data.activeAccountId,
   config: configSchema.parse({
     ...data.preferences,
     logDir: 'test-profile/GameLogs',

@@ -56,6 +56,7 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
   if (action.type === 'bootstrap')
     return {
       ...action.bootstrap,
+      activeAccountId: action.bootstrap.session.localPlayerId ?? action.bootstrap.activeAccountId,
       rosters: { current: { requestId: '', rows: {} }, previous: { requestId: '', rows: {} } },
       preview: null,
       matchesRevision: 0,
@@ -73,7 +74,11 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
     case 'config':
       return { ...next, config: e.config };
     case 'session':
-      return { ...next, session: e.session };
+      return {
+        ...next,
+        session: e.session,
+        activeAccountId: e.session.localPlayerId ?? next.activeAccountId,
+      };
     case 'watcher':
       return { ...next, watcher: e.watcher };
     case 'health':

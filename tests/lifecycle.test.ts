@@ -87,6 +87,32 @@ afterEach(async () => {
   applications.clear();
 });
 
+describe('active overview account', () => {
+  it('restores the persisted account and keeps it after the live roster disappears', async () => {
+    const app = application(platform(vi.fn<typeof fetch>()));
+    expect(app.snapshot().activeAccountId).toBeNull();
+    app.db.setState('activeAccountId', '2');
+    expect(app.snapshot()).toMatchObject({
+      activeAccountId: '2',
+      session: { localPlayerId: null },
+    });
+
+    app.parser.feed([
+      'Log: GetPersonaName First player',
+      'Log: Enter to lobby (id: 123)',
+      'Log: Incoming client First player:1 to lobby',
+    ]);
+    expect(app.snapshot().activeAccountId).toBe('1');
+    await vi.waitFor(() => expect(app.db.state('activeAccountId', null)).toBe('1'));
+
+    app.parser.feed(['Log: Exit lobby']);
+    expect(await app.invoke('app.bootstrap', null)).toMatchObject({
+      activeAccountId: '1',
+      session: { phase: 'idle', localPlayerId: null, lobbyPlayers: [] },
+    });
+  });
+});
+
 describe('concurrent room queries', () => {
   const players = [
     { id: '1', name: 'First player', teamId: 0 as const },
