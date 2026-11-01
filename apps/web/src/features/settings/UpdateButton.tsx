@@ -5,7 +5,7 @@ import { useI18n } from '../../hooks/useI18n';
 import { Button } from '../../components/ui';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
-import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 
 export function UpdateButton({ inline = false }: { inline?: boolean }) {
   const { api, state, notify } = useApp(),
@@ -34,9 +34,11 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
         : 'updateCheck',
   );
   const label =
-    active && !inline
-      ? t('update.' + update.status, { percent: update.downloadPercent ?? 0 })
-      : actionLabel;
+    !inline && available
+      ? t('updateAvailable')
+      : active && !inline
+        ? t('update.' + update.status, { percent: update.downloadPercent ?? 0 })
+        : actionLabel;
   const detail =
     update.mode === 'disabled'
       ? t('update.disabled')
@@ -90,6 +92,7 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
     <SidebarMenuItem>
       <SidebarMenuButton
         size="workspace"
+        variant={available ? 'notification' : 'default'}
         tooltip={`${detail} · v${update.currentVersion}`}
         aria-label={label}
         aria-busy={busy}
@@ -99,6 +102,7 @@ export function UpdateButton({ inline = false }: { inline?: boolean }) {
         {icon}
         <span>{label}</span>
       </SidebarMenuButton>
+      {available && <SidebarMenuBadge variant="dot" aria-hidden="true" />}
       {update.status === 'downloading' && (
         <Progress
           className="mt-2 group-data-[collapsible=icon]:hidden"

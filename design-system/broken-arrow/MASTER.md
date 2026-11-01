@@ -281,6 +281,16 @@ required by the current interface.
   space, the header separator, accessible navigation, and route scroll state.
   Sidebar footers reserve 16px of bottom padding so update actions sit clear
   of the window edge.
+- Available updates in both sidebar footers use the localized "New version
+  available" label, a persistent neutral fill, and a notification dot. Use the
+  shared SidebarMenuButton `notification` variant: mix sidebar foreground into
+  the sidebar surface at 6%, increasing to 10% on hover or press. Keep the
+  foreground opaque with medium weight; add no outline, colored feedback, or
+  animation. The shared SidebarMenuBadge `dot` variant remains visible at the
+  icon's upper-right corner when collapsed. Preserve the theme focus ring and
+  version tooltip. Download failures retain this availability cue for retry;
+  downloading and installation use their existing status controls. General
+  settings keeps explicit download, retry, and portable download-page actions.
 
 Use container queries when available space depends on a panel, not the viewport.
 At the existing narrow breakpoints, metrics and teams may stack. Controls may

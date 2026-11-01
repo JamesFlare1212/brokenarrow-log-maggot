@@ -161,6 +161,7 @@ export const messages: Record<string, readonly [string, string]> = {
   projectLinks: ['项目链接', 'Project links'],
   appUpdates: ['应用更新', 'App updates'],
   updateCheck: ['检查更新', 'Check for updates'],
+  updateAvailable: ['有新版本可用', 'New version available'],
   updateDownload: ['下载更新', 'Download update'],
   updateManualInstall: [
     '下载完成后，点击“重启并安装”应用更新。',

@@ -457,6 +457,8 @@ const sidebarMenuButtonVariants = cva(
     variants: {
       variant: {
         default: 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        notification:
+          'bg-[color-mix(in_oklch,var(--sidebar-foreground)_6%,var(--sidebar))] pr-8 font-medium text-sidebar-foreground hover:bg-[color-mix(in_oklch,var(--sidebar-foreground)_10%,var(--sidebar))] hover:text-sidebar-foreground active:bg-[color-mix(in_oklch,var(--sidebar-foreground)_10%,var(--sidebar))] active:text-sidebar-foreground',
         outline:
           'bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]',
       },
@@ -468,6 +470,9 @@ const sidebarMenuButtonVariants = cva(
           'h-10 gap-3 px-3 text-sm text-sidebar-foreground/80 data-active:font-medium [&>svg]:size-[18px] group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:[&>span:last-child]:hidden',
       },
     },
+    compoundVariants: [
+      { variant: 'notification', size: 'workspace', className: 'pr-8 text-sidebar-foreground' },
+    ],
     defaultVariants: {
       variant: 'default',
       size: 'default',
@@ -496,6 +501,7 @@ function SidebarMenuButton({
       data-slot="sidebar-menu-button"
       data-sidebar="menu-button"
       data-size={size}
+      data-variant={variant}
       data-active={isActive}
       className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
       {...props}
@@ -551,15 +557,28 @@ function SidebarMenuAction({
   );
 }
 
-function SidebarMenuBadge({ className, ...props }: React.ComponentProps<'div'>) {
+const sidebarMenuBadgeVariants = cva('pointer-events-none absolute select-none', {
+  variants: {
+    variant: {
+      default:
+        'right-1 flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs font-medium text-sidebar-foreground tabular-nums group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-sidebar-accent-foreground',
+      dot: 'top-1/2 right-3 size-1.5 -translate-y-1/2 rounded-full bg-sidebar-foreground group-data-[collapsible=icon]:top-1.25 group-data-[collapsible=icon]:right-1.25 group-data-[collapsible=icon]:size-1.25 group-data-[collapsible=icon]:translate-y-0',
+    },
+  },
+  defaultVariants: { variant: 'default' },
+});
+
+function SidebarMenuBadge({
+  className,
+  variant = 'default',
+  ...props
+}: React.ComponentProps<'div'> & VariantProps<typeof sidebarMenuBadgeVariants>) {
   return (
     <div
       data-slot="sidebar-menu-badge"
       data-sidebar="menu-badge"
-      className={cn(
-        'pointer-events-none absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs font-medium text-sidebar-foreground tabular-nums select-none group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-sidebar-accent-foreground',
-        className,
-      )}
+      data-variant={variant}
+      className={cn(sidebarMenuBadgeVariants({ variant }), className)}
       {...props}
     />
   );

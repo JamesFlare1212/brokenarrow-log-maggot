@@ -475,6 +475,7 @@ describe('application updates', () => {
     const check = await screen.findByRole('button', { name: '检查更新' });
     expect(check.closest('[data-slot=sidebar-footer]')).not.toBeNull();
     expect(check.querySelector('svg')).not.toBeNull();
+    expect(check.parentElement?.querySelector('[data-slot=sidebar-menu-badge]')).toBeNull();
     fireEvent.click(check);
     expect(check.querySelector('[data-slot=spinner]')).not.toBeNull();
     expect(check.getAttribute('disabled')).not.toBeNull();
@@ -490,12 +491,19 @@ describe('application updates', () => {
         revision: 1,
       }),
     );
-    const download = screen.getByRole('button', { name: '下载更新' });
+    const download = screen.getByRole('button', { name: '有新版本可用' });
     expect(download.querySelector('svg')).not.toBeNull();
-    expect(download.textContent).toContain('下载更新');
+    expect(download.textContent).toContain('有新版本可用');
+    expect(download.getAttribute('data-variant')).toBe('notification');
+    expect(download.getAttribute('data-active')).toBe('false');
+    const badge = download.parentElement?.querySelector('[data-slot=sidebar-menu-badge]');
+    expect(badge?.getAttribute('data-variant')).toBe('dot');
+    expect(badge?.getAttribute('aria-hidden')).toBe('true');
     act(() => download.focus());
     expect(explanation().textContent).toContain('下载完成后，点击“重启并安装”应用更新');
     fireEvent.blur(download);
+    expect(download.getAttribute('data-variant')).toBe('notification');
+    expect(download.parentElement?.contains(badge!)).toBe(true);
     expect(f.calls.some((call) => call.method === 'updates.download')).toBe(false);
     fireEvent.click(download);
     await waitFor(() =>
@@ -523,6 +531,8 @@ describe('application updates', () => {
     })) as HTMLButtonElement;
     expect(download.disabled).toBe(true);
     expect(download.textContent).toBe('正在下载更新…');
+    expect(download.getAttribute('data-variant')).toBe('default');
+    expect(download.parentElement?.querySelector('[data-slot=sidebar-menu-badge]')).toBeNull();
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('37');
     expect(download.querySelector('.update-percent')).toBeNull();
     expect(download.querySelector('[data-icon="download"].fa-spin')).toBeNull();
@@ -539,6 +549,7 @@ describe('application updates', () => {
     expect(install.disabled).toBe(false);
     expect(install.querySelector('svg')).not.toBeNull();
     expect(install.textContent).toContain('重启并安装');
+    expect(install.getAttribute('data-variant')).toBe('default');
     expect(f.calls.some((call) => call.method === 'updates.install')).toBe(false);
     fireEvent.click(install);
     await waitFor(() =>
@@ -575,7 +586,7 @@ describe('application updates', () => {
       'updates.openDownload': () => null,
     });
     render(<UpdateButton />, { wrapper: wrapper(f.api) });
-    fireEvent.click(await screen.findByRole('button', { name: '下载更新' }));
+    fireEvent.click(await screen.findByRole('button', { name: '有新版本可用' }));
     await waitFor(() =>
       expect(f.calls.filter((call) => call.method === 'updates.download')).toHaveLength(1),
     );
@@ -586,7 +597,7 @@ describe('application updates', () => {
         revision: 1,
       }),
     );
-    const download = screen.getByRole('button', { name: '下载更新' });
+    const download = screen.getByRole('button', { name: '有新版本可用' });
     act(() => download.focus());
     expect(explanation().textContent).toContain('便携版');
     fireEvent.blur(download);
