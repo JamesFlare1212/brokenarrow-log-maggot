@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { configSchema, rpcSchemas, type PublicConfig } from '@ba/contracts';
 import { Database } from '../apps/server/src/storage/database';
 import { projectConfig, projectConfigSchema } from '../apps/server/src/config';
-import { canvasSize, estimateRecordingBytes } from '@ba/shared';
+import { canvasSize, normalizeRecordingQualityScore } from '@ba/shared';
 
 describe('project configuration', () => {
   it('accepts zero offset and retry delay while keeping positive timeouts and intervals', () => {
@@ -57,8 +57,8 @@ describe('configuration patches', () => {
     { replayEnabled: false },
     { replayMicrophone: false },
     { replayQuality: 1080, replayFps: 60, replaySaveDir: 'custom-recordings' },
-    { replayQuality: 1440, replayFps: 90, replayBitrateMbps: 15 },
-    { replayQuality: 2160, replayFps: 120, replayBitrateMbps: 20 },
+    { replayQuality: 1440, replayFps: 90, replayQualityScore: 15 },
+    { replayQuality: 2160, replayFps: 120, replayQualityScore: 20 },
   ])('keeps omitted fields absent when validating %j', (patch) => {
     expect(rpcSchemas['config.update'].parse(patch)).toEqual(patch);
   });
@@ -86,8 +86,8 @@ describe('configuration patches', () => {
       { replayQuality: 4320 },
       { replayFps: 121 },
       { replayFps: 45 },
-      { replayBitrateMbps: 4 },
-      { replayBitrateMbps: 21 },
+      { replayQualityScore: 0 },
+      { replayQualityScore: 52 },
       { replayMicrophone: 'false' },
       { analyticsEnabled: 'true' },
       { analyticsChoiceSaved: 'true' },
@@ -137,7 +137,7 @@ describe('configuration patches', () => {
         replayDisplayId: 'screen:1',
         replayQuality: 1080,
         replayFps: 60,
-        replayBitrateMbps: 10,
+        replayQualityScore: 10,
         replaySaveDir: 'custom-recordings',
         banPollEnabled: false,
         matchSyncEnabled: false,
@@ -267,14 +267,34 @@ describe('configuration patches', () => {
 });
 
 describe('recording configuration ranges', () => {
-  it('starts with 720p, 30fps and 5Mbps and sizes the highest recording quality correctly', () => {
+  it.each([5, 10, 20])(
+    'replaces legacy %i Mbps with quality 20 and persists subsequent quality changes',
+    (bitrate) => {
+      const db = new Database(':memory:');
+      try {
+        db.sql
+          .prepare('INSERT INTO settings VALUES(?,?)')
+          .run('public', JSON.stringify({ replayBitrateMbps: bitrate, replayQuality: 1440 }));
+        expect(db.config()).toMatchObject({ replayQuality: 1440, replayQualityScore: 20 });
+        expect(db.config()).not.toHaveProperty('replayBitrateMbps');
+        db.updateConfig({ replayQualityScore: 17 });
+        expect(db.config().replayQualityScore).toBe(17);
+        expect(
+          String(db.sql.prepare("SELECT value FROM settings WHERE key='public'").get()?.value),
+        ).not.toContain('replayBitrateMbps');
+      } finally {
+        db.close();
+      }
+    },
+  );
+  it('starts with 720p, 30fps and quality score 20 and sizes the highest recording quality correctly', () => {
     expect(configSchema.parse({})).toMatchObject({
       replayQuality: 720,
       replayFps: 30,
-      replayBitrateMbps: 5,
+      replayQualityScore: 20,
     });
     expect(canvasSize(2160, 3840, 2160)).toEqual({ width: 3840, height: 2160 });
-    expect(estimateRecordingBytes(45, 20, true)).toBe(6_793_200_000);
+    expect(normalizeRecordingQualityScore(undefined)).toBe(20);
   });
 
   it.each([240, 360, 480])(
@@ -295,14 +315,14 @@ describe('recording configuration ranges', () => {
         expect(db.config()).toMatchObject({
           replayQuality: 720,
           replayFps: 50,
-          replayBitrateMbps: 5,
+          replayQualityScore: 20,
           lang: 'en',
           replaySaveDir: 'custom-recordings',
         });
         expect(db.updateConfig({ replayFps: 120 })).toMatchObject({
           replayQuality: 720,
           replayFps: 120,
-          replayBitrateMbps: 5,
+          replayQualityScore: 20,
           lang: 'en',
         });
       } finally {

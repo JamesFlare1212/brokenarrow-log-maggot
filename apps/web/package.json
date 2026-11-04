@@ -14,6 +14,7 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.1",
     "lucide-react": "^1.65.0",
+    "mediabunny": "1.65.1",
     "radix-ui": "^1.8.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",

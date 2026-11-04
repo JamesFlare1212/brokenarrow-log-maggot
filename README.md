@@ -129,9 +129,16 @@ Service defaults live in [`app.config.json`](app.config.json), including a rando
 
 Temporary workaround: the desktop app disables Chromium QUIC/HTTP/3 to avoid observed BATrace stalls. See [scope and removal criteria](docs/architecture.md#temporary-quic-workaround).
 
-数据保存在原 `broken-arrow-log-assistant` 用户目录中的 SQLite。旧 JSON 在首次启动备份并事务导入，原文件保留。录像仍是本地 WebM，播放通过受控 Range 协议按需读取。
+Data remains in SQLite under the original `broken-arrow-log-assistant` user
+directory. Legacy JSON is backed up and imported transactionally without changing
+the originals. New recordings use local MP4 files; existing WebM recordings remain
+playable through the controlled Range protocol.
 
 Recording is disabled by default and captures the entire selected display.
+Available encoders are tested in AV1 → HEVC → H.264 order. Video uses a quality
+score instead of fixed bitrate: default 20, with lower values requesting higher
+quality. See [recording codecs and quality](docs/recording.md) for the official
+parameter references and validation instructions.
 
 ## Optional anonymous analytics
 

@@ -4,9 +4,9 @@ import { createWriteStream, type WriteStream } from 'node:fs';
 import { mkdir, rename, unlink, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Display, Match, PublicConfig, RecorderConfig, RecordingState } from '@ba/contracts';
+import { RECORDING_CODECS, type RecordingCodec } from '@ba/contracts';
 import { errorMessage } from '@ba/shared';
 import { replayName } from '@ba/server';
-import { patchDurationFile } from './webm';
 interface Capture {
   token: string;
   generation: number;
@@ -103,6 +103,7 @@ export class RecordingController {
       startedAt: null,
       error: null,
       hasAudio: false,
+      codec: undefined,
     });
     try {
       const sources = await desktopCapturer.getSources({
@@ -121,7 +122,7 @@ export class RecordingController {
       const dir = this.directory();
       await mkdir(dir, { recursive: true });
       if (generation !== this.generation) return;
-      const part = join(dir, '.rec-part-' + token + '.webm');
+      const part = join(dir, '.rec-part-' + token + '.mp4');
       let resolve: () => void = () => {},
         reject: (e: Error) => void = () => {};
       const done = new Promise<void>((yes, no) => {
@@ -156,7 +157,7 @@ export class RecordingController {
           sourceId: source.id,
           quality: config.replayQuality,
           fps: config.replayFps,
-          bitrateMbps: config.replayBitrateMbps,
+          qualityScore: config.replayQualityScore,
           audio: config.replayAudio,
           microphone: config.replayMicrophone,
         },
@@ -188,7 +189,7 @@ export class RecordingController {
       win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
       capture.timer = setTimeout(() => {
         void this.failCapture(capture, 'Capture startup timed out');
-      }, 30000);
+      }, 45000);
       await win.loadFile(this.recorderPage);
       if (generation !== this.generation || this.current !== capture) {
         if (!win.isDestroyed()) win.destroy();
@@ -215,9 +216,11 @@ export class RecordingController {
   config(sender: number): RecorderConfig {
     return { ...this.owner(sender).config };
   }
-  ready(sender: number, token: string, hasAudio: boolean): void {
+  ready(sender: number, token: string, hasAudio: boolean, codec: RecordingCodec): void {
     const c = this.owner(sender, token);
     if (c.stopped) return;
+    if (!RECORDING_CODECS.includes(codec) || typeof hasAudio !== 'boolean')
+      throw new Error('Invalid recording encoder');
     if (c.timer) clearTimeout(c.timer);
     c.timer = c.test ? setTimeout(() => void this.stop(), 60000) : null;
     c.startedAt = Date.now();
@@ -230,6 +233,7 @@ export class RecordingController {
       sourceId: c.config.sourceId,
       startedAt: c.startedAt,
       hasAudio,
+      codec,
     });
   }
   async chunk(sender: number, token: string, sequence: number, data: ArrayBuffer): Promise<void> {
@@ -276,17 +280,18 @@ export class RecordingController {
       const me = c.match.players.find((p) => p.id === c.match.localPlayerId),
         name =
           (c.test ? 'test_' : '') +
-          replayName({
-            fid: c.test ? null : c.match.fid,
-            id: c.test ? '0' : c.match.localPlayerId,
-            name: c.test ? 'Recording test' : me?.name || c.match.localPersona,
-            teamId: me?.teamId ?? null,
-            mapId: c.match.mapId,
-          }),
-        final = join(c.dir, '.rec-final-' + c.token + '.webm');
-      await patchDurationFile(c.part, final, duration);
-      await rename(final, join(c.dir, name));
-      await unlink(c.part);
+          replayName(
+            {
+              fid: c.test ? null : c.match.fid,
+              id: c.test ? '0' : c.match.localPlayerId,
+              name: c.test ? 'Recording test' : me?.name || c.match.localPersona,
+              teamId: me?.teamId ?? null,
+              mapId: c.match.mapId,
+            },
+            Date.now(),
+            '.mp4',
+          );
+      await rename(c.part, join(c.dir, name));
       c.hasAudio = hasAudio;
       this.saved(name, duration, c.match);
       this.complete(c);
@@ -323,7 +328,6 @@ export class RecordingController {
     c.writer.destroy();
     if (!c.win.isDestroyed()) c.win.destroy();
     await unlink(c.part).catch(() => {});
-    await unlink(join(c.dir, '.rec-final-' + c.token + '.webm')).catch(() => {});
     this.update({ phase: 'error', error: message, startedAt: null, sessionId: null });
     c.reject(new Error(message));
   }

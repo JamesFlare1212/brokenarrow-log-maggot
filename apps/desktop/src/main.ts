@@ -13,7 +13,12 @@ import electronUpdater from 'electron-updater';
 import { join, resolve } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { Application, type Platform } from '@ba/server';
-import { rpcSchemas, windowThemeColorsSchema, type RpcMethod } from '@ba/contracts';
+import {
+  rpcSchemas,
+  windowThemeColorsSchema,
+  type RpcMethod,
+  type RecordingCodec,
+} from '@ba/contracts';
 import { errorMessage } from '@ba/shared';
 import { RecordingController } from './recordings/controller';
 import { ReplayProtocol } from './recordings/protocol';
@@ -369,8 +374,8 @@ ipcMain.handle('ba:window:theme', (event, mode: unknown, input: unknown) => {
   window.setBackgroundColor(palette.color);
 });
 ipcMain.handle('ba:recording:config', (event) => recordings?.config(event.sender.id));
-ipcMain.handle('ba:recording:started', (event, id: string, audio: boolean) =>
-  recordings?.ready(event.sender.id, id, audio),
+ipcMain.handle('ba:recording:started', (event, id: string, audio: boolean, codec: RecordingCodec) =>
+  recordings?.ready(event.sender.id, id, audio, codec),
 );
 ipcMain.handle('ba:recording:chunk', (event, id: string, sequence: number, data: ArrayBuffer) =>
   recordings?.chunk(event.sender.id, id, sequence, data),

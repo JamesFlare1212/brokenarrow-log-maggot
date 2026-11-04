@@ -670,7 +670,20 @@ export const messages: Record<string, readonly [string, string]> = {
   display: ['显示器', 'Display'],
   quality: ['分辨率', 'Resolution'],
   fps: ['帧率', 'Frame rate'],
-  bitrate: ['码率', 'Bitrate'],
+  recordingQualityScore: ['质量分数', 'Quality score'],
+  recordingQualityHint: [
+    '数值越低越清晰，文件越大。建议 {min}–{max}，默认 {value}。',
+    'Lower values improve quality and increase file size. Suggested: {min}–{max}; default: {value}.',
+  ],
+  recordingCodecAutomatic: [
+    '录制前检测可用编码，按 AV1 → HEVC → H.264 自动选择。',
+    'Test available encoders before recording and select AV1 → HEVC → H.264 automatically.',
+  ],
+  recordingCodecSelected: ['当前编码：{codec}', 'Current codec: {codec}'],
+  recordingVariableSize: [
+    '录像保存为 MP4。文件大小随画面内容、分辨率和所选编码变化。',
+    'Recordings are saved as MP4. File size varies with content, resolution and the selected codec.',
+  ],
   audio: ['系统声音', 'System audio'],
   audioOff: ['关闭声音', 'Audio off'],
   recordMicrophone: ['录制麦克风（系统默认设备）', 'Record microphone (system default device)'],
@@ -678,7 +691,6 @@ export const messages: Record<string, readonly [string, string]> = {
   defaultDirectory: ['默认目录', 'Default folder'],
   select: ['选择', 'Select'],
   recordingTest: ['录制 60 秒测试', 'Record a 60-second test'],
-  estimated: ['45 分钟理论大小约 {size}', '45-minute theoretical size: {size}'],
   migrateFiles: ['迁移已有录像', 'Move existing recordings'],
   migrateFilesOnChange: [
     '更换目录时迁移已有录像',

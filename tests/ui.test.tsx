@@ -1612,19 +1612,19 @@ describe('recording settings automatic saving', () => {
     return within(await screen.findByRole('dialog', { name: '录像设置' }));
   }
 
-  it('starts at the new minimums and saves the highest resolution, frame rate and bitrate', async () => {
+  it('starts at the new minimums and saves the highest resolution, frame rate and quality score', async () => {
     const initial = bootstrapForApp();
-    Object.assign(initial.config, { replayQuality: 720, replayFps: 30, replayBitrateMbps: 5 });
+    Object.assign(initial.config, { replayQuality: 720, replayFps: 30, replayQualityScore: 20 });
     const native = nativeFixture(initial, { 'displays.thumbnail': () => null });
     const dialog = await open(native);
     const quality = dialog.getByRole('slider', { name: '分辨率' });
     const fps = dialog.getByRole('slider', { name: '帧率' });
-    const bitrate = dialog.getByRole('slider', { name: '码率' });
+    const bitrate = dialog.getByRole('slider', { name: '质量分数' });
     expect(quality.getAttribute('aria-valuetext')).toBe('720p');
     expect(fps.getAttribute('aria-valuemin')).toBe('30');
     expect(fps.getAttribute('aria-valuemax')).toBe('120');
-    expect(bitrate.getAttribute('aria-valuemin')).toBe('5');
-    expect(bitrate.getAttribute('aria-valuemax')).toBe('20');
+    expect(bitrate.getAttribute('aria-valuemin')).toBe('1');
+    expect(bitrate.getAttribute('aria-valuemax')).toBe('51');
     fireEvent.keyDown(fps, { key: 'ArrowRight' });
     expect(fps.getAttribute('aria-valuenow')).toBe('40');
     for (const slider of [quality, fps, bitrate]) fireEvent.keyDown(slider, { key: 'End' });
@@ -1633,7 +1633,7 @@ describe('recording settings automatic saving', () => {
     expect(native.backend.config).toMatchObject({
       replayQuality: 2160,
       replayFps: 120,
-      replayBitrateMbps: 20,
+      replayQualityScore: 51,
     });
     fireEvent.click(screen.getByRole('button', { name: '录像设置' }));
     const reopened = within(await screen.findByRole('dialog', { name: '录像设置' }));
@@ -1643,7 +1643,9 @@ describe('recording settings automatic saving', () => {
     expect(reopened.getByRole('slider', { name: '帧率' }).getAttribute('aria-valuenow')).toBe(
       '120',
     );
-    expect(reopened.getByRole('slider', { name: '码率' }).getAttribute('aria-valuenow')).toBe('20');
+    expect(reopened.getByRole('slider', { name: '质量分数' }).getAttribute('aria-valuenow')).toBe(
+      '51',
+    );
   });
 
   it('opens recording settings as a sidebar tab and preserves pending changes when leaving it', async () => {
@@ -3538,11 +3540,11 @@ describe('user interaction regressions', () => {
     act(() =>
       native.emit({
         type: 'recording',
-        recording: { ...active, seconds: 44, sourceId: 'screen:1:0' },
+        recording: { ...active, seconds: 44, sourceId: 'screen:1:0', codec: 'av1' },
         revision: 2,
       }),
     );
-    expect(screen.getByText(/screen:1:0/)).toBeTruthy();
+    expect(screen.getByText(/AV1/)).toBeTruthy();
     const idle: RecordingState = { ...fixtureBootstrap.recording };
     act(() => native.emit({ type: 'recording', recording: idle, revision: 3 }));
     expect(screen.queryByAltText('录制预览')).toBeNull();

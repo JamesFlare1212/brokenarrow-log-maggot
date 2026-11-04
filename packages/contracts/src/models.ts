@@ -268,6 +268,7 @@ export interface RecordingState {
   startedAt: number | null;
   seconds: number;
   hasAudio: boolean;
+  codec?: import('./recording').RecordingCodec;
   error: string | null;
 }
 export interface MigrationStatus {
@@ -301,7 +302,7 @@ export interface PublicConfig {
   replayDisplayId: string;
   replayQuality: RecordingQuality;
   replayFps: number;
-  replayBitrateMbps: number;
+  replayQualityScore: number;
   replayAudio: 'default' | 'off';
   replayMicrophone: boolean;
   replaySaveDir: string;

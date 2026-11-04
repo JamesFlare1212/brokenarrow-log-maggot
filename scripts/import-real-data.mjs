@@ -64,7 +64,7 @@ try {
         'banCardVisible',
         'replayQuality',
         'replayFps',
-        'replayBitrateMbps',
+        'replayQualityScore',
       ]
         .filter((key) => config[key] !== undefined)
         .map((key) => [key, config[key]]),

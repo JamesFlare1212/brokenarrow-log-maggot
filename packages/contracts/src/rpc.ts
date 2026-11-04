@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { DIAGNOSTIC_ERROR_TYPES, ANALYTICS_FEATURES, isDiagnosticFilename } from './analytics';
-import { RECORDING_QUALITIES, RECORDING_FPS, RECORDING_BITRATE_MBPS } from './recording';
+import {
+  RECORDING_QUALITIES,
+  RECORDING_FPS,
+  RECORDING_QUALITY_SCORE,
+  type RecordingCodec,
+} from './recording';
 import type {
   Account,
   ApiHealth,
@@ -83,12 +88,12 @@ export const configSchema = z.object({
     .max(RECORDING_FPS.max)
     .multipleOf(RECORDING_FPS.step)
     .default(RECORDING_FPS.default),
-  replayBitrateMbps: z
+  replayQualityScore: z
     .number()
     .int()
-    .min(RECORDING_BITRATE_MBPS.min)
-    .max(RECORDING_BITRATE_MBPS.max)
-    .default(RECORDING_BITRATE_MBPS.default),
+    .min(RECORDING_QUALITY_SCORE.min)
+    .max(RECORDING_QUALITY_SCORE.max)
+    .default(RECORDING_QUALITY_SCORE.default),
   replayAudio: z.enum(['default', 'off']).default('default'),
   replayMicrophone: z.boolean().default(true),
   replaySaveDir: z.string().max(4096).default(''),
@@ -295,13 +300,13 @@ export interface RecorderConfig {
   sourceId: string;
   quality: number;
   fps: number;
-  bitrateMbps: number;
+  qualityScore: number;
   audio: 'default' | 'off';
   microphone: boolean;
 }
 export interface RecorderBridge {
   config(): Promise<RecorderConfig>;
-  started(sessionId: string, hasAudio: boolean): Promise<void>;
+  started(sessionId: string, hasAudio: boolean, codec: RecordingCodec): Promise<void>;
   chunk(sessionId: string, sequence: number, data: ArrayBuffer): Promise<void>;
   finish(sessionId: string, durationSec: number, hasAudio: boolean): Promise<void>;
   failure(sessionId: string, error: string): Promise<void>;

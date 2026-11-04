@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
+import { extname } from 'node:path';
 export class ReplayProtocol {
   private tokens = new Map<string, { path: string; expires: number }>();
   register(): void {
@@ -34,7 +35,7 @@ export class ReplayProtocol {
           partial = true;
         }
         const headers: Record<string, string> = {
-          'Content-Type': 'video/webm',
+          'Content-Type': extname(entry.path).toLowerCase() === '.mp4' ? 'video/mp4' : 'video/webm',
           'Accept-Ranges': 'bytes',
           'Content-Length': String(end - start + 1),
           'Cache-Control': 'no-store',
@@ -59,7 +60,7 @@ export class ReplayProtocol {
     if (this.tokens.size >= 128) this.tokens.delete(this.tokens.keys().next().value || '');
     const token = randomUUID();
     this.tokens.set(token, { path, expires: Date.now() + 7200000 });
-    return `ba-replay://${token}/video.webm`;
+    return `ba-replay://${token}/video${extname(path).toLowerCase()}`;
   }
   close(): void {
     this.tokens.clear();

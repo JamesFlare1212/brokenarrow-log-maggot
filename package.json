@@ -30,6 +30,7 @@
     "check": "pnpm typecheck && pnpm ui:check && pnpm test && pnpm build",
     "smoke": "pnpm build && node scripts/smoke.mjs",
     "smoke:real": "pnpm build && node scripts/smoke.mjs --real",
+    "smoke:recording": "pnpm build && node scripts/recording-smoke.mjs",
     "smoke:packaged": "node scripts/smoke.mjs \"dist/win-unpacked/断箭蛐工具.exe\"",
     "dist": "pnpm build && electron-builder --win --publish never",
     "pack:desktop": "pnpm build && electron-builder --dir --publish never"
