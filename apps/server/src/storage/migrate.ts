@@ -11,7 +11,7 @@ import {
   normalizeMatch,
   normalizeQuality,
   normalizeFps,
-  normalizeBitrate,
+  normalizeRecordingQualityScore,
   emptyMatch,
   emptyPlayer,
   mergeMatch,
@@ -168,7 +168,7 @@ function importSettings(db: Database, raw: Record<string, unknown>, warnings: st
     themeMode: raw.themeMode ?? legacyThemeMode(raw.theme),
     replayQuality: normalizeQuality(raw.replayQuality),
     replayFps: normalizeFps(raw.replayFps),
-    replayBitrateMbps: normalizeBitrate(raw.replayBitrateMbps),
+    replayQualityScore: normalizeRecordingQualityScore(raw.replayQualityScore),
     panelOrder: array(raw.panelOrder)
       .map((p) => aliases[text(p)] || text(p))
       .filter((p) => PANELS.some((k) => k === p)),

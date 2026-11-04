@@ -63,6 +63,16 @@ the same match again allocates a different token, so IPC from an earlier capture
 cannot affect the new recording. Disabling recording during display discovery
 cancels startup; disabling an active recording waits for the final file.
 
+The capture page now uses WebCodecs with explicit per-frame quantizers and
+Mediabunny fragmented MP4 output. Before each recording it tries AV1, HEVC and
+H.264 with hardware acceleration preferred, followed by software AV1. A probe
+must encode at the requested dimensions/frame rate and decode its output before
+selection. The quality score replaces fixed video bitrate and defaults to 20.
+System/microphone mixing and acknowledged sequential IPC writes are retained;
+the replay library supports both new MP4 and legacy WebM files. See
+[recording codecs and quality](recording.md) for parameter sources, migration,
+failure handling and the synthetic encoding smoke test.
+
 Player reports expose a separate `ratingTrend` of up to 30 chronological analysis
 points, retaining each match ID, end time, and pre/post-match rating. The existing
 12-row recent-match table keeps its newest-first order. Both views use the same

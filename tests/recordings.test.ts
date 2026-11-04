@@ -132,7 +132,7 @@ async function start(value: RecordingController, current = match()) {
   const window = electron.windows.at(-1)!;
   const sender = window.webContents.id,
     token = value.config(sender).sessionId;
-  value.ready(sender, token, true);
+  value.ready(sender, token, true, 'av1');
   return { window, sender, token };
 }
 beforeEach(() => {
@@ -221,7 +221,7 @@ describe('recording lifecycle and IPC ownership', () => {
     const sender = electron.windows.at(-1)!.webContents.id;
     const token = value.config(sender).sessionId;
     expect(token).toBe(sessionId);
-    value.ready(sender, token, false);
+    value.ready(sender, token, false, 'av1');
     expect(value.status().sessionId).toBe(sessionId);
     await value.chunk(sender, token, 0, bytes('reviewed capture'));
     const stopping = value.stop();
@@ -235,7 +235,7 @@ describe('recording lifecycle and IPC ownership', () => {
     await value.start(current, configSchema.parse({}));
     expect(value.status().sessionId).not.toBe(sessionId);
     const nextSender = electron.windows.at(-1)!.webContents.id;
-    expect(() => value.ready(nextSender, token, false)).toThrow(/expired/i);
+    expect(() => value.ready(nextSender, token, false, 'av1')).toThrow(/expired/i);
     expect(value.status().phase).toBe('starting');
   });
 
@@ -283,7 +283,7 @@ describe('recording lifecycle and IPC ownership', () => {
           await starting;
           const sender = electron.windows.at(-1)!.webContents.id;
           const token = value.config(sender).sessionId;
-          value.ready(sender, token, false);
+          value.ready(sender, token, false, 'av1');
           await value.chunk(sender, token, 0, bytes('disabled capture'));
           const disabling = app.invoke('config.update', { replayEnabled: false });
           void disabling.catch(() => {});
@@ -292,7 +292,7 @@ describe('recording lifecycle and IPC ownership', () => {
           );
           await value.finish(sender, token, 15, false);
           await disabling;
-          const files = (await readdir(dir)).filter((name) => name.endsWith('.webm'));
+          const files = (await readdir(dir)).filter((name) => name.endsWith('.mp4'));
           expect(files).toHaveLength(1);
           expect(await readFile(join(dir, files[0]!), 'utf8')).toBe('disabled capture');
         } else {
@@ -300,7 +300,7 @@ describe('recording lifecycle and IPC ownership', () => {
           sources.resolve([source]);
           await starting;
           expect(electron.windows).toHaveLength(0);
-          expect((await readdir(dir)).filter((name) => name.endsWith('.webm'))).toEqual([]);
+          expect((await readdir(dir)).filter((name) => name.endsWith('.mp4'))).toEqual([]);
         }
         expect(value.status()).toMatchObject({ phase: 'idle', sessionId: null });
         expect(app.db.config().replayEnabled).toBe(false);
@@ -363,7 +363,7 @@ describe('recording lifecycle and IPC ownership', () => {
     const { value } = await controller();
     const { sender, token } = await start(value);
     expect(() => value.config(sender + 1)).toThrow(/expired/i);
-    expect(() => value.ready(sender, 'wrong-token', false)).toThrow(/expired/i);
+    expect(() => value.ready(sender, 'wrong-token', false, 'av1')).toThrow(/expired/i);
     await expect(value.chunk(sender + 1, token, 0, bytes('bad'))).rejects.toThrow(/expired/i);
     await expect(value.chunk(sender, 'wrong-token', 0, bytes('bad'))).rejects.toThrow(/expired/i);
     await expect(value.chunk(sender, token, 1, bytes('out of order'))).rejects.toThrow(/invalid/i);
@@ -430,7 +430,7 @@ describe('recording lifecycle and IPC ownership', () => {
     await Promise.all([stopping, starting]);
     expect(saved).toHaveBeenCalledTimes(1);
     const completed = (await readdir(dir)).filter(
-      (name) => !name.startsWith('.') && name.endsWith('.webm'),
+      (name) => !name.startsWith('.') && name.endsWith('.mp4'),
     );
     expect(completed).toHaveLength(1);
     expect(completed[0]).toMatch(/^123__/);
@@ -438,14 +438,14 @@ describe('recording lifecycle and IPC ownership', () => {
     expect(value.status()).toMatchObject({ phase: 'starting', fid: '456' });
     await vi.waitFor(async () => {
       const partial = (await readdir(dir)).filter(
-        (name) => name.startsWith('.rec-part-') && name.endsWith('.webm'),
+        (name) => name.startsWith('.rec-part-') && name.endsWith('.mp4'),
       );
       expect(partial).toHaveLength(1);
     });
     const nextWindow = electron.windows.at(-1)!,
       sender = nextWindow.webContents.id,
       token = value.config(sender).sessionId;
-    value.ready(sender, token, false);
+    value.ready(sender, token, false, 'av1');
     await expect(
       value.chunk(first.sender, first.token, 1, bytes('late old chunk')),
     ).rejects.toThrow(/expired/i);
@@ -557,9 +557,9 @@ describe('WebM duration metadata', () => {
 });
 
 describe('local replay HTTP ranges', () => {
-  async function fixture() {
+  async function fixture(extension = '.webm') {
     const root = await temp(),
-      path = join(root, 'video.webm');
+      path = join(root, 'video' + extension);
     await writeFile(path, '0123456789');
     const protocol = new ReplayProtocol();
     protocols.push(protocol);
@@ -577,6 +577,20 @@ describe('local replay HTTP ranges', () => {
     expect(response.headers.get('Content-Length')).toBe('10');
     expect(await response.text()).toBe('0123456789');
   });
+
+  it.each(['.mp4', '.webm'])(
+    'serves %s with the correct MIME type and range seeking',
+    async (extension) => {
+      const { handler, url } = await fixture(extension);
+      expect(url).toMatch(new RegExp(extension.replace('.', '\\.') + '$'));
+      const response = await handler(new Request(url, { headers: { Range: 'bytes=2-5' } }));
+      expect(response.status).toBe(206);
+      expect(response.headers.get('Content-Type')).toBe(
+        extension === '.mp4' ? 'video/mp4' : 'video/webm',
+      );
+      expect(await response.text()).toBe('2345');
+    },
+  );
 
   it.each([
     ['bytes=2-5', '2345', 'bytes 2-5/10'],

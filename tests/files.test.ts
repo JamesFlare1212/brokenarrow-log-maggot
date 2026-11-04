@@ -296,6 +296,37 @@ describe('file path boundaries', () => {
 });
 
 describe('local recordings', () => {
+  it('lists and migrates MP4 alongside legacy WebM while excluding unfinished files', async () => {
+    const root = await temp(),
+      db = database(),
+      destination = join(root, 'moved');
+    db.updateConfig({ replaySaveDir: root });
+    const files = new ReplayFiles(db, root);
+    const mp4 = replayName(
+      { fid: '123', id: '8863', name: 'Player', teamId: 0, mapId: 7 },
+      1700000000000,
+      '.mp4',
+    );
+    await Promise.all([
+      writeFile(join(root, mp4), 'mp4 video'),
+      writeFile(join(root, 'legacy.webm'), 'webm video'),
+      writeFile(join(root, '.rec-part-fixture.mp4'), 'unfinished'),
+    ]);
+    expect((await files.list()).map((file) => file.id).sort()).toEqual([mp4, 'legacy.webm'].sort());
+    expect((await files.list()).find((file) => file.id === mp4)).toMatchObject({
+      fid: '123',
+      uploaderName: 'Player',
+    });
+    expect(await files.move(root, destination)).toEqual({ moved: 2, failed: [] });
+    db.updateConfig({ replaySaveDir: destination });
+    expect(await files.path(mp4)).toBe(join(destination, mp4));
+    await files.remove(mp4);
+    expect((await files.list()).map((file) => file.id)).toEqual(['legacy.webm']);
+    expect(await readFile(join(root, '.rec-part-fixture.mp4'), 'utf8')).toBe('unfinished');
+    await expect(files.path('../escape.mp4')).rejects.toThrow();
+    await expect(files.path('invalid.avi')).rejects.toThrow();
+  });
+
   it('hides unfinished recording files and preserves encoded player metadata', async () => {
     const root = await temp(),
       db = database();

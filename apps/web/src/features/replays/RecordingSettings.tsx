@@ -20,11 +20,12 @@ import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   RECORDING_FPS,
-  RECORDING_BITRATE_MBPS,
+  RECORDING_QUALITY_SCORE,
+  RECORDING_CODEC_LABELS,
   type Display,
   type PublicConfig,
 } from '@ba/contracts';
-import { QUALITIES, normalizeQuality, estimateRecordingBytes, formatSize } from '@ba/shared';
+import { QUALITIES, normalizeQuality } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
@@ -165,6 +166,7 @@ export function RecordingSettings({
       <Card className="recording-video-card">
         <CardHeader>
           <CardTitle>{t('recordingVideo')}</CardTitle>
+          <CardDescription>{t('recordingCodecAutomatic')}</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup>
@@ -234,32 +236,40 @@ export function RecordingSettings({
                     }
                   />
                 </Field>
-                <Field id="rec-bitrate" label={`${t('bitrate')} · ${draft.replayBitrateMbps} Mbps`}>
+                <Field
+                  id="rec-quality-score"
+                  label={`${t('recordingQualityScore')} · ${draft.replayQualityScore}`}
+                >
                   <Slider
-                    id="rec-bitrate"
-                    min={RECORDING_BITRATE_MBPS.min}
-                    max={RECORDING_BITRATE_MBPS.max}
+                    id="rec-quality-score"
+                    min={RECORDING_QUALITY_SCORE.min}
+                    max={RECORDING_QUALITY_SCORE.max}
                     step={1}
-                    value={[draft.replayBitrateMbps]}
-                    aria-label={t('bitrate')}
+                    value={[draft.replayQualityScore]}
+                    aria-label={t('recordingQualityScore')}
+                    aria-describedby="rec-quality-score-hint"
                     onValueChange={([value]) =>
-                      set('replayBitrateMbps', value ?? RECORDING_BITRATE_MBPS.default, 250)
+                      set('replayQualityScore', value ?? RECORDING_QUALITY_SCORE.default, 250)
                     }
                   />
+                  <FieldDescription id="rec-quality-score-hint">
+                    {t('recordingQualityHint', {
+                      min: RECORDING_QUALITY_SCORE.recommendedMin,
+                      max: RECORDING_QUALITY_SCORE.recommendedMax,
+                      value: RECORDING_QUALITY_SCORE.default,
+                    })}
+                  </FieldDescription>
                 </Field>
               </FieldGroup>
             </div>
-            <FieldDescription>
-              {t('estimated', {
-                size: formatSize(
-                  estimateRecordingBytes(
-                    45,
-                    draft.replayBitrateMbps,
-                    draft.replayAudio === 'default',
-                  ),
-                ),
-              })}
-            </FieldDescription>
+            <FieldDescription>{t('recordingVariableSize')}</FieldDescription>
+            {state.recording.codec && ['recording', 'stopping'].includes(state.recording.phase) && (
+              <FieldDescription role="status">
+                {t('recordingCodecSelected', {
+                  codec: RECORDING_CODEC_LABELS[state.recording.codec],
+                })}
+              </FieldDescription>
+            )}
           </FieldGroup>
         </CardContent>
       </Card>

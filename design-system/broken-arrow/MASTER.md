@@ -308,6 +308,19 @@ dialog close controls, and readable table headers.
 
 ### Asynchronous content and reserved space
 
+Recording settings retain the shared Card, FieldGroup, Field and shadcn Slider
+composition. Keep resolution and frame rate separate from the quality score.
+The quality slider ranges from 1 to 51 and defaults to 20; its associated helper
+text explains that lower values improve quality and increase file size, with
+16–23 as suggested starting values. Preserve keyboard adjustment, visible focus,
+automatic saving and `aria-describedby` on the quality control. Show the automatic
+AV1 → HEVC → H.264 order before recording and the selected codec while recording
+or saving. Hardware-preferred encoders are attempted first; software AV1 is the
+final fallback. Explain that MP4 file size varies with content instead of presenting
+a fixed-duration size estimate. The recording library continues to play old
+WebM files. Parameter sources and limitations live in
+[the recording specification](../../docs/recording.md).
+
 Keep the same section shells, labels, table headers, column widths, and responsive
 grids while requests are waiting, partially available, or complete. Replace values
 inside their final slots with shadcn Skeleton. A cache response must fill those

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import { TooltipButton } from '../../components/Tooltip';
-import type { Replay } from '@ba/contracts';
+import { RECORDING_CODEC_LABELS, type Replay } from '@ba/contracts';
 import { formatSize, formatTime, formatDuration } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useConfirmation } from '../../components/Confirmation';
@@ -157,7 +157,8 @@ export function ReplaysPanel() {
               </Badge>
               {recording.phase === 'recording' && (
                 <span>
-                  {formatDuration(recording.seconds)} · {recording.sourceId}
+                  {formatDuration(recording.seconds)}
+                  {recording.codec && <> · {RECORDING_CODEC_LABELS[recording.codec]}</>}
                 </span>
               )}
             </div>

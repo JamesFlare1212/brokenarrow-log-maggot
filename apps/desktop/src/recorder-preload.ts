@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { RecorderBridge, RecorderConfig } from '@ba/contracts';
 const bridge: RecorderBridge = {
   config: () => ipcRenderer.invoke('ba:recording:config') as Promise<RecorderConfig>,
-  started: (id, hasAudio) => ipcRenderer.invoke('ba:recording:started', id, hasAudio),
+  started: (id, hasAudio, codec) => ipcRenderer.invoke('ba:recording:started', id, hasAudio, codec),
   chunk: (id, sequence, data) => ipcRenderer.invoke('ba:recording:chunk', id, sequence, data),
   finish: (id, duration, hasAudio) =>
     ipcRenderer.invoke('ba:recording:finish', id, duration, hasAudio),

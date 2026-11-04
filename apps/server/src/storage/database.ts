@@ -23,7 +23,7 @@ import {
   determineOutcome,
   normalizeQuality,
   normalizeFps,
-  normalizeBitrate,
+  normalizeRecordingQualityScore,
 } from '@ba/shared';
 import { projectConfig } from '../config';
 
@@ -117,7 +117,7 @@ export class Database {
       lang: stored.lang === 'ja' || stored.lang === 'ru' ? 'zh' : stored.lang,
       replayQuality: normalizeQuality(stored.replayQuality),
       replayFps: normalizeFps(stored.replayFps),
-      replayBitrateMbps: normalizeBitrate(stored.replayBitrateMbps),
+      replayQualityScore: normalizeRecordingQualityScore(stored.replayQualityScore),
     });
     config.panelOrder = includeRadar(config.panelOrder);
     return config;
