@@ -34,18 +34,22 @@ describe('button tooltips', () => {
     await act(async () => vi.advanceTimersByTime(400));
     const hover = document.querySelector<HTMLElement>('[data-slot=tooltip-content]')!;
     const content = hover.firstElementChild!.innerHTML;
-    const panelClasses = (element: HTMLElement) =>
+    const panelSurfaceClasses = (element: HTMLElement) =>
       element.className
         .split(/\s+/)
         .filter(
-          (name) => !name.startsWith('origin-') && !name.startsWith('data-[state=delayed-open]'),
+          // Glass hints stay stationary; pinned popovers retain their panel animation.
+          (name) =>
+            !/^(?:origin-|group\/tooltip$)|(?:^|:)(?:animate-|fade-|zoom-|slide-|duration-)/.test(
+              name,
+            ),
         )
         .sort();
-    const hoverClasses = panelClasses(hover);
+    const hoverClasses = panelSurfaceClasses(hover);
     fireEvent.click(badge);
     const pinned = document.querySelector<HTMLElement>('[data-slot=popover-content]')!;
     expect(pinned.firstElementChild!.innerHTML).toBe(content);
-    expect(panelClasses(pinned)).toEqual(hoverClasses);
+    expect(panelSurfaceClasses(pinned)).toEqual(hoverClasses);
     fireEvent.pointerLeave(badge);
     await act(async () => vi.advanceTimersByTime(500));
     expect(document.querySelector('[data-slot=popover-content]')).toBe(pinned);

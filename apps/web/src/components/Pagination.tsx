@@ -59,7 +59,10 @@ export function Pagination({
   };
   return (
     <PrimitivePagination
-      className={cn('flex-wrap justify-between gap-3 py-3', hidden && 'invisible')}
+      className={cn(
+        'results-page-navigation @container/pagination flex-wrap justify-between gap-3 py-3',
+        hidden && 'invisible',
+      )}
       aria-label={label}
       aria-hidden={hidden || undefined}
       aria-busy={pending}
@@ -94,16 +97,7 @@ export function Pagination({
           />
         </PaginationItem>
         {paginationItems(current, pages).map((item) => (
-          <PaginationItem
-            key={item}
-            className={cn(
-              typeof item === 'number' &&
-                item !== 1 &&
-                item !== pages &&
-                item !== current &&
-                'hidden sm:list-item',
-            )}
-          >
+          <PaginationItem key={item} className="pagination-page-item pagination-max-24:hidden">
             {typeof item === 'number' ? (
               <PaginationLink
                 href="#"
@@ -120,6 +114,9 @@ export function Pagination({
             )}
           </PaginationItem>
         ))}
+        <PaginationItem className="pagination-page-summary hidden px-2 text-[0.75rem] whitespace-nowrap pagination-max-24:list-item">
+          <span>{t('pageOf', { page: current, pages })}</span>
+        </PaginationItem>
         <PaginationItem>
           <PaginationNext
             href="#"

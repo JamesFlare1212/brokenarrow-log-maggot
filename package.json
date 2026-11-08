@@ -25,6 +25,7 @@
     "typecheck": "tsc --noEmit",
     "ui:check": "node scripts/check-ui-design.mjs",
     "test": "vitest run",
+    "test:ui": "playwright test --config tests/browser/playwright.config.ts",
     "test:watch": "vitest",
     "build": "node scripts/prepare-icon.mjs && pnpm --filter @ba/web build && pnpm --filter @ba/server build && pnpm --filter @ba/desktop build",
     "check": "pnpm typecheck && pnpm ui:check && pnpm test && pnpm build",
@@ -36,6 +37,7 @@
     "pack:desktop": "pnpm build && electron-builder --dir --publish never"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.8",
     "@types/node": "26.6.6",

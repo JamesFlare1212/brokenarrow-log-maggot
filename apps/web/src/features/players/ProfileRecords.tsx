@@ -59,14 +59,20 @@ export function ProfileRecords({
   ];
 
   return (
-    <Tabs defaultValue="statistics" className="profile-records">
-      <div className="profile-tab-scroll">
+    <Tabs
+      defaultValue="statistics"
+      className="profile-records min-w-0 gap-4 [&>[data-slot='tabs-content'][data-state='active']]:flex [&>[data-slot='tabs-content'][data-state='active']]:min-w-0 [&>[data-slot='tabs-content'][data-state='active']]:flex-col [&>[data-slot='tabs-content'][data-state='active']]:gap-3"
+    >
+      <div className="profile-tab-scroll min-w-0 overflow-x-auto overflow-y-hidden pb-0.5 border-b border-b-border [&>[data-slot='tabs-list']]:h-11 [&>[data-slot='tabs-list']]:gap-4 viewport-max-767:[&>[data-slot='tabs-list']]:gap-2">
         <TabsList variant="line" aria-label={t('profileRecords')}>
           {tabs.map(({ value, label, icon: TabIcon, count, pending }) => (
             <TabsTrigger key={value} value={value}>
               <TabIcon aria-hidden="true" />
               {label}
-              <span className="profile-tab-count" aria-busy={pending}>
+              <span
+                className="profile-tab-count inline-flex min-w-4 min-h-4 items-center justify-center text-muted-foreground text-[0.6875rem] tabular-nums"
+                aria-busy={pending}
+              >
                 {pending ? <Skeleton className="h-3 w-4" aria-hidden="true" /> : count}
               </span>
             </TabsTrigger>
@@ -75,7 +81,7 @@ export function ProfileRecords({
       </div>
       <TabsContent value="statistics">
         {reportPending || (report && report.recentMatches.length > 0) ? (
-          <div className="profile-table profile-statistics-table">
+          <div className="profile-table profile-statistics-table min-w-0 overflow-hidden rounded-(--radius) border border-border">
             <ReportMatchTable report={report} pending={reportPending} />
           </div>
         ) : (
@@ -85,7 +91,10 @@ export function ProfileRecords({
       <TabsContent value="encounters">
         {profilePending || encounters.length > 0 ? (
           <>
-            <dl className="profile-encounter-summary" aria-busy={profilePending}>
+            <dl
+              className="profile-encounter-summary [&_dt]:text-muted-foreground [&_dt]:text-[0.75rem] grid grid-cols-4 gap-4 pt-1 px-0 pb-3 [&_dd]:flex [&_dd]:min-h-7.5 [&_dd]:items-center [&_dd]:mt-1 [&_dd]:text-[1.25rem] [&_dd]:font-semibold [&_dd]:tabular-nums viewport-max-767:grid-cols-2"
+              aria-busy={profilePending}
+            >
               {[
                 { label: t('same'), value: teammates.length },
                 {
@@ -113,7 +122,7 @@ export function ProfileRecords({
                 </div>
               ))}
             </dl>
-            <div className="profile-table profile-encounters-table">
+            <div className="profile-table min-w-0 overflow-hidden border border-border rounded-(--radius) [&_table]:min-w-128 [&_th]:bg-muted [&_th]:text-[0.75rem] [&_th]:py-2.5 [&_th]:px-4 [&_td]:py-2.5 [&_td]:px-4 [&_td:first-child_[data-slot='button']]:min-h-6 [&_td:first-child_[data-slot='button']]:h-auto [&_td:first-child_[data-slot='button']]:justify-start [&_td:first-child_[data-slot='button']]:p-0 [&_td:first-child_[data-slot='button']]:whitespace-normal [&_td:first-child_[data-slot='button']]:text-left profile-encounters-table [&_table]:table-fixed [&_th[data-column='team']]:w-24 [&_th[data-column='result']]:w-32 [&_th[data-column='time']]:w-50">
               <Table aria-busy={profilePending}>
                 <TableCaption className="sr-only">{t('encounters')}</TableCaption>
                 <TableHeader>
@@ -159,7 +168,7 @@ export function ProfileRecords({
                             {encounter.custom && <Badge>{t('custom')}</Badge>}
                           </div>
                         </TableCell>
-                        <TableCell className="profile-time">
+                        <TableCell className="profile-time text-muted-foreground text-[0.8125rem] whitespace-nowrap">
                           {formatTime(encounter.at, locale)}
                         </TableCell>
                       </TableRow>

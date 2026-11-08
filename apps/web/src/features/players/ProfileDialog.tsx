@@ -1,12 +1,8 @@
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from '@/components/ui/accordion';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { ExternalLink, RefreshCw as faArrowsRotate } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
@@ -41,13 +37,14 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
   const profilePending = !p && (profile.pending || !profile.error);
   const reportPending = !r && (report.pending || !report.error);
   const metaPending = !info && (profilePending || reportPending);
+  const nameHistoryId = useId();
   return (
     <Dialog
       open
       onClose={closeModal}
       onBack={backModal}
       title={`${p?.name || r?.name || name} · #${id}`}
-      className="dialog-wide profile-dialog"
+      className="dialog-wide profile-dialog w-[calc(100%_-_3rem)] max-w-288 sm:max-w-288 h-[min(52rem,_calc(100svh_-_var(--window-controls-height)_-_3rem))] viewport-max-767:w-[calc(100%_-_1.5rem)]"
       headerActions={
         <Button
           variant="ghost"
@@ -61,13 +58,16 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
         </Button>
       }
     >
-      <div className="profile-toolbar">
-        <div className="profile-heading">
-          <div className="profile-heading-title">
+      <div className="profile-toolbar flex items-center flex-wrap justify-between gap-4">
+        <div className="profile-heading flex min-w-0 flex-col gap-1.5">
+          <div className="profile-heading-title flex flex-wrap items-baseline gap-2 [&_h2]:text-[1.125rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.025em]">
             <h2>{t('profileOverview')}</h2>
             {p?.banned && <Badge tone="danger">{t('banned')}</Badge>}
           </div>
-          <dl className="profile-meta" aria-busy={metaPending}>
+          <dl
+            className="profile-meta flex flex-wrap items-baseline gap-4 text-[0.75rem] [&>div]:flex [&>div]:flex-wrap [&>div]:items-center [&>div]:gap-2 [&_dt]:text-muted-foreground [&_dd]:flex [&_dd]:min-w-6 [&_dd]:min-h-4.5 [&_dd]:items-center [&_dd]:font-medium [&_dd]:tabular-nums"
+            aria-busy={metaPending}
+          >
             {[
               { label: t('totalMatches'), value: info?.matchCount },
               { label: t('samples'), value: info?.sampleCount },
@@ -85,7 +85,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
             ))}
           </dl>
         </div>
-        <div className="actions">
+        <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
           <Button
             onClick={() =>
               void api
@@ -123,28 +123,55 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
         profilePending={profilePending}
         reportPending={reportPending}
       />
-      {p && (
-        <>
-          {aliases.length > 0 && (
-            <Accordion type="single" collapsible className="profile-name-history">
-              <AccordionItem value="details">
-                <AccordionTrigger>
-                  {t('names')} <Badge>{aliases.length}</Badge>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="name-history">
-                    {aliases.map((n) => (
-                      <span className="profile-alias" key={n.name}>
-                        <strong>{n.name}</strong>
-                        <small>{formatTime(n.lastSeen, locale)}</small>
-                      </span>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          )}
-        </>
+      {aliases.length > 0 && (
+        <Card
+          size="sm"
+          className="profile-name-history min-w-0 @container/aliases"
+          role="region"
+          aria-labelledby={nameHistoryId}
+        >
+          <CardHeader>
+            <CardTitle id={nameHistoryId} role="heading" aria-level={3}>
+              {t('names')}
+            </CardTitle>
+            <CardAction>
+              <Badge tone="muted">{aliases.length}</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <ItemGroup
+              className="name-history max-h-64 min-w-0 gap-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] has-data-[size=xs]:gap-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:outline-offset-2"
+              aria-label={t('names')}
+              tabIndex={0}
+            >
+              {aliases.map((entry) => (
+                <Item
+                  size="xs"
+                  role="listitem"
+                  className="profile-alias min-w-0 flex-col items-stretch @sm/aliases:flex-row @sm/aliases:items-start"
+                  key={entry.name}
+                >
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="block w-full line-clamp-none wrap-anywhere">
+                      {entry.name}
+                    </ItemTitle>
+                  </ItemContent>
+                  <ItemContent className="min-w-0 flex-none">
+                    <ItemDescription className="line-clamp-none tabular-nums">
+                      <time
+                        dateTime={
+                          entry.lastSeen > 0 ? new Date(entry.lastSeen).toISOString() : undefined
+                        }
+                      >
+                        {formatTime(entry.lastSeen, locale)}
+                      </time>
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+              ))}
+            </ItemGroup>
+          </CardContent>
+        </Card>
       )}
     </Dialog>
   );

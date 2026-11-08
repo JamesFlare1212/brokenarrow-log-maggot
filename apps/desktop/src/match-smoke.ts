@@ -34,11 +34,19 @@ export async function verifyMatchDetails(window: BrowserWindow) {
         const grid = page.querySelector('.match-scoreboard-grid');
         const teams = grid.querySelectorAll('.match-team');
         const width = details.getBoundingClientRect().width;
-        const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+        const available = grid.getBoundingClientRect().width;
+        const gap = parseFloat(getComputedStyle(grid).gap);
+        const teamBounds = Array.from(teams, team => team.getBoundingClientRect());
+        const requiredWidths = Array.from(teams, team => parseFloat(team.style.getPropertyValue('--match-team-width')));
+        const fits = requiredWidths.reduce((sum, required) => sum + required, 0) + gap <= available + 0.1;
+        const paired = teamBounds.length === 2 && Math.abs(teamBounds[0].top - teamBounds[1].top) < 1;
         const initial = {
           route: location.hash.startsWith('#archive/match/'),
           scoreboard: teams.length >= 2 && Array.from(teams).every(team => team.querySelectorAll('thead th').length === 6),
-          responsive: columns === (width >= 1180 ? 2 : 1),
+          responsive: requiredWidths.every(Number.isFinite) && paired === fits &&
+            (paired ? teamBounds[0].right + gap <= teamBounds[1].left + 1 :
+              teamBounds.every(bounds => Math.abs(bounds.width - available) < 1)),
+          widthCapped: width <= 1537,
           contained: page.scrollWidth <= page.clientWidth + 1 && details.scrollWidth <= details.clientWidth + 1,
           readable: Array.from(page.querySelectorAll('.match-player-toggle')).every(button => button.getBoundingClientRect().width > 40),
         };

@@ -47,6 +47,56 @@ afterEach(async () => {
 });
 
 describe('UI design guard', () => {
+  it.each([
+    `className={cn('bg-white')}`,
+    `className="dark:bg-white"`,
+    `className={enabled ? 'bg-white' : 'p-4'}`,
+    `className={cn({ 'dark:bg-white': enabled })}`,
+    `className={cn('w-72', enabled && 'hover:ring-red-500')}`,
+    `className="md:focus:outline-red-500!"`,
+  ])('rejects static surface overrides in %s', async (attribute) => {
+    const directory = await fixture(
+      compliantSource +
+        `import { PopoverContent as Popup } from '@/components/ui/popover';
+export const Floating = () => <Popup ${attribute}>Details</Popup>;`,
+    );
+    const result = check(directory);
+    expect(result.status, result.stderr).toBe(1);
+    expect(JSON.parse(result.stderr).overlayOverrides).toHaveLength(1);
+  });
+
+  it('preserves layout-only conditional classes and outline geometry', async () => {
+    const directory = await fixture(
+      compliantSource +
+        `import { PopoverContent as Popup } from '@/components/ui/popover';
+export const Floating = () => <Popup className={cn('w-72', enabled && 'max-h-40', {'border-0': enabled}, 'ring-2 outline-offset-2')}>Details</Popup>;`,
+    );
+    const result = check(directory);
+    expect(result.status, result.stderr).toBe(0);
+  });
+
+  it('allows layout-only overlays with aliased imports', async () => {
+    const directory = await fixture(
+      compliantSource +
+        `import { PopoverContent as Popup } from '@/components/ui/popover';
+export const Floating = () => <Popup className="w-72 p-4">Details</Popup>;`,
+    );
+    const result = check(directory);
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ overlaySites: 1, overlayOverrides: [] });
+  });
+
+  it('rejects a feature-specific inverse overlay surface', async () => {
+    const directory = await fixture(
+      compliantSource +
+        `import { TooltipContent as Hint } from '@/components/ui/tooltip';
+export const Floating = () => <Hint className="bg-foreground text-background">Details</Hint>;`,
+    );
+    const result = check(directory);
+    expect(result.status).toBe(1);
+    expect(JSON.parse(result.stderr).overlayOverrides).toHaveLength(1);
+  });
+
   it('allows layout-only card styling, renamed imports, and deliberate table surfaces', async () => {
     const directory = await fixture(
       compliantSource,

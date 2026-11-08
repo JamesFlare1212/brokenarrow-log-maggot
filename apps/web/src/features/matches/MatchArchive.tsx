@@ -25,6 +25,7 @@ import {
   RefreshCw as faArrowsRotate,
   LayoutGrid,
   List,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
@@ -35,12 +36,23 @@ import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Badge, Field, Notice, Empty, Toggle, Dialog } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
+import { OverflowHint } from '../../components/OverflowHint';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverDescription,
+} from '@/components/ui/popover';
 import { MatchArchiveCard, MatchArchiveCardSkeleton } from './MatchArchiveCard';
 import { MatchArchiveActions } from './MatchArchiveActions';
 import { LoadingStatus } from '../../components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MatchDetails } from './MatchDetails';
 import { archiveMatchFromHash, archiveMatchHash } from './routes';
+import { usePageBreadcrumb } from '../../hooks/usePageBreadcrumb';
 const PAGE_SIZE = 50;
 export function MatchArchive() {
   const { api, state, notify } = useApp(),
@@ -58,6 +70,7 @@ export function MatchArchive() {
     [page, setPage] = useState(1),
     [sorting, setSorting] = useState<SortingState>([{ id: 'time', desc: true }]),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
+  const compact = useIsMobile();
   const table = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
   const detailPage = useRef<HTMLDivElement>(null);
@@ -104,13 +117,22 @@ export function MatchArchive() {
     history.pushState({ baArchiveDetail: true }, '', archiveMatchHash(matchId));
     setDetailId(matchId);
   }, []);
-  const returnToArchive = () => {
+  const returnToArchive = useCallback(() => {
     if (history.state?.baArchiveDetail) history.back();
     else {
       history.replaceState(null, '', '#archive');
       setDetailId(null);
     }
-  };
+  }, []);
+  usePageBreadcrumb(
+    'archive',
+    detailId
+      ? /^\d+$/.test(detailId)
+        ? `${t('matchDetail')} #${detailId}`
+        : `${t('matchDetail')} · ${t('matchLocalOnly')}`
+      : null,
+    returnToArchive,
+  );
   const navigateMatch = (matchId: string) => {
     history.replaceState(history.state, '', archiveMatchHash(matchId));
     setDetailId(matchId);
@@ -194,7 +216,7 @@ export function MatchArchive() {
         header: t('map'),
         size: 160,
         cell: ({ row }) => (
-          <span className="archive-map-name">
+          <span className="archive-map-name whitespace-normal wrap-anywhere">
             {row.original.map || (row.original.fid ? '#' + row.original.fid : t('matchUnrecorded'))}
           </span>
         ),
@@ -308,64 +330,107 @@ export function MatchArchive() {
       {t(outcome !== 'all' || account || hideUnknown ? 'noFilteredMatches' : 'empty')}
     </Empty>
   );
+  const filters = (
+    <div className="archive-filters flex flex-wrap items-center gap-3 min-w-0 max-w-full [&>[data-slot='field-group']]:[container-type:normal] [&>[data-slot='field-group']]:w-auto [&>[data-slot='field-group']]:max-w-full [&>[data-slot='field-group']]:flex-none [&>[data-slot='field-group']:has(#archive-account)]:w-44 [&_[data-slot='field-content']]:flex-none [.archive-filter-popover_&]:flex-col [.archive-filter-popover_&]:items-stretch [.archive-filter-popover_&]:gap-4 [.archive-filter-popover_&>[data-slot='field-group']:has(#archive-account)]:w-full viewport-max-479:w-full viewport-max-479:[&>[data-slot='field-group']:has(#archive-account)]:w-full">
+      <Field id="archive-account" label={t('account')} labelHidden>
+        <NativeSelect
+          id="archive-account"
+          value={account}
+          onChange={(e) => {
+            setAccount(e.target.value);
+            setPage(1);
+          }}
+        >
+          <NativeSelectOption value="">{t('allAccounts')}</NativeSelectOption>
+          {accounts.map((a) => (
+            <NativeSelectOption key={a.id} value={a.id}>
+              {a.name} · #{a.id}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </Field>
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        value={outcome}
+        onValueChange={(value) => {
+          if (value) {
+            setOutcome(value as typeof outcome);
+            setPage(1);
+          }
+        }}
+        aria-label={t('result')}
+      >
+        {(['all', 'win', 'loss'] as const).map((value) => (
+          <ToggleGroupItem value={value} key={value}>
+            {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <Toggle
+        id="archive-hide-unknown"
+        label={t('hideUnknownResults')}
+        checked={hideUnknown}
+        onChange={(value) => {
+          setHideUnknown(value);
+          setPage(1);
+        }}
+      />
+    </div>
+  );
+  const addButton = (
+    <Button variant="default" onClick={() => setAddDialog(true)}>
+      <Icon icon={faPlus} />
+      {t('addMatch')}
+    </Button>
+  );
   return (
     <>
       <section
-        className="archive-panel"
+        className="archive-panel flex flex-1 flex-col min-h-0 gap-3.5"
         aria-label={t('archive')}
         hidden={Boolean(detailId)}
         ref={panel}
         tabIndex={-1}
       >
-        <div className="archive-toolbar">
-          <div className="archive-filters">
-            <Field id="archive-account" label={t('account')} labelHidden>
-              <NativeSelect
-                id="archive-account"
-                value={account}
-                onChange={(e) => {
-                  setAccount(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <NativeSelectOption value="">{t('allAccounts')}</NativeSelectOption>
-                {accounts.map((a) => (
-                  <NativeSelectOption key={a.id} value={a.id}>
-                    {a.name} · #{a.id}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              value={outcome}
-              onValueChange={(value) => {
-                if (value) {
-                  setOutcome(value as typeof outcome);
-                  setPage(1);
-                }
-              }}
-              aria-label={t('result')}
-            >
-              {(['all', 'win', 'loss'] as const).map((value) => (
-                <ToggleGroupItem value={value} key={value}>
-                  {t(value === 'all' ? 'allResults' : value === 'win' ? 'winsOnly' : 'lossesOnly')}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-            <Toggle
-              id="archive-hide-unknown"
-              label={t('hideUnknownResults')}
-              checked={hideUnknown}
-              onChange={(value) => {
-                setHideUnknown(value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="archive-results-actions">
-            <small className="muted inline-flex items-center gap-2">
+        <div className="archive-toolbar flex flex-wrap items-center gap-3 justify-between viewport-max-479:w-full">
+          {compact ? (
+            <div className="archive-compact-actions flex w-full items-center justify-between gap-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    aria-label={t('archiveFilters')}
+                    aria-description={t('activeFilters', {
+                      count:
+                        Number(Boolean(account)) + Number(outcome !== 'all') + Number(hideUnknown),
+                    })}
+                  >
+                    <SlidersHorizontal data-icon="inline-start" aria-hidden="true" />
+                    {t('archiveFilters')}
+                    <Badge>
+                      {Number(Boolean(account)) + Number(outcome !== 'all') + Number(hideUnknown)}
+                    </Badge>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  className="archive-filter-popover w-80 max-w-[calc(100vw-2rem)]"
+                  aria-labelledby="archive-filter-title"
+                >
+                  <PopoverHeader>
+                    <PopoverTitle id="archive-filter-title">{t('archiveFilters')}</PopoverTitle>
+                    <PopoverDescription>{t('archiveFilterHint')}</PopoverDescription>
+                  </PopoverHeader>
+                  {filters}
+                </PopoverContent>
+              </Popover>
+              {addButton}
+            </div>
+          ) : (
+            filters
+          )}
+          <div className="archive-results-actions flex flex-wrap items-center gap-3 shrink-0 max-w-full ml-auto [&_small]:whitespace-nowrap viewport-max-479:ml-0 viewport-max-479:w-full viewport-max-479:justify-end">
+            <small className="muted text-muted-foreground inline-flex items-center gap-2">
               {t('samples')}:{' '}
               {loading ? <Skeleton className="h-4 w-8" aria-hidden="true" /> : filtered.length}
             </small>
@@ -398,22 +463,22 @@ export function MatchArchive() {
               />
               {t(scanning ? 'scanningLogs' : 'refresh')}
             </Button>
-            <Button variant="default" onClick={() => setAddDialog(true)}>
-              <Icon icon={faPlus} />
-              {t('addMatch')}
-            </Button>
+            {!compact && addButton}
           </div>
         </div>
         {matches.error && <Notice error>{matches.error}</Notice>}
         {view === 'grid' ? (
           <div
-            className="archive-grid-viewport scroll-fade scroll-fade-4"
+            className="archive-grid-viewport flex-1 min-h-0 overflow-auto [scrollbar-gutter:stable] [scroll-padding-block:var(--scroll-fade-size,_1rem)] p-1 scroll-fade scroll-fade-4"
             ref={table}
             tabIndex={0}
             aria-busy={matches.pending}
           >
             {dataTable.getRowModel().rows.length ? (
-              <ul className="archive-grid" aria-label={t('archive')}>
+              <ul
+                className="archive-grid grid grid-cols-[repeat(auto-fill,_minmax(min(100%,_25rem),_1fr))] [align-items:start] gap-4 [&>li]:min-w-0"
+                aria-label={t('archive')}
+              >
                 {dataTable.getRowModel().rows.map((row) => (
                   <li key={row.id}>
                     <MatchArchiveCard match={row.original} onOpen={() => openMatch(row.original)} />
@@ -423,7 +488,11 @@ export function MatchArchive() {
             ) : loading ? (
               <>
                 <LoadingStatus />
-                <ul className="archive-grid" aria-label={t('archive')} aria-busy="true">
+                <ul
+                  className="archive-grid grid grid-cols-[repeat(auto-fill,_minmax(min(100%,_25rem),_1fr))] [align-items:start] gap-4 [&>li]:min-w-0"
+                  aria-label={t('archive')}
+                  aria-busy="true"
+                >
                   {Array.from({ length: 6 }, (_, index) => (
                     <li key={index}>
                       <MatchArchiveCardSkeleton />
@@ -436,21 +505,22 @@ export function MatchArchive() {
             )}
           </div>
         ) : (
-          <div className="data-table-surface">
+          <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-lg bg-card">
             <DataTable
               table={dataTable}
               label={t('archive')}
               pending={matches.pending || loading}
               loading={loading}
               scrollRef={table}
-              className="archive-table"
+              className="archive-table flex-1 min-h-0 overflow-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:table-fixed [&_[data-slot='table-header']]:sticky [&_[data-slot='table-header']]:top-0 [&_[data-slot='table-header']]:bg-card [&_[data-slot='table-head']:first-child]:pl-4 [&_[data-slot='table-cell']:first-child]:pl-4"
               fillColumn="map"
               empty={empty}
               onRowOpen={openMatch}
             />
+            <OverflowHint viewport={table} />
           </div>
         )}
-        <div className="results-pagination">
+        <div className="results-pagination shrink-0 mt-auto [&_[data-slot='pagination']]:py-0.5">
           <Pagination
             page={currentPage}
             pageSize={PAGE_SIZE}
@@ -473,7 +543,7 @@ export function MatchArchive() {
           }}
         >
           <form
-            className="add-match-form"
+            className="add-match-form flex flex-col gap-5"
             aria-busy={adding}
             onSubmit={(e) => {
               e.preventDefault();
@@ -521,7 +591,7 @@ export function MatchArchive() {
                 )}
               </FormField>
             </FieldGroup>
-            <div className="actions">
+            <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
               <Button
                 variant="default"
                 type="submit"
@@ -549,7 +619,10 @@ export function MatchArchive() {
         </Dialog>
       </section>
       {detailId && (
-        <div className="match-detail-page" ref={detailPage}>
+        <div
+          className="match-detail-page flex-1 min-h-0 overflow-auto px-6 [scrollbar-gutter:stable] viewport-max-767:px-5"
+          ref={detailPage}
+        >
           <MatchDetails
             key={detailId}
             matchId={detailId}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -51,6 +51,7 @@ export function MatchDetails({
   onNext,
   position,
   total,
+  renderDialog,
 }: {
   matchId: string;
   summary?: Match;
@@ -59,6 +60,7 @@ export function MatchDetails({
   onNext?: () => void;
   position?: number;
   total?: number;
+  renderDialog?: (content: ReactNode, actions: ReactNode) => ReactNode;
 }) {
   const { api, state, openModal, notify } = useApp();
   const { t, locale } = useI18n();
@@ -135,62 +137,75 @@ export function MatchDetails({
     'dlRatio',
     'objectivesCaptured',
   ] as const;
-  return (
-    <div className="match-details">
-      <div className="match-detail-toolbar">
-        {onBack && (
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-            {t('archive')}
-          </Button>
-        )}
-        <div className="match-detail-navigation">
-          {position !== undefined && total !== undefined && (
-            <span className="muted">{position > 0 ? `${position} / ${total}` : '—'}</span>
-          )}
+  const refreshAction = (
+    <TooltipButton
+      variant="ghost"
+      size="icon-sm"
+      aria-label={t('refresh')}
+      disabled={localOnly || request.pending || replayRequest.pending}
+      tooltip={localOnly ? t('matchLocalOnlyHint') : t('refresh')}
+      aria-busy={request.pending || replayRequest.pending}
+      onClick={refresh}
+    >
+      <RefreshCw className={cn(request.pending && 'animate-spin')} aria-hidden="true" />
+    </TooltipButton>
+  );
+  const content = (
+    <div className="match-details [.match-detail-page>&]:py-6 @container/match-detail flex flex-col gap-5 w-full max-w-384 mx-auto viewport-max-767:[.match-detail-page>&]:py-5">
+      {!renderDialog && (
+        <div className="match-detail-toolbar flex items-center gap-2 sticky top-0 z-[2] min-h-11 pb-2 border-b border-b-border bg-background">
           {onBack && (
-            <>
-              <TooltipButton
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t('matchPrevious')}
-                disabled={!onPrevious}
-                onClick={onPrevious}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </TooltipButton>
-              <TooltipButton
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t('matchNext')}
-                disabled={!onNext}
-                onClick={onNext}
-              >
-                <ChevronRight aria-hidden="true" />
-              </TooltipButton>
-            </>
+            <Button variant="ghost" onClick={onBack}>
+              <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+              {t('archive')}
+            </Button>
           )}
-          <TooltipButton
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t('refresh')}
-            disabled={localOnly || request.pending || replayRequest.pending}
-            tooltip={localOnly ? t('matchLocalOnlyHint') : t('refresh')}
-            aria-busy={request.pending || replayRequest.pending}
-            onClick={refresh}
-          >
-            <RefreshCw className={cn(request.pending && 'animate-spin')} aria-hidden="true" />
-          </TooltipButton>
+          <div className="match-detail-navigation flex items-center gap-2 ml-auto text-[0.75rem] tabular-nums">
+            {position !== undefined && total !== undefined && (
+              <span className="muted text-muted-foreground">
+                {position > 0 ? `${position} / ${total}` : '—'}
+              </span>
+            )}
+            {onBack && (
+              <>
+                <TooltipButton
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t('matchPrevious')}
+                  disabled={!onPrevious}
+                  onClick={onPrevious}
+                >
+                  <ChevronLeft aria-hidden="true" />
+                </TooltipButton>
+                <TooltipButton
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t('matchNext')}
+                  disabled={!onNext}
+                  onClick={onNext}
+                >
+                  <ChevronRight aria-hidden="true" />
+                </TooltipButton>
+              </>
+            )}
+            {refreshAction}
+          </div>
         </div>
-      </div>
+      )}
       {request.pending && <LoadingStatus />}
       {request.error && <Notice error>{request.error}</Notice>}
-      {match?.warning && <Notice>{match.warning}</Notice>}
+      {match?.warning && (
+        <Notice>
+          {match.warning === 'Cached match data; BATrace is unavailable'
+            ? t('matchCachedWarning')
+            : match.warning}
+        </Notice>
+      )}
       {localOnly && <Notice>{t('matchLocalOnlyHint')}</Notice>}
-      <div className="match-overview">
-        <div className="match-overview-heading">
-          <div className="match-identity">
-            <div className="match-kicker">
+      <div className="match-overview flex flex-col gap-5">
+        <div className="match-overview-heading flex items-center gap-2 justify-between [.match-details_&]:items-start [.match-details_&]:flex-nowrap [.match-details_&]:gap-4">
+          <div className="match-identity min-w-0 [&_h2]:mt-1 [&_h2]:text-[1.75rem] [&_h2]:font-[650] [&_h2]:leading-[1.3] [&_h2]:wrap-anywhere match-detail-max-36:[&_h2]:text-[1.375rem]">
+            <div className="match-kicker flex items-center gap-2 text-muted-foreground text-[0.75rem]">
               {t('matchDetail')}
               {localOnly ? (
                 <Badge variant="outline">{t('matchLocalOnly')}</Badge>
@@ -211,7 +226,7 @@ export function MatchDetails({
             <h2 ref={heading} tabIndex={-1}>
               {!match && loading ? <Skeleton className="h-8 w-56" /> : match?.map || '—'}
             </h2>
-            <div className="match-metadata">
+            <div className="match-metadata flex items-center gap-3 text-muted-foreground text-[0.75rem] flex-wrap mt-3 [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1 [&_svg]:w-3.5 [&_svg]:h-3.5">
               <Badge variant="secondary">
                 {match
                   ? t(localOnly && match.mode === 'unknown' ? 'matchUnrecorded' : match.mode)
@@ -234,7 +249,7 @@ export function MatchDetails({
               </span>
             </div>
           </div>
-          <div className="match-outcome">
+          <div className="match-outcome flex shrink-0 flex-col items-end gap-1.5 [&>strong]:flex [&>strong]:items-baseline [&>strong]:gap-1.5 [&>strong]:text-[1.875rem] [&>strong]:font-semibold [&>strong]:tabular-nums [&>span]:text-[0.75rem] [&_strong>span]:text-[0.75rem] [&_strong>span]:text-muted-foreground [&_strong>span]:font-normal">
             <Badge
               variant={
                 outcome === 'win' ? 'success' : outcome === 'loss' ? 'destructive' : 'secondary'
@@ -247,13 +262,13 @@ export function MatchDetails({
               {delta === null && loading ? <Skeleton className="h-9 w-24" /> : formatDelta(delta)}
               <span>ELO</span>
             </strong>
-            <span className="muted">
+            <span className="muted text-muted-foreground">
               {match?.localPersona || local?.name || '—'}
               {participant && ` · ${teamLabel(participant.teamId)}`}
             </span>
           </div>
         </div>
-        <div className="match-detail-actions">
+        <div className="match-detail-actions flex items-center gap-2 flex-wrap">
           {replayRequest.data?.map((replay, index) => (
             <Button
               variant={index === 0 ? 'default' : 'outline'}
@@ -286,7 +301,7 @@ export function MatchDetails({
             <ExternalLink data-icon="inline-end" aria-hidden="true" />
           </Button>
           {replayRequest.data && (
-            <span className="muted match-replay-caption">
+            <span className="muted text-muted-foreground match-replay-caption ml-auto text-[0.75rem]">
               {t(
                 localOnly
                   ? 'matchLocalReplayUnavailable'
@@ -308,18 +323,18 @@ export function MatchDetails({
         {(participant ||
           (!match && loading) ||
           (localOnly && match && (match.points !== null || match.localDeck))) && (
-          <Card size="sm" className="match-personal-card">
+          <Card size="sm" className="match-personal-card gap-3">
             <CardHeader>
               <CardTitle>
-                <span className="match-personal-title">
+                <span className="match-personal-title flex items-center gap-2 [&>span]:ml-auto [&>span]:text-[0.75rem] [&_svg]:w-4 [&_svg]:h-4">
                   <Swords aria-hidden="true" />
                   {t('matchYourPerformance')}
-                  <span className="muted">{participant?.name}</span>
+                  <span className="muted text-muted-foreground">{participant?.name}</span>
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <dl className="match-summary">
+              <dl className="match-summary grid grid-cols-4 gap-4 [&_dt]:text-muted-foreground [&_dt]:text-[0.75rem] [&_dd]:flex [&_dd]:min-h-7.5 [&_dd]:items-center [&_dd]:mt-1 [&_dd]:text-[1.5rem] [&_dd]:font-semibold [&_dd]:tabular-nums match-detail-max-36:grid-cols-2 viewport-max-767:grid-cols-2">
                 {localOnly ? (
                   <>
                     <div>
@@ -350,13 +365,18 @@ export function MatchDetails({
           </Card>
         )}
       </div>
-      <section className="match-players" aria-label={t('matchScoreboard')}>
-        <div className="match-section-heading">
+      <section
+        className="match-players [&_[data-slot='tabs']]:gap-4"
+        aria-label={t('matchScoreboard')}
+      >
+        <div className="match-section-heading flex items-center gap-2 justify-between flex-wrap mb-3 [&_h3]:text-[1rem] [&_h3]:font-semibold [&_h3_span]:text-[0.75rem] [&_h3_span]:font-normal [&_h3_span]:ml-2 [&>span]:text-[0.75rem] [&>span]:font-normal match-detail-max-36:[&>span]:hidden">
           <h3>
             {t('matchScoreboard')}{' '}
-            <span className="muted">{match && t('playersCount', { n: match.players.length })}</span>
+            <span className="muted text-muted-foreground">
+              {match && t('playersCount', { n: match.players.length })}
+            </span>
           </h3>
-          <span className="muted">{t('matchExpandHint')}</span>
+          <span className="muted text-muted-foreground">{t('matchExpandHint')}</span>
         </div>
         <Tabs value={group} onValueChange={(value) => setGroup(value as MatchMetricGroup)}>
           <TabsList variant="line" aria-label={t('matchMetricGroup')}>
@@ -384,10 +404,11 @@ export function MatchDetails({
           ))}
         </Tabs>
       </section>
-      <div className="match-detail-footnote">
+      <div className="match-detail-footnote flex items-center gap-2 justify-between flex-wrap text-muted-foreground text-[0.6875rem]">
         <span>{t('matchRatioHint')}</span>
         <span>{t('matchMissingHint')}</span>
       </div>
     </div>
   );
+  return renderDialog ? renderDialog(content, refreshAction) : content;
 }

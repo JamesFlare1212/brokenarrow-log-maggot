@@ -133,8 +133,8 @@ export function RecordingSettings({
     }
   };
   const content = (
-    <div className="recording-settings">
-      <Card className="recording-behavior-card">
+    <div className="recording-settings grid min-w-0 flex-col gap-(--content-gap) @container/recording grid-cols-2 [&>[role='alert']]:col-span-full viewport-max-767:grid-cols-1">
+      <Card className="recording-behavior-card recording-max-28:[&>[data-slot='card-header']]:grid-cols-1 recording-max-28:[&_[data-slot='card-action']]:col-start-1 recording-max-28:[&_[data-slot='card-action']]:[grid-row:3] recording-max-28:[&_[data-slot='card-action']]:justify-self-start recording-max-28:[&_[data-slot='card-action']]:mt-2 col-span-full">
         <CardHeader>
           <CardTitle>{t('recordingBehavior')}</CardTitle>
           <CardDescription>{t('recordingHint')}</CardDescription>
@@ -163,7 +163,7 @@ export function RecordingSettings({
           </FieldGroup>
         </CardContent>
       </Card>
-      <Card className="recording-video-card">
+      <Card className="recording-video-card col-span-full">
         <CardHeader>
           <CardTitle>{t('recordingVideo')}</CardTitle>
           <CardDescription>{t('recordingCodecAutomatic')}</CardDescription>
@@ -184,15 +184,15 @@ export function RecordingSettings({
                 ))}
               </NativeSelect>
             </Field>
-            <div className="recording-video-grid">
+            <div className="recording-video-grid grid grid-cols-2 gap-6 items-center viewport-max-767:grid-cols-1">
               <div
-                className="display-preview-slot"
+                className="display-preview-slot flex w-full max-w-[calc(20rem_*_var(--display-preview-ratio))] [aspect-ratio:var(--display-preview-ratio)] items-center justify-center overflow-hidden rounded-lg bg-muted"
                 style={{ '--display-preview-ratio': previewAspectRatio } as CSSProperties}
                 aria-busy={thumbnail.pending && !thumbnail.data}
               >
                 {thumbnail.data ? (
                   <img
-                    className="display-preview"
+                    className="display-preview block size-full object-contain"
                     src={thumbnail.data}
                     alt={t('display')}
                     onLoad={({ currentTarget: image }) => {
@@ -203,7 +203,10 @@ export function RecordingSettings({
                 ) : thumbnail.pending ? (
                   <Skeleton className="size-full" />
                 ) : (
-                  <span role={thumbnail.error ? 'alert' : 'status'} className="muted">
+                  <span
+                    role={thumbnail.error ? 'alert' : 'status'}
+                    className="muted text-muted-foreground"
+                  >
                     {thumbnail.error || t('previewUnavailable')}
                   </span>
                 )}
@@ -355,7 +358,11 @@ export function RecordingSettings({
         </Notice>
       )}
       {!inline && (
-        <div className="settings-save-state" role="status" aria-live="polite">
+        <div
+          className="settings-save-state flex items-center gap-2 text-muted-foreground text-[0.75rem] [.recording-settings>&]:col-span-full viewport-max-767:max-w-32 viewport-max-479:shrink-0 viewport-max-479:max-w-24"
+          role="status"
+          aria-live="polite"
+        >
           {t(
             status === 'saved'
               ? 'settingsAutoSaved'
@@ -376,7 +383,7 @@ export function RecordingSettings({
       onClose={() => void close()}
       onBack={backModal ? () => void close(true) : undefined}
       title={t('recordingSettings')}
-      className="recording-settings-dialog"
+      className="recording-settings-dialog w-[calc(100%_-_3rem)] max-w-192 sm:max-w-192 viewport-max-767:w-[calc(100%_-_1.5rem)]"
     >
       {content}
     </Dialog>

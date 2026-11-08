@@ -43,22 +43,25 @@ export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boole
           </Badge>
         </CardAction>
       </CardHeader>
-      <CardContent className="maggot-card-content">
+      <CardContent className="maggot-card-content flex min-w-0 flex-col gap-3">
         {(report || pending) && (
           <>
-            <div className="maggot-summary">
+            <div className="maggot-summary flex flex-wrap items-center justify-between gap-y-2 gap-x-4">
               <div>
-                <div className="maggot-score-row" aria-busy={pending && !report}>
+                <div
+                  className="maggot-score-row flex min-h-[2.7rem] items-end gap-1 [&>[data-slot='skeleton']]:self-center"
+                  aria-busy={pending && !report}
+                >
                   {report ? (
                     <strong
                       className={cn(
-                        'maggot-score',
+                        'maggot-score text-[2.25rem] font-semibold tracking-[-0.04em] leading-[1.2] tabular-nums',
                         report.index !== null &&
                           (report.index <= 3.5
                             ? 'text-success'
                             : report.index <= 7
                               ? 'text-warning'
-                              : 'text-danger'),
+                              : 'text-destructive'),
                       )}
                     >
                       {formatMetric(report.index, 1)}
@@ -72,7 +75,7 @@ export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boole
                 </div>
                 <p className="text-xs text-muted-foreground">{t('maggotScale')}</p>
               </div>
-              <dl className="maggot-summary-metrics">
+              <dl className="maggot-summary-metrics flex flex-col gap-1.5 text-[0.75rem] [&>div]:flex [&>div]:justify-between [&>div]:gap-3 [&_dt]:text-muted-foreground [&_dd]:flex [&_dd]:min-w-8 [&_dd]:min-h-4.5 [&_dd]:items-center [&_dd]:justify-end [&_dd]:font-medium [&_dd]:tabular-nums">
                 <div>
                   <dt>{t('averageRank')}</dt>
                   <dd>
@@ -99,7 +102,7 @@ export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boole
                 </div>
               </dl>
             </div>
-            <div className="maggot-feedback">
+            <div className="maggot-feedback flex min-h-8 flex-col gap-2 [&>:first-child]:min-h-4.5">
               {report ? (
                 <p className="text-xs text-muted-foreground" role="status">
                   {report.complete

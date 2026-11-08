@@ -1,4 +1,6 @@
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
+import { cn } from '@/lib/utils';
+import { glassOverlaySurfaceClasses } from '@/lib/surfaces';
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -23,13 +25,27 @@ const Toaster = ({ ...props }: ToasterProps) => {
         {
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
-          '--normal-border': 'var(--border)',
-          '--border-radius': 'var(--radius)',
+          '--normal-border': 'transparent',
+          '--normal-bg-hover': 'var(--accent)',
+          '--normal-border-hover': 'var(--glass-border)',
+          '--border-radius': 'var(--radius-xl)',
         } as React.CSSProperties
       }
       toastOptions={{
         classNames: {
-          toast: 'cn-toast',
+          // Sonner's unlayered shadow needs an important utility to retain the shared material.
+          toast: cn(
+            'cn-toast',
+            glassOverlaySurfaceClasses,
+            'shadow-(--glass-shadow)! focus-visible:ring-2 focus-visible:ring-ring',
+          ),
+          description: 'text-muted-foreground!',
+          closeButton:
+            'focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-ring!',
+          actionButton:
+            'focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-ring!',
+          cancelButton:
+            'focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-ring!',
         },
       }}
       {...props}

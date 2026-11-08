@@ -41,7 +41,11 @@ describe('application startup with the removed demo query', () => {
     await import('../apps/web/src/main');
 
     expect(render).toHaveBeenCalledWith(
-      expect.objectContaining({ props: expect.objectContaining({ className: 'startup-error' }) }),
+      expect.objectContaining({
+        props: expect.objectContaining({
+          className: expect.stringMatching(/(?:^|\s)startup-error(?:\s|$)/),
+        }),
+      }),
     );
     expect(createFixtureBridge).not.toHaveBeenCalled();
   });

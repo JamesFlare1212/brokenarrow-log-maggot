@@ -83,8 +83,10 @@ describe('browser development with repository fixtures', () => {
       themeMode: 'light',
       lightTheme: 'forest',
       darkTheme: 'violet',
+      glassOpacity: 40,
       eloColorScheme: 'red-up',
       sidebarCollapsed: true,
+      sidebarWidth: 320,
       hiddenPanels: ['players', 'decks'],
     });
     expect(events).toContainEqual(
@@ -95,8 +97,10 @@ describe('browser development with repository fixtures', () => {
           themeMode: 'light',
           lightTheme: 'forest',
           darkTheme: 'violet',
+          glassOpacity: 40,
           eloColorScheme: 'red-up',
           sidebarCollapsed: true,
+          sidebarWidth: 320,
           hiddenPanels: ['players', 'decks'],
         }),
       }),

@@ -355,8 +355,8 @@ describe('BATrace status indicator', () => {
       const tooltip = explanation();
       const blocked = within(tooltip).getByText('被 Cloudflare 拦截');
       const fallback = within(tooltip).getByText(ok ? 'fallback 成功' : 'fallback 失败');
-      expect(blocked.className).toBe(ok ? 'text-warning' : 'text-danger');
-      expect(fallback.className).toBe(ok ? 'text-success' : 'text-danger');
+      expect(blocked.classList.contains(ok ? 'text-warning' : 'text-destructive')).toBe(true);
+      expect(fallback.classList.contains(ok ? 'text-success' : 'text-destructive')).toBe(true);
       expect(blocked.nextElementSibling).toBe(fallback);
       expect(within(tooltip).getByText('/player/8863')).toBeTruthy();
       expect(within(tooltip).getByText(`HTTP ${ok ? 200 : 403} · 200 ms`)).toBeTruthy();
@@ -723,6 +723,8 @@ describe('first-launch analytics consent', () => {
         name: translate('zh', 'analyticsConsentTitle'),
       });
       expect(within(dialog).getByText(translate('zh', 'analyticsConsentPrompt'))).toBeTruthy();
+      expect(within(dialog).getByText(translate('zh', 'analyticsDescription'))).toBeTruthy();
+      expect(within(dialog).getByText(translate('zh', 'analyticsPrivacy'))).toBeTruthy();
       expect(within(dialog).queryByRole('button', { name: translate('zh', 'close') })).toBeNull();
       await userEvent.setup().keyboard('{Escape}');
       expect(
@@ -881,14 +883,25 @@ describe('settings pages and automatic saving', () => {
     const panel = within(await screen.findByRole('tabpanel', { name: '缓存' }));
     expect(screen.getByRole('tab', { name: '缓存' }).getAttribute('aria-selected')).toBe('true');
     expect(await panel.findByText('3 KB')).toBeTruthy();
-    expect(panel.getByText('3 条 · 2 条已过期')).toBeTruthy();
-    fireEvent.click(panel.getByRole('button', { name: '清理过期缓存' }));
+    const apiUsage = within(
+      panel.getByRole('group', { name: translate('zh', 'cacheCategory.api') }),
+    );
+    expect(apiUsage.getAllByRole('term').map((node) => node.textContent)).toEqual([
+      translate('zh', 'cacheEntriesShort'),
+      translate('zh', 'cacheExpiredShort'),
+    ]);
+    expect(apiUsage.getAllByRole('definition').map((node) => node.textContent)).toEqual(['3', '2']);
+    fireEvent.click(panel.getByRole('button', { name: translate('zh', 'cacheClearExpired') }));
     await waitFor(() =>
       expect(
         native.calls.filter((call) => call.method === 'cache.clear').map((call) => call.input),
       ).toEqual([{ mode: 'expired' }]),
     );
-    expect(panel.getByRole('button', { name: '清空全部缓存' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      panel
+        .getByRole('button', { name: translate('zh', 'cacheClearAll') })
+        .hasAttribute('disabled'),
+    ).toBe(true);
     expect(panel.getByRole('button', { name: '刷新' }).hasAttribute('disabled')).toBe(true);
     clearing.resolve({
       removed: 3,
@@ -898,10 +911,16 @@ describe('settings pages and automatic saving', () => {
       },
     });
     expect(await panel.findByText('已清理 3 条缓存。')).toBeTruthy();
-    expect(panel.getByRole('button', { name: '清理过期缓存' }).hasAttribute('disabled')).toBe(true);
-    expect(panel.getByRole('button', { name: '清空全部缓存' }).hasAttribute('disabled')).toBe(
-      false,
-    );
+    expect(
+      panel
+        .getByRole('button', { name: translate('zh', 'cacheClearExpired') })
+        .hasAttribute('disabled'),
+    ).toBe(true);
+    expect(
+      panel
+        .getByRole('button', { name: translate('zh', 'cacheClearAll') })
+        .hasAttribute('disabled'),
+    ).toBe(false);
   });
 
   it('requires confirmation to clear all cache and keeps cancellation harmless', async () => {
@@ -921,17 +940,25 @@ describe('settings pages and automatic saving', () => {
     await user.click(screen.getByRole('tab', { name: '缓存' }));
     const panel = within(screen.getByRole('tabpanel', { name: '缓存' }));
     await panel.findByText('3 KB');
-    const clear = panel.getByRole('button', { name: '清空全部缓存' });
+    const clear = panel.getByRole('button', { name: translate('zh', 'cacheClearAll') });
     await user.click(clear);
-    let dialog = within(await screen.findByRole('alertdialog', { name: '清空全部缓存' }));
+    let dialog = within(
+      await screen.findByRole('alertdialog', { name: translate('zh', 'cacheClearAll') }),
+    );
     expect(dialog.getByText(translate('zh', 'cachePreserved'))).toBeTruthy();
     await user.click(dialog.getByRole('button', { name: '取消' }));
     expect(native.calls.some((call) => call.method === 'cache.clear')).toBe(false);
     await user.click(clear);
-    dialog = within(await screen.findByRole('alertdialog', { name: '清空全部缓存' }));
-    await user.click(dialog.getByRole('button', { name: '清空全部缓存' }));
+    dialog = within(
+      await screen.findByRole('alertdialog', { name: translate('zh', 'cacheClearAll') }),
+    );
+    await user.click(dialog.getByRole('button', { name: translate('zh', 'cacheClearAll') }));
     expect(await panel.findByText('已清理 5 条缓存。')).toBeTruthy();
-    expect(panel.getByRole('button', { name: '清空全部缓存' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      panel
+        .getByRole('button', { name: translate('zh', 'cacheClearAll') })
+        .hasAttribute('disabled'),
+    ).toBe(true);
     expect(
       native.calls.filter((call) => call.method === 'cache.clear').map((call) => call.input),
     ).toEqual([{ mode: 'all' }]);
@@ -952,17 +979,30 @@ describe('settings pages and automatic saving', () => {
     fireEvent.click(screen.getByRole('tab', { name: '缓存' }));
     const panel = within(screen.getByRole('tabpanel', { name: '缓存' }));
     expect((await panel.findByRole('alert')).textContent).toContain('Cache statistics unavailable');
-    expect(panel.getByRole('button', { name: '清空全部缓存' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      panel
+        .getByRole('button', { name: translate('zh', 'cacheClearAll') })
+        .hasAttribute('disabled'),
+    ).toBe(true);
     available = true;
     fireEvent.click(panel.getByRole('button', { name: '刷新' }));
     await panel.findByText('3 KB');
-    fireEvent.click(panel.getByRole('button', { name: '清理过期缓存' }));
+    fireEvent.click(panel.getByRole('button', { name: translate('zh', 'cacheClearExpired') }));
     expect((await panel.findByRole('alert')).textContent).toContain('Cache cleanup failed');
     expect(panel.queryByText('已清理 3 条缓存。')).toBeNull();
-    expect(panel.getByText('3 条 · 2 条已过期')).toBeTruthy();
-    expect(panel.getByRole('button', { name: '清理过期缓存' }).hasAttribute('disabled')).toBe(
-      false,
+    const apiUsage = within(
+      panel.getByRole('group', { name: translate('zh', 'cacheCategory.api') }),
     );
+    expect(apiUsage.getAllByRole('term').map((node) => node.textContent)).toEqual([
+      translate('zh', 'cacheEntriesShort'),
+      translate('zh', 'cacheExpiredShort'),
+    ]);
+    expect(apiUsage.getAllByRole('definition').map((node) => node.textContent)).toEqual(['3', '2']);
+    expect(
+      panel
+        .getByRole('button', { name: translate('zh', 'cacheClearExpired') })
+        .hasAttribute('disabled'),
+    ).toBe(false);
   });
 
   it('opens a full page, uses addressable tabs, and returns to the previous page with its input intact', async () => {
@@ -1006,7 +1046,7 @@ describe('settings pages and automatic saving', () => {
   it('previews glass opacity in five-percent steps, saves it, and restores the default', async () => {
     const native = nativeFixture(bootstrapForApp());
     const page = await openSettings(native);
-    const slider = page.getByRole('slider', { name: 'Glass opacity' });
+    const slider = page.getByRole('slider', { name: translate('zh', 'glassOpacity') });
     const opacity = () => document.documentElement.style.getPropertyValue('--glass-opacity');
     const resetName = '恢复默认透明度（50%）';
     expect(page.getByRole('button', { name: resetName }).hasAttribute('disabled')).toBe(true);
@@ -1036,7 +1076,9 @@ describe('settings pages and automatic saving', () => {
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     const reopened = within(await screen.findByRole('main', { name: '设置' }));
     expect(
-      reopened.getByRole('slider', { name: 'Glass opacity' }).getAttribute('aria-valuetext'),
+      reopened
+        .getByRole('slider', { name: translate('zh', 'glassOpacity') })
+        .getAttribute('aria-valuetext'),
     ).toBe('45%');
     fireEvent.click(reopened.getByRole('radio', { name: '浅色' }));
     expect(opacity()).toBe('45%');
@@ -1045,7 +1087,9 @@ describe('settings pages and automatic saving', () => {
     fireEvent.click(reopened.getByRole('button', { name: resetName }));
     expect(opacity()).toBe('50%');
     expect(
-      reopened.getByRole('slider', { name: 'Glass opacity' }).getAttribute('aria-valuetext'),
+      reopened
+        .getByRole('slider', { name: translate('zh', 'glassOpacity') })
+        .getAttribute('aria-valuetext'),
     ).toBe('50%');
     expect(reopened.getByRole('button', { name: resetName }).hasAttribute('disabled')).toBe(true);
     await waitFor(() => expect(native.backend.config.glassOpacity).toBe(50));
@@ -1345,6 +1389,105 @@ describe('settings pages and automatic saving', () => {
     expect(page.getByRole('status').textContent).toBe('已自动保存');
   });
 
+  it.each([
+    ['zh', 'retry'],
+    ['en', 'retry'],
+    ['zh', 'discard'],
+    ['en', 'discard'],
+  ] as const)(
+    'keeps a global save failure visible on Recording in %s until %s succeeds',
+    async (locale, recovery) => {
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      let available = false;
+      const native = nativeFixture(initial, {
+        'displays.thumbnail': () => null,
+        'config.update': (patch) => {
+          if (!available) throw new Error('Global save unavailable');
+          const config = configSchema.parse({ ...native.backend.config, ...patch });
+          native.emit({ type: 'config', config, revision: native.backend.revision + 1 });
+          return config;
+        },
+      });
+      history.replaceState(null, '', '#settings/appearance');
+      render(<App />, { wrapper: wrapper(native.api) });
+      const label = (key: string) => translate(locale, key);
+      fireEvent.keyDown(await screen.findByRole('slider', { name: label('glassOpacity') }), {
+        key: 'End',
+      });
+      await screen.findByText('Global save unavailable');
+      fireEvent.click(screen.getByRole('tab', { name: label('recordingSettings') }));
+      await screen.findByRole('tabpanel', { name: label('recordingSettings') });
+      const status = document.querySelector('.settings-page-toolbar .settings-save-state')!;
+      await waitFor(() => expect(status.textContent).toBe(label('settingsSaveFailed')));
+      expect(screen.getByRole('alert').textContent).toContain('Global save unavailable');
+      expect(native.backend.config.glassOpacity).toBe(initial.config.glassOpacity);
+      available = true;
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: label(recovery === 'retry' ? 'settingsRetry' : 'settingsDiscard'),
+        }),
+      );
+      await waitFor(() => expect(status.textContent).toBe(label('settingsAutoSaved')));
+      expect(screen.queryByText('Global save unavailable')).toBeNull();
+      expect(native.backend.config.glassOpacity).toBe(
+        recovery === 'retry' ? 100 : initial.config.glassOpacity,
+      );
+    },
+  );
+
+  it('shows a global in-flight save on Recording until that write completes', async () => {
+    const initial = bootstrapForApp();
+    const saved = deferred<Bootstrap['config']>();
+    const native = nativeFixture(initial, {
+      'displays.thumbnail': () => null,
+      'config.update': async () => {
+        const config = await saved.promise;
+        native.emit({ type: 'config', config, revision: native.backend.revision + 1 });
+        return config;
+      },
+    });
+    const page = await openSettings(native);
+    fireEvent.keyDown(page.getByRole('slider', { name: translate('zh', 'glassOpacity') }), {
+      key: 'End',
+    });
+    await waitFor(() =>
+      expect(native.calls.some((call) => call.method === 'config.update')).toBe(true),
+    );
+    fireEvent.click(screen.getByRole('tab', { name: '录像设置' }));
+    const status = document.querySelector('.settings-page-toolbar .settings-save-state')!;
+    expect(status.textContent).toBe(translate('zh', 'settingsSaving'));
+    await act(async () =>
+      saved.resolve(configSchema.parse({ ...initial.config, glassOpacity: 100 })),
+    );
+    await waitFor(() => expect(status.textContent).toBe(translate('zh', 'settingsAutoSaved')));
+  });
+
+  it('keeps a recording-owned failure in the page status until its retry succeeds', async () => {
+    let available = false;
+    const initial = bootstrapForApp();
+    const native = nativeFixture(initial, {
+      'displays.thumbnail': () => null,
+      'config.update': (patch) => {
+        if (!available) throw new Error('Recording save unavailable');
+        const config = configSchema.parse({ ...native.backend.config, ...patch });
+        native.emit({ type: 'config', config, revision: native.backend.revision + 1 });
+        return config;
+      },
+    });
+    history.replaceState(null, '', '#settings/recording');
+    render(<App />, { wrapper: wrapper(native.api) });
+    const panel = within(await screen.findByRole('tabpanel', { name: '录像设置' }));
+    fireEvent.click(panel.getByRole('switch', { name: '自动录制' }));
+    await panel.findByText('Recording save unavailable');
+    const status = document.querySelector('.settings-page-toolbar .settings-save-state')!;
+    await waitFor(() => expect(status.textContent).toBe(translate('zh', 'settingsSaveFailed')));
+    available = true;
+    fireEvent.click(panel.getByRole('button', { name: '重试保存' }));
+    await waitFor(() => expect(status.textContent).toBe(translate('zh', 'settingsAutoSaved')));
+    expect(native.backend.config.replayEnabled).toBe(!initial.config.replayEnabled);
+  });
+
   it('serializes saves and keeps the newest choices visible when an older save completes', async () => {
     const writes: Array<{
       patch: RpcInputs['config.update'];
@@ -1453,14 +1596,25 @@ describe('settings pages and automatic saving', () => {
     render(<App />, { wrapper: wrapper(native.api) });
     const page = within(await screen.findByRole('main', { name: '设置' }));
     const checkbox = page.getByRole('switch', {
-      name: translate('zh', 'analyticsEnabled'),
+      name: translate('zh', 'analyticsEnabledShort') + ' · ' + translate('zh', 'analyticsEnabled'),
     }) as HTMLInputElement;
+    expect(checkbox.getAttribute('aria-label')).toContain(
+      page.getByText(translate('zh', 'analyticsEnabledShort')).textContent,
+    );
     expect(checkbox.getAttribute('aria-checked') === 'true').toBe(false);
     expect(checkbox.getAttribute('aria-describedby')).toBe(
       'analytics-description analytics-privacy',
     );
-    expect(page.getByText(translate('zh', 'analyticsDescription')).textContent).toContain(
+    expect(page.getByText(translate('zh', 'analyticsSummary')).textContent).toContain(
       'aptabase.jamesflare.com',
+    );
+    expect(page.queryByText(translate('zh', 'analyticsDescription'))).toBeNull();
+    fireEvent.click(page.getByRole('button', { name: translate('zh', 'analyticsDetails') }));
+    expect(await page.findByText(translate('zh', 'analyticsDescription'))).toBeTruthy();
+    expect(page.getByText(translate('zh', 'analyticsPrivacy'))).toBeTruthy();
+    fireEvent.click(page.getByRole('button', { name: translate('zh', 'analyticsDetails') }));
+    await waitFor(() =>
+      expect(page.queryByText(translate('zh', 'analyticsDescription'))).toBeNull(),
     );
     const before = structuredClone(native.backend.config);
     checkbox.focus();
@@ -1470,6 +1624,43 @@ describe('settings pages and automatic saving', () => {
     fireEvent.click(checkbox);
     await waitFor(() => expect(native.backend.config.analyticsEnabled).toBe(false));
     expect(native.backend.config).toEqual(before);
+  });
+
+  it('waits for a pending save and prevents duplicate workspace breadcrumb returns', async () => {
+    history.replaceState(null, '', '#current');
+    const initial = bootstrapForApp();
+    initial.config.lang = 'en';
+    initial.config.analyticsEnabled = false;
+    initial.config.analyticsChoiceSaved = true;
+    const pending = deferred<RpcOutputs['config.update']>();
+    const native = nativeFixture(initial, { 'config.update': () => pending.promise });
+    const user = userEvent.setup();
+    const popstates = vi.fn();
+    window.addEventListener('popstate', popstates);
+    try {
+      render(<App />, { wrapper: wrapper(native.api) });
+      await user.click(await screen.findByRole('button', { name: 'Settings' }));
+      await user.click(await screen.findByRole('tab', { name: 'General' }));
+      await user.click(
+        screen.getByRole('switch', { name: 'Share stats · Send optional usage statistics' }),
+      );
+      await waitFor(() =>
+        expect(native.calls.some((call) => call.method === 'config.update')).toBe(true),
+      );
+      const breadcrumb = within(screen.getByRole('navigation', { name: 'Page location' }));
+      const parent = breadcrumb.getByRole('link', { name: 'Overview' });
+      await user.click(parent);
+      expect(parent.getAttribute('aria-disabled')).toBe('true');
+      parent.focus();
+      await user.keyboard('{Enter}');
+      expect(location.hash).toBe('#settings/general');
+      expect(popstates).not.toHaveBeenCalled();
+      await act(async () => pending.resolve({ ...initial.config, analyticsEnabled: true }));
+      await waitFor(() => expect(location.hash).toBe('#current'));
+      expect(popstates).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener('popstate', popstates);
+    }
   });
 
   it('opens a settings tab directly and saves both label and switch activation', async () => {
@@ -2020,6 +2211,24 @@ describe('request and native event ordering', () => {
 });
 
 describe('user interaction regressions', () => {
+  it('closes mobile navigation with one Escape and restores its opener focus', async () => {
+    vi.stubGlobal('innerWidth', 375);
+    const native = nativeFixture(bootstrapForApp());
+    const user = userEvent.setup();
+    render(<App />, { wrapper: wrapper(native.api) });
+    const trigger = await screen.findByRole('button', {
+      name: translate('zh', 'openNavigation'),
+    });
+    await user.click(trigger);
+    const navigation = await screen.findByRole('dialog', { name: translate('zh', 'workspaceNav') });
+    expect(document.activeElement).toBe(
+      within(navigation).getByRole('button', { name: translate('zh', 'closeNavigation') }),
+    );
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
   it.each(['current', 'radar'] as const)(
     'shows pre-match party teammates and their stats on the %s page from development tools',
     async (page) => {
@@ -2360,6 +2569,35 @@ describe('user interaction regressions', () => {
     expect(screen.getByRole('button', { name: 'Banned player 24 #9024' })).toBeTruthy();
     expect(within(list).getAllByRole('row').slice(1)).toHaveLength(5);
     expect(screen.getByRole('link', { name: '第 2 页' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('preserves mobile archive filters through dismissal and view changes', async () => {
+    vi.stubGlobal('innerWidth', 375);
+    const native = nativeFixture(bootstrapForApp(), {
+      'matches.list': () => [
+        matchFixture({ id: 'won', fid: '8001', map: 'Won map', outcome: 'win' }),
+        matchFixture({ id: 'lost', fid: '8002', map: 'Lost map', outcome: 'loss' }),
+      ],
+    });
+    const user = userEvent.setup();
+    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    await screen.findByText('Won map');
+    const trigger = screen.getByRole('button', { name: translate('zh', 'archiveFilters') });
+    await user.click(trigger);
+    await user.click(screen.getByRole('radio', { name: translate('zh', 'winsOnly') }));
+    expect(screen.queryByText('Lost map')).toBeNull();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    await user.click(trigger);
+    expect(
+      screen.getByRole('radio', { name: translate('zh', 'winsOnly') }).getAttribute('aria-checked'),
+    ).toBe('true');
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('radio', { name: translate('zh', 'listView') }));
+    const table = screen.getByRole('table', { name: translate('zh', 'archive') });
+    expect(within(table).getByText('Won map')).toBeTruthy();
+    expect(within(table).queryByText('Lost map')).toBeNull();
+    expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(1);
   });
 
   it('preserves archive sorting and pagination when switching views without reloading matches', async () => {
@@ -2887,6 +3125,48 @@ describe('user interaction regressions', () => {
     expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'players']);
   });
 
+  it.each(['zh', 'en'] as const)(
+    'keeps keyboard focus in the moved row at both navigation boundaries in %s',
+    async (lang) => {
+      history.replaceState(null, '', '#settings/navigation');
+      const bootstrap = bootstrapForApp();
+      bootstrap.config.lang = lang;
+      bootstrap.config.panelOrder = ['current', 'players', 'decks'];
+      const native = nativeFixture(bootstrap);
+      const user = userEvent.setup();
+      render(<App />, { wrapper: wrapper(native.api) });
+      const up = await screen.findByRole('button', {
+        name: translate(lang, 'moveUp') + ' ' + translate(lang, 'players'),
+      });
+      const down = screen.getByRole('button', {
+        name: translate(lang, 'moveDown') + ' ' + translate(lang, 'players'),
+      });
+      up.focus();
+      await user.keyboard('{Enter}');
+      await waitFor(() =>
+        expect(native.backend.config.panelOrder).toEqual(['players', 'current', 'decks']),
+      );
+      expect((up as HTMLButtonElement).disabled).toBe(true);
+      expect(document.activeElement).toBe(down);
+      await user.keyboard('{Enter}');
+      await waitFor(() =>
+        expect(native.backend.config.panelOrder).toEqual(['current', 'players', 'decks']),
+      );
+      expect(document.activeElement).toBe(down);
+      await user.keyboard('{Enter}');
+      await waitFor(() =>
+        expect(native.backend.config.panelOrder).toEqual(['current', 'decks', 'players']),
+      );
+      expect((down as HTMLButtonElement).disabled).toBe(true);
+      expect(document.activeElement).toBe(up);
+      await user.keyboard('{Enter}');
+      await waitFor(() =>
+        expect(native.backend.config.panelOrder).toEqual(['current', 'players', 'decks']),
+      );
+      expect(document.activeElement).toBe(up);
+    },
+  );
+
   it('saves page visibility in both navigation menus and restores pages in their saved order', async () => {
     const bootstrap = bootstrapForApp();
     bootstrap.config.panelOrder = ['current', 'players', 'decks'];
@@ -2953,7 +3233,7 @@ describe('user interaction regressions', () => {
     fireEvent.click(await screen.findByRole('button', { name: '设置' }));
     await screen.findByRole('main', { name: '设置' });
     fireEvent.click(screen.getByRole('tab', { name: '导航' }));
-    const toggle = screen.getByRole('switch', { name: '在导航中显示 当前房间 / 对局' });
+    const toggle = screen.getByRole('switch', { name: '在导航中显示 总览' });
     expect(toggle.getAttribute('aria-checked') === 'true').toBe(false);
     fireEvent.click(toggle);
     fireEvent.click(screen.getByRole('button', { name: '返回' }));
@@ -3845,7 +4125,7 @@ describe('profile refresh and report scopes', () => {
     },
   );
 
-  it('shows every preference entry when a report exceeds the reserved row budgets', async () => {
+  it('keeps every unit in the adaptive viewport and retains expansion on refresh', async () => {
     const report = reportFixture();
     report.favUnits = Array.from({ length: 20 }, (_, index) => ({
       ...report.favUnits[0]!,
@@ -3857,13 +4137,34 @@ describe('profile refresh and report scopes', () => {
       key: `Additional category ${index + 1}`,
     }));
     const native = nativeFixture(bootstrapForApp());
-    render(<ReportView report={report} />, { wrapper: wrapper(native.api) });
+    const view = render(<ReportView report={report} />, { wrapper: wrapper(native.api) });
     const table = await screen.findByRole('table', { name: translate('zh', 'units') });
     expect(within(table).getAllByRole('row')).toHaveLength(21);
-    expect(within(table).getByText(report.favUnits.at(-1)!.name)).toBeTruthy();
+    expect(table.closest('.profile-highlights')?.getAttribute('data-expanded')).toBe('false');
     const preferences = screen.getByRole('region', { name: translate('zh', 'preference') });
+    expect(within(preferences).getAllByRole('listitem')).toHaveLength(3);
+    const unitsToggle = screen.getByRole('button', {
+      name: translate('zh', 'showAllUnits', { count: 20 }),
+    });
+    fireEvent.click(unitsToggle);
+    expect(unitsToggle.getAttribute('aria-expanded')).toBe('true');
+    expect(table.closest('.profile-highlights')?.getAttribute('data-expanded')).toBe('true');
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: translate('zh', 'showAllCategories', { count: 9 }),
+      }),
+    );
+    expect(within(table).getAllByRole('row')).toHaveLength(21);
+    expect(within(table).getByText(report.favUnits.at(-1)!.name)).toBeTruthy();
     expect(within(preferences).getAllByRole('listitem')).toHaveLength(9);
     expect(within(preferences).getByText('Additional category 9')).toBeTruthy();
+    view.rerender(<ReportView report={report} pending />);
+    expect(within(table).getAllByRole('row')).toHaveLength(21);
+    expect(within(preferences).getAllByRole('listitem')).toHaveLength(9);
+    fireEvent.click(unitsToggle);
+    expect(within(table).getAllByRole('row')).toHaveLength(21);
+    expect(unitsToggle.getAttribute('aria-expanded')).toBe('false');
+    expect(table.closest('.profile-highlights')?.getAttribute('data-expanded')).toBe('false');
   });
 
   it('marks ELO increases and decreases while leaving zero and missing values neutral', async () => {
@@ -3984,9 +4285,9 @@ describe('profile refresh and report scopes', () => {
     await user.click(dataTab);
     expect(screen.getByRole('table', { name: '对局数据' })).toBeTruthy();
     const aliases = document.querySelector<HTMLElement>('.profile-name-history')!;
-    expect(within(aliases).getByRole('button').getAttribute('aria-expanded')).toBe('false');
-    await userEvent.setup().click(within(aliases).getByText('名字历史'));
-    expect(within(aliases).getByRole('button').getAttribute('aria-expanded')).toBe('true');
+    const aliasList = within(aliases).getByRole('list', { name: '名字历史' });
+    expect(within(aliasList).getAllByRole('listitem')).toHaveLength(1);
+    expect(aliasList.getAttribute('tabindex')).toBe('0');
     expect(within(aliases).getByText('Previous alias')).toBeTruthy();
     expect(within(aliases).queryByText('Profile player')).toBeNull();
   });
@@ -4215,6 +4516,43 @@ describe('UX failure recovery', () => {
     await act(async () => pending.resolve(fixtureBootstrap.health));
     await waitFor(() => expect(check.hasAttribute('disabled')).toBe(false));
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('returns from a room report to its player and ignores the cancelled response', async () => {
+    const pending = deferred<RpcOutputs['players.report']>();
+    const bootstrap = bootstrapForApp();
+    bootstrap.session.current = null;
+    bootstrap.session.lobbyPlayers = [{ ...localPlayer, teamId: null }];
+    const native = nativeFixture(bootstrap, { 'players.report': () => pending.promise });
+    render(<PlayersPanel />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: localPlayer.name }));
+    expect(document.activeElement).toBe(document.querySelector('.player-report-panel'));
+    fireEvent.click(screen.getByRole('button', { name: translate('zh', 'backToPlayers') }));
+    const player = screen.getByRole('button', { name: localPlayer.name });
+    expect(document.activeElement).toBe(player);
+    await act(async () => pending.resolve(reportFixture({ name: 'Cancelled room report' })));
+    expect(screen.queryByRole('heading', { name: /Cancelled room report/ })).toBeNull();
+    expect(
+      screen.getByRole('heading', { name: translate('zh', 'currentRoomPlayers') }),
+    ).toBeTruthy();
+  });
+
+  it('returns from a search report without clearing the query or results', async () => {
+    const native = nativeFixture(bootstrapForApp(), {
+      'players.search': () => ({ source: 'local', players: [localPlayer] }),
+    });
+    render(<PlayersPanel />, { wrapper: wrapper(native.api) });
+    const input = await screen.findByLabelText(translate('zh', 'searchLabel'));
+    fireEvent.change(input, { target: { value: localPlayer.name } });
+    fireEvent.click(screen.getByRole('button', { name: translate('zh', 'search') }));
+    const result = await screen.findByRole('button', { name: new RegExp('^' + localPlayer.name) });
+    fireEvent.click(result);
+    await screen.findByRole('button', { name: translate('zh', 'backToPlayers') });
+    fireEvent.click(screen.getByRole('button', { name: translate('zh', 'backToPlayers') }));
+    expect((input as HTMLInputElement).value).toBe(localPlayer.name);
+    expect(result.isConnected).toBe(true);
+    expect(document.activeElement).toBe(result);
+    expect(result.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('invalidates the previous selection and its late report when a new search is submitted', async () => {
@@ -4833,11 +5171,12 @@ describe('match detail navigation and disclosure', () => {
   it.each(['zh', 'en'] as const)(
     'opens recorded local details from the %s list and preserves missing values',
     async (locale) => {
+      history.replaceState(null, '', '#archive');
       const initial = bootstrapForApp();
       initial.config.lang = locale;
       const match = capturedLocalMatch;
       const native = nativeFixture(initial, { 'matches.list': () => [match] });
-      render(<MatchArchive />, { wrapper: wrapper(native.api) });
+      render(<App />, { wrapper: wrapper(native.api) });
       const user = userEvent.setup();
       await user.click(
         await screen.findByRole('switch', { name: translate(locale, 'hideUnknownResults') }),
@@ -4857,6 +5196,9 @@ describe('match detail navigation and disclosure', () => {
       );
       const page = within(document.querySelector('.match-detail-page')! as HTMLElement);
       expect(await page.findByText(translate(locale, 'matchLocalOnlyHint'))).toBeTruthy();
+      const breadcrumb = screen.getByRole('navigation', { name: translate(locale, 'breadcrumb') });
+      expect(breadcrumb.textContent).toContain(translate(locale, 'matchLocalOnly'));
+      expect(breadcrumb.textContent).not.toContain(match.id);
       expect(page.getByText(translate(locale, 'matchLocalOnly'))).toBeTruthy();
       const points = page.getByText(translate(locale, 'matchLogPoints')).closest('div')!;
       expect(points.textContent).toContain(formatMetric(match.points));
@@ -4998,27 +5340,99 @@ describe('match detail navigation and disclosure', () => {
     expect(native.calls.filter((call) => call.method === 'matches.detail')).toHaveLength(1);
   });
 
-  it('loads a direct archive detail route and returns through both its back action and sidebar', async () => {
-    const match = matchFixture();
-    history.replaceState(null, '', `#archive/match/${match.fid}`);
-    const initial = bootstrapForApp();
-    initial.config.panelOrder = ['current', 'archive'];
-    const native = nativeFixture(initial, { 'matches.list': () => [match] });
-    render(<App />, { wrapper: wrapper(native.api) });
-    const heading = await screen.findByRole('heading', { name: match.map });
-    expect(heading.closest('.match-detail-page')).toBeTruthy();
-    fireEvent.click(
-      within(document.querySelector('.match-details')!).getByRole('button', { name: '对局档案' }),
-    );
-    expect(await screen.findByRole('list', { name: '对局档案' })).toBeTruthy();
-    expect(location.hash).toBe('#archive');
-    fireEvent.click(screen.getByRole('button', { name: /查看 .* 的对局详情/ }));
-    await screen.findByRole('heading', { name: match.map });
-    fireEvent.click(document.querySelector('.nav-item[aria-label="对局档案"]')!);
-    expect(await screen.findByRole('list', { name: '对局档案' })).toBeTruthy();
-    expect(location.hash).toBe('#archive');
-    expect(document.querySelector('.match-detail-page')).toBeNull();
-  });
+  it.each(['zh', 'en'] as const)(
+    'updates archive breadcrumbs and returns through its parent, back action and sidebar in %s',
+    async (locale) => {
+      const match = matchFixture();
+      history.replaceState(null, '', `#archive/match/${match.fid}`);
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      initial.config.panelOrder = ['current', 'archive'];
+      const native = nativeFixture(initial, { 'matches.list': () => [match] });
+      render(<App />, { wrapper: wrapper(native.api) });
+      const heading = await screen.findByRole('heading', { name: match.map });
+      expect(heading.closest('.match-detail-page')).toBeTruthy();
+      const breadcrumb = within(
+        screen.getByRole('navigation', { name: translate(locale, 'breadcrumb') }),
+      );
+      expect(
+        breadcrumb
+          .getByRole('link', {
+            name: `${translate(locale, 'matchDetail')} #${match.fid}`,
+          })
+          .getAttribute('aria-current'),
+      ).toBe('page');
+      const parent = breadcrumb.getByRole('link', {
+        name: translate(locale, 'archive'),
+      });
+      parent.focus();
+      await userEvent.setup().keyboard('{Enter}');
+      expect(await screen.findByRole('list', { name: translate(locale, 'archive') })).toBeTruthy();
+      expect(location.hash).toBe('#archive');
+      expect(
+        breadcrumb.queryByText(`${translate(locale, 'matchDetail')} #${match.fid}`),
+      ).toBeNull();
+      fireEvent.click(document.querySelector('[data-match-open]')!);
+      await screen.findByRole('heading', { name: match.map });
+      fireEvent.click(
+        within(document.querySelector('.match-details')!).getByRole('button', {
+          name: translate(locale, 'archive'),
+        }),
+      );
+      expect(await screen.findByRole('list', { name: translate(locale, 'archive') })).toBeTruthy();
+      expect(location.hash).toBe('#archive');
+      fireEvent.click(document.querySelector('[data-match-open]')!);
+      await screen.findByRole('heading', { name: match.map });
+      fireEvent.click(
+        document.querySelector(`.nav-item[aria-label="${translate(locale, 'archive')}"]`)!,
+      );
+      expect(await screen.findByRole('list', { name: translate(locale, 'archive') })).toBeTruthy();
+      expect(location.hash).toBe('#archive');
+      expect(document.querySelector('.match-detail-page')).toBeNull();
+    },
+  );
+
+  it.each(['zh', 'en'] as const)(
+    'keeps player breadcrumbs scoped to the visible page and restores the result focus in %s',
+    async (locale) => {
+      history.replaceState(null, '', '#players');
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      initial.config.panelOrder = ['current', 'players'];
+      const native = nativeFixture(initial);
+      const user = userEvent.setup();
+      render(<App />, { wrapper: wrapper(native.api) });
+      await user.type(await screen.findByRole('searchbox'), localPlayer.id);
+      await user.click(screen.getByRole('button', { name: translate(locale, 'search') }));
+      const opener = await waitFor(() => {
+        const button = document.querySelector<HTMLButtonElement>(
+          `[data-player-select="${localPlayer.id}"]`,
+        );
+        expect(button).toBeTruthy();
+        return button!;
+      });
+      await user.click(opener);
+      const label = `${localPlayer.name} #${localPlayer.id}`;
+      const navigation = () =>
+        within(screen.getByRole('navigation', { name: translate(locale, 'breadcrumb') }));
+      expect(await navigation().findByRole('link', { name: label })).toBeTruthy();
+      await user.click(navigation().getByRole('link', { name: translate(locale, 'overview') }));
+      expect(navigation().queryByText(label)).toBeNull();
+      await user.click(
+        within(
+          screen.getByRole('navigation', { name: translate(locale, 'workspaceNav') }),
+        ).getByRole('button', { name: translate(locale, 'players') }),
+      );
+      expect(await navigation().findByRole('link', { name: label })).toBeTruthy();
+      const parent = navigation().getByRole('link', {
+        name: translate(locale, 'players'),
+      });
+      parent.focus();
+      await user.keyboard('{Enter}');
+      await waitFor(() => expect(navigation().queryByText(label)).toBeNull());
+      expect(document.activeElement).toBe(opener);
+    },
+  );
 
   it('does not replace the next match with a late response from the previous one', async () => {
     const pending = deferred<RpcOutputs['matches.detail']>();
@@ -5054,6 +5468,7 @@ describe('match detail navigation and disclosure', () => {
     expect(teams[1]!.querySelector('.match-team-total')!.textContent).toContain('—');
     const row = screen.getByRole('button', { name: local.name }).closest('tr')!;
     expect(row.hasAttribute('data-self')).toBe(true);
+    expect(within(row).queryByText(translate('zh', 'you'), { exact: true })).toBeNull();
     expect(row.textContent).toContain('∞');
     expect(within(row).getAllByText('0').length).toBeGreaterThan(0);
     expect(screen.queryByText('胜利')).toBeNull();

@@ -139,11 +139,14 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
     </>
   );
   const content = (
-    <div className="session-layout">
-      <div className="session-banner">
+    <div
+      className="session-layout flex min-w-0 flex-col gap-(--session-layout-gap) min-h-[calc(_var(--session-banner-height)+2_*_var(--session-layout-gap)+var(--session-separator-height)+var(--session-roster-height)_)] [.page-current_&[data-empty='true']]:min-h-0 [&>[data-slot='separator']]:h-(--session-separator-height) [&>[data-slot='empty']]:py-8 [&>[data-slot='empty']]:max-h-[max(9.5rem,_calc(100svh_-_28rem))] [@media(max-height:44rem)]:[&>[data-slot='empty']]:py-4"
+      data-empty={!players.length && !pending && !match && !isLobby}
+    >
+      <div className="session-banner flex flex-wrap items-start justify-between gap-4 [&_h2]:text-[1.25rem] [&_h2]:leading-[var(--session-map-line-height)] [&_h2]:font-semibold [&_h2]:tracking-[-0.025em]">
         {players.length > 0 && (
-          <div className="session-banner-content">
-            <div className="session-kicker">
+          <div className="session-banner-content flex min-w-0 [flex:1_1_16rem] flex-col gap-(--session-banner-content-gap)">
+            <div className="session-kicker flex items-center gap-2 flex-wrap text-muted-foreground text-[0.75rem] min-h-(--session-kicker-height) leading-[var(--session-kicker-line-height)]">
               {t(
                 view === 'previous'
                   ? 'previous'
@@ -157,7 +160,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                 <Button
                   variant="ghost"
                   size="xs"
-                  className="match-id"
+                  className="match-id [.session-kicker_&]:h-auto [.session-kicker_&]:p-0 [.session-kicker_&]:leading-[inherit]"
                   aria-label={`${t('copy')} ${t('matchId')}: ${match.fid}`}
                   onClick={() =>
                     void navigator.clipboard
@@ -171,7 +174,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
               )}
             </div>
             <h2>{match?.map || t(isLobby ? 'partyLobby' : 'sessionOverview')}</h2>
-            <div className="match-meta">
+            <div className="match-meta flex items-center gap-2 flex-wrap text-muted-foreground text-[0.75rem] leading-[var(--session-meta-line-height)] [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5">
               {match && (
                 <span>
                   <Icon icon={faLocationDot} size={13} aria-hidden="true" />
@@ -197,7 +200,9 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
             </div>
           </div>
         )}
-        <div className="session-actions">{actions}</div>
+        <div className="session-actions flex flex-wrap items-center justify-end gap-2 ml-auto">
+          {actions}
+        </div>
       </div>
       {players.length > 0 && <Separator />}
       {!players.length ? (
@@ -209,19 +214,25 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
           {t('waiting')}
         </Empty>
       ) : (
-        <div className="team-grid">
+        <div className="team-grid grid grid-cols-2 gap-(--content-gap) [.session-roster_&]:gap-(--session-team-grid-gap) workspace-max-48:grid-cols-1 viewport-max-767:grid-cols-1 viewport-max-767:gap-6">
           {([0, 1, 100, null] as const).map((team) => {
             const list = players.filter((p) => p.teamId === team);
             if (!list.length) return null;
             const label = teamLabel(team);
             return (
-              <div className={`team-column team-${team}`} key={String(team)}>
-                <div className="team-title">
+              <div
+                className={`team-column flex min-w-0 flex-col gap-(--session-player-gap) team-${team}`}
+                key={String(team)}
+              >
+                <div className="team-title flex items-center gap-2 justify-between min-h-(--session-team-heading-height) px-2.5 border-x border-x-transparent mb-(--session-team-heading-margin) [&_h3]:flex [&_h3]:items-center [&_h3]:gap-2 [&_h3]:flex-1 [&_h3]:min-w-0 [&_h3]:flex-wrap [&_h3]:text-[0.875rem] [&_h3]:font-medium [&_h3_small]:text-[0.75rem] [&_h3_small]:text-muted-foreground [&_h3_small]:min-w-0 [&_h3_small]:wrap-anywhere session-roster-max-24:grid session-roster-max-24:grid-cols-[minmax(0,_1fr)_auto] session-roster-max-24:gap-y-1 session-roster-max-24:gap-x-2 session-roster-max-24:[&_h3]:col-start-1 session-roster-max-24:[&_h3]:row-start-1 session-roster-max-24:[&>button]:col-start-2 session-roster-max-24:[&>button]:row-start-1 session-roster-max-24:[&>button]:row-span-2">
                   <h3>
                     {(team === 0 || team === 1) && (
-                      <span className="team-indicator" aria-hidden="true" />
+                      <span
+                        className="team-indicator w-0.75 h-3.5 shrink-0 rounded-sm bg-info [.team-1_&]:bg-[oklch(from_var(--info)_l_c_25)]"
+                        aria-hidden="true"
+                      />
                     )}
-                    {label}{' '}
+                    <span className="team-name shrink-0 whitespace-nowrap">{label}</span>{' '}
                     <small>
                       {team === 0 || team === 1
                         ? t(
@@ -235,7 +246,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                         : t('playersCount', { n: list.length })}
                     </small>
                   </h3>
-                  <div className="team-rating">
+                  <div className="team-rating flex items-center gap-2 text-[0.75rem] text-muted-foreground whitespace-nowrap session-roster-max-24:col-start-1 session-roster-max-24:row-start-2">
                     <span>{t('teamRating')}</span>
                     <strong>
                       {list.every((p) => rating(p) !== null)
@@ -281,21 +292,21 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                     <Item
                       variant={p.id === localPlayerId ? 'muted' : 'default'}
                       size="xs"
-                      className="player-card"
+                      className="player-card min-w-0 relative min-h-(--session-player-height) flex-nowrap py-(--session-player-padding) [border-block-width:var(--session-player-border)] [&>[data-slot='item-content']]:relative [&>[data-slot='item-content']]:pointer-events-none [&>[data-slot='item-content']]:min-w-0 [&>[data-slot='item-actions']]:relative [&>[data-slot='item-actions']]:pointer-events-none"
                       key={p.id}
                     >
                       <PrimitiveButton
                         type="button"
                         variant="ghost"
-                        className="player-card-trigger"
+                        className="player-card-trigger absolute inset-0 size-full rounded-[inherit]"
                         aria-label={p.name}
                         aria-haspopup="dialog"
                         onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}
                       />
                       <ItemContent>
-                        <div className="player-identity">
-                          <div className="player-heading">
-                            <span className="player-name min-w-0 font-medium text-primary">
+                        <div className="player-identity min-w-0 flex flex-col gap-0.5">
+                          <div className="player-heading flex items-center gap-1 min-w-0 flex-wrap">
+                            <span className="player-name block max-w-full whitespace-normal wrap-anywhere min-w-0 font-medium text-primary">
                               {p.name}
                             </span>
                             <MatchAwards
@@ -308,25 +319,28 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                               }
                             />
                           </div>
-                          <div className="player-meta">
-                            <small className="player-id muted">#{p.id}</small>
-                            <small className="player-analysis muted">
-                              <span className="player-analysis-placeholder" aria-hidden="true">
+                          <div className="player-meta flex items-center gap-2 text-[0.75rem] text-muted-foreground flex-wrap">
+                            <span className="player-id muted text-muted-foreground">#{p.id}</span>
+                            <span className="player-analysis muted text-muted-foreground">
+                              <span
+                                className="player-analysis-placeholder hidden"
+                                aria-hidden="true"
+                              >
                                 {t('recentWinRate')} 100% · {t('latestKd')} 999.99
                               </span>
                               <span
                                 className={
-                                  row?.error ? 'player-analysis-error text-danger' : undefined
+                                  row?.error ? 'player-analysis-error text-destructive' : undefined
                                 }
                               >
                                 {analysis}
                               </span>
-                            </small>
+                            </span>
                           </div>
                         </div>
                       </ItemContent>
                       <ItemActions>
-                        <span className="player-rating">
+                        <span className="player-rating flex flex-col items-end gap-(--session-rating-gap) tabular-nums [&_strong]:text-[1.125rem] [&_strong]:leading-[var(--session-rating-line-height)] [&_strong]:font-semibold [&_small]:leading-[var(--session-rating-label-line-height)] [&_small]:text-muted-foreground">
                           <strong>{formatMetric(rating(p), 0)}</strong>
                           <small>ELO</small>
                         </span>
@@ -343,14 +357,17 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   );
   if (standalone) {
     return (
-      <section className="session-panel session-roster" aria-label={title}>
+      <section
+        className="session-panel flex min-w-0 flex-col gap-(--content-gap) session-roster @container/session-roster"
+        aria-label={title}
+      >
         {content}
       </section>
     );
   }
   return (
     <Card
-      className="session-card session-roster"
+      className="session-card session-roster @container/session-roster"
       contentClassName="session-content"
       title={title}
       showHeader={false}

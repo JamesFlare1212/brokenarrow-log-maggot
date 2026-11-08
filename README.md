@@ -4,7 +4,7 @@
 
 本地 Broken Arrow 对局助手，使用 React + Vite + Electron + Node.js + TypeScript + SQLite，以及 pnpm。
 
-[UI design system](design-system/broken-arrow/MASTER.md) · [UI audit](docs/ui-audit.md) · [Architecture](docs/architecture.md) · [Migration](docs/migration.md) · [Audit resolutions](docs/audit-resolution.md)
+[UI design system](design-system/broken-arrow/MASTER.md) · [UI audit](docs/ui-audit.md) · [UI/UX review](docs/ui-ux-review.md) · [Architecture](docs/architecture.md) · [Migration](docs/migration.md) · [Audit resolutions](docs/audit-resolution.md)
 
 [游戏日志目录检测：实现与调研依据](docs/log-directory-detection.md)
 
@@ -18,7 +18,9 @@
 - 本地录像：240–1080p、30–60 fps、3–10 Mbps、系统声音与默认麦克风混音、预览、播放和目录迁移。
 - Optional ban alerts.
 - System, light and dark appearance modes, six palette pairs, separate light/dark palettes, and Chinese/English interfaces.
+- Cards, tooltips, menus, dialogs, and notifications share the theme's glass material and opacity preference.
 - 独立设置页面、自动保存、返回原页面，以及可折叠并记住状态的侧栏。
+- Desktop sidebars resize from 200–400px and remember their width across restarts. Drag the edge, double-click to reset, or use the width control in Appearance settings.
 
 BATrace 是历史数据，可能延迟数天。蛆指数需要最近 12 场有效五人队排位；缺本人、完整 MVP 或足够样本时不生成替代分数。
 
@@ -32,9 +34,9 @@ the latest compliance review.
 
 ### Overview
 
-Previous match teams and cached player summaries in dark mode.
+Saved-match metrics, recording shortcuts, and the idle room state in dark mode.
 
-![Overview showing the previous match on Dam and both teams](docs/screenshots/overview.png)
+![Overview showing recorded match metrics and waiting for game logs](docs/screenshots/overview.png)
 
 ### Match archive
 
@@ -44,7 +46,7 @@ Local match history with results, maps, ELO changes and account filters.
 
 ### Player analysis
 
-Cached player statistics, preferred units, map win rates and recent match performance.
+Recorded player statistics and adaptive unit previews, with access to all units, categories, and recent matches.
 
 ![Player analysis showing JamesFlare's statistics and recent matches](docs/screenshots/player-analysis.png)
 
@@ -78,19 +80,41 @@ responses and report missing data as errors. Settings and data changes affect on
 that copy; native directory selection, recording, and update installation are
 unavailable in the browser.
 
-| 命令                | 用途                                                                 |
-| ------------------- | -------------------------------------------------------------------- |
-| `pnpm dev`          | 使用仓库内真实样本启动离线桌面开发；每次创建隔离数据库               |
-| `pnpm dev:web`      | 浏览器前端开发，加载同一批真实测试样本，支持热更新，默认端口 5174    |
-| `pnpm data:import`  | 从本机应用数据库和 GameLogs 更新真实回归样本                         |
-| `pnpm data:capture` | Capture missing BATrace fixture responses and retain existing data   |
-| `pnpm test`         | 全部回归测试，默认包含仓库内的真实日志、档案和缓存数据               |
-| `pnpm smoke:real`   | 构建并在真实 Electron 中核对全部真实档案                             |
-| `pnpm check`        | 严格类型检查、回归测试、三个应用构建                                 |
-| `pnpm smoke`        | Run Electron with isolated data, without network access or recording |
-| `pnpm format:check` | 格式检查                                                             |
-| `pnpm pack:desktop` | Windows 解包目录                                                     |
-| `pnpm dist`         | NSIS 安装包与便携版                                                  |
+Browser interaction regressions use Playwright and an isolated fixture service:
+
+```sh
+pnpm exec playwright install chromium
+pnpm test:ui
+```
+
+The runner starts `pnpm dev:web` when needed and can reuse an existing fixture
+server locally. Set `BA_BROWSER_CHANNEL=chrome` to use an installed Chrome instead
+of Playwright's Chromium. Tests override bootstrap preferences per page and do not
+save theme changes. The submenu suite verifies painted pointer access, selection,
+keyboard navigation, Escape, and focus return in both themes at 40%/100% opacity.
+
+Palette hover regressions sample full viewport frames from pointer entry through
+the hint delay, visible hint, and dismissal. Preview content and the lower row
+plus its preceding gap are compared from the same frame. Ordinary entry, rapid
+re-entry, and direct movement within and between cards run in both themes at
+40%, 50%, and 100% glass opacity, at device scale factors 1 and 1.5. The tests
+record actual capture intervals and assert stable scroll and stationary hints,
+without saving appearance preferences.
+
+| 命令                | 用途                                                                      |
+| ------------------- | ------------------------------------------------------------------------- |
+| `pnpm dev`          | 使用仓库内真实样本启动离线桌面开发；每次创建隔离数据库                    |
+| `pnpm dev:web`      | 浏览器前端开发，加载同一批真实测试样本，支持热更新，默认端口 5174         |
+| `pnpm data:import`  | 从本机应用数据库和 GameLogs 更新真实回归样本                              |
+| `pnpm data:capture` | Capture missing BATrace fixture responses and retain existing data        |
+| `pnpm test`         | 全部回归测试，默认包含仓库内的真实日志、档案和缓存数据                    |
+| `pnpm test:ui`      | Run browser interaction regressions against the real shared UI components |
+| `pnpm smoke:real`   | 构建并在真实 Electron 中核对全部真实档案                                  |
+| `pnpm check`        | 严格类型检查、回归测试、三个应用构建                                      |
+| `pnpm smoke`        | Run Electron with isolated data, without network access or recording      |
+| `pnpm format:check` | 格式检查                                                                  |
+| `pnpm pack:desktop` | Windows 解包目录                                                          |
+| `pnpm dist`         | NSIS 安装包与便携版                                                       |
 
 生产前端通过 sandboxed preload 的类型化 IPC 访问服务。`pnpm dev` 同时启动 Vite 和 Electron，通过原生服务加载真实样本的隔离副本；其 5173 端口在普通浏览器中访问 `/` 会提示使用桌面应用。`pnpm dev:web` 在 5174 端口为浏览器提供真实测试样本接口，不访问本机应用数据库。
 

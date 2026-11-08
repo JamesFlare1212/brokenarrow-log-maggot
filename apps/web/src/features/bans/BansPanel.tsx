@@ -9,6 +9,7 @@ import { useRequest } from '../../hooks/useRequest';
 import { Button, Notice, Empty, Badge, Dialog } from '../../components/ui';
 import { LoadingStatus, TableSkeletonRows } from '../../components/LoadingState';
 import { Pagination } from '../../components/Pagination';
+import { OverflowHint } from '../../components/OverflowHint';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Item } from '@/components/ui/item';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
@@ -67,8 +68,8 @@ export function BansPanel() {
     if (list.current) list.current.scrollTop = 0;
   }, [currentPage, metOnly, query]);
   return (
-    <section className="bans-panel" aria-label={t('bans')}>
-      <div className="bans-toolbar">
+    <section className="bans-panel flex flex-1 flex-col min-h-0 gap-3.5" aria-label={t('bans')}>
+      <div className="bans-toolbar flex flex-wrap items-center gap-3 justify-between">
         <ToggleGroup
           type="single"
           variant="outline"
@@ -84,7 +85,7 @@ export function BansPanel() {
           <ToggleGroupItem value="all">{t('allBans')}</ToggleGroupItem>
           <ToggleGroupItem value="met">{t('metBans')}</ToggleGroupItem>
         </ToggleGroup>
-        <InputGroup className="ban-search">
+        <InputGroup className="ban-search [flex:1_1_12rem] w-auto min-w-[min(12rem,_100%)] max-w-68 ml-auto viewport-max-767:flex-1 viewport-max-767:ml-0 viewport-max-767:max-w-none viewport-max-767:min-w-40">
           <InputGroupAddon>
             <Search aria-hidden="true" />
           </InputGroupAddon>
@@ -123,20 +124,22 @@ export function BansPanel() {
       </div>
       {request.error && <Notice error>{request.error}</Notice>}
       {loading && <LoadingStatus />}
-      <div className="data-table-surface">
+      <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-lg bg-card">
         <div
-          className="table-wrap data-table-scroll bans-table ban-list-paged"
+          className="table-wrap [.report_&]:max-h-120 min-w-0 overflow-auto [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] data-table-scroll flex-1 min-h-0 overflow-auto [scrollbar-gutter:stable] [scroll-padding-block:3rem_1rem] [&>[data-slot='table-container']]:overflow-visible [&_[data-slot='table-header']]:sticky [&_[data-slot='table-header']]:top-0 [&_[data-slot='table-header']]:z-[1] [&_[data-slot='table-header']]:bg-card [&_[data-slot='table-head']]:px-4 [&_[data-slot='table-cell']]:px-4 [&_[data-slot='table-cell']]:py-2.5 [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] bans-table [&_table]:min-w-192 [&_table]:table-fixed [&_[data-slot='table-header']]:z-[3] [&_th:first-child]:sticky [&_th:first-child]:left-0 [&_th:first-child]:z-[1] [&_th:first-child]:bg-card [&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:z-[1] [&_td:first-child]:bg-card ban-list-paged flex-1 min-h-0 overflow-auto [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[2px]"
           ref={list}
           tabIndex={0}
+          role="region"
+          aria-label={`${t('bans')} · ${t('tableScrollHint')}`}
           aria-busy={request.pending}
         >
           <Table aria-label={t('bans')} aria-busy={request.pending || loading}>
             <colgroup>
               <col />
-              <col className="ban-id-column" />
-              <col className="ban-rating-column" />
-              <col className="ban-time-column" />
-              <col className="ban-time-column" />
+              <col className="ban-id-column w-24" />
+              <col className="ban-rating-column w-24" />
+              <col className="ban-time-column w-50" />
+              <col className="ban-time-column w-50" />
             </colgroup>
             <TableHeader>
               <TableRow>
@@ -155,7 +158,7 @@ export function BansPanel() {
                       <Button
                         variant="link"
                         size="sm"
-                        className="ban-player-button"
+                        className="ban-player-button min-w-0 justify-start max-w-full min-h-8 h-auto whitespace-normal wrap-anywhere text-left"
                         aria-label={`${ban.name} #${ban.id}`}
                         onClick={() => openModal({ type: 'profile', id: ban.id, name: ban.name })}
                       >
@@ -174,7 +177,7 @@ export function BansPanel() {
                           {formatTime(ban.lastEncounterAt, locale)}
                         </time>
                       ) : (
-                        <span className="muted">
+                        <span className="muted text-muted-foreground">
                           {ban.encountered ? t('encounterTimeUnknown') : '—'}
                         </span>
                       )}
@@ -209,9 +212,10 @@ export function BansPanel() {
             </TableBody>
           </Table>
         </div>
+        <OverflowHint viewport={list} />
       </div>
       {bans.length > pageSize && (
-        <div className="results-pagination">
+        <div className="results-pagination shrink-0 mt-auto [&_[data-slot='pagination']]:py-0.5">
           <Pagination
             page={currentPage}
             pageSize={pageSize}
@@ -232,9 +236,13 @@ export function BanAlertDialog({ players }: { players: Ban[] }) {
     { t } = useI18n();
   return (
     <Dialog open onClose={closeModal} onBack={backModal} title={t('banAlert')}>
-      <div className="ban-list">
+      <div className="ban-list flex flex-col gap-2 p-3">
         {players.map((p) => (
-          <Item variant="outline" className="ban-row" key={p.id}>
+          <Item
+            variant="outline"
+            className="ban-row grid grid-cols-[minmax(12rem,_1fr)_6rem_7rem_10rem] items-center gap-4 [&_time]:text-muted-foreground [&_time]:text-[0.75rem] [&_time]:text-right workspace-max-48:grid-cols-[minmax(0,_1fr)_5rem] workspace-max-48:[&_time]:text-left"
+            key={p.id}
+          >
             <strong>{p.name}</strong>
             <Badge tone="danger">{t('banned')}</Badge>
             <Button onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}>

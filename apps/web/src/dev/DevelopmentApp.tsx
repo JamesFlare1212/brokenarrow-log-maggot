@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { createPortal } from 'react-dom';
 import { FlaskConical, GripVertical, RefreshCw, Users, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { glassOverlaySurfaceClasses } from '@/lib/surfaces';
 import toolStyles from './tools.css?inline';
 import { useDevelopmentLayer, useDevelopmentTheme, useToolPosition } from './layer';
 import { errorMessage } from '@ba/shared';
@@ -63,21 +64,29 @@ function DevelopmentTools({
       <style>{toolStyles}</style>
       <div
         ref={setContainer}
-        className={cn('development-tools-theme', theme.dark && 'dark')}
+        className={cn(
+          'development-tools-theme [font-family:var(--font-sans)] text-[14px] leading-[1.5] text-foreground pointer-events-none',
+          theme.dark && 'dark',
+        )}
         style={theme.style}
       >
         <div
           ref={dock}
-          className="development-tools"
+          className="development-tools fixed w-max pointer-events-auto"
           style={{ left: position.x, top: position.y }}
           data-dev-tools
         >
           <Popover open={open} onOpenChange={setOpen}>
-            <div className="development-tools-launcher">
+            <div
+              className={cn(
+                'development-tools-launcher flex items-center gap-1 p-1 border border-transparent',
+                glassOverlaySurfaceClasses,
+              )}
+            >
               <Button
                 variant="ghost"
                 size="icon"
-                className="development-tools-handle"
+                className="development-tools-handle touch-none cursor-grab [&:active]:cursor-grabbing"
                 aria-label={t('devMoveTools')}
                 aria-describedby="development-move-hint"
                 {...handle}
@@ -101,7 +110,7 @@ function DevelopmentTools({
               container={container}
               updatePositionStrategy="always"
               aria-labelledby="development-tools-title"
-              className="development-tools-panel w-80 max-w-[calc(100vw-2rem)]"
+              className="development-tools-panel flex max-h-[calc(100dvh_-_5rem)] flex-col gap-5 overflow-y-auto pointer-events-auto [&_[data-slot='field-label']>svg]:w-4 [&_[data-slot='field-label']>svg]:h-4 w-80 max-w-[calc(100vw-2rem)]"
             >
               <PopoverHeader>
                 <PopoverTitle id="development-tools-title">{t('devTools')}</PopoverTitle>

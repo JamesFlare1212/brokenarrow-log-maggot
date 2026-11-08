@@ -58,11 +58,11 @@ function Metric({
         <CardDescription>{label}</CardDescription>
         <CardAction>{icon}</CardAction>
       </CardHeader>
-      <CardContent className="metric-content flex items-baseline justify-between gap-3">
+      <CardContent className="metric-content [&>strong]:shrink-0 [&>strong]:whitespace-nowrap viewport-max-479:flex-col viewport-max-479:items-start viewport-max-479:gap-1 flex items-baseline justify-between gap-3">
         <strong className="text-3xl font-semibold tracking-tight tabular-nums" aria-busy={pending}>
           {pending ? <Skeleton className="h-9 w-20" aria-hidden="true" /> : value}
         </strong>
-        <div className="metric-detail text-xs text-muted-foreground">
+        <div className="metric-detail whitespace-nowrap metric-max-16:hidden text-xs text-muted-foreground">
           {pending ? <Skeleton className="h-4 w-20" aria-hidden="true" /> : detail}
         </div>
       </CardContent>
@@ -115,9 +115,12 @@ export function Dashboard() {
           ? 'recordingReady'
           : 'recordingOff';
   return (
-    <div className="dashboard">
+    <div className="dashboard flex min-w-0 flex-col gap-(--content-gap)">
       {loading && <LoadingStatus />}
-      <div className="metrics-grid" aria-label={t('sessionOverview')}>
+      <div
+        className="metrics-grid grid grid-cols-4 gap-(--content-gap) [&>[data-slot='card']]:@container/metric [&>[data-slot='card']]:min-w-0 viewport-max-767:grid-cols-2 workspace-max-36:grid-cols-2"
+        aria-label={t('sessionOverview')}
+      >
         <Metric
           label={t('recentRating')}
           pending={loading}
@@ -164,7 +167,7 @@ export function Dashboard() {
         </Notice>
       )}
       <SessionPanel />
-      <div className="dashboard-grid">
+      <div className="dashboard-grid grid grid-cols-[minmax(0,_1.7fr)_minmax(17rem,_1fr)] items-stretch gap-(--content-gap) workspace-max-48:grid-cols-1">
         <Card
           title={t('recent')}
           icon={<Archive />}
@@ -177,14 +180,17 @@ export function Dashboard() {
           }
         >
           {loading ? (
-            <ListSkeletonRows className="recent-matches" rowClassName="recent-match-loading" />
+            <ListSkeletonRows
+              className="recent-matches gap-1 has-data-[size=sm]:gap-1 has-data-[size=xs]:gap-1"
+              rowClassName="recent-match-loading min-h-17 py-2.5 px-3"
+            />
           ) : all.length ? (
-            <ItemGroup className="recent-matches">
+            <ItemGroup className="recent-matches gap-1 has-data-[size=sm]:gap-1 has-data-[size=xs]:gap-1">
               {all.slice(0, 3).map((match) => (
                 <Item size="sm" asChild key={match.id}>
                   <Button
                     variant="ghost"
-                    className="recent-match h-auto w-full justify-start"
+                    className="recent-match min-h-17 [&_[data-slot='item-content']]:min-w-0 viewport-max-479:[&>[data-slot='item-media']]:hidden h-auto w-full justify-start"
                     onClick={() => openModal({ type: 'match', fid: match.fid || match.id })}
                   >
                     <ItemContent>
@@ -195,7 +201,7 @@ export function Dashboard() {
                     </ItemContent>
                     <span
                       className={cn(
-                        'recent-elo',
+                        'recent-elo w-20 shrink-0 text-right tabular-nums viewport-max-479:w-16',
                         eloChangeClass(
                           match.eloAfter !== null && match.eloBefore !== null
                             ? match.eloAfter - match.eloBefore
@@ -218,11 +224,14 @@ export function Dashboard() {
             </Empty>
           )}
         </Card>
-        <aside className="dashboard-side" aria-label={t('quickTools')}>
+        <aside
+          className="dashboard-side flex min-w-0 flex-col gap-(--content-gap)"
+          aria-label={t('quickTools')}
+        >
           <Card
             title={t('quickTools')}
             showHeader={false}
-            className="quick-tools"
+            className="quick-tools [.dashboard-side>&]:flex-1 [&_[data-slot='item-group']]:gap-0.5"
             contentClassName="gap-2"
           >
             <Item size="xs">

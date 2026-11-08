@@ -33,17 +33,17 @@ export function ReplayDialog({ id, title }: { id: string; title: string }) {
       onClose={closeModal}
       onBack={backModal}
       title={title || t('play')}
-      className="dialog-wide"
+      className="dialog-wide w-[calc(100%_-_3rem)] max-w-320 sm:max-w-320 viewport-max-767:w-[calc(100%_-_1.5rem)]"
     >
       <div
-        className="replay-stage"
+        className="replay-stage relative w-full aspect-video min-h-48 max-h-[65svh] shrink-0 overflow-hidden rounded-lg bg-muted"
         aria-busy={request.pending || (!request.data && !request.error)}
       >
         {request.data && (
           <>
             <video
               key={attempt}
-              className="replay-video"
+              className="replay-video absolute inset-0 block size-full object-contain"
               ref={video}
               src={request.data.url}
               controls
@@ -60,14 +60,17 @@ export function ReplayDialog({ id, title }: { id: string; title: string }) {
             {!request.data && (
               <Skeleton className="absolute inset-0 size-full" aria-hidden="true" />
             )}
-            <div className="replay-status" role="status">
+            <div
+              className="replay-status absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-auto p-4 bg-[color-mix(in_srgb,_var(--background)_85%,_transparent)]"
+              role="status"
+            >
               <Spinner aria-hidden="true" />
               <span>{t('loading')}</span>
             </div>
           </>
         )}
         {(request.error || error) && (
-          <div className="replay-status">
+          <div className="replay-status absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-auto p-4 bg-[color-mix(in_srgb,_var(--background)_85%,_transparent)]">
             <Notice error>{request.error || error}</Notice>
             <Button onClick={retry} disabled={request.pending}>
               {t('retry')}

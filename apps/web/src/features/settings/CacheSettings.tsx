@@ -14,8 +14,14 @@ import { LoadingStatus } from '../../components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Item, ItemContent, ItemTitle, ItemDescription, ItemActions } from '@/components/ui/item';
+import {
+  Card,
+  CardAction,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/card';
 
 export function CacheSettings() {
   const { api } = useApp(),
@@ -67,11 +73,11 @@ export function CacheSettings() {
   return (
     <>
       <section
-        className="settings-section"
+        className="settings-section @container/cache-usage flex min-w-0 flex-col gap-(--content-gap)"
         aria-labelledby="cache-usage-heading"
         aria-busy={request.pending || loading}
       >
-        <div className="cache-section-heading">
+        <div className="cache-section-heading flex items-center justify-between gap-4 [&_h3]:text-[1rem] [&_h3]:font-medium">
           <h3 id="cache-usage-heading">{t('cacheUsage')}</h3>
           <Button
             disabled={busy}
@@ -90,6 +96,7 @@ export function CacheSettings() {
         {request.error && <Notice error>{request.error}</Notice>}
         <>
           <Stats
+            className="viewport-max-767:[&>[data-slot=card]:last-child]:col-span-2"
             items={[
               { label: t('cacheEntries'), value: stats ? count(entries) : '—', pending: loading },
               { label: t('cacheExpired'), value: stats ? count(expired) : '—', pending: loading },
@@ -100,16 +107,21 @@ export function CacheSettings() {
               },
             ]}
           />
-          <div className="cache-category-grid">
+          <div className="cache-category-grid grid grid-cols-1 gap-(--content-gap) @min-[36rem]/cache-usage:grid-cols-2">
             {(['api', 'snapshots'] as const).map((category) => (
-              <Item variant="outline" className="cache-category" key={category}>
-                <ItemContent>
-                  <ItemTitle>{t('cacheCategory.' + category)}</ItemTitle>
-                  <ItemDescription>{t('cacheCategoryHint.' + category)}</ItemDescription>
-                </ItemContent>
-                <ItemActions>
-                  <div className="cache-category-usage">
-                    <strong>
+              <Card
+                size="sm"
+                className="cache-category min-w-0 gap-3"
+                role="group"
+                aria-labelledby={'cache-' + category + '-heading'}
+                key={category}
+              >
+                <CardHeader className="grid-cols-[minmax(0,_1fr)_auto] items-center gap-x-3 gap-y-1">
+                  <CardTitle id={'cache-' + category + '-heading'} className="min-w-0">
+                    {t('cacheCategory.' + category)}
+                  </CardTitle>
+                  <CardAction className="col-start-2 row-span-1 row-start-1 self-center">
+                    <strong className="cache-category-size flex min-h-7 items-center text-xl font-semibold tabular-nums">
                       {loading ? (
                         <Skeleton className="h-6 w-24" aria-hidden="true" />
                       ) : stats ? (
@@ -118,55 +130,78 @@ export function CacheSettings() {
                         '—'
                       )}
                     </strong>
-                    <span>
-                      {loading ? (
-                        <Skeleton className="h-4 w-40" aria-hidden="true" />
-                      ) : stats ? (
-                        t('cacheEntrySummary', {
-                          entries: count(stats[category].entries),
-                          expired: count(stats[category].expired),
-                        })
-                      ) : (
-                        '—'
-                      )}
-                    </span>
-                  </div>
-                </ItemActions>
-              </Item>
+                  </CardAction>
+                  <CardDescription className="col-span-2">
+                    {t('cacheCategoryHint.' + category)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <dl className="cache-category-counts flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                    {(['entries', 'expired'] as const).map((metric) => (
+                      <div className="flex min-h-4.5 items-center gap-1.5" key={metric}>
+                        <dt className="text-muted-foreground">
+                          {t(metric === 'entries' ? 'cacheEntriesShort' : 'cacheExpiredShort')}
+                        </dt>
+                        <dd className="font-medium tabular-nums">
+                          {loading ? (
+                            <Skeleton className="h-4 w-10" aria-hidden="true" />
+                          ) : stats ? (
+                            count(stats[category][metric])
+                          ) : (
+                            '—'
+                          )}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </CardContent>
+              </Card>
             ))}
           </div>
-          <p>{t('cacheSizeHint')}</p>
+          <p className="text-sm text-muted-foreground">{t('cacheSizeHint')}</p>
         </>
       </section>
-      <Card aria-labelledby="cache-cleanup-heading">
-        <CardHeader>
-          <CardTitle id="cache-cleanup-heading">{t('cacheCleanup')}</CardTitle>
-          <CardDescription>{t('cacheCleanupHint')}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p>{t('cachePreserved')}</p>
-          <div className="actions cache-actions">
-            <Button
-              disabled={busy || !stats || expired === 0}
-              aria-busy={clearing === 'expired'}
-              onClick={() => void clear('expired')}
-            >
-              <Icon icon={faBroom} size={14} aria-hidden="true" />
-              {t(clearing === 'expired' ? 'cacheClearing' : 'cacheClearExpired')}
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={busy || !stats || entries === 0}
-              aria-busy={clearing === 'all'}
-              onClick={() => void clear('all')}
-            >
-              <Icon icon={faTrashCan} size={14} aria-hidden="true" />
-              {t(clearing === 'all' ? 'cacheClearing' : 'cacheClearAll')}
-            </Button>
+      <Card
+        className="cache-cleanup @container/cache-cleanup"
+        aria-labelledby="cache-cleanup-heading"
+      >
+        <CardHeader className="flex flex-col gap-4 @min-[40rem]/cache-cleanup:flex-row @min-[40rem]/cache-cleanup:items-center">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <CardTitle id="cache-cleanup-heading">{t('cacheCleanup')}</CardTitle>
+            <CardDescription>
+              {t('cacheCleanupHint')} {t('cachePreservedShort')}
+            </CardDescription>
           </div>
-          {error && <Notice error>{error}</Notice>}
-          {removed !== null && <p role="status">{t('cacheCleared', { count: count(removed) })}</p>}
-        </CardContent>
+          <CardAction className="w-full self-stretch @min-[40rem]/cache-cleanup:w-auto @min-[40rem]/cache-cleanup:shrink-0 @min-[40rem]/cache-cleanup:self-center">
+            <div className="cache-actions grid gap-2 @min-[40rem]/cache-cleanup:flex">
+              <Button
+                disabled={busy || !stats || expired === 0}
+                aria-busy={clearing === 'expired'}
+                onClick={() => void clear('expired')}
+              >
+                <Icon icon={faBroom} size={14} aria-hidden="true" />
+                {t(clearing === 'expired' ? 'cacheClearing' : 'cacheClearExpired')}
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={busy || !stats || entries === 0}
+                aria-busy={clearing === 'all'}
+                onClick={() => void clear('all')}
+              >
+                <Icon icon={faTrashCan} size={14} aria-hidden="true" />
+                {t(clearing === 'all' ? 'cacheClearing' : 'cacheClearAll')}
+              </Button>
+            </div>
+          </CardAction>
+        </CardHeader>
+        {(error || removed !== null) && (
+          <CardContent className="flex flex-col gap-3">
+            {error && <Notice error>{error}</Notice>}
+            {removed !== null && (
+              <p role="status">{t('cacheCleared', { count: count(removed) })}</p>
+            )}
+          </CardContent>
+        )}
       </Card>
     </>
   );

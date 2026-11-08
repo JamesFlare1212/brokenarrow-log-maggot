@@ -1,12 +1,31 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 import {
   FieldGroup,
+  FieldContent,
   FieldDescription,
   Field as FormField,
   FieldLabel,
 } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import {
   InputGroup,
   InputGroupInput,
@@ -15,6 +34,7 @@ import {
 } from '@/components/ui/input-group';
 import { Item, ItemContent, ItemTitle, ItemActions } from '@/components/ui/item';
 import { Skeleton } from '@/components/ui/skeleton';
+import { panelLabelKey } from '@/lib/navigation';
 import { LoadingStatus } from '../../components/LoadingState';
 import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
@@ -35,7 +55,8 @@ import {
   Database as faDatabase,
   RefreshCw as faArrowsRotate,
   Search as faMagnifyingGlass,
-  Activity as faWaveSquare,
+  Activity,
+  ChevronDown,
   ShieldCheck as faShieldHalved,
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
@@ -81,7 +102,16 @@ const flags = [
 
 export function SettingsPage() {
   const confirm = useConfirmation();
-  const { api, state, settings, settingsTab: tab, openSettings, closeSettings, notify } = useApp(),
+  const {
+      api,
+      state,
+      page,
+      settings,
+      settingsTab: tab,
+      openSettings,
+      closeSettings,
+      notify,
+    } = useApp(),
     { t } = useI18n(),
     [accounts, setAccounts] = useState<Account[]>([]),
     [accountsLoading, setAccountsLoading] = useState(true),
@@ -99,8 +129,14 @@ export function SettingsPage() {
     healthRunning = useRef(false);
   const draft = settings.draft ?? state.config;
   const orderList = useRef<HTMLOListElement>(null),
+    orderFocus = useRef<HTMLButtonElement | null>(null),
     orderPositions = useRef(new Map<string, number>()),
     orderAnimations = useRef<Animation[]>([]);
+  useLayoutEffect(() => {
+    const button = orderFocus.current;
+    orderFocus.current = null;
+    if (button?.isConnected && !button.disabled) button.focus({ preventScroll: true });
+  }, [draft.panelOrder]);
   useLayoutEffect(() => {
     const positions = orderPositions.current;
     orderPositions.current = new Map();
@@ -130,7 +166,14 @@ export function SettingsPage() {
   useEffect(() => () => orderAnimations.current.forEach((animation) => animation.cancel()), []);
   const collapsed = draft.sidebarCollapsed;
   const flush = settings.flush;
-  const saveStatus = tab === 'recording' ? recordingStatus : settings.status;
+  const saveStatuses = tab === 'recording' ? [settings.status, recordingStatus] : [settings.status];
+  const saveStatus = saveStatuses.includes('error')
+    ? 'error'
+    : saveStatuses.includes('saving')
+      ? 'saving'
+      : saveStatuses.includes('pending')
+        ? 'pending'
+        : 'saved';
   const sidebar = useSidebar();
   const setTab: typeof openSettings = (value) => {
     openSettings(value);
@@ -228,13 +271,18 @@ export function SettingsPage() {
       if (request === logRequest.current) setDetecting(false);
     }
   };
-  const move = (index: number, direction: number) => {
+  const move = (index: number, direction: number, button: HTMLButtonElement) => {
     const order = [...draft.panelOrder],
       other = index + direction;
     if (other < 0 || other >= order.length) return;
     const first = order[index],
       second = order[other];
     if (first && second) {
+      const focusDirection = other === 0 ? 1 : other === order.length - 1 ? -1 : direction;
+      orderFocus.current =
+        button
+          .closest('.panel-order-actions')
+          ?.querySelector<HTMLButtonElement>(`[data-order-direction="${focusDirection}"]`) ?? null;
       orderPositions.current = new Map(
         Array.from(orderList.current?.children ?? [], (child) => [
           (child as HTMLElement).dataset.panel!,
@@ -261,7 +309,7 @@ export function SettingsPage() {
       orientation="vertical"
       value={tab ?? 'appearance'}
       onValueChange={(value) => setTab(value as typeof currentTab.id)}
-      className="settings-page"
+      className="settings-page flex flex-1 min-w-0 min-h-0 flex-row gap-0"
       aria-labelledby="settings-title"
     >
       <Sidebar id="settings-sidebar" className="settings-sidebar" label={t('settings')}>
@@ -273,7 +321,11 @@ export function SettingsPage() {
             <span className="truncate text-xs text-muted-foreground">{t('brand')}</span>
           </SidebarHeading>
         </SidebarHeader>
-        <TabsList variant="navigation" className="settings-tabs" aria-label={t('settings')}>
+        <TabsList
+          variant="navigation"
+          className="settings-tabs flex flex-1 w-full h-auto flex-col items-stretch justify-start gap-1 py-3 px-2 min-h-0 overflow-y-auto [&>[data-slot='tabs-trigger']]:flex-none [&>[data-slot='tabs-trigger']]:justify-start [[data-collapsible='icon']_&>[data-slot='tabs-trigger']]:w-10 [[data-collapsible='icon']_&>[data-slot='tabs-trigger']]:self-center [[data-collapsible='icon']_&>[data-slot='tabs-trigger']]:justify-center [[data-collapsible='icon']_&>[data-slot='tabs-trigger']]:px-0"
+          aria-label={t('settings')}
+        >
           {tabs.map(({ id, label, icon: TabIcon }) => (
             <TabsTrigger
               value={id}
@@ -309,13 +361,13 @@ export function SettingsPage() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset
-        className="settings-main"
+        className="settings-main flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden @container/settings"
         id="settings-content"
         aria-label={t('settings')}
         tabIndex={-1}
       >
         <PageToolbar className="settings-page-toolbar">
-          <div className="settings-breadcrumb">
+          <div className="settings-breadcrumb flex min-w-0 items-center gap-2 viewport-max-479:gap-1.5">
             {sidebar.isMobile && (
               <Button
                 variant="ghost"
@@ -332,13 +384,48 @@ export function SettingsPage() {
               orientation="vertical"
               className="mx-2 data-vertical:h-4 data-vertical:self-center"
             />
-            <span className="hidden text-muted-foreground sm:inline">{t('settings')}</span>
-            <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
-              /
-            </span>
-            <h2 className="truncate">{t(currentTab.label)}</h2>
+            <Breadcrumb className="min-w-0" aria-label={t('breadcrumb')}>
+              <BreadcrumbList className="flex-nowrap">
+                <BreadcrumbItem className="shrink-0 settings-max-36:hidden">
+                  <BreadcrumbLink
+                    href={'#' + page}
+                    aria-disabled={returning || undefined}
+                    tabIndex={returning ? -1 : undefined}
+                    className="aria-disabled:opacity-50"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      if (!returning) void back();
+                    }}
+                  >
+                    {t(panelLabelKey(page))}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="shrink-0 settings-max-36:hidden" />
+                <BreadcrumbItem className="shrink-0 viewport-max-479:hidden">
+                  <BreadcrumbLink
+                    href="#settings/appearance"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setTab('appearance');
+                    }}
+                  >
+                    {t('settings')}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="shrink-0 viewport-max-479:hidden" />
+                <BreadcrumbItem className="min-w-0">
+                  <BreadcrumbPage className="settings-current-label truncate">
+                    {t(currentTab.label)}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
-          <div className="settings-save-state" role="status" aria-live="polite">
+          <div
+            className="settings-save-state flex shrink-0 items-center gap-2 text-muted-foreground text-[0.75rem] md:whitespace-nowrap [.recording-settings>&]:col-span-full viewport-max-767:max-w-32 viewport-max-479:max-w-24"
+            role="status"
+            aria-live="polite"
+          >
             {saveStatus === 'saved' ? (
               <Icon icon={faCheck} size={14} aria-hidden="true" />
             ) : saveStatus !== 'error' ? (
@@ -354,7 +441,7 @@ export function SettingsPage() {
           </div>
         </PageToolbar>
         {(settings.error || error) && (
-          <div className="settings-errors">
+          <div className="settings-errors flex flex-wrap gap-2 py-4 px-6">
             <Notice error>{settings.error ?? error}</Notice>
             {settings.error && <Button onClick={() => void flush()}>{t('settingsRetry')}</Button>}
             {settings.error && (
@@ -362,7 +449,7 @@ export function SettingsPage() {
             )}
           </div>
         )}
-        {tabs.map(({ id }) => (
+        {tabs.map(({ id, label }) => (
           <TabsContent
             value={id}
             forceMount
@@ -371,8 +458,12 @@ export function SettingsPage() {
             aria-labelledby={'settings-tab-' + id}
             hidden={tab !== id}
             tabIndex={0}
-            className="settings-content"
+            className="settings-content flex-1 min-h-0 overflow-auto p-6 [scrollbar-gutter:stable] [scroll-padding-block:1.5rem] overscroll-contain [&>*]:w-full [&>*]:max-w-256 [&>*]:mx-auto [&>*+*]:mt-(--content-gap) viewport-max-767:p-5"
           >
+            <header className="settings-page-heading [&_h2]:text-[1.5rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.025em] [&_h2]:leading-[1.3] [&_h2]:text-balance [&_p]:max-w-[65ch] [&_p]:mt-1.5 [&_p]:text-muted-foreground [&_p]:text-[0.875rem] [&_p]:leading-[1.5] mb-6">
+              <h2>{t(label)}</h2>
+              <p>{t(`settingsHint.${id}`)}</p>
+            </header>
             {id === 'appearance' && <AppearanceSettings draft={draft} change={settings.change} />}
             {id === 'cache' && tab === 'cache' && <CacheSettings />}
             {id === 'general' && (
@@ -395,18 +486,23 @@ export function SettingsPage() {
                     </Field>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle id="analytics-heading">{t('analytics')}</CardTitle>
-                    <CardDescription id="analytics-description">
-                      {t('analyticsDescription')}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FieldGroup>
+                <Card
+                  className="settings-privacy-card @container/privacy"
+                  role="region"
+                  aria-labelledby="analytics-heading"
+                >
+                  <CardHeader className="flex flex-col gap-4 @min-[32rem]/privacy:flex-row @min-[32rem]/privacy:items-center">
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <CardTitle id="analytics-heading">{t('analytics')}</CardTitle>
+                      <CardDescription id="analytics-description" className="wrap-anywhere">
+                        {t('analyticsSummary')}
+                      </CardDescription>
+                    </div>
+                    <CardAction className="w-full self-stretch @min-[32rem]/privacy:w-32 @min-[32rem]/privacy:shrink-0 @min-[32rem]/privacy:self-center">
                       <Toggle
                         id="setting-analyticsEnabled"
-                        label={t('analyticsEnabled')}
+                        label={t('analyticsEnabledShort')}
+                        aria-label={t('analyticsEnabledShort') + ' · ' + t('analyticsEnabled')}
                         aria-describedby="analytics-description analytics-privacy"
                         checked={draft.analyticsEnabled}
                         onChange={(value) =>
@@ -416,10 +512,28 @@ export function SettingsPage() {
                           })
                         }
                       />
-                      <FieldDescription id="analytics-privacy">
-                        {t('analyticsPrivacy')}
-                      </FieldDescription>
-                    </FieldGroup>
+                    </CardAction>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-2">
+                    <FieldDescription id="analytics-privacy">
+                      {t('analyticsPrivacySummary')}
+                    </FieldDescription>
+                    <Collapsible className="group/privacy-details">
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="w-fit justify-start px-0">
+                          {t('analyticsDetails')}
+                          <ChevronDown
+                            data-icon="inline-end"
+                            aria-hidden="true"
+                            className="transition-transform group-data-[state=open]/privacy-details:rotate-180 motion-reduce:transition-none"
+                          />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="flex flex-col gap-3 pt-3 text-sm text-muted-foreground wrap-anywhere">
+                        <p>{t('analyticsDescription')}</p>
+                        <p>{t('analyticsPrivacy')}</p>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CardContent>
                 </Card>
                 <AboutSettings />
@@ -429,8 +543,7 @@ export function SettingsPage() {
               <>
                 <Card>
                   <CardHeader>
-                    <CardTitle>{t('gameConnection')}</CardTitle>
-                    <CardDescription>{t('settingsHint.connection')}</CardDescription>
+                    <CardTitle>{t('localFolders')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <FieldGroup>
@@ -443,7 +556,7 @@ export function SettingsPage() {
                             onBlur={() => void flush()}
                             aria-describedby={logFeedback ? 'settings-log-feedback' : undefined}
                           />
-                          <InputGroupAddon align="inline-end">
+                          <InputGroupAddon align={sidebar.isMobile ? 'block-end' : 'inline-end'}>
                             <InputGroupButton onClick={() => void choose('logs')}>
                               <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                               {t('select')}
@@ -487,60 +600,93 @@ export function SettingsPage() {
                     </FieldGroup>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{t('health')}</CardTitle>
-                    <CardDescription>{t('healthHint')}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4">
-                    <div className="settings-health-summary">
-                      <span className="settings-feature-icon" aria-hidden="true">
-                        <Icon icon={faWaveSquare} size={18} />
-                      </span>
-                      <div className="settings-health-copy">
-                        <div
-                          className="settings-health-feedback"
-                          role={healthError ? 'alert' : 'status'}
-                        >
-                          {healthError || (healthPending ? t('loading') : '')}
-                        </div>
-                      </div>
+                <Card
+                  className="settings-health-card @container/health-check"
+                  role="region"
+                  aria-labelledby="settings-health-title"
+                >
+                  <CardHeader className="flex flex-col gap-4 @min-[30rem]/health-check:flex-row @min-[30rem]/health-check:items-center">
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <CardTitle id="settings-health-title">{t('health')}</CardTitle>
+                      <CardDescription>{t('healthHint')}</CardDescription>
                     </div>
-                    <Button
-                      disabled={healthPending}
-                      aria-busy={healthPending}
-                      onClick={() => void checkHealth()}
-                    >
-                      <Icon icon={faWaveSquare} size={16} spin={healthPending} aria-hidden="true" />
-                      {t('healthCheck')}
-                    </Button>
-                  </CardContent>
+                    <CardAction className="w-full self-stretch @min-[30rem]/health-check:w-auto @min-[30rem]/health-check:shrink-0 @min-[30rem]/health-check:self-center">
+                      <Button
+                        className="w-full"
+                        disabled={healthPending}
+                        aria-busy={healthPending}
+                        onClick={() => void checkHealth()}
+                      >
+                        {healthPending ? (
+                          <Spinner data-icon="inline-start" aria-hidden="true" />
+                        ) : (
+                          <Activity data-icon="inline-start" aria-hidden="true" />
+                        )}
+                        {t('healthCheck')}
+                      </Button>
+                    </CardAction>
+                    <span className="sr-only" role="status">
+                      {healthPending ? t('loading') : ''}
+                    </span>
+                  </CardHeader>
+                  {healthError && (
+                    <CardContent className="settings-health-feedback">
+                      <Notice error>
+                        <span>{healthError}</span>
+                      </Notice>
+                    </CardContent>
+                  )}
                 </Card>
               </>
             )}
             {id === 'automation' && (
-              <section className="settings-automation" aria-label={t('automation')}>
-                <Card>
-                  <CardHeader>
+              <section
+                className="settings-automation flex flex-col gap-3 [.settings-content>&]:max-w-192"
+                aria-label={t('automation')}
+              >
+                <Card className="@container/automation-options">
+                  <CardHeader className="sr-only">
                     <CardTitle>{t('automation')}</CardTitle>
-                    <CardDescription>{t('settingsHint.automation')}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <FieldGroup className="automation-options">
+                    <FieldGroup className="automation-options grid auto-rows-fr gap-0">
                       {flags.map(([key, label, icon], index) => (
-                        <div key={key} className="automation-option">
-                          <FormField orientation="horizontal">
-                            <FieldLabel htmlFor={'setting-' + key}>
-                              <Icon icon={icon} aria-hidden="true" />
-                              {t(label)}
-                            </FieldLabel>
+                        <div key={key} className="automation-option flex min-w-0 flex-col">
+                          <FormField
+                            orientation="horizontal"
+                            className="min-h-16 flex-1 gap-4 py-2.5 has-[>[data-slot=field-content]]:items-center @max-[24rem]/automation-options:grid @max-[24rem]/automation-options:grid-cols-[auto_minmax(0,_1fr)_auto] @max-[24rem]/automation-options:grid-rows-[auto_auto] @max-[24rem]/automation-options:content-center @max-[24rem]/automation-options:gap-y-0.5"
+                          >
+                            <Icon
+                              icon={icon}
+                              size={18}
+                              className="shrink-0 text-muted-foreground @max-[24rem]/automation-options:col-start-1 @max-[24rem]/automation-options:row-start-1"
+                              aria-hidden="true"
+                            />
+                            <FieldContent className="min-w-0 @max-[24rem]/automation-options:contents">
+                              <FieldLabel
+                                htmlFor={'setting-' + key}
+                                className="max-w-full cursor-pointer @max-[24rem]/automation-options:col-start-2 @max-[24rem]/automation-options:row-start-1"
+                              >
+                                {t(label)}
+                              </FieldLabel>
+                              <FieldDescription
+                                id={'setting-' + key + '-description'}
+                                className="@max-[24rem]/automation-options:col-start-2 @max-[24rem]/automation-options:col-end-4 @max-[24rem]/automation-options:row-start-2"
+                              >
+                                {t(label + 'Hint')}
+                              </FieldDescription>
+                            </FieldContent>
                             <Switch
                               id={'setting-' + key}
+                              className="@max-[24rem]/automation-options:col-start-3 @max-[24rem]/automation-options:row-start-1"
+                              aria-describedby={'setting-' + key + '-description'}
                               checked={draft[key]}
                               onCheckedChange={(value) => set(key, value)}
                             />
                           </FormField>
-                          {index < flags.length - 1 && <Separator />}
+                          {index < flags.length - 1 && (
+                            <Separator className="ml-8.5 data-[orientation=horizontal]:w-[calc(100%_-_2.125rem)]" />
+                          )}
                         </div>
                       ))}
                     </FieldGroup>
@@ -553,36 +699,63 @@ export function SettingsPage() {
             )}
             {id === 'navigation' && (
               <section
-                className="settings-section settings-navigation"
+                className="settings-section flex min-w-0 flex-col gap-(--content-gap) settings-navigation [.settings-content>&]:max-w-192"
                 aria-labelledby="navigation-order-heading"
               >
                 <Card>
-                  <CardHeader>
-                    <CardTitle id="navigation-order-heading">{t('panelOrder')}</CardTitle>
-                    <CardDescription>{t('settingsHint.navigation')}</CardDescription>
+                  <CardHeader className="flex flex-row items-center justify-between gap-4">
+                    <CardTitle id="navigation-order-heading" className="min-w-0">
+                      {t('panelOrder')}
+                    </CardTitle>
+                    <CardAction
+                      className="flex shrink-0 items-center gap-3 self-center"
+                      aria-hidden="true"
+                    >
+                      <span className="w-8 text-center text-xs text-muted-foreground">
+                        {t('navigationVisibleLabel')}
+                      </span>
+                      <span className="w-14.5 text-center text-xs text-muted-foreground">
+                        {t('navigationOrderLabel')}
+                      </span>
+                    </CardAction>
                   </CardHeader>
                   <CardContent>
-                    <ol className="panel-order" ref={orderList}>
+                    <ol className="panel-order flex flex-col gap-0" ref={orderList}>
                       {draft.panelOrder.map((panel, index) => (
                         <li
                           key={panel}
                           data-panel={panel}
                           data-hidden={draft.hiddenPanels.includes(panel)}
                         >
-                          <Item className="panel-order-row" size="sm">
-                            <ItemContent>
-                              <ItemTitle>
-                                <span className="panel-order-label">
-                                  <small>{String(index + 1).padStart(2, '0')}</small>
-                                  {t(panel)}
+                          <Item
+                            className="panel-order-row min-h-12.5 flex-nowrap gap-3 px-0 py-1"
+                            size="sm"
+                          >
+                            <ItemContent className="min-w-0">
+                              <ItemTitle className="block w-full line-clamp-none">
+                                <span className="panel-order-label grid min-w-0 grid-cols-[1.25rem_minmax(0,_1fr)] items-center gap-3">
+                                  <small
+                                    className="text-xs text-muted-foreground tabular-nums"
+                                    aria-hidden="true"
+                                  >
+                                    {String(index + 1).padStart(2, '0')}
+                                  </small>
+                                  <span
+                                    className={cn(
+                                      'wrap-anywhere',
+                                      draft.hiddenPanels.includes(panel) && 'text-muted-foreground',
+                                    )}
+                                  >
+                                    {t(panelLabelKey(panel))}
+                                  </span>
                                 </span>
                               </ItemTitle>
                             </ItemContent>
                             <ItemActions>
-                              <div className="panel-order-actions">
+                              <div className="panel-order-actions flex shrink-0 items-center gap-3">
                                 <Switch
                                   id={`navigation-visible-${panel}`}
-                                  aria-label={t('showInNavigation') + ' ' + t(panel)}
+                                  aria-label={t('showInNavigation') + ' ' + t(panelLabelKey(panel))}
                                   checked={!draft.hiddenPanels.includes(panel)}
                                   onCheckedChange={(visible) =>
                                     set(
@@ -593,28 +766,34 @@ export function SettingsPage() {
                                     )
                                   }
                                 />
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  disabled={index === 0}
-                                  aria-label={t('moveUp') + ' ' + t(panel)}
-                                  onClick={() => move(index, -1)}
-                                >
-                                  <Icon icon={faArrowUp} size={16} />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  disabled={index === draft.panelOrder.length - 1}
-                                  aria-label={t('moveDown') + ' ' + t(panel)}
-                                  onClick={() => move(index, 1)}
-                                >
-                                  <Icon icon={faArrowDown} size={16} />
-                                </Button>
+                                <div className="flex items-center gap-0.5">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    disabled={index === 0}
+                                    data-order-direction={-1}
+                                    aria-label={t('moveUp') + ' ' + t(panelLabelKey(panel))}
+                                    onClick={(event) => move(index, -1, event.currentTarget)}
+                                  >
+                                    <Icon icon={faArrowUp} size={16} />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    disabled={index === draft.panelOrder.length - 1}
+                                    data-order-direction={1}
+                                    aria-label={t('moveDown') + ' ' + t(panelLabelKey(panel))}
+                                    onClick={(event) => move(index, 1, event.currentTarget)}
+                                  >
+                                    <Icon icon={faArrowDown} size={16} />
+                                  </Button>
+                                </div>
                               </div>
                             </ItemActions>
                           </Item>
-                          {index < draft.panelOrder.length - 1 && <Separator />}
+                          {index < draft.panelOrder.length - 1 && (
+                            <Separator className="ml-8 data-[orientation=horizontal]:w-[calc(100%_-_2rem)]" />
+                          )}
                         </li>
                       ))}
                     </ol>
@@ -623,17 +802,19 @@ export function SettingsPage() {
               </section>
             )}
             {id === 'accounts' && (
-              <section className="settings-section" aria-busy={accountsLoading}>
+              <section
+                className="settings-section flex min-w-0 flex-col gap-(--content-gap)"
+                aria-busy={accountsLoading}
+              >
                 <Card>
                   <CardHeader>
                     <CardTitle>{t('recognizedAccounts')}</CardTitle>
-                    <CardDescription>{t('settingsHint.accounts')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {accountsLoading ? (
                       <>
                         <LoadingStatus />
-                        <div className="account-list" aria-hidden="true">
+                        <div className="account-list flex flex-col gap-3" aria-hidden="true">
                           <Item variant="outline">
                             <ItemContent>
                               <Skeleton className="h-5 w-32" />
@@ -653,12 +834,12 @@ export function SettingsPage() {
                         {t('accountsEmpty')}
                       </Empty>
                     ) : (
-                      <div className="account-list">
+                      <div className="account-list flex flex-col gap-3">
                         {accounts.map((account) => (
                           <Item variant="outline" key={account.id}>
                             <ItemContent>
                               <ItemTitle>{account.name}</ItemTitle>
-                              <p className="muted">
+                              <p className="muted text-muted-foreground">
                                 #{account.id} · {t('accountMatches', { count: account.matchCount })}
                               </p>
                             </ItemContent>
@@ -702,7 +883,7 @@ export function SettingsPage() {
         title={t('settingsUnsavedTitle')}
       >
         <p>{t('settingsUnsavedDescription')}</p>
-        <div className="actions">
+        <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
           <Button disabled={returning} onClick={() => void back()}>
             {t('settingsRetry')}
           </Button>
