@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { RatingTrendPoint } from '@ba/contracts';
 import { RatingTrendChart } from '../apps/web/src/features/players/RatingTrendChart';
 import { buildRatingTrend } from '../apps/web/src/features/players/rating-trend';
@@ -91,8 +91,8 @@ describe('player rating chart', () => {
   });
 
   it.each([
-    [1950, 'elo-increase', '+50.00'],
-    [1870, 'elo-decrease', '-30.00'],
+    [1950, 'text-(--elo-increase)', '+50.00'],
+    [1870, 'text-(--elo-decrease)', '-30.00'],
     [1900, '', '0.00'],
     [null, '', '—'],
   ] as const)(
@@ -105,11 +105,12 @@ describe('player rating chart', () => {
       );
       const value = screen.getByText('区间变化').nextElementSibling!;
       expect(value.textContent).toBe(label);
-      expect(value.className).toBe(color);
+      if (color) expect(value.classList.contains(color)).toBe(true);
+      else expect(value.className).toBe('');
     },
   );
 
-  it('exposes match values through keyboard navigation and localizes the chart', async () => {
+  it('keeps the localized chart out of keyboard navigation without opening match tooltips', async () => {
     render(
       <LocaleContext.Provider value="en">
         <RatingTrendChart report={reportFixture({ ratingTrend: history })} />
@@ -117,12 +118,13 @@ describe('player rating chart', () => {
     );
     const region = screen.getByRole('region', { name: 'ELO trend' });
     expect(within(region).getByText('Last 3 matches · oldest to newest')).toBeTruthy();
-    const chart = await within(region).findByRole('application');
+    const chart = await within(region).findByRole('img', { name: 'ELO trend' });
+    expect(within(region).queryByRole('application')).toBeNull();
+    expect(chart.hasAttribute('tabindex')).toBe(false);
+    expect(chart.getAttribute('aria-describedby')).toBeNull();
     fireEvent.focus(chart);
-    await waitFor(() => expect(within(region).getByText('Match 1 · #10')).toBeTruthy());
-    expect(within(region).getByText('+20.00')).toBeTruthy();
     fireEvent.keyDown(chart, { key: 'ArrowRight' });
-    await waitFor(() => expect(within(region).getByText('Match 2 · #11')).toBeTruthy());
-    expect(within(region).getByText('-10.00')).toBeTruthy();
+    fireEvent.keyDown(chart, { key: 'ArrowLeft' });
+    expect(within(region).queryByText(/^Match \d+ · #/)).toBeNull();
   });
 });

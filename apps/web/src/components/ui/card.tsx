@@ -1,8 +1,11 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { glassMaterialClasses } from '@/lib/surfaces';
 
-const cardSurfaceClasses =
-  'rounded-xl border border-(--glass-border) bg-(--glass-surface) text-card-foreground shadow-(--glass-shadow) backdrop-blur-(--glass-blur) backdrop-saturate-(--glass-saturation)';
+const cardSurfaceClasses = cn(
+  'rounded-xl border border-(--glass-border) bg-(--glass-surface) text-card-foreground',
+  glassMaterialClasses,
+);
 
 function Card({
   className,

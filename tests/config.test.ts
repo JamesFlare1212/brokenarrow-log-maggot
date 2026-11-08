@@ -45,6 +45,9 @@ describe('configuration patches', () => {
     { glassOpacity: 40 },
     { glassOpacity: 50 },
     { glassOpacity: 100 },
+    { sidebarWidth: 200 },
+    { sidebarWidth: 256 },
+    { sidebarWidth: 400 },
     { eloColorScheme: 'green-up' },
     { eloColorScheme: 'red-up' },
     { collapsedPanels: [] },
@@ -78,6 +81,11 @@ describe('configuration patches', () => {
       { glassOpacity: 101 },
       { glassOpacity: 50.5 },
       { glassOpacity: '50' },
+      { sidebarWidth: 199 },
+      { sidebarWidth: 401 },
+      { sidebarWidth: 256.5 },
+      { sidebarWidth: '256' },
+      { sidebarWidth: Number.NaN },
       { eloColorScheme: 'blue-up' },
       { eloColorScheme: null },
       { logDir: null },
@@ -103,6 +111,7 @@ describe('configuration patches', () => {
     expect(configSchema.parse({}).analyticsChoiceSaved).toBe(false);
     expect(configSchema.parse({}).themeMode).toBe('system');
     expect(configSchema.parse({}).glassOpacity).toBe(50);
+    expect(configSchema.parse({}).sidebarWidth).toBe(256);
     expect(configSchema.parse({}).eloColorScheme).toBe('green-up');
     expect(configSchema.parse({}).hiddenPanels).toEqual([]);
     expect(configSchema.parse({ replayAudio: 'default' }).replayMicrophone).toBe(true);
@@ -131,6 +140,7 @@ describe('configuration patches', () => {
         glassOpacity: 67,
         eloColorScheme: 'red-up',
         sidebarCollapsed: true,
+        sidebarWidth: 320,
         hiddenPanels: ['players', 'decks'],
         lang: 'zh',
         replayEnabled: true,

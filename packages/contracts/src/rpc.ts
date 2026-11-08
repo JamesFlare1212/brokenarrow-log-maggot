@@ -45,6 +45,7 @@ export const THEME_MODES = ['system', 'light', 'dark'] as const;
 // Keep legacy palette keys so existing installations retain their colors.
 export const COLOR_SCHEMES = ['dark', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
 export const GLASS_OPACITY = { min: 40, max: 100, step: 5, default: 50 } as const;
+export const SIDEBAR_WIDTH_LIMITS = { min: 200, max: 400, default: 256 } as const;
 export function legacyThemeMode(theme: unknown): ThemeMode {
   if (theme === undefined) return 'system';
   return ['light', 'cyan', 'orange'].includes(String(theme)) ? 'light' : 'dark';
@@ -71,6 +72,12 @@ export const configSchema = z.object({
     .max(GLASS_OPACITY.max)
     .default(GLASS_OPACITY.default),
   sidebarCollapsed: z.boolean().default(false),
+  sidebarWidth: z
+    .number()
+    .int()
+    .min(SIDEBAR_WIDTH_LIMITS.min)
+    .max(SIDEBAR_WIDTH_LIMITS.max)
+    .default(SIDEBAR_WIDTH_LIMITS.default),
   lang: z.enum(['zh', 'en']).default('zh'),
   panelOrder: panelListSchema.default([...PANELS]),
   hiddenPanels: z

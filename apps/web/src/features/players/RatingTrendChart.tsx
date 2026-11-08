@@ -42,7 +42,7 @@ export function RatingTrendChart({
   return (
     <Card
       size="sm"
-      className="rating-trend-card"
+      className="rating-trend-card min-w-0"
       role="region"
       aria-labelledby={`${id}-title`}
       aria-busy={loading}
@@ -55,7 +55,7 @@ export function RatingTrendChart({
           {data.length ? t('ratingTrendRange', { count: data.length }) : t('ratingTrendScope')}
         </CardDescription>
         <CardAction>
-          <dl className="rating-trend-summary">
+          <dl className="rating-trend-summary flex flex-wrap items-center justify-end gap-y-1.5 gap-x-4 font-medium tabular-nums">
             <div>
               <dt className="sr-only">{t('ratingTrendLatest')}</dt>
               <dd>{loading ? <Skeleton className="h-5 w-16" /> : formatMetric(latest, 1)}</dd>
@@ -71,11 +71,14 @@ export function RatingTrendChart({
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="rating-trend-placeholder" aria-label={t('loading')}>
+          <div
+            className="rating-trend-placeholder flex h-[200px] items-center justify-center"
+            aria-label={t('loading')}
+          >
             <Skeleton className="h-full w-full" />
           </div>
         ) : !hasRatings ? (
-          <div className="rating-trend-placeholder">
+          <div className="rating-trend-placeholder flex h-[200px] items-center justify-center">
             <Empty
               icon={<ChartNoAxesCombined aria-hidden="true" />}
               description={t('ratingTrendEmptyHint')}
@@ -86,12 +89,12 @@ export function RatingTrendChart({
         ) : (
           <ChartContainer
             config={{ ratingAfter: { label: 'ELO', color } }}
-            className="rating-trend-plot aspect-auto h-[200px] w-full"
+            className="rating-trend-plot tabular-nums aspect-auto h-[200px] w-full"
           >
             <AreaChart
-              accessibilityLayer
+              accessibilityLayer={false}
+              role="img"
               aria-label={t('ratingTrend')}
-              aria-describedby={`${id}-hint`}
               data={data}
               margin={{ top: 12, right: 12, bottom: 0, left: 0 }}
             >
@@ -137,7 +140,7 @@ export function RatingTrendChart({
                       const point = data[Number(item.payload?.matchNumber) - 1];
                       if (!point) return null;
                       return (
-                        <div className="rating-trend-tooltip">
+                        <div className="rating-trend-tooltip grid gap-1.5 [&_dl]:grid [&_dl]:gap-1.5 [&_dl>div]:flex [&_dl>div]:items-center [&_dl>div]:justify-between [&_dl>div]:gap-6 [&_dt]:text-muted-foreground [&_dd]:font-medium [&_dd]:tabular-nums">
                           <span className="text-muted-foreground">
                             {formatTime(point.endTime, locale)}
                           </span>
@@ -184,12 +187,6 @@ export function RatingTrendChart({
             </AreaChart>
           </ChartContainer>
         )}
-        <p id={`${id}-hint`} className="rating-trend-hint">
-          {hasRatings
-            ? t(baseline !== null ? 'ratingTrendHint' : 'ratingTrendNoBaselineHint')
-            : '\u00a0'}
-          {hasRatings && hasGaps && ` ${t('ratingTrendGaps')}`}
-        </p>
       </CardContent>
     </Card>
   );

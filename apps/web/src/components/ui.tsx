@@ -92,10 +92,13 @@ export function Card({
   const { t } = useI18n();
   const contentId = useId();
   return (
-    <PrimitiveCard className={cn('panel-card', className)} aria-label={title}>
+    <PrimitiveCard
+      className={cn("panel-card [&_[data-slot='collapsible-content']]:min-w-0", className)}
+      aria-label={title}
+    >
       <Collapsible open={!collapsed} className="flex flex-col gap-4">
         {showHeader && (
-          <CardHeader className="panel-card-header">
+          <CardHeader className="panel-card-header flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <CardTitle role="heading" aria-level={2} className="flex min-w-0 items-center gap-2">
                 {icon}
@@ -104,7 +107,7 @@ export function Card({
               {description && <CardDescription className="mt-1">{description}</CardDescription>}
             </div>
             {(actions || onToggle) && (
-              <CardAction className="panel-card-actions">
+              <CardAction className="panel-card-actions flex flex-wrap items-center self-center gap-2 ml-auto viewport-max-479:ml-0">
                 {actions}
                 {onToggle && (
                   <Button
@@ -169,7 +172,10 @@ export function Dialog({
         }}
       >
         <DialogContent
-          className={cn('app-dialog flex flex-col gap-0 overflow-hidden p-0', className)}
+          className={cn(
+            "app-dialog [&>[data-slot='dialog-header']]:shrink-0 [&_[data-slot='dialog-title']]:wrap-anywhere flex flex-col gap-0 overflow-hidden p-0",
+            className,
+          )}
           showCloseButton={false}
           aria-describedby={undefined}
           onEscapeKeyDown={(event) => {
@@ -234,7 +240,7 @@ export function Dialog({
           </DialogHeader>
           <Separator />
           {banner}
-          <div className="dialog-body flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
+          <div className="dialog-body overscroll-contain [.profile-dialog>&]:gap-4 [.profile-dialog>&]:[scrollbar-gutter:stable] [.profile-dialog_&>*]:shrink-0 [.match-dialog>&]:[scrollbar-gutter:stable] viewport-max-767:[.profile-dialog>&]:p-4 viewport-max-767:p-4 flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
             {children}
           </div>
         </DialogContent>
@@ -290,7 +296,9 @@ export function Notice({ error, children }: { error?: boolean; children: ReactNo
   return (
     <Alert variant={error ? 'destructive' : 'default'} role={error ? 'alert' : 'status'}>
       {error ? <TriangleAlert /> : <Info />}
-      <AlertDescription className="flex flex-wrap items-center gap-2">{children}</AlertDescription>
+      <AlertDescription className="notice-content flex min-w-0 flex-wrap items-start gap-2 wrap-anywhere [&>*]:min-w-0 [&>*]:max-w-full">
+        {children}
+      </AlertDescription>
     </Alert>
   );
 }
@@ -314,12 +322,20 @@ export function Badge({
 
 export function Stats({
   items,
+  className,
 }: {
   items: Array<{ label: string; value: ReactNode; pending?: boolean }>;
+  className?: string;
 }) {
   const { t } = useI18n();
   return (
-    <dl className="stats" data-count={items.length}>
+    <dl
+      className={cn(
+        "stats grid grid-cols-4 gap-(--content-gap) [&[data-count='1']]:grid-cols-1 [&[data-count='2']]:grid-cols-2 [&[data-count='3']]:grid-cols-3 [&[data-count='6']]:grid-cols-3 [&[data-count='5']]:grid-cols-5 [&_[data-slot='card-content']]:mt-auto [.report-embedded_&[data-count='6']]:grid-cols-6 [.profile-overview_&]:gap-3 viewport-max-1099:[.report-embedded_&[data-count='6']]:grid-cols-3 viewport-max-1099:[&[data-count='5']]:grid-cols-3 viewport-max-767:grid-cols-2 viewport-max-767:[&[data-count='3']]:grid-cols-2 viewport-max-767:[&[data-count='5']]:grid-cols-2 viewport-max-767:[&[data-count='6']]:grid-cols-2 viewport-max-767:[.report-embedded_&[data-count='6']]:grid-cols-2 viewport-max-767:[&[data-count='1']]:grid-cols-1",
+        className,
+      )}
+      data-count={items.length}
+    >
       {items.map((item, index) => (
         <PrimitiveCard size="sm" key={index}>
           <CardHeader>

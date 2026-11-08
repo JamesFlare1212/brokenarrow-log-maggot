@@ -104,7 +104,7 @@ export function BatraceStatus({
           </PopoverDescription>
         </PopoverHeader>
         {checks.length > 0 && (
-          <ul className="health-checks">
+          <ul className="health-checks flex flex-col gap-4 [&>li]:flex [&>li]:flex-col [&>li]:gap-1.5 [&>li]:min-w-0 [&_code]:text-[0.75rem] [&_code]:wrap-anywhere">
             {checks.map((check) => {
               const reason = check.unchecked
                 ? 'healthEndpointNotChecked'
@@ -122,26 +122,26 @@ export function BatraceStatus({
                       : 'healthFailure_network';
               return (
                 <li key={check.path}>
-                  <div className="health-check-heading">
+                  <div className="health-check-heading flex flex-wrap items-baseline gap-y-1.5 gap-x-3 justify-between">
                     <strong>
                       {t(endpoints[check.path.split('?')[0] ?? ''] ?? 'healthEndpoint')}
                     </strong>
-                    <span className="health-check-status">
+                    <span className="health-check-status flex flex-wrap items-baseline gap-y-1.5 gap-x-3">
                       <span
                         className={
                           check.unchecked
-                            ? 'muted'
+                            ? 'muted text-muted-foreground'
                             : check.ok
                               ? 'text-success'
                               : check.fallback?.ok
                                 ? 'text-warning'
-                                : 'text-danger'
+                                : 'text-destructive'
                         }
                       >
                         {t(reason)}
                       </span>
                       {check.fallback && (
-                        <span className={check.fallback.ok ? 'text-success' : 'text-danger'}>
+                        <span className={check.fallback.ok ? 'text-success' : 'text-destructive'}>
                           {t(check.fallback.ok ? 'healthFallbackSuccess' : 'healthFallbackFailed')}
                         </span>
                       )}
@@ -149,17 +149,19 @@ export function BatraceStatus({
                   </div>
                   <code>{check.path}</code>
                   {!check.unchecked && (
-                    <small className="muted">
+                    <small className="muted text-muted-foreground">
                       {check.status === null ? t('healthNoHttpResponse') : `HTTP ${check.status}`}
                       {' · '}
                       {check.ms} ms
                     </small>
                   )}
-                  {check.rayId && <small className="muted">Ray ID: {check.rayId}</small>}
+                  {check.rayId && (
+                    <small className="muted text-muted-foreground">Ray ID: {check.rayId}</small>
+                  )}
                   {check.fallback && (
                     <>
                       <code>{check.fallback.path}</code>
-                      <small className="muted">
+                      <small className="muted text-muted-foreground">
                         {check.fallback.status === null
                           ? t('healthNoHttpResponse')
                           : `HTTP ${check.fallback.status}`}
@@ -167,7 +169,9 @@ export function BatraceStatus({
                         {check.fallback.ms} ms
                       </small>
                       {check.fallback.rayId && (
-                        <small className="muted">Ray ID: {check.fallback.rayId}</small>
+                        <small className="muted text-muted-foreground">
+                          Ray ID: {check.fallback.rayId}
+                        </small>
                       )}
                     </>
                   )}
@@ -176,7 +180,7 @@ export function BatraceStatus({
             })}
           </ul>
         )}
-        <p className="muted">{t('healthRefreshHint')}</p>
+        <p className="muted text-muted-foreground">{t('healthRefreshHint')}</p>
         {error && (
           <p role="alert" className="text-destructive">
             {error}

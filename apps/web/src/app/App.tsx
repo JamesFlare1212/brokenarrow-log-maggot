@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type CSSProperties,
 } from 'react';
 import {
   Archive as faBoxArchive,
@@ -35,6 +34,7 @@ import {
   SidebarItem,
   SidebarNavigation,
   SidebarToggle,
+  SidebarProvider,
 } from '../components/Sidebar';
 import { Dashboard } from '../features/overview/Dashboard';
 import { SessionPanel } from '../features/session/SessionPanel';
@@ -47,14 +47,9 @@ import { UpdateButton } from '../features/settings/UpdateButton';
 import { AnalyticsConsentDialog } from '../features/settings/AnalyticsConsentDialog';
 import { hasAnalyticsChoice } from '@ba/contracts';
 import { cn } from '@/lib/utils';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { panelLabelKey } from '@/lib/navigation';
+import { SidebarInset } from '@/components/ui/sidebar';
+import { WorkspaceBreadcrumb } from '../components/WorkspaceBreadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 const ProfileDialog = lazy(() =>
@@ -109,17 +104,17 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
             key={panel}
             className="nav-item"
             icon={icons[panel]}
-            label={t(panel === 'current' ? 'overview' : panel)}
+            label={t(panelLabelKey(panel))}
             selected={page === panel}
             onClick={() => {
               setPage(panel);
               onNavigate?.();
             }}
             aria-current={page === panel ? 'page' : undefined}
-            aria-label={t(panel === 'current' ? 'overview' : panel)}
+            aria-label={t(panelLabelKey(panel))}
             title={
               (settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed)
-                ? t(panel === 'current' ? 'overview' : panel)
+                ? t(panelLabelKey(panel))
                 : undefined
             }
           />
@@ -200,14 +195,18 @@ export function App() {
   const collapsed = settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed;
   return (
     <SidebarProvider
-      style={{ '--sidebar-width': '16rem' } as CSSProperties}
+      width={settings.draft?.sidebarWidth ?? state.config.sidebarWidth}
+      onWidthChange={(sidebarWidth) => settings.change({ sidebarWidth })}
       open={!collapsed}
       onOpenChange={(open) => settings.change({ sidebarCollapsed: !open })}
-      className={cn('app-shell', settingsTab && 'app-shell-settings')}
+      className={cn(
+        "app-shell h-[100svh] min-h-0 overflow-hidden [&_[data-slot='sidebar-inset']]:m-0 [&_[data-slot='sidebar-inset']]:rounded-none! [&_[data-slot='sidebar-inset']]:shadow-none [&_[data-slot='sidebar-container']]:py-0 min-[768px]:[&:has([data-slot='sidebar'][data-state='expanded'])_[data-slot='sidebar-inset']]:[border-start-start-radius:16px]! min-[768px]:[&:has([data-slot='sidebar'][data-state='expanded'])_[data-slot='sidebar-inset']]:[border-end-start-radius:16px]!",
+        settingsTab && 'app-shell-settings',
+      )}
       data-ready="true"
     >
       <a
-        className="skip-link"
+        className="skip-link fixed top-4 left-4 z-[100] p-3 rounded-(--radius) bg-primary text-primary-foreground -translate-y-[200%] [&:focus]:translate-y-0"
         href={settingsTab ? '#settings-content' : '#main-content'}
         onClick={(event) => {
           event.preventDefault();
@@ -233,26 +232,21 @@ export function App() {
           <UpdateButton />
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="workspace" hidden={Boolean(settingsTab)}>
+      <SidebarInset
+        className="workspace flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden @container/workspace"
+        hidden={Boolean(settingsTab)}
+      >
         <PageToolbar className="topbar">
-          <div className="topbar-location">
+          <div className="topbar-location flex items-center gap-2 min-w-0 [&_[data-slot='breadcrumb-list']]:flex-nowrap [&_[data-slot='breadcrumb-item']:last-child]:min-w-0 [&_[data-slot='breadcrumb-page']]:overflow-hidden [&_[data-slot='breadcrumb-page']]:text-ellipsis [&_[data-slot='breadcrumb-page']]:whitespace-nowrap">
             <SidebarToggle controls="workspace-sidebar" />
             <Separator
               orientation="vertical"
               className="mx-2 data-vertical:h-4 data-vertical:self-center"
             />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>Broken Arrow</BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{t(page === 'current' ? 'overview' : page)}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+            <WorkspaceBreadcrumb />
           </div>
-          <div className="topbar-actions">
-            <div className="topbar-health">
+          <div className="topbar-actions flex items-center gap-2 shrink-0">
+            <div className="topbar-health flex items-center gap-2 viewport-max-767:hidden workspace-max-48:hidden">
               <BatraceStatus
                 health={state.health}
                 onCheck={() => api.invoke('api.health', { force: true })}
@@ -276,8 +270,9 @@ export function App() {
         </PageToolbar>
         <div
           className={cn(
-            'workspace-scroll',
-            (page === 'archive' || page === 'bans') && 'workspace-scroll-results',
+            'workspace-scroll flex-1 min-h-0 overflow-auto [scrollbar-gutter:stable] [scroll-padding-block:1.5rem] overscroll-contain',
+            (page === 'archive' || page === 'bans') &&
+              'workspace-scroll-results flex flex-col overflow-hidden [scrollbar-gutter:auto]',
           )}
           ref={workspaceScroll}
           onScroll={(event) => {
@@ -286,21 +281,31 @@ export function App() {
         >
           <div
             id="main-content"
-            className={page === 'archive' || page === 'bans' ? 'results-page' : undefined}
+            className={cn(
+              'flex flex-col gap-(--content-gap) w-full max-w-360 mx-auto p-6 outline-none [&:has(>_.page-archive:not([hidden])>.match-detail-page)]:max-w-none [&:has(>_.page-archive:not([hidden])>.match-detail-page)]:p-0 viewport-max-767:p-5',
+              page === 'archive' || page === 'bans'
+                ? 'results-page [.workspace-scroll-results_&]:h-auto [.workspace-scroll-results_&]:min-h-0 [.workspace-scroll-results_&]:flex-1 h-full'
+                : undefined,
+            )}
             ref={main}
             tabIndex={-1}
             aria-labelledby="page-title"
           >
-            <h1 id="page-title" className="sr-only">
-              {title}
-            </h1>
-            {page !== 'replays' && (
-              <span className="sr-only" role="status" data-log-status>
+            <header className="page-heading flex items-start justify-between gap-4 shrink-0 [&_h1]:text-[1.5rem] [&_h1]:font-semibold [&_h1]:tracking-[-0.025em] [&_h1]:leading-[1.3] [&_h1]:text-balance [&_p]:max-w-[65ch] [&_p]:mt-1.5 [&_p]:text-muted-foreground [&_p]:text-[0.875rem] [&_p]:leading-[1.5] viewport-max-767:gap-2 viewport-max-479:flex-wrap workspace-heading grid grid-cols-[minmax(0,_1fr)_auto] [#main-content:has(>_.page-archive:not([hidden])>.match-detail-page)>&]:hidden">
+              <div className="min-w-0">
+                <h1 id="page-title">{title}</h1>
+                <p>{t(`pageHint.${page}`)}</p>
+              </div>
+              <div
+                className="page-heading-status flex flex-wrap items-center gap-2 pt-1.5 max-w-[min(100%,_22rem)] [&_[data-slot='badge']]:whitespace-normal [&_[data-slot='badge']]:wrap-anywhere viewport-max-767:shrink-0 viewport-max-479:pt-1 viewport-max-479:[&_[data-slot='badge']]:max-w-full"
+                role="status"
+                data-log-status
+              >
                 <Badge tone={isListening ? 'success' : state.watcher.error ? 'danger' : 'muted'}>
                   {status}
                 </Badge>
-              </span>
-            )}
+              </div>
+            </header>
             {!state.config.logDir && page === 'current' && (
               <Notice>
                 <span>{t('noDirectory')}</span>
@@ -308,7 +313,11 @@ export function App() {
               </Notice>
             )}
             {[...new Set([...visited, page])].map((panel) => (
-              <div key={panel} className={`feature-page page-${panel}`} hidden={page !== panel}>
+              <div
+                key={panel}
+                className={`feature-page flex flex-col min-w-0 [.results-page>&]:flex-1 [.results-page>&]:min-h-0 page-${panel}`}
+                hidden={page !== panel}
+              >
                 {components[panel]}
               </div>
             ))}
@@ -331,11 +340,11 @@ export function App() {
       </Suspense>
       <AnalyticsConsentDialog />
       {settings.error && !settingsTab && (
-        <div className="settings-save-alert">
+        <div className="settings-save-alert fixed bottom-4 right-4 max-w-100">
           <Notice error>
             <strong>{t('settingsSaveFailed')}</strong>
             <p>{settings.error}</p>
-            <div className="actions">
+            <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
               <Button onClick={() => void settings.flush()}>{t('settingsRetry')}</Button>
               <Button onClick={() => void settings.discard()}>{t('settingsDiscard')}</Button>
             </div>

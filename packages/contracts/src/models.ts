@@ -294,6 +294,7 @@ export interface PublicConfig {
   eloColorScheme: 'green-up' | 'red-up';
   glassOpacity: number;
   sidebarCollapsed: boolean;
+  sidebarWidth: number;
   lang: Locale;
   panelOrder: Panel[];
   hiddenPanels: Panel[];

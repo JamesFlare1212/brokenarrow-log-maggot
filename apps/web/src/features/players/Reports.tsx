@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/table';
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import type { PlayerReport } from '@ba/contracts';
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { formatMetric, formatDelta, formatTime } from '@ba/shared';
 import { eloChangeClass } from '@/lib/elo';
 import { Badge, Button, Notice, Stats } from '../../components/ui';
@@ -35,6 +35,7 @@ import { MaggotCard } from './MaggotCard';
 import { ProfileTableSkeleton } from './ProfileTableSkeleton';
 import { MapPerformanceGrid } from './MapPerformanceGrid';
 import { Skeleton } from '@/components/ui/skeleton';
+import { OverflowHint } from '../../components/OverflowHint';
 
 export function ReportCopyButton({ report }: { report: PlayerReport | null }) {
   const { t } = useI18n(),
@@ -95,9 +96,12 @@ export function ReportView({
   const ReportContainer = embedded ? 'div' : ReportCard;
   const ReportContent = embedded ? 'div' : CardContent;
   return (
-    <ReportContainer className={cn('report', embedded && 'report-embedded')} aria-busy={pending}>
+    <ReportContainer
+      className={cn('report min-w-0', embedded && 'report-embedded')}
+      aria-busy={pending}
+    >
       {!embedded && (
-        <CardHeader className="report-heading">
+        <CardHeader className="report-heading flex flex-wrap items-start justify-between gap-3 [&>[data-slot='card-action']]:ml-auto [&_[data-slot='card-title']]:wrap-anywhere">
           <div className="min-w-0">
             <CardTitle
               role="heading"
@@ -106,7 +110,7 @@ export function ReportView({
             >
               {report?.name ?? name ?? <Skeleton className="h-6 w-40" aria-hidden="true" />}
             </CardTitle>
-            <CardDescription className="report-identity-meta">
+            <CardDescription className="report-identity-meta flex flex-wrap gap-y-1 gap-x-3 mt-1">
               <span>#{playerId}</span>
               <span>
                 {t('totalMatches')}{' '}
@@ -126,7 +130,7 @@ export function ReportView({
               </span>
             </CardDescription>
           </div>
-          <CardAction className="actions">
+          <CardAction className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
             <Button
               disabled={!report}
               onClick={() =>
@@ -139,7 +143,7 @@ export function ReportView({
           </CardAction>
         </CardHeader>
       )}
-      <ReportContent className="report-content">
+      <ReportContent className="report-content flex min-w-0 flex-col gap-4 @container/profile-overview [.report-embedded_&]:p-0">
         {report?.stale && (
           <Notice>
             {t('stale')} · {formatTime(report.updatedAt, locale)}
@@ -209,65 +213,117 @@ export function ReportMatchTable({
 }) {
   const { t, locale } = useI18n();
   const { openModal } = useApp();
+  const scroll = useRef<HTMLDivElement>(null);
   const columns = [
-    'matchId',
-    'result',
-    'eloDelta',
-    'K/D',
-    'DMR',
-    'destruction',
-    'losses',
-    'objectives',
-    'time',
+    { key: 'matchId', minWidth: 'min-w-[clamp(6rem,12cqi,8rem)]' },
+    {
+      key: 'result',
+      minWidth:
+        locale === 'en'
+          ? 'min-w-22 @[60rem]/report-matches:min-w-24'
+          : 'min-w-16 @[60rem]/report-matches:min-w-18',
+    },
+    { key: 'eloDelta', minWidth: 'min-w-[clamp(5.5rem,11cqi,7rem)]' },
+    { key: 'K/D', minWidth: 'min-w-[clamp(3.5rem,7cqi,4.5rem)]' },
+    { key: 'DMR', minWidth: 'min-w-[clamp(3.5rem,7cqi,4.5rem)]' },
+    { key: 'destruction', minWidth: 'min-w-[clamp(5.5rem,11cqi,8rem)]' },
+    { key: 'losses', minWidth: 'min-w-[clamp(5.5rem,11cqi,8rem)]' },
+    {
+      key: 'objectives',
+      minWidth:
+        locale === 'en'
+          ? 'min-w-[clamp(5.5rem,11cqi,6.5rem)]'
+          : 'min-w-[clamp(3.5rem,7cqi,4.5rem)]',
+    },
+    { key: 'time', minWidth: 'min-w-38' },
   ];
   return (
-    <div className="table-wrap report-match-table">
-      <Table aria-busy={pending}>
-        <TableCaption className="sr-only">{label ?? t('matchStatistics')}</TableCaption>
-        <TableHeader>
-          <TableRow>
-            {columns.map((k) => (
-              <TableHead
-                key={k}
-                data-column={k}
-                className={k === 'eloDelta' ? 'elo-column' : undefined}
-              >
-                {t(k)}
-              </TableHead>
+    <div className="report-match-region @container/report-matches min-w-0">
+      <div
+        ref={scroll}
+        className="table-wrap report-match-table relative min-w-0 overflow-auto [.report_&]:max-h-120 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:-outline-offset-2 [&>[data-slot='table-container']]:overflow-visible"
+        tabIndex={0}
+        role="region"
+        aria-label={`${label ?? t('matchStatistics')} · ${t('tableScrollHint')}`}
+      >
+        <Table
+          aria-busy={pending}
+          className="table-auto [&_th]:px-2 [&_th]:py-2.5 [&_td]:px-2 [&_td]:py-2.5 [&_[data-slot='skeleton']]:w-full @[60rem]/report-matches:[&_th]:px-3 @[60rem]/report-matches:[&_td]:px-3"
+        >
+          <TableCaption className="sr-only">{label ?? t('matchStatistics')}</TableCaption>
+          <colgroup>
+            {columns.map(({ key }) => (
+              <col key={key} className={cn(key !== 'time' && 'w-px')} />
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {pending && !report && <ProfileTableSkeleton columns={columns} />}
-          {report?.recentMatches.map((m) => (
-            <TableRow key={m.matchId}>
-              <TableCell data-column="matchId">
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={() => openModal({ type: 'match', fid: m.matchId })}
+          </colgroup>
+          <TableHeader>
+            <TableRow>
+              {columns.map(({ key, minWidth }) => (
+                <TableHead
+                  key={key}
+                  data-column={key}
+                  className={cn(
+                    'text-xs',
+                    minWidth,
+                    key === 'matchId' && 'sticky left-0 z-1 bg-card',
+                    key === 'result' && 'text-center',
+                    !['matchId', 'result', 'time'].includes(key) && 'text-right tabular-nums',
+                  )}
                 >
-                  #{m.matchId}
-                </Button>
-              </TableCell>
-              <TableCell data-column="result">
-                <Badge tone={m.won === true ? 'success' : m.won === false ? 'danger' : 'muted'}>
-                  {m.won === null ? t('unknown') : m.won ? t('win') : t('loss')}
-                </Badge>
-              </TableCell>
-              <TableCell className={cn('elo-column', eloChangeClass(m.eloDelta))}>
-                {formatDelta(m.eloDelta)}
-              </TableCell>
-              <TableCell>{formatMetric(m.kd)}</TableCell>
-              <TableCell data-column="DMR">{formatMetric(m.dmr)}</TableCell>
-              <TableCell>{formatMetric(m.destruction, 0)}</TableCell>
-              <TableCell>{formatMetric(m.losses, 0)}</TableCell>
-              <TableCell>{formatMetric(m.objectives, 0)}</TableCell>
-              <TableCell data-column="time">{formatTime(m.endTime, locale)}</TableCell>
+                  {t(key)}
+                </TableHead>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {pending && !report && <ProfileTableSkeleton columns={columns.map(({ key }) => key)} />}
+            {report?.recentMatches.map((m) => (
+              <TableRow key={m.matchId}>
+                <TableCell data-column="matchId" className="sticky left-0 z-1 bg-card">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto min-h-6 max-w-full justify-start p-0 whitespace-normal text-left wrap-anywhere"
+                    onClick={() => openModal({ type: 'match', fid: m.matchId })}
+                  >
+                    #{m.matchId}
+                  </Button>
+                </TableCell>
+                <TableCell data-column="result" className="text-center">
+                  <Badge tone={m.won === true ? 'success' : m.won === false ? 'danger' : 'muted'}>
+                    {m.won === null ? t('unknown') : m.won ? t('win') : t('loss')}
+                  </Badge>
+                </TableCell>
+                <TableCell
+                  data-column="eloDelta"
+                  className={cn('elo-column text-right tabular-nums', eloChangeClass(m.eloDelta))}
+                >
+                  {formatDelta(m.eloDelta)}
+                </TableCell>
+                <TableCell data-column="K/D" className="text-right tabular-nums">
+                  {formatMetric(m.kd)}
+                </TableCell>
+                <TableCell data-column="DMR" className="text-right tabular-nums">
+                  {formatMetric(m.dmr)}
+                </TableCell>
+                <TableCell data-column="destruction" className="text-right tabular-nums">
+                  {formatMetric(m.destruction, 0)}
+                </TableCell>
+                <TableCell data-column="losses" className="text-right tabular-nums">
+                  {formatMetric(m.losses, 0)}
+                </TableCell>
+                <TableCell data-column="objectives" className="text-right tabular-nums">
+                  {formatMetric(m.objectives, 0)}
+                </TableCell>
+                <TableCell data-column="time" className="tabular-nums">
+                  {formatTime(m.endTime, locale)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <OverflowHint viewport={scroll} />
     </div>
   );
 }

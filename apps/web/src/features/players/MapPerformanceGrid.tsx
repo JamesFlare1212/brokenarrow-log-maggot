@@ -28,7 +28,11 @@ export function MapPerformanceGrid({
       : maps.slice().sort((a, b) => b.matchCount - a.matchCount);
 
   return (
-    <ul className="map-performance-grid" aria-label={t('mapStatistics')} aria-busy={pending}>
+    <ul
+      className="map-performance-grid grid grid-cols-[repeat(auto-fit,_minmax(min(100%,_16rem),_1fr))] gap-3 [&>li]:min-w-0"
+      aria-label={t('mapStatistics')}
+      aria-busy={pending}
+    >
       {entries.map((map, index) => (
         <li
           key={map?.mapId ?? map?.name ?? index}
@@ -78,7 +82,7 @@ function MapPerformanceCard({ map }: { map: MapPerformance | null }) {
       <CardContent className="flex flex-col gap-3">
         {map ? (
           <Progress
-            className="map-performance-progress"
+            className="map-performance-progress [&_[data-slot='progress-indicator']]:bg-(--map-performance-color)"
             value={winRate ?? 0}
             aria-label={`${map.name} · ${t('winRate')}`}
             aria-hidden={winRate === null || undefined}
@@ -86,10 +90,10 @@ function MapPerformanceCard({ map }: { map: MapPerformance | null }) {
         ) : (
           <Skeleton className="h-1 w-full" />
         )}
-        <dl className="map-performance-metrics">
+        <dl className="map-performance-metrics grid grid-cols-3 gap-2 [&_dt]:text-muted-foreground [&_dt]:text-[0.6875rem] [&_dd]:mt-1 [&_dd]:font-semibold [&_dd]:tabular-nums">
           <div>
             <dt>{t('winRate')}</dt>
-            <dd className="map-performance-win-rate">
+            <dd className="map-performance-win-rate text-(--map-performance-color)">
               {map ? (
                 winRate === null ? (
                   '—'

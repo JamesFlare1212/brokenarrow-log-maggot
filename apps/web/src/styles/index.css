@@ -6,6 +6,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Preserve inclusive legacy query boundaries and their cascade order. */
+@custom-variant metric-max-16 (@container metric (max-width: 16rem));
+@custom-variant session-roster-max-24 (@container session-roster (max-width: 24rem));
+@custom-variant profile-overview-max-52 (@container profile-overview (max-width: 52rem));
+@custom-variant match-detail-max-36 (@container match-detail (max-width: 36rem));
+@custom-variant recording-max-28 (@container recording (max-width: 28rem));
+@custom-variant pagination-max-24 (@container pagination (max-width: 24rem));
+@custom-variant appearance-max-36 (@container appearance (max-width: 36rem));
+@custom-variant appearance-max-44 (@container appearance (max-width: 44rem));
+@custom-variant appearance-max-28 (@container appearance (max-width: 28rem));
+@custom-variant players-max-55 (@container players (max-width: 55rem));
+@custom-variant players-max-30 (@container players (max-width: 30rem));
+@custom-variant workspace-max-48 (@container workspace (max-width: 48rem));
+@custom-variant workspace-max-36 (@container workspace (max-width: 36rem));
+@custom-variant settings-max-36 (@container settings (max-width: 36rem));
+@custom-variant viewport-max-1099 (@media (max-width: 1099px));
+@custom-variant viewport-max-767 (@media (max-width: 767px));
+@custom-variant viewport-max-479 (@media (max-width: 479px));
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', 'Segoe UI', 'Microsoft YaHei', sans-serif;
@@ -75,7 +94,7 @@
   --destructive: light-dark(oklch(0.54 0.21 27.325), oklch(0.704 0.191 22.216));
   --success: light-dark(oklch(0.448 0.119 151.328), oklch(0.792 0.209 151.711));
   --warning: light-dark(oklch(0.473 0.137 46.201), oklch(0.828 0.189 84.429));
-  --info: light-dark(oklch(0.488 0.243 264.376), oklch(0.809 0.105 251.813));
+  --info: light-dark(oklch(0.44 0.205 264.376), oklch(0.809 0.105 251.813));
   --background: light-dark(
     oklch(0.968 var(--theme-chroma) var(--theme-hue)),
     oklch(0.16 var(--theme-chroma) var(--theme-hue))
@@ -90,6 +109,13 @@
   );
   --card-foreground: var(--foreground);
   --glass-surface: color-mix(in srgb, var(--card) var(--glass-opacity), transparent);
+  /* Raised glass stays readable above arbitrary content and follows the opacity preference. */
+  --glass-overlay-opacity: calc(80% + var(--glass-opacity) * 0.2);
+  --glass-overlay-surface: color-mix(
+    in srgb,
+    var(--card) var(--glass-overlay-opacity),
+    transparent
+  );
   --glass-blur: 12px;
   --glass-saturation: 1.14;
   --glass-border: light-dark(
@@ -97,10 +123,7 @@
     rgb(255 255 255 / 0.08)
   );
   --glass-shadow: 0 1px 2px light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.16));
-  --popover: light-dark(
-    oklch(0.996 calc(var(--theme-chroma) * 0.2) var(--theme-hue)),
-    oklch(0.265 calc(var(--theme-chroma) * 1.15) var(--theme-hue))
-  );
+  --popover: var(--glass-overlay-surface);
   --popover-foreground: var(--foreground);
   --primary: light-dark(var(--theme-primary-light), var(--theme-primary-dark));
   --primary-foreground: light-dark(

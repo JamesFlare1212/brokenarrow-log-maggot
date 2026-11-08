@@ -98,11 +98,12 @@ export function ThemePreviewCircle({
   mode: ThemeAppearance;
   className?: string;
 }) {
+  // Keep filtered pixels inside the swatch when neighboring glass layers repaint.
   return (
     <span
       aria-hidden
       className={cn(
-        'theme-palette relative block size-14 shrink-0 overflow-hidden rounded-full border-2 border-background',
+        'theme-palette relative isolate block size-14 shrink-0 contain-paint overflow-hidden rounded-full border-2 border-background',
         className,
       )}
       data-theme={colors.scheme}

@@ -12,6 +12,22 @@
 - Preserve localized application text and translation resources in their intended languages.
 - Follow the existing TypeScript, React, Electron, and pnpm workspace conventions.
 
+## UI Styling
+
+- Use Tailwind CSS v4 utilities in React `className` values for layout, spacing, typography, colors,
+  responsive behavior, and interaction states. Do not add handwritten CSS for ordinary components
+  or pages.
+- Compose existing shadcn/ui components and variants, use semantic theme tokens, and use `cn()` for
+  conditional classes.
+- Cards and floating content surfaces must use the shared glass material and semantic surface tokens.
+  Customize shared shadcn primitives instead of applying inverse tooltip fills or page-specific
+  backgrounds, borders, shadows, blur, or radius overrides.
+- Limit handwritten CSS to shared theme tokens, browser/native foundations such as Electron caption
+  geometry and scrollbars, forced colors/reduced motion, Shadow DOM hosts, and shared calculated
+  layout variables. Document the reason for any necessary exception.
+- Do not recreate component stylesheets with selector blocks or bulk `@apply` wrappers. Use CSS
+  variables with Tailwind utilities when runtime values are needed.
+
 ## Validation
 
 - Run checks appropriate to the change. For application changes, use `pnpm check` for type checking,

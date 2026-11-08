@@ -59,7 +59,7 @@ function DeckFiles({
           <FieldLegend className="sr-only">{title}</FieldLegend>
           <div
             id={id}
-            className="deck-file-list"
+            className="deck-file-list min-h-48 max-h-104 overflow-auto [&_[data-slot='field-group']]:gap-0 [&_[data-slot='field']]:py-2.5 [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[2px]"
             aria-busy={pending}
             tabIndex={0}
             onKeyDown={(e) => {
@@ -114,7 +114,7 @@ function DeckFiles({
               <Empty>{t('empty')}</Empty>
             )}
           </div>
-          <PrimitiveField orientation="horizontal" className="deck-selection">
+          <PrimitiveField orientation="horizontal" className="deck-selection py-2.5">
             <Checkbox
               id={`${id}-all`}
               checked={allSelected ? true : selectedCount > 0 ? 'indeterminate' : false}
@@ -124,7 +124,7 @@ function DeckFiles({
               disabled={pending || !files.length}
             />
             <FieldLabel htmlFor={`${id}-all`}>{t('selectAll')}</FieldLabel>
-            <small className="muted">
+            <small className="muted text-muted-foreground">
               {pending ? (
                 <Skeleton className="h-4 w-12" aria-hidden="true" />
               ) : (
@@ -178,12 +178,12 @@ export function DecksPanel() {
     </Button>
   );
   return (
-    <div className="decks-panel">
+    <div className="decks-panel flex min-w-0 flex-col gap-(--content-gap)">
       {!loading && !list?.found && <div className="deck-toolbar">{refreshButton}</div>}
       {state.deckAlert && (
         <Notice>
           <span>{t('deckSwitch', { name: state.deckAlert.from })}</span>
-          <div className="actions">
+          <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
             {(['restore', 'ignore', 'dismiss'] as const).map((action) => (
               <Button
                 key={action}
@@ -215,7 +215,7 @@ export function DecksPanel() {
         </Card>
       ) : (
         (list?.found || loading) && (
-          <div className="deck-columns">
+          <div className="deck-columns grid grid-cols-2 gap-(--content-gap) [&>section]:flex [&>section]:min-w-0 [&>section]:flex-col [&>section]:gap-3.5 workspace-max-48:grid-cols-1 viewport-max-767:grid-cols-1">
             <section>
               <DeckFiles
                 id="front-decks"
@@ -226,10 +226,10 @@ export function DecksPanel() {
                 onChange={setFront}
                 actions={refreshButton}
               />
-              <small className="path">
+              <small className="path text-muted-foreground text-[0.75rem] wrap-anywhere [.deck-columns_&]:flex [.deck-columns_&]:min-h-4.5 [.deck-columns_&]:items-center">
                 {loading ? <Skeleton className="h-4 w-48" aria-hidden="true" /> : content.decksDir}
               </small>
-              <div className="actions">
+              <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
                 <Button
                   disabled={loading || busy || !front.length}
                   onClick={() => {
@@ -287,14 +287,14 @@ export function DecksPanel() {
                 onChange={setBack}
                 actions={refreshButton}
               />
-              <small className="path">
+              <small className="path text-muted-foreground text-[0.75rem] wrap-anywhere [.deck-columns_&]:flex [.deck-columns_&]:min-h-4.5 [.deck-columns_&]:items-center">
                 {loading ? (
                   <Skeleton className="h-4 w-48" aria-hidden="true" />
                 ) : (
                   content.backupsDir
                 )}
               </small>
-              <div className="actions">
+              <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
                 <Button
                   disabled={loading || busy || back.length !== 1}
                   variant="default"
@@ -356,7 +356,7 @@ export function DecksPanel() {
             maxLength={200}
           />
         </Field>
-        <div className="actions">
+        <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
           <Button
             disabled={busy || !packageName.trim()}
             variant="default"

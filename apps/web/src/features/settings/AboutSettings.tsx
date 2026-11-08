@@ -13,27 +13,32 @@ export function AboutSettings() {
   const { api, state, notify } = useApp(),
     { t } = useI18n();
   return (
-    <Card role="region" aria-labelledby="settings-about-title">
+    <Card
+      className="settings-about-card @container/about-settings gap-3"
+      role="region"
+      aria-labelledby="settings-about-title"
+    >
       <CardHeader>
         <CardTitle id="settings-about-title">{t('about')}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+      <CardContent className="flex flex-col gap-4">
         <UpdatePanel />
         <Separator />
-        <div className="settings-about-row">
-          <div className="settings-about-copy">
-            <div className="settings-about-title">
-              <BrandLogo size={32} />
-              <strong>{t('projectLinks')}</strong>
+        <div className="settings-about-row flex min-w-0 flex-col gap-3 @min-[32rem]/about-settings:flex-row @min-[32rem]/about-settings:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <BrandLogo size={32} />
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <strong>{t('brand')}</strong>
+              <span className="text-xs text-muted-foreground">{t('projectLinks')}</span>
             </div>
-            <p>{t('brand')}</p>
           </div>
-          <div className="settings-about-links">
+          <div className="settings-about-links grid grid-cols-2 gap-2 @min-[32rem]/about-settings:flex @min-[32rem]/about-settings:shrink-0">
             {[
               ['GitHub', 'https://github.com/JamesFlare1212/brokenarrow-log-maggot'],
               ['BATrace', BATRACE_ORIGIN + '/'],
             ].map(([label, url]) => (
               <Button
+                className="w-full @min-[32rem]/about-settings:w-auto"
                 key={label}
                 onClick={() =>
                   void api
@@ -42,7 +47,7 @@ export function AboutSettings() {
                 }
               >
                 {label}
-                <Icon icon={faArrowUpRightFromSquare} size={14} />
+                <Icon icon={faArrowUpRightFromSquare} data-icon="inline-end" aria-hidden="true" />
               </Button>
             ))}
           </div>

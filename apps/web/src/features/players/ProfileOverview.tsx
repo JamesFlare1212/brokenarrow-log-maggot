@@ -24,7 +24,7 @@ export function ProfileOverview({
   const preferencesPending = reportPending || (!report && profilePending);
 
   return (
-    <div className="profile-overview">
+    <div className="profile-overview flex min-w-0 flex-col gap-4 @container/profile-overview">
       <Stats
         items={[
           {

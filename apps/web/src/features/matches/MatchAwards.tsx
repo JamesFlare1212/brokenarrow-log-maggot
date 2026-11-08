@@ -27,7 +27,7 @@ export function MatchAwards({
       {groups.map((group) => (
         <div
           key={group.source}
-          className="match-awards"
+          className="match-awards [.match-player-labels_&]:max-w-none [.match-player-labels_&]:shrink-0 [.match-player-labels_&]:flex-nowrap inline-flex items-center flex-wrap gap-1 min-w-0 max-w-full"
           data-award-source={group.source}
           role="group"
           aria-label={group.name}
@@ -36,11 +36,14 @@ export function MatchAwards({
             <TooltipBadge
               key={award.id}
               variant={award.tone}
-              className="match-award-button"
+              className="match-award-button [.player-card_&]:pointer-events-auto [.match-player-labels_&]:max-w-48 [.match-player-labels_&]:shrink-0 min-w-0 max-w-full"
               data-award-id={award.id}
+              aria-label={award.name}
               tooltip={<AwardDetails award={award} />}
             >
-              {award.name}
+              <span className="match-award-label min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                {award.name}
+              </span>
             </TooltipBadge>
           ))}
         </div>

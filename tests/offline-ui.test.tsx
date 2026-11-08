@@ -61,6 +61,9 @@ describe('UI backed by the complete recorded BATrace service', () => {
       </AppProvider>,
     );
     await screen.findByRole('heading', { name: 'Dam' });
+    expect(document.querySelector('.match-dialog .match-detail-toolbar')).toBeNull();
+    const refresh = screen.getByRole('button', { name: t('refresh') });
+    expect(refresh.closest('[data-slot="dialog-header"]')).toBeTruthy();
     await waitFor(() => expect(document.querySelectorAll('.match-player-cell')).toHaveLength(10));
     const match = await api.invoke('matches.detail', { fid: '9227650', force: false });
     const awarded = match.players.find(
@@ -79,7 +82,7 @@ describe('UI backed by the complete recorded BATrace service', () => {
     const details = await Promise.resolve(explanation());
     expect(details.querySelector('.match-award-evidence')?.textContent).toMatch(/\d/);
     expect(details.textContent).not.toContain(t('title.condition.evidence'));
-    fireEvent.click(screen.getByRole('button', { name: t('refresh') }));
+    fireEvent.click(refresh);
     await waitFor(() =>
       expect(completed).toContainEqual({
         method: 'matches.detail',
@@ -119,8 +122,15 @@ describe('UI backed by the complete recorded BATrace service', () => {
       within(ratingTrend).getByText(t('ratingTrendLatest')).nextElementSibling?.textContent,
     ).toBe(formatMetric(report.ratingTrend.at(-1)!.ratingAfter, 1));
     const units = screen.getByRole('table', { name: t('units') });
-    const unitRows = within(units).getAllByRole('row').slice(1);
     expect(report.favUnits.length).toBeGreaterThan(3);
+    expect(within(units).getAllByRole('row').slice(1)).toHaveLength(report.favUnits.length);
+    expect(units.closest('.profile-highlights')?.getAttribute('data-expanded')).toBe('false');
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: translate('zh', 'showAllUnits', { count: report.favUnits.length }),
+      }),
+    );
+    const unitRows = within(units).getAllByRole('row').slice(1);
     expect(unitRows).toHaveLength(report.favUnits.length);
     expect(within(units).getByRole('columnheader', { name: t('deployments') })).toBeTruthy();
     for (const [index, unit] of report.favUnits.entries()) {
@@ -134,6 +144,12 @@ describe('UI backed by the complete recorded BATrace service', () => {
     }
     const preferences = screen.getByRole('region', { name: t('preference') });
     expect(report.categories).toHaveLength(7);
+    expect(within(preferences).getAllByRole('listitem')).toHaveLength(3);
+    fireEvent.click(
+      within(preferences).getByRole('button', {
+        name: translate('zh', 'showAllCategories', { count: report.categories.length }),
+      }),
+    );
     expect(within(preferences).getAllByRole('listitem')).toHaveLength(7);
     for (const category of report.categories) {
       expect(
@@ -164,6 +180,8 @@ describe('UI backed by the complete recorded BATrace service', () => {
       { timeout: 10000 },
     );
     expect(calls.filter((call) => call.method === 'players.maggot')).toHaveLength(2);
+    expect(within(units).getAllByRole('row').slice(1)).toHaveLength(report.favUnits.length);
+    expect(within(preferences).getAllByRole('listitem')).toHaveLength(report.categories.length);
     expect(maggot.querySelector('.maggot-score')?.textContent).toBe(index);
     expect(within(maggot).queryByRole('button', { name: '查看计算明细' })).toBeNull();
     expect(fetch).not.toHaveBeenCalled();

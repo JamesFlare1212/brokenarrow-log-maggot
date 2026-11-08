@@ -34,7 +34,7 @@ export function AnalyticsConsentDialog() {
       <p>{t('analyticsConsentChangeLater')}</p>
       {settings.error && <Notice error>{settings.error}</Notice>}
       {saving && <p role="status">{t('settingsSaving')}</p>}
-      <div className="dialog-footer">
+      <div className="dialog-footer flex justify-end flex-wrap gap-2">
         <Button disabled={saving} onClick={() => void choose(false)}>
           {t('analyticsConsentDecline')}
         </Button>

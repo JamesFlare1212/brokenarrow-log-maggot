@@ -2,7 +2,10 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '../hooks/useI18n';
-import { Tooltip, TooltipButton } from './Tooltip';
+import { Tooltip } from './Tooltip';
+import { Button } from './ui/button';
+import { SidebarResizeHandle } from './SidebarResize';
+export { SidebarProvider } from './SidebarResize';
 import {
   Sidebar as PrimitiveSidebar,
   SidebarContent,
@@ -22,6 +25,7 @@ export function Sidebar({
   hidden,
   className,
   label,
+  children,
   ...props
 }: ComponentPropsWithoutRef<'div'> & { label?: string }) {
   const { t } = useI18n();
@@ -33,7 +37,10 @@ export function Sidebar({
       collapsible="offcanvas"
       className={className}
       label={label ?? t('workspaceNav')}
-    />
+    >
+      {children}
+      <SidebarResizeHandle controls={props.id} />
+    </PrimitiveSidebar>
   );
 }
 
@@ -45,14 +52,14 @@ export function SidebarHeader({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 items-center gap-2">
         <div className="min-w-0 flex-1">{children}</div>
         {isMobile && (
-          <TooltipButton
+          <Button
             variant="ghost"
             size="icon-sm"
             aria-label={t('closeNavigation')}
             onClick={() => setOpenMobile(false)}
           >
             <X />
-          </TooltipButton>
+          </Button>
         )}
       </div>
     </PrimitiveHeader>

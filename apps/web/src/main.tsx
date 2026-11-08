@@ -31,7 +31,7 @@ const root = createRoot(
 );
 if (!native && !fixtures)
   root.render(
-    <div className="startup-error">
+    <div className="startup-error w-[min(32rem,_100%)] my-[10svh] mx-auto p-8">
       请通过桌面应用启动 / Open the desktop application to access local game data.
     </div>,
   );

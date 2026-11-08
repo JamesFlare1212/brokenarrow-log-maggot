@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useReducer, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useReducer,
+  useState,
+  type ReactNode,
+} from 'react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -122,11 +130,17 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
       return next;
   }
 }
+export interface PageBreadcrumbDetail {
+  label: string;
+  onBack: () => void;
+}
 interface AppContextValue {
   api: Bridge;
   state: AppState;
   page: Panel;
   setPage: (page: Panel) => void;
+  breadcrumbs: Partial<Record<Panel, PageBreadcrumbDetail>>;
+  setBreadcrumb: (page: Panel, detail: PageBreadcrumbDetail | null) => void;
   settingsTab: SettingsTab | null;
   openSettings: (tab?: SettingsTab) => void;
   closeSettings: () => void;
@@ -165,7 +179,22 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       settingsTabFromHash(location.hash),
     ),
     [modalStack, setModalStack] = useState<NonNullable<ModalRoute>[]>([]),
+    [breadcrumbs, updateBreadcrumbs] = useState<Partial<Record<Panel, PageBreadcrumbDetail>>>({}),
     [error, setError] = useState<string | null>(null);
+  const setBreadcrumb = useCallback((panel: Panel, detail: PageBreadcrumbDetail | null) => {
+    updateBreadcrumbs((current) => {
+      if (
+        detail
+          ? current[panel]?.label === detail.label && current[panel]?.onBack === detail.onBack
+          : !current[panel]
+      )
+        return current;
+      const next = { ...current };
+      if (detail) next[panel] = detail;
+      else delete next[panel];
+      return next;
+    });
+  }, []);
   const { maggot, runMaggot } = useMaggotRequests(api);
   const settings = useSettingsAutosave(api, state?.config);
   const modal = modalStack.at(-1) ?? null;
@@ -261,13 +290,13 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
   }, [state?.config.lang]);
   if (error)
     return (
-      <div className="startup-error">
+      <div className="startup-error w-[min(32rem,_100%)] my-[10svh] mx-auto p-8">
         <Notice error>{error}</Notice>
       </div>
     );
   if (!state)
     return (
-      <div className="startup">
+      <div className="startup w-[min(32rem,_100%)] my-[10svh] mx-auto p-8">
         <Loading />
       </div>
     );
@@ -276,6 +305,8 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     state,
     page,
     setPage,
+    breadcrumbs,
+    setBreadcrumb,
     settingsTab,
     openSettings,
     closeSettings,
