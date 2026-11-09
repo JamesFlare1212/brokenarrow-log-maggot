@@ -1142,3 +1142,62 @@ Escape/focus return passed without renderer exceptions. The current run passed
 `pnpm smoke`; the nine targeted chart tests also passed. The name-history list
 remains proposal-only. Evidence and limits are in
 `.test-data/name-list-chart/round-1/native-acceptance.md`.
+
+## Divided name-history list
+
+Date: 2026-11-08. The user requested applying the earlier list direction to the
+profile name-history section. The shared small glass Card now contains compact
+shadcn Item rows with ItemSeparator dividers and localized Previous name / Last
+used labels. Wide containers align names and dates in two columns; narrow
+containers put each date below its name and omit the column headings. Long names
+wrap, every alias remains available in the 16rem scroll viewport, and its focus
+outline is inset to avoid clipping. At the user's follow-up request, the separate
+Name history heading and count band are removed; the region and list retain
+their accessible names. The shared Card material, data order, date formatting
+and omission of the current name are retained. No component stylesheet or
+clickable-row behavior is added. The user is reviewing this iteration directly;
+no Astra review is requested. Validation is tracked in
+`.test-data/name-history-list/round-1`.
+
+The same iteration unifies scrollbar dimensions across native scroll regions and
+the shared shadcn ScrollArea primitive. The rail changes from 10px to 8px with a
+2px transparent inset, reducing the visible native thumb from 8px to 4px. Vertical
+and horizontal bars share the size, inset and existing semantic thumb colors,
+including hover/active states. Native fallback and forced-colors behavior are
+retained. The implementation stays in the documented shared browser-foundation
+CSS exception and Tailwind classes on the shared ScrollArea primitive.
+
+The user also requested matching the adjacent match table's header treatment.
+The name list now spans its Card width with full-width dividers and no outer
+content padding. Its column labels reuse the exact shared TableHead height,
+foreground and weight classes, plus the match table's 12px text, vertical padding
+and responsive 8px/12px horizontal padding. TableHead's own classes are unchanged;
+they are exported for reuse so the two header treatments remain synchronized.
+
+Final validation passed `pnpm check` (**1088 tests in 44 files**, types, UI checks
+and production builds), `pnpm format:check` and `pnpm smoke`. The final browser
+matrix passed 20 list states and all 15 routes in both themes. Production Electron
+then passed 12 history states, 30 route states and four actual scrollbar drags,
+including a 253-name offline profile, with no renderer exceptions. Header styles,
+bounded names, dates, keyboard scrolling and focus return were verified. The user
+is reviewing the appearance directly; no Astra score is claimed for this iteration.
+Evidence and limits are in `.test-data/name-history-list/round-1/native-acceptance.md`.
+
+## Archive title and ELO-value alignment
+
+Date: 2026-11-08. The user requested matching the archive ELO change to the map
+title. The shared Badge value variant now uses 18px bold tabular figures and the
+title's snug line height. Archive CardHeader aligns their first text baselines,
+with CardAction spanning only the title row; skeleton heights match as well.
+Signed values, missing-value labels, accessible descriptions, saved ELO colors
+and the shared glass Card are retained. Validation and screenshots are tracked
+in `.test-data/archive-title/round-1`.
+
+Final validation passed `pnpm check` (**1088 tests in 44 files**, types, UI checks
+and production builds), `pnpm format:check` and `pnpm smoke`. The focused existing
+archive ELO test passed. Production Electron checked eight language/theme/window
+states, 400 card headers and eight wrapped-title cases: matching 18px size, 700
+weight and snug line height, zero text-top difference, no title/value collision,
+preserved metadata placement and no renderer exceptions. Shared-preview checks
+also covered 375px width. The user continues to review the appearance directly;
+no Astra review was started for this follow-up.

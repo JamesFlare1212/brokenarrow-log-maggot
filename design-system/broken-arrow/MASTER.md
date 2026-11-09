@@ -235,9 +235,12 @@ Positive changes include a plus sign, zero is neutral, and unavailable values
 show an em dash. The saved green-up/red-up preference applies independently of
 the result of the match. Feedback success/error colors retain their own meaning.
 
-Archive-card ELO changes use the shared Badge `value` variant: bare 14px tabular
-figures on a 20px line, with no pill, fill, border, or extra padding. Keep the
-localized accessible ELO-change label and semantic increase/decrease color.
+Archive-card ELO changes use the shared Badge `value` variant: bare 18px bold
+tabular figures with the map title's snug line height, with no pill, fill, border,
+or extra padding. Align the map title and value on their first text baseline in
+the CardHeader; the CardAction occupies only the title row. Match their loading
+placeholder heights as well. Keep the localized accessible ELO-change label and
+semantic increase/decrease color.
 Status, result, player-title, and self badges retain their respective variants.
 
 ## Typography, icons, and motion
@@ -539,11 +542,20 @@ metrics and actions in a 900px window with a 400px sidebar. Reduce empty-state
 vertical padding to 1rem below 44rem viewport height so the centered prompt fits
 the 600px native minimum in both languages without changing populated rosters.
 
-Show player name history immediately in a shared small glass Card with its count.
+Show player name history immediately in a shared small glass Card without a
+separate heading or count band. Keep its region and list accessibly named.
 Use an ItemGroup of names and last-seen dates, with a keyboard-focusable native
-scroll viewport capped at 16rem. Long names wrap within a min-width-zero column;
-dates move below names in narrow history containers. Keep all aliases available
-through scrolling without allowing a large history to stretch the dialog.
+scroll viewport capped at 16rem. Compose compact rows with ItemSeparator dividers
+and localized Previous name / Last used column labels. Align names left and dates
+right in wide history containers; move dates below names and hide column labels
+below 24rem. Long names wrap within a min-width-zero column. Keep the focus outline
+inside the scroll viewport and all aliases available through scrolling without
+allowing a large history to stretch the dialog. Use the existing shared glass Card
+and default transparent Item variant without separate row cards or hover actions.
+Make the list content and dividers span the Card width with no outer content
+padding. Reuse TableHead's shared height, weight and foreground classes for the
+column labels; match the adjacent match table's 12px header text, 40px height,
+vertical padding and 8px/12px responsive horizontal padding.
 
 Within SessionPanel containers up to 24rem, keep team identity and role on the
 first summary line and Average ELO on the second, with Copy spanning both lines.
@@ -753,8 +765,12 @@ color overrides; check the badge fill composited over the actual row surface.
 
 Verify all six palettes in light and dark modes, opacity at 40%, 50%, and 100%,
 hover/selected/focus states, a narrow viewport, long labels, and reduced motion.
-Use native scrollbars with the shared layout rules; forced-colors mode keeps
-operating-system rendering.
+Use shared scrollbar tokens for both native scroll regions and shadcn ScrollArea:
+an 8px rail with 2px inset on each side produces a 4px visible thumb in Chromium
+and Electron, for both axes. Preserve foreground-derived thumb contrast and
+hover/active feedback, transparent tracks, stable reserved gutters where needed,
+and the thin native fallback in other engines. Native scrollbars retain
+operating-system rendering in forced-colors mode; ScrollArea thumbs use CanvasText.
 
 Run `pnpm check`, `pnpm format:check`, and `pnpm smoke` for implementation changes.
 `pnpm check` includes `pnpm ui:check`, which inventories Card usage, rejects

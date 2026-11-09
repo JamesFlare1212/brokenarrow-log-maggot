@@ -22,18 +22,18 @@ export function MatchArchiveCardSkeleton() {
       className="archive-card [&_[data-slot='card-header']]:min-w-0 [&_[data-slot='card-header']]:gap-2"
       aria-hidden="true"
     >
-      <CardHeader>
+      <CardHeader className="items-baseline">
         <CardTitle className="archive-card-title min-w-0 text-[1.125rem] leading-snug font-bold">
           <Skeleton className="h-7 w-36" />
         </CardTitle>
-        <CardDescription className="archive-card-meta flex flex-wrap items-center gap-1.5 wrap-anywhere">
+        <CardDescription className="archive-card-meta col-start-1 flex flex-wrap items-center gap-1.5 wrap-anywhere">
           <Skeleton className="h-4 w-48" />
         </CardDescription>
-        <CardDescription className="archive-card-time">
+        <CardDescription className="archive-card-time col-start-1">
           <Skeleton className="h-4 w-36" />
         </CardDescription>
-        <CardAction>
-          <Skeleton className="h-6 w-16" />
+        <CardAction className="row-span-1 self-baseline">
+          <Skeleton className="h-7 w-16" />
         </CardAction>
       </CardHeader>
       <CardContent>
@@ -85,7 +85,7 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
         onOpen();
       }}
     >
-      <CardHeader>
+      <CardHeader className="items-baseline">
         <CardTitle
           role="heading"
           aria-level={3}
@@ -106,19 +106,19 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
             {mapName}
           </Button>
         </CardTitle>
-        <CardDescription className="archive-card-meta flex flex-wrap items-center gap-1.5 wrap-anywhere">
+        <CardDescription className="archive-card-meta col-start-1 flex flex-wrap items-center gap-1.5 wrap-anywhere">
           <span>{match.fid ? '#' + match.fid : t('matchLocalOnly')}</span>
           <span aria-hidden="true">·</span>
           <span>{t(!match.fid && match.mode === 'unknown' ? 'matchUnrecorded' : match.mode)}</span>
           <span aria-hidden="true">·</span>
           <span>{t('playersCount', { n: match.players.length })}</span>
         </CardDescription>
-        <CardDescription className="archive-card-time">
+        <CardDescription className="archive-card-time col-start-1">
           <time dateTime={timestamp === null ? undefined : new Date(timestamp).toISOString()}>
             {formatTime(timestamp, locale)}
           </time>
         </CardDescription>
-        <CardAction>
+        <CardAction className="row-span-1 self-baseline">
           <Badge variant="value" aria-label={`${t('eloDelta')}: ${formatDelta(eloDelta)}`}>
             <span className={eloChangeClass(eloDelta)}>{formatDelta(eloDelta)}</span>
           </Badge>

@@ -670,6 +670,8 @@ export const messages: Record<string, readonly [string, string]> = {
   sameTeamWins: ['同队获胜', 'Wins as teammates'],
   sameTeamLosses: ['同队落败', 'Losses as teammates'],
   names: ['名字历史', 'Name history'],
+  nameHistoryAlias: ['曾用名', 'Previous name'],
+  nameHistoryLastUsed: ['最近使用', 'Last used'],
   matchStatistics: ['对局数据', 'Match data'],
   mapStatistics: ['地图表现', 'Map performance'],
   mapMatchCount: ['{count} 场', '{count} matches'],
