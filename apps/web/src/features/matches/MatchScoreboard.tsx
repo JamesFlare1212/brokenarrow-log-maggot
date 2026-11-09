@@ -12,6 +12,7 @@ import type { Match, MatchPlayer, MatchTitle } from '@ba/contracts';
 import { formatMetric, teamLabel } from '@ba/shared';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipButton } from '@/components/Tooltip';
 import {
   Table,
   TableBody,
@@ -241,7 +242,11 @@ export function MatchScoreboard({
                     {columns.map((metric) => (
                       <TableHead scope="col" key={metric}>
                         {metric === 'dlRatio' ? (
-                          <abbr title={t('matchRatioHint')}>D/L</abbr>
+                          <Tooltip content={t('matchRatioHint')}>
+                            <abbr tabIndex={0} aria-label={t('matchRatioHint')}>
+                              D/L
+                            </abbr>
+                          </Tooltip>
                         ) : (
                           t(matchMetricLabels[metric])
                         )}
@@ -263,9 +268,10 @@ export function MatchScoreboard({
                         <TableRow data-self={player.id === match?.localPlayerId || undefined}>
                           <TableCell className="match-player-cell whitespace-nowrap">
                             <div className="match-player-heading flex items-center gap-2 w-max min-w-0 flex-nowrap">
-                              <Button
+                              <TooltipButton
                                 variant="ghost"
                                 size="sm"
+                                tooltip={player.name || `#${player.id}`}
                                 className="match-player-toggle min-w-0 max-w-56 h-7 shrink-0 items-center gap-1.5 justify-start px-0.5 whitespace-nowrap [&_svg]:text-muted-foreground"
                                 aria-expanded={isOpen}
                                 aria-controls={isOpen ? id : undefined}
@@ -276,13 +282,10 @@ export function MatchScoreboard({
                                   className={cn(isOpen && 'rotate-90')}
                                   aria-hidden="true"
                                 />
-                                <span
-                                  className="match-player-name min-w-0 text-left truncate"
-                                  title={player.name}
-                                >
+                                <span className="match-player-name min-w-0 text-left truncate">
                                   {player.name || `#${player.id}`}
                                 </span>
-                              </Button>
+                              </TooltipButton>
                               {hasLabels && (
                                 <div className="match-player-labels flex shrink-0 flex-nowrap items-center gap-1">
                                   <MatchAwards

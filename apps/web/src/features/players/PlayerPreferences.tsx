@@ -77,7 +77,7 @@ export function PlayerPreferences({
 
   return (
     <div
-      className="profile-analysis-grid grid grid-cols-[minmax(0,_1.5fr)_minmax(18rem,_1fr)] items-stretch gap-3 [&>:only-child]:col-span-full [&>*]:min-w-0 profile-overview-max-52:grid-cols-1"
+      className="profile-analysis-grid grid grid-cols-[minmax(0,_1fr)_fit-content(36%)] items-stretch gap-3 [&>:only-child]:col-span-full [&>*]:min-w-0 profile-overview-max-52:grid-cols-1"
       style={
         {
           '--profile-unit-rows': UNIT_PREVIEW_ROWS,
@@ -116,7 +116,7 @@ export function PlayerPreferences({
           >
             {unitRows.length > 0 ? (
               <Table
-                className="profile-unit-table min-w-[calc(14.5rem+2_*_var(--unit-metric-column-width))] table-fixed tabular-nums [.report_&]:min-w-[calc(14.5rem+2_*_var(--unit-metric-column-width))] [.report_&]:table-fixed [.report_&]:tabular-nums [&_th:not(:first-child)]:text-right [&_td:not(:first-child)]:text-right [&_th:first-child]:w-auto [&_th:nth-child(2)]:w-(--unit-metric-column-width) [&_th:nth-child(3)]:w-(--unit-metric-column-width) [&_th:nth-child(4)]:w-18 [&_td]:h-(--profile-unit-row-height) [&_td]:whitespace-normal [&_td]:wrap-anywhere"
+                className="profile-unit-table table-auto tabular-nums [&_th:not(:first-child)]:w-px [&_th:not(:first-child)]:text-right [&_td:not(:first-child)]:text-right [&_td]:h-(--profile-unit-row-height)"
                 aria-label={t('units')}
                 aria-busy={pending}
               >

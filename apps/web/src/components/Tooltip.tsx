@@ -144,6 +144,7 @@ function TooltipControl({
     >
       {explanation}
       <PopoverContent
+        variant="tooltip"
         aria-labelledby={triggerId}
         className={cn('max-h-[70svh] overflow-y-auto', panelClassName)}
         side={richContent ? 'top' : undefined}

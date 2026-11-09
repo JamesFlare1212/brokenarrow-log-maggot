@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { RatingTrendPoint } from '@ba/contracts';
 import { RatingTrendChart } from '../apps/web/src/features/players/RatingTrendChart';
@@ -7,19 +7,6 @@ import { buildRatingTrend } from '../apps/web/src/features/players/rating-trend'
 import { LocaleContext } from '../apps/web/src/hooks/useI18n';
 import { reportFixture } from './fixtures/ui';
 
-beforeEach(() => {
-  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-    x: 0,
-    y: 0,
-    top: 0,
-    left: 0,
-    right: 640,
-    bottom: 200,
-    width: 640,
-    height: 200,
-    toJSON: () => ({}),
-  });
-});
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -83,6 +70,9 @@ describe('player rating chart', () => {
     expect(screen.getByText('最近一场赛后 ELO').nextElementSibling?.textContent).toBe('1,935');
     expect(screen.getByText('区间变化').nextElementSibling?.textContent).toBe('+35.00');
     expect(region.querySelector('[data-slot="chart"]')).toBeTruthy();
+    const chart = within(region).getByRole('img', { name: 'ELO 趋势' });
+    expect(chart.getAttribute('width')).toBe('640');
+    expect(chart.getAttribute('height')).toBe('200');
     expect(region.querySelector('[data-slot="skeleton"]')).toBeNull();
 
     rerender(<RatingTrendChart report={reportFixture({ ratingTrend: history })} pending />);

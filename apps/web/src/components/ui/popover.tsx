@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { glassOverlaySurfaceClasses } from '@/lib/surfaces';
+import { glassOverlaySurfaceClasses, glassTooltipSurfaceClasses } from '@/lib/surfaces';
 import { Popover as PopoverPrimitive } from 'radix-ui';
 
 export const popoverSurfaceClasses = cn(
@@ -26,9 +26,11 @@ function PopoverContent({
   align = 'center',
   sideOffset = 4,
   container,
+  variant = 'default',
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content> & {
   container?: React.ComponentProps<typeof PopoverPrimitive.Portal>['container'];
+  variant?: 'default' | 'tooltip';
 }) {
   return (
     <PopoverPrimitive.Portal container={container}>
@@ -38,6 +40,7 @@ function PopoverContent({
         sideOffset={sideOffset}
         className={cn(
           popoverContentClasses,
+          variant === 'tooltip' && glassTooltipSurfaceClasses,
           'origin-(--radix-popover-content-transform-origin)',
           className,
         )}

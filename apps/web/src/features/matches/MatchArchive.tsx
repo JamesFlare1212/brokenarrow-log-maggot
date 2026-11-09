@@ -37,6 +37,7 @@ import { useRequest } from '../../hooks/useRequest';
 import { Button, Badge, Field, Notice, Empty, Toggle, Dialog } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
 import { OverflowHint } from '../../components/OverflowHint';
+import { Tooltip } from '@/components/Tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Popover,
@@ -259,11 +260,16 @@ export function MatchArchive() {
         accessorKey: 'localPersona',
         header: t('account'),
         size: 120,
-        cell: ({ row }) => (
-          <span className="block truncate" title={row.original.localPersona || undefined}>
-            {row.original.localPersona || '—'}
-          </span>
-        ),
+        cell: ({ row }) =>
+          row.original.localPersona ? (
+            <Tooltip content={row.original.localPersona}>
+              <span className="block truncate" tabIndex={0}>
+                {row.original.localPersona}
+              </span>
+            </Tooltip>
+          ) : (
+            '—'
+          ),
       },
       {
         id: 'actions',

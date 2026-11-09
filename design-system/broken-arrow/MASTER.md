@@ -91,6 +91,7 @@ feature pages arrange components without redefining their surface treatment.
 | Fill                | `color-mix(in srgb, var(--card) var(--glass-opacity), transparent)` | Same formula with the dark card color |
 | Default opacity     | 50%                                                                 | 50%                                   |
 | Floating opacity    | `80% + 20% × glass opacity`; 90% by default                         | Same formula with the dark card color |
+| Tooltip opacity     | Global glass opacity; 50% by default                                | Same formula with the dark card color |
 | Border              | 1px; foreground mixed at 10%                                        | 1px; white at 8%                      |
 | Backdrop blur       | 12px                                                                | 16px                                  |
 | Backdrop saturation | 1.14                                                                | 1.08                                  |
@@ -122,8 +123,17 @@ coverage keeps text legible above arbitrary content while retaining the shared
 glass material and continuous preference updates. Text and icons remain opaque.
 At 100%, both content and floating surfaces become opaque and backdrop blur stops.
 
-Tooltip, rich Tooltip, Popover, dropdown and submenu, Dialog, AlertDialog, Sheet,
-chart Tooltip, and Sonner toast all use this material. Use the shared 14px outer
+Standard and rich Tooltips, their click-to-pin Popovers, and chart Tooltips use
+`glassTooltipSurfaceClasses`, which applies `--glass-surface` directly for
+40–100% coverage, with 50% at the default. Their blur, saturation, outline,
+radius, shadow, and semantic foreground remain shared with other floating
+surfaces. Tooltip arrows use the same translucent fill. Native text hints for
+truncated names, ELO, D/L, and map metrics use the shared shadcn Tooltip rather
+than browser `title` bubbles; static hint triggers also support keyboard focus.
+Collapsed settings tabs and palette-pair actions use the same Tooltip material.
+
+Other Popovers, dropdowns and submenus, Dialog, AlertDialog, Sheet, and Sonner
+toast retain the raised coverage described above. Use the shared 14px outer
 radius; a screen-edge Sheet keeps flush corners against the viewport. Floating
 outlines use the shared glass-border color through a 1px ring, preserving dialog
 and table content budgets. Sonner's unlayered vendor shadow is explicitly
@@ -133,8 +143,9 @@ fills, hardcoded light/dark panels, or feature-specific surface overrides.
 Hover Tooltips keep their glass surface and content stationary. Do not fade,
 scale, or slide a backdrop-filtered hint: animated hint layers can leave stale
 pixels in neighboring glass cards. Preserve the existing delay, placement,
-hoverable content and keyboard behavior. Rich Tooltips share the Popover surface
-classes without its animation; pinned Popovers retain their existing motion.
+hoverable content and keyboard behavior. Rich Tooltips share the Popover layout
+classes without its animation; pinned explanations use the Tooltip surface
+variant of Popover and retain their existing motion.
 Paint regressions must sample before hint visibility as well as after it.
 Capture the viewport once per sample and compare the preview interior and lower
 row/gap from that same image; record actual timing, scroll position, and hint
@@ -206,7 +217,8 @@ items, such as recordings; do not add redundant glass wrappers around controls.
 | Archive grid cards                                                          | Shared glass Card; custom content density is allowed, a separate radius is not                                              |
 | Appearance mode and ELO choices                                             | Shared glass Toggle `card` variant                                                                                          |
 | Workspace, sidebar, and titlebar                                            | Flat semantic background; keep navigation and native caption controls legible                                               |
-| Dialog, alert dialog, sheet, popover, dropdown, tooltip, chart hint, toast  | Shared raised glass material and semantic foreground; coverage follows the global glass preference with a readability floor |
+| Standard and rich tooltips, pinned explanations, and chart hints            | Shared glass material and semantic foreground; coverage matches the global glass opacity directly                           |
+| Dialog, alert dialog, sheet, other popovers, dropdown, toast                | Shared raised glass material and semantic foreground; coverage follows the global glass preference with a readability floor |
 | Data-table frames, sticky headers, and profile tables                       | Solid semantic surfaces, clear borders, and independent scrolling; rows must not bleed through sticky labels                |
 | Alerts and selected list rows                                               | Semantic feedback or muted fills; these communicate state within the surrounding layout                                     |
 | Inputs, sliders, switches, badges, and compact filters                      | Their shared control variants and semantic colors; do not add a glass layer to every control                                |
@@ -420,9 +432,13 @@ required by the current interface.
   with unit name, damage, deployment count, and ROI columns. Category preferences
   use the shared Progress component with one-decimal percentages and total
   deployment investment. Keep zero values distinct from unavailable values,
-  which use an em dash. Use tabular numbers and theme tokens; unit names wrap,
+  which use an em dash. Size numeric columns automatically from their headers
+  and values without wrapping; the unit name receives the remaining table width
+  and wraps. Fit the sidebar to its content within 36% of the available grid width
+  so the table receives the remaining space. Use tabular numbers and theme tokens;
   narrow containers stack the cards, and any table overflow stays inside its
-  scroll container. Loading placeholders retain the same headers and columns.
+  scroll container. Loading placeholders retain the same headers and automatic
+  column sizing.
 - Profile and report requests resolve independently. Replace only the placeholders
   supplied by each response; show empty states only after that request settles.
   Refreshes retain existing values and the active record tab. The Maggot Index
@@ -477,7 +493,7 @@ required by the current interface.
   compact overview metrics below 36rem and hide the optional toolbar health
   indicator below 48rem; protect native caption space and route breadcrumbs.
 - Sidebar resize hints follow the mouse using the existing shadcn Tooltip's
-  native placement offsets and collision handling. Use the shared raised-glass
+  native placement offsets and collision handling. Use the shared Tooltip glass
   surface, semantic foreground, compact typography, themed arrow, and original
   hoverable-content behavior. Position hover hints beside the pointer
   with a small gap and 12px viewport collision padding; keyboard focus uses the

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 import type { PlayerReport } from '@ba/contracts';
 import { MapPerformanceGrid } from '../apps/web/src/features/players/MapPerformanceGrid';
@@ -44,7 +44,10 @@ it('orders maps by sample size without mutating the report and labels map averag
   expect(within(map).getByText('72.7%')).toBeTruthy();
   expect(within(map).getByText('Avg. K/D').nextElementSibling?.textContent).toBe('1.79');
   expect(within(map).getByText('Avg. destruction').nextElementSibling?.textContent).toBe('5.3k');
-  expect(within(map).getByTitle('5,347')).toBeTruthy();
+  const destruction = within(map).getByText('5.3k');
+  expect(destruction.hasAttribute('title')).toBe(false);
+  fireEvent.focus(destruction);
+  expect(screen.getByRole('tooltip', { hidden: true }).textContent).toBe('5,347');
   expect(within(map).getByRole('progressbar').getAttribute('aria-valuenow')).toBe('72.7');
   const dam = within(grid).getByRole('listitem', { name: 'Dam' });
   expect(within(dam).getByText('1 match')).toBeTruthy();

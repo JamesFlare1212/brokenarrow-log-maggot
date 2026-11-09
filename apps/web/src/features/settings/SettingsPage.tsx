@@ -36,6 +36,7 @@ import { Item, ItemContent, ItemTitle, ItemActions } from '@/components/ui/item'
 import { Skeleton } from '@/components/ui/skeleton';
 import { panelLabelKey } from '@/lib/navigation';
 import { LoadingStatus } from '../../components/LoadingState';
+import { Tooltip } from '@/components/Tooltip';
 import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -326,20 +327,28 @@ export function SettingsPage() {
           className="settings-tabs flex flex-1 w-full h-auto flex-col items-stretch justify-start gap-1 py-3 px-2 min-h-0 overflow-y-auto [&>[data-slot='tabs-trigger']]:flex-none [&>[data-slot='tabs-trigger']]:justify-start [[data-collapsible='icon']_&>[data-slot='tabs-trigger']]:w-10 [[data-collapsible='icon']_&>[data-slot='tabs-trigger']]:self-center [[data-collapsible='icon']_&>[data-slot='tabs-trigger']]:justify-center [[data-collapsible='icon']_&>[data-slot='tabs-trigger']]:px-0"
           aria-label={t('settings')}
         >
-          {tabs.map(({ id, label, icon: TabIcon }) => (
-            <TabsTrigger
-              value={id}
-              key={id}
-              onClick={() => setTab(id)}
-              id={'settings-tab-' + id}
-              aria-controls={'settings-panel-' + id}
-              aria-label={t(label)}
-              title={collapsed ? t(label) : undefined}
-            >
-              <TabIcon aria-hidden="true" />
-              <span className="group-data-[collapsible=icon]:hidden">{t(label)}</span>
-            </TabsTrigger>
-          ))}
+          {tabs.map(({ id, label, icon: TabIcon }) => {
+            const trigger = (
+              <TabsTrigger
+                value={id}
+                key={id}
+                onClick={() => setTab(id)}
+                id={'settings-tab-' + id}
+                aria-controls={'settings-panel-' + id}
+                aria-label={t(label)}
+              >
+                <TabIcon aria-hidden="true" />
+                <span className="group-data-[collapsible=icon]:hidden">{t(label)}</span>
+              </TabsTrigger>
+            );
+            return collapsed ? (
+              <Tooltip key={id} content={t(label)}>
+                {trigger}
+              </Tooltip>
+            ) : (
+              trigger
+            );
+          })}
         </TabsList>
         <SidebarFooter>
           <SidebarItem

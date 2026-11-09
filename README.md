@@ -88,6 +88,13 @@ artifacts from `.test-data/playwright/`. Desktop smoke tests remain separate:
 validation CI tests the built application, while release CI tests the packaged
 application, each in normal and real-data modes.
 
+The shared jsdom test setup gives Recharts responsive containers a fixed 640×200
+viewport because jsdom does not calculate layout. Other elements keep their default
+measurements. Chart regressions verify that the SVG renders at the measured size;
+this fixture does not validate browser layout or suppress console warnings.
+Vitest uses at most four workers to limit disk contention between captured-data
+suites on machines with many CPU cores; test timeouts remain unchanged.
+
 Browser interaction regressions use Playwright and an isolated fixture service:
 
 ```sh

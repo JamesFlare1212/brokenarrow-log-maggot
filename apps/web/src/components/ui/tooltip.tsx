@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { glassOverlaySurfaceClasses } from '@/lib/surfaces';
+import { glassTooltipSurfaceClasses } from '@/lib/surfaces';
 import { Tooltip as TooltipPrimitive } from 'radix-ui';
 import { popoverSurfaceClasses } from './popover';
 
@@ -40,10 +40,10 @@ function TooltipContent({
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          glassOverlaySurfaceClasses,
           variant === 'popover'
             ? popoverSurfaceClasses
             : 'z-50 inline-flex w-fit max-w-xs items-center gap-1.5 px-3 py-1.5 text-xs has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm',
+          glassTooltipSurfaceClasses,
           className,
         )}
         {...props}
@@ -51,7 +51,7 @@ function TooltipContent({
         {/* Keep glass hints stationary; animated backdrop layers can leave stale pixels. */}
         {children}
         {variant === 'default' && (
-          <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-popover fill-popover" />
+          <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-(--glass-surface) fill-(--glass-surface)" />
         )}
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>

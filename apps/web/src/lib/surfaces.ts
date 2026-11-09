@@ -7,3 +7,5 @@ export const glassOverlaySurfaceClasses = cn(
   glassMaterialClasses,
   'rounded-xl bg-popover text-popover-foreground ring-1 ring-(--glass-border)',
 );
+
+export const glassTooltipSurfaceClasses = cn(glassOverlaySurfaceClasses, 'bg-(--glass-surface)');

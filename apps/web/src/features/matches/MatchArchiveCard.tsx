@@ -15,6 +15,7 @@ import { useApp } from '../../app/state';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '../../hooks/useI18n';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip } from '@/components/Tooltip';
 
 export function MatchArchiveCardSkeleton() {
   return (
@@ -164,9 +165,11 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
                         >
                           {player.name || '#' + player.id}
                         </Button>
-                        <strong title={t('ELO')}>
-                          {formatMetric(player.newRating ?? player.oldRating, 0)}
-                        </strong>
+                        <Tooltip content={t('ELO')}>
+                          <strong tabIndex={0}>
+                            {formatMetric(player.newRating ?? player.oldRating, 0)}
+                          </strong>
+                        </Tooltip>
                       </li>
                     ))}
                   </ul>

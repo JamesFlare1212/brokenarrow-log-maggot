@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { glassOverlaySurfaceClasses } from '@/lib/surfaces';
+import { glassTooltipSurfaceClasses } from '@/lib/surfaces';
 import * as RechartsPrimitive from 'recharts';
 import type { TooltipValueType } from 'recharts';
 
@@ -168,7 +168,7 @@ function ChartTooltipContent({
     <div
       data-slot="chart-tooltip-content"
       className={cn(
-        glassOverlaySurfaceClasses,
+        glassTooltipSurfaceClasses,
         'grid min-w-32 items-start gap-1.5 px-2.5 py-1.5 text-xs',
         className,
       )}

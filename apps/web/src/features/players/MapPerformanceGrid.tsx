@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip } from '@/components/Tooltip';
 import { useI18n } from '../../hooks/useI18n';
 
 type MapPerformance = PlayerReport['mapStats'][number];
@@ -111,13 +112,15 @@ function MapPerformanceCard({ map }: { map: MapPerformance | null }) {
           </div>
           <div>
             <dt>{t('averageDestruction')}</dt>
-            <dd title={map ? formatMetric(destruction, 0) : undefined}>
+            <dd>
               {map ? (
-                destruction != null && destruction >= 1000 ? (
-                  `${formatMetric(destruction / 1000, 1)}k`
-                ) : (
-                  formatMetric(destruction, 0)
-                )
+                <Tooltip content={formatMetric(destruction, 0)}>
+                  <span tabIndex={0}>
+                    {destruction != null && destruction >= 1000
+                      ? `${formatMetric(destruction / 1000, 1)}k`
+                      : formatMetric(destruction, 0)}
+                  </span>
+                </Tooltip>
               ) : (
                 <Skeleton className="h-5 w-12" />
               )}

@@ -9,7 +9,6 @@ import {
 import { useI18n } from '../../hooks/useI18n';
 import { colorSchemeFor } from '../../hooks/useAppearance';
 import { Tooltip, TooltipButton } from '../../components/Tooltip';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -346,16 +345,16 @@ export function AppearanceSettings({
                   variant="plain"
                   className="appearance-theme-footer gap-2 pt-2 px-3 pb-3"
                 >
-                  <Button
+                  <TooltipButton
                     variant="ghost"
                     className="h-auto min-w-0 justify-start p-0"
                     aria-label={`${label} · ${t('selectPalettePair')}`}
                     aria-pressed={activeModes.length === 2}
-                    title={t('selectPalettePair')}
+                    tooltip={t('selectPalettePair')}
                     onClick={() => pickPair(color)}
                   >
                     {label}
-                  </Button>
+                  </TooltipButton>
                 </CardFooter>
               </Card>
             );
