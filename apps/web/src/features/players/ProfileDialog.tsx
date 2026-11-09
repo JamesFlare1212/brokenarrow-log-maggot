@@ -1,8 +1,17 @@
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
+import { Card, CardContent } from '@/components/ui/card';
+import { tableHeadClasses } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemSeparator,
+  ItemTitle,
+} from '@/components/ui/item';
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useEffect, useId } from 'react';
+import { Fragment, useEffect } from 'react';
 import { ExternalLink, RefreshCw as faArrowsRotate } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
@@ -37,7 +46,6 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
   const profilePending = !p && (profile.pending || !profile.error);
   const reportPending = !r && (report.pending || !report.error);
   const metaPending = !info && (profilePending || reportPending);
-  const nameHistoryId = useId();
   return (
     <Dialog
       open
@@ -126,48 +134,54 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
       {aliases.length > 0 && (
         <Card
           size="sm"
-          className="profile-name-history min-w-0 @container/aliases"
+          className="profile-name-history min-w-0 gap-0 py-0 @container/aliases"
           role="region"
-          aria-labelledby={nameHistoryId}
+          aria-label={t('names')}
         >
-          <CardHeader>
-            <CardTitle id={nameHistoryId} role="heading" aria-level={3}>
-              {t('names')}
-            </CardTitle>
-            <CardAction>
-              <Badge tone="muted">{aliases.length}</Badge>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="px-0">
             <ItemGroup
-              className="name-history max-h-64 min-w-0 gap-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] has-data-[size=xs]:gap-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:outline-offset-2"
+              className="name-history max-h-64 min-w-0 gap-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] has-data-[size=xs]:gap-0 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:-outline-offset-2"
               aria-label={t('names')}
               tabIndex={0}
             >
-              {aliases.map((entry) => (
-                <Item
-                  size="xs"
-                  role="listitem"
-                  className="profile-alias min-w-0 flex-col items-stretch @sm/aliases:flex-row @sm/aliases:items-start"
-                  key={entry.name}
-                >
-                  <ItemContent className="min-w-0">
-                    <ItemTitle className="block w-full line-clamp-none wrap-anywhere">
-                      {entry.name}
-                    </ItemTitle>
-                  </ItemContent>
-                  <ItemContent className="min-w-0 flex-none">
-                    <ItemDescription className="line-clamp-none tabular-nums">
-                      <time
-                        dateTime={
-                          entry.lastSeen > 0 ? new Date(entry.lastSeen).toISOString() : undefined
-                        }
-                      >
-                        {formatTime(entry.lastSeen, locale)}
-                      </time>
-                    </ItemDescription>
-                  </ItemContent>
-                </Item>
+              <div
+                aria-hidden="true"
+                className={cn(
+                  tableHeadClasses,
+                  'hidden shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-6 py-2.5 text-xs @sm/aliases:grid @[60rem]/aliases:px-3',
+                )}
+              >
+                <span>{t('nameHistoryAlias')}</span>
+                <span>{t('nameHistoryLastUsed')}</span>
+              </div>
+              <ItemSeparator className="my-0 hidden @sm/aliases:block" />
+              {aliases.map((entry, index) => (
+                <Fragment key={entry.name}>
+                  <Item
+                    size="xs"
+                    role="listitem"
+                    className="profile-alias grid min-h-10 min-w-0 shrink-0 grid-cols-[minmax(0,1fr)] items-start gap-x-6 gap-y-1 px-2 @sm/aliases:grid-cols-[minmax(0,1fr)_auto] @sm/aliases:items-center @[60rem]/aliases:px-3"
+                  >
+                    <ItemContent className="min-w-0">
+                      <ItemTitle className="block w-full line-clamp-none wrap-anywhere">
+                        {entry.name}
+                      </ItemTitle>
+                    </ItemContent>
+                    <ItemContent className="min-w-0 flex-none">
+                      <ItemDescription className="line-clamp-none tabular-nums @sm/aliases:text-right">
+                        <span className="sr-only">{t('nameHistoryLastUsed')}: </span>
+                        <time
+                          dateTime={
+                            entry.lastSeen > 0 ? new Date(entry.lastSeen).toISOString() : undefined
+                          }
+                        >
+                          {formatTime(entry.lastSeen, locale)}
+                        </time>
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
+                  {index < aliases.length - 1 && <ItemSeparator className="my-0" />}
+                </Fragment>
               ))}
             </ItemGroup>
           </CardContent>

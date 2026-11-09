@@ -16,7 +16,8 @@ body {
   --motion-fast: 140ms;
   --motion-normal: 220ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --scrollbar-size: 10px;
+  --scrollbar-size: 8px;
+  --scrollbar-inset: 2px;
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 58%, transparent);
   --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 70%, transparent);
   --scrollbar-thumb-active: color-mix(in oklab, var(--foreground) 80%, transparent);
@@ -35,7 +36,8 @@ body {
   }
   ::-webkit-scrollbar-thumb {
     min-height: 24px;
-    border: 1px solid transparent;
+    min-width: 24px;
+    border: var(--scrollbar-inset) solid transparent;
     border-radius: 999px;
     background: var(--scrollbar-thumb);
     background-clip: padding-box;

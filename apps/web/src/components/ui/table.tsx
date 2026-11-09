@@ -52,17 +52,11 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
   );
 }
 
+const tableHeadClasses =
+  'h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0';
+
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
-  return (
-    <th
-      data-slot="table-head"
-      className={cn(
-        'h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0',
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <th data-slot="table-head" className={cn(tableHeadClasses, className)} {...props} />;
 }
 
 function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
@@ -85,4 +79,14 @@ function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) 
   );
 }
 
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+  tableHeadClasses,
+};
