@@ -760,6 +760,11 @@ Run `pnpm check`, `pnpm format:check`, and `pnpm smoke` for implementation chang
 `pnpm check` includes `pnpm ui:check`, which inventories Card usage, rejects
 feature-level surface overrides and retired card-choice variants, and checks
 local documentation links. `pnpm ui:check --json` prints the detailed inventory.
+Both validation and Windows release CI use `pnpm check` and `pnpm format:check`
+and run `pnpm test:ui` with Playwright Chromium. For local browser interaction
+validation, install Chromium with `pnpm exec playwright install chromium` and
+run `pnpm test:ui`; browser tests are separate from `pnpm check`. Failed browser
+runs upload `.test-data/playwright/` artifacts in both workflows.
 Run `pnpm smoke:real` when actual fixture-backed rendering or data behavior is
 affected. `pnpm format:check` includes this design-system directory. Check local
 documentation links and keep the audit record current when changing the rules.

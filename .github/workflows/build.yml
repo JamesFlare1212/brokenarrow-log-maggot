@@ -47,11 +47,23 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
-      - name: Run type checks
-        run: pnpm typecheck
+      - name: Run application checks and production builds
+        run: pnpm check
 
-      - name: Run regression tests
-        run: pnpm test
+      - name: Install Chromium for browser tests
+        run: pnpm exec playwright install chromium
+
+      - name: Run browser interaction regressions
+        run: pnpm test:ui
+
+      - name: Upload browser failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-test-results
+          path: .test-data/playwright/
+          if-no-files-found: ignore
+          include-hidden-files: true
 
       - name: Build NSIS installer and portable executable
         run: pnpm dist

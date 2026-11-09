@@ -6,7 +6,7 @@
 apps/
   desktop/    Electron windows, preload, system paths, verification, recording, video protocol
   server/     Node.js 业务、日志、HTTP 调度、分析、卡组、SQLite
-  web/        React 功能模块、公共 UI、hooks、四语和主题
+  web/        React features, shared UI, hooks, Chinese/English localization, themes
 packages/
   contracts/  领域类型、Zod 请求验证、RPC 和事件协议
   shared/     归一化、合并、格式化、录像参数、蛆指数纯计算

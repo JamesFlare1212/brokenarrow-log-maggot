@@ -28,12 +28,20 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check formatting
         run: pnpm format:check
-      - name: Run type checks
-        run: pnpm typecheck
-      - name: Run regression tests
-        run: pnpm test
-      - name: Build application
-        run: pnpm build
+      - name: Run application checks and production builds
+        run: pnpm check
+      - name: Install Chromium for browser tests
+        run: pnpm exec playwright install chromium
+      - name: Run browser interaction regressions
+        run: pnpm test:ui
+      - name: Upload browser failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-test-results
+          path: .test-data/playwright/
+          if-no-files-found: ignore
+          include-hidden-files: true
       - name: Run Electron smoke test
         run: node scripts/smoke.mjs
       - name: Run real-data Electron smoke test

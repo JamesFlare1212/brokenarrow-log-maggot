@@ -15,7 +15,7 @@
 - 玩家搜索、粗查报告、最近对局、12 场 MVP 蛆指数、调查羁绊和改名历史。
 - 对局档案、完整评分、手动收录、刷新、删除和多个录像视角。
 - 卡组备份 / 部署、实时开局自动覆盖唯一的“上一局卡组包”、换号提醒。
-- 本地录像：240–1080p、30–60 fps、3–10 Mbps、系统声音与默认麦克风混音、预览、播放和目录迁移。
+- Local recording: 720–2160p, 30–120 fps, quality score 1–51 (default 20; lower means higher quality), system audio and optional default microphone mixing, previews, playback, and directory migration.
 - Optional ban alerts.
 - System, light and dark appearance modes, six palette pairs, separate light/dark palettes, and Chinese/English interfaces.
 - Cards, tooltips, menus, dialogs, and notifications share the theme's glass material and opacity preference.
@@ -80,6 +80,14 @@ responses and report missing data as errors. Settings and data changes affect on
 that copy; native directory selection, recording, and update installation are
 unavailable in the browser.
 
+Both validation and Windows release CI run `pnpm format:check` and `pnpm check`.
+The shared `pnpm check` entry point covers type checking, UI design checks,
+regression tests, and all three production builds. Both workflows also install
+Playwright Chromium and run `pnpm test:ui`; failed browser tests upload their
+artifacts from `.test-data/playwright/`. Desktop smoke tests remain separate:
+validation CI tests the built application, while release CI tests the packaged
+application, each in normal and real-data modes.
+
 Browser interaction regressions use Playwright and an isolated fixture service:
 
 ```sh
@@ -110,7 +118,7 @@ without saving appearance preferences.
 | `pnpm test`         | 全部回归测试，默认包含仓库内的真实日志、档案和缓存数据                    |
 | `pnpm test:ui`      | Run browser interaction regressions against the real shared UI components |
 | `pnpm smoke:real`   | 构建并在真实 Electron 中核对全部真实档案                                  |
-| `pnpm check`        | 严格类型检查、回归测试、三个应用构建                                      |
+| `pnpm check`        | Type checking, UI design checks, regression tests, and three app builds   |
 | `pnpm smoke`        | Run Electron with isolated data, without network access or recording      |
 | `pnpm format:check` | 格式检查                                                                  |
 | `pnpm pack:desktop` | Windows 解包目录                                                          |
