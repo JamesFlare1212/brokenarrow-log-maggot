@@ -12,9 +12,9 @@
     "@fontsource-variable/geist": "^5.3.0",
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
-    "cn": "^0.5.1",
-    "lucide-react": "^1.65.0",
-    "mediabunny": "1.65.1",
+    "cn": "^0.5.2",
+    "lucide-react": "^1.70.0",
+    "mediabunny": "1.65.2",
     "radix-ui": "^1.8.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -25,7 +25,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "tailwindcss": "^4.3.3"
+    "@tailwindcss/vite": "^4.3.4",
+    "tailwindcss": "^4.3.4"
   }
 }
