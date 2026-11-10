@@ -204,7 +204,10 @@ export const rpcSchemas = {
   'decks.deploy': z.object({ name }),
   'decks.delete': z.object({ kind: z.enum(['decks', 'backups']), names: z.array(name).max(2000) }),
   'decks.open': z.object({ kind: z.enum(['decks', 'backups']) }),
-  'decks.switch': z.object({ action: z.enum(['restore', 'ignore', 'dismiss']) }),
+  'decks.switch': z.object({
+    action: z.enum(['restore', 'ignore', 'dismiss']),
+    packageRevision: z.string().min(1).max(256).optional(),
+  }),
   'replays.list': empty,
   'replays.directory': empty,
   'replays.delete': z.object({ name }),

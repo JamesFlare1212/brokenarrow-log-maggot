@@ -93,6 +93,24 @@ preserving resolution, frame rate, audio and other preferences. The obsolete
 bitrate field is dropped when preferences are next saved. Fixed-duration file
 size estimates are removed because quality-driven file size depends on content.
 
+## Ownership and migration
+
+Capture retirement is published before asynchronous cleanup. Finalization checks
+its capture owner after queued writes, writer completion, stat, and rename; a
+revoked capture cannot publish saved metadata. Final output names are reserved
+monotonically per controller so late cleanup cannot delete a replacement recording.
+
+Recording settings use the shared AppProvider autosave queue. Directory text is
+staged before blur, failed edits survive tab replacement, and migration preparation
+is retained with a failed patch. Staged directory text is held outside automatic
+save batches until blur, return, recording test, or teardown explicitly commits
+it. Unrelated slider saves keep the directory input enabled and never trigger its
+migration. Cross-device migration records verified source
+and destination identity plus SHA-256 content before source deletion. A locked
+source can retry after restart; unrelated or modified destinations remain errors.
+See the [state machine repair contracts](state-machine-risk-audit.md) for detailed
+ownership, recovery, and regression requirements.
+
 ## Validation
 
 `pnpm check`, `pnpm format:check`, `pnpm smoke` and `pnpm smoke:real` cover the

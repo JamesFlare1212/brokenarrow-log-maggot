@@ -188,7 +188,14 @@ export function DecksPanel() {
               <Button
                 key={action}
                 disabled={busy}
-                onClick={() => void operate(() => api.invoke('decks.switch', { action }))}
+                onClick={() =>
+                  void operate(() =>
+                    api.invoke('decks.switch', {
+                      action,
+                      packageRevision: state.deckAlert?.packageRevision,
+                    }),
+                  )
+                }
               >
                 {t(action === 'dismiss' ? 'close' : action)}
               </Button>

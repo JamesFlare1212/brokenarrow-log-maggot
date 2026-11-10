@@ -67,6 +67,14 @@ pnpm dev
 
 Electron 44 的运行时由 postinstall 显式安装。开发启动器先构建，再启动 Vite 和 Electron。
 
+The [Electron installation wrapper](scripts/install-electron.mjs) retries failed
+downloads up to three attempts, waiting 5 and 15 seconds between attempts. It
+keeps Electron's installed-runtime detection and checksum verification and fails
+installation if all attempts fail. Both CI workflows restore the download archive
+cache before installation and save it immediately after a successful install,
+so later test failures do not discard a usable runtime cache. See
+[CI installation details](docs/project-configuration.md#ci-electron-installation).
+
 仅在浏览器中开发前端时运行：
 
 ```sh

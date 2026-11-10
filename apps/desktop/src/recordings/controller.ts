@@ -18,6 +18,7 @@ interface Capture {
   dir: string;
   nextSequence: number;
   queue: Promise<void>;
+  finalization: Promise<void> | null;
   done: Promise<void>;
   resolve: () => void;
   reject: (error: Error) => void;
@@ -29,6 +30,7 @@ interface Capture {
 }
 export class RecordingController {
   private generation = 0;
+  private lastFileTime = 0;
   private current: Capture | null = null;
   private state: RecordingState = {
     phase: 'idle',
@@ -167,6 +169,7 @@ export class RecordingController {
         dir,
         nextSequence: 0,
         queue: Promise.resolve(),
+        finalization: null,
         done,
         resolve,
         reject,
@@ -239,6 +242,7 @@ export class RecordingController {
   async chunk(sender: number, token: string, sequence: number, data: ArrayBuffer): Promise<void> {
     const c = this.owner(sender, token);
     if (
+      c.finalization ||
       sequence !== c.nextSequence ||
       !Number.isInteger(sequence) ||
       !(data instanceof ArrayBuffer) ||
@@ -270,13 +274,23 @@ export class RecordingController {
     const c = this.owner(sender, token);
     if (!Number.isFinite(duration) || duration < 0 || duration > 86400)
       throw new Error('Invalid recording duration');
+    c.finalization ??= this.finalize(c, duration, hasAudio);
+    return c.finalization;
+  }
+  private async finalize(c: Capture, duration: number, hasAudio: boolean): Promise<void> {
     try {
       await c.queue;
+      if (this.current !== c) return;
       await new Promise<void>((resolve, reject) => {
         c.writer.once('error', reject);
         c.writer.end(resolve);
       });
+      if (this.current !== c) return;
       if (!(await stat(c.part)).size) throw new Error('No recording data');
+      if (this.current !== c) return;
+      // Retired and replacement finalizers must never publish or remove the same destination.
+      const fileTime = Math.max(Date.now(), this.lastFileTime + 1);
+      this.lastFileTime = fileTime;
       const me = c.match.players.find((p) => p.id === c.match.localPlayerId),
         name =
           (c.test ? 'test_' : '') +
@@ -288,14 +302,20 @@ export class RecordingController {
               teamId: me?.teamId ?? null,
               mapId: c.match.mapId,
             },
-            Date.now(),
+            fileTime,
             '.mp4',
           );
-      await rename(c.part, join(c.dir, name));
+      const destination = join(c.dir, name);
+      await rename(c.part, destination);
+      if (this.current !== c) {
+        await unlink(destination).catch(() => {});
+        return;
+      }
       c.hasAudio = hasAudio;
       this.saved(name, duration, c.match);
       this.complete(c);
     } catch (error) {
+      if (this.current !== c) return;
       await this.failCapture(c, errorMessage(error));
       throw error;
     }
@@ -325,10 +345,10 @@ export class RecordingController {
     if (this.current !== c) return;
     if (c.timer) clearTimeout(c.timer);
     this.current = null;
+    this.update({ phase: 'error', error: message, startedAt: null, sessionId: null });
     c.writer.destroy();
     if (!c.win.isDestroyed()) c.win.destroy();
     await unlink(c.part).catch(() => {});
-    this.update({ phase: 'error', error: message, startedAt: null, sessionId: null });
     c.reject(new Error(message));
   }
   async stop(match?: Match): Promise<void> {
@@ -355,18 +375,8 @@ export class RecordingController {
   }
   private async discardCurrent(): Promise<void> {
     const c = this.current;
-    if (c) {
-      this.current = null;
-      if (c.timer) clearTimeout(c.timer);
-      if (!c.win.isDestroyed()) {
-        c.win.webContents.send('ba:recording:stop', true);
-        c.win.destroy();
-      }
-      c.writer.destroy();
-      if (!c.writer.closed) await new Promise<void>((resolve) => c.writer.once('close', resolve));
-      await unlink(c.part).catch(() => {});
-      c.resolve();
-    }
+    this.current = null;
+    // Publish retirement before cleanup yields to a replacement capture.
     this.update({
       phase: 'idle',
       sessionId: null,
@@ -377,6 +387,17 @@ export class RecordingController {
       seconds: 0,
       error: null,
     });
+    if (c) {
+      if (c.timer) clearTimeout(c.timer);
+      if (!c.win.isDestroyed()) {
+        c.win.webContents.send('ba:recording:stop', true);
+        c.win.destroy();
+      }
+      c.writer.destroy();
+      if (!c.writer.closed) await new Promise<void>((resolve) => c.writer.once('close', resolve));
+      await unlink(c.part).catch(() => {});
+      c.resolve();
+    }
   }
   async abort(): Promise<void> {
     this.generation++;

@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import { createHash, randomUUID } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { stat, lstat, readdir, readFile, unlink } from 'node:fs/promises';
 import type { DeckFile, DeckList, DeckSwitchAlert, Session } from '@ba/contracts';
@@ -8,11 +9,22 @@ import { childPath, atomicWrite } from '../files/paths';
 import { zipCreate, zipExtract, ZIP_LIMITS } from './zip';
 const PREVIOUS = '上一局卡组包.zip';
 interface DeckState {
+  pkgRevision: string;
   pkgKey: string;
   pkgName: string;
   pkgFid: string | null;
   pkgUpdatedAt: number;
   alertedPairs: string[];
+}
+function packageRevision(state: Record<string, unknown>): string | null {
+  if (!text(state.pkgKey)) return null;
+  return (
+    text(state.pkgRevision) ||
+    'legacy:' +
+      createHash('sha256')
+        .update(JSON.stringify([state.pkgKey, state.pkgName, state.pkgFid, state.pkgUpdatedAt]))
+        .digest('hex')
+  );
 }
 export class DeckService {
   private queue: Promise<unknown> = Promise.resolve();
@@ -78,55 +90,61 @@ export class DeckService {
     packageName: string,
     replaceExisting: boolean,
   ): Promise<{ name: string }> {
-    return this.exclusive(async () => {
-      const p = await this.paths();
-      if (!p.found) throw new Error('Deck directory not found');
-      if (!names.length) throw new Error('Select at least one deck');
-      names = [...new Set(names)];
-      let total = 0;
-      for (const deck of names) {
-        const info = await lstat(childPath(p.decks, deck, '.dek'));
-        total += info.size;
-        if (
-          !info.isFile() ||
-          info.isSymbolicLink() ||
-          info.size > ZIP_LIMITS.entry ||
-          total > ZIP_LIMITS.total
-        )
-          throw new Error('Deck backup exceeds size limits or contains a symbolic link');
-      }
-      const name = filename(
-          packageName.toLowerCase().endsWith('.zip') ? packageName : packageName + '.zip',
-          '.zip',
-        ),
-        files = await Promise.all(
-          names.map(async (n) => ({
-            name: filename(n, '.dek'),
-            data: await readFile(childPath(p.decks, n, '.dek')),
-          })),
-        );
-      try {
-        await atomicWrite(p.backups, name, await zipCreate(files), replaceExisting);
-      } catch (error) {
-        if (object(error).code === 'EEXIST')
-          throw new Error('Deck backup already exists; choose a different name');
-        throw error;
-      }
-      return { name };
-    });
+    return this.exclusive(() => this.writeBackup(names, packageName, replaceExisting));
+  }
+  private async writeBackup(
+    names: string[],
+    packageName: string,
+    replaceExisting: boolean,
+  ): Promise<{ name: string }> {
+    const p = await this.paths();
+    if (!p.found) throw new Error('Deck directory not found');
+    if (!names.length) throw new Error('Select at least one deck');
+    names = [...new Set(names)];
+    let total = 0;
+    for (const deck of names) {
+      const info = await lstat(childPath(p.decks, deck, '.dek'));
+      total += info.size;
+      if (
+        !info.isFile() ||
+        info.isSymbolicLink() ||
+        info.size > ZIP_LIMITS.entry ||
+        total > ZIP_LIMITS.total
+      )
+        throw new Error('Deck backup exceeds size limits or contains a symbolic link');
+    }
+    const name = filename(
+        packageName.toLowerCase().endsWith('.zip') ? packageName : packageName + '.zip',
+        '.zip',
+      ),
+      files = await Promise.all(
+        names.map(async (n) => ({
+          name: filename(n, '.dek'),
+          data: await readFile(childPath(p.decks, n, '.dek')),
+        })),
+      );
+    try {
+      await atomicWrite(p.backups, name, await zipCreate(files), replaceExisting);
+    } catch (error) {
+      if (object(error).code === 'EEXIST')
+        throw new Error('Deck backup already exists; choose a different name');
+      throw error;
+    }
+    return { name };
   }
   deploy(name: string): Promise<{ deployed: number }> {
-    return this.exclusive(async () => {
-      const p = await this.paths();
-      if (!p.found) throw new Error('Deck directory not found');
-      const path = childPath(p.backups, name, '.zip'),
-        info = await lstat(path);
-      if (!info.isFile() || info.isSymbolicLink() || info.size > ZIP_LIMITS.total)
-        throw new Error('Unsafe deck backup');
-      const entries = await zipExtract(await readFile(path));
-      for (const e of entries) await atomicWrite(p.decks, e.name, e.data);
-      return { deployed: entries.length };
-    });
+    return this.exclusive(() => this.deployArchive(name));
+  }
+  private async deployArchive(name: string): Promise<{ deployed: number }> {
+    const p = await this.paths();
+    if (!p.found) throw new Error('Deck directory not found');
+    const path = childPath(p.backups, name, '.zip'),
+      info = await lstat(path);
+    if (!info.isFile() || info.isSymbolicLink() || info.size > ZIP_LIMITS.total)
+      throw new Error('Unsafe deck backup');
+    const entries = await zipExtract(await readFile(path));
+    for (const e of entries) await atomicWrite(p.decks, e.name, e.data);
+    return { deployed: entries.length };
   }
   remove(kind: 'decks' | 'backups', names: string[]): Promise<{ removed: number }> {
     return this.exclusive(async () => {
@@ -141,24 +159,41 @@ export class DeckService {
       return { removed };
     });
   }
-  async onMatchStart(session: Session): Promise<void> {
-    const list = await this.list();
-    if (!list.found || !list.decks.length) return;
-    await this.createBackup(
-      list.decks.map((f) => f.name),
-      PREVIOUS,
-      true,
-    );
-    const state: DeckState = {
-      pkgKey: session.accountKey,
-      pkgName: session.localName,
-      pkgFid: session.current?.fid ?? null,
-      pkgUpdatedAt: Date.now(),
-      alertedPairs: [],
-    };
-    this.db.setState('deckSync', state);
+  currentPackageRevision(): string | null {
+    return packageRevision(object(this.db.state('deckSync', {})));
   }
-  async switchAlert(session: Session): Promise<DeckSwitchAlert | null> {
+  onMatchStart(session: Session): Promise<string | null> {
+    return this.exclusive(async () => {
+      const list = await this.list();
+      if (!list.found || !list.decks.length) return null;
+      await this.writeBackup(
+        list.decks.map((f) => f.name),
+        PREVIOUS,
+        true,
+      );
+      const state: DeckState = {
+        pkgRevision: randomUUID(),
+        pkgKey: session.accountKey,
+        pkgName: session.localName,
+        pkgFid: session.current?.fid ?? null,
+        pkgUpdatedAt: Date.now(),
+        alertedPairs: [],
+      };
+      this.db.setState('deckSync', state);
+      return state.pkgRevision;
+    });
+  }
+  switchAlert(
+    session: Session,
+    isCurrent: () => boolean = () => true,
+  ): Promise<DeckSwitchAlert | null> {
+    return this.exclusive(() => this.evaluateSwitchAlert(session, isCurrent));
+  }
+  private async evaluateSwitchAlert(
+    session: Session,
+    isCurrent: () => boolean,
+  ): Promise<DeckSwitchAlert | null> {
+    if (!isCurrent()) return null;
     const raw = object(this.db.state('deckSync', {})),
       key = text(raw.pkgKey);
     if (!session.loginSeen || !session.accountKey || !key || key === session.accountKey)
@@ -166,6 +201,7 @@ export class DeckService {
     const pair = key + '>' + session.accountKey,
       alerted = array(raw.alertedPairs).map((v) => text(v));
     if (alerted.includes(pair)) return null;
+    const configuredDir = this.db.config().decksDir;
     const p = await this.paths();
     if (!p.found) return null;
     let entries;
@@ -175,8 +211,17 @@ export class DeckService {
       if (object(error).code === 'ENOENT') return null;
       throw error;
     }
-    this.db.setState('deckSync', { ...raw, alertedPairs: [...alerted, pair] });
+    if (!isCurrent() || this.db.config().decksDir !== configuredDir) return null;
+    const current = object(this.db.state('deckSync', {}));
+    if (
+      ['pkgRevision', 'pkgKey', 'pkgFid', 'pkgUpdatedAt'].some((key) => current[key] !== raw[key])
+    )
+      return null;
+    const currentPairs = array(current.alertedPairs).map((value) => text(value));
+    if (currentPairs.includes(pair)) return null;
+    this.db.setState('deckSync', { ...current, alertedPairs: [...currentPairs, pair] });
     return {
+      packageRevision: packageRevision(current)!,
       pair,
       from: text(raw.pkgName, key),
       to: session.localName,
@@ -185,7 +230,15 @@ export class DeckService {
       fid: text(raw.pkgFid) || null,
     };
   }
-  async switchAction(action: 'restore' | 'ignore' | 'dismiss'): Promise<void> {
-    if (action === 'restore') await this.deploy(PREVIOUS);
+  async switchAction(
+    action: 'restore' | 'ignore' | 'dismiss',
+    expectedRevision?: string,
+  ): Promise<void> {
+    if (action !== 'restore') return;
+    await this.exclusive(async () => {
+      if (!expectedRevision || this.currentPackageRevision() !== expectedRevision)
+        throw new Error('Deck backup changed; reopen the account-switch reminder');
+      await this.deployArchive(PREVIOUS);
+    });
   }
 }

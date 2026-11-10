@@ -235,6 +235,7 @@ export interface DeckList {
   backups: DeckFile[];
 }
 export interface DeckSwitchAlert {
+  packageRevision?: string;
   pair: string;
   from: string;
   to: string;

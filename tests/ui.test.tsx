@@ -2211,6 +2211,29 @@ describe('request and native event ordering', () => {
 });
 
 describe('user interaction regressions', () => {
+  it('sends the displayed backup identity when restoring a deck reminder', async () => {
+    const initial = bootstrapForApp();
+    initial.deckAlert = {
+      packageRevision: 'review-backup',
+      pair: 'Alice>Bob',
+      from: 'Alice',
+      to: 'Bob',
+      count: 1,
+      names: ['Alice.dek'],
+      fid: '123',
+    };
+    const restore = vi.fn(async () => null);
+    const native = nativeFixture(initial, { 'decks.switch': restore });
+    render(<DecksPanel />, { wrapper: wrapper(native.api) });
+    fireEvent.click(await screen.findByRole('button', { name: translate('zh', 'restore') }));
+    await waitFor(() =>
+      expect(restore).toHaveBeenCalledExactlyOnceWith({
+        action: 'restore',
+        packageRevision: 'review-backup',
+      }),
+    );
+  });
+
   it('closes mobile navigation with one Escape and restores its opener focus', async () => {
     vi.stubGlobal('innerWidth', 375);
     const native = nativeFixture(bootstrapForApp());

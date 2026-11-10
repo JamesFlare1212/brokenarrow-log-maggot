@@ -1,5 +1,9 @@
 # 审查问题处理
 
+These earlier resolutions cover the scenarios recorded below. The follow-up
+[state machine risk audit and fixes](state-machine-risk-audit.md) records nine
+additional repaired interleavings and their normal regression tests.
+
 旧入口与历史样式已移出运行树；原版本保留在 Git 历史。
 
 | 问题                           | v4 处理                                                                       |

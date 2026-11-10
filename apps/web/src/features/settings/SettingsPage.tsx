@@ -129,6 +129,7 @@ export function SettingsPage() {
     logRequest = useRef(0),
     healthRunning = useRef(false);
   const draft = settings.draft ?? state.config;
+  const saveError = tab === 'recording' ? null : settings.error;
   const orderList = useRef<HTMLOListElement>(null),
     orderFocus = useRef<HTMLButtonElement | null>(null),
     orderPositions = useRef(new Map<string, number>()),
@@ -449,11 +450,11 @@ export function SettingsPage() {
             )}
           </div>
         </PageToolbar>
-        {(settings.error || error) && (
+        {(saveError || error) && (
           <div className="settings-errors flex flex-wrap gap-2 py-4 px-6">
-            <Notice error>{settings.error ?? error}</Notice>
-            {settings.error && <Button onClick={() => void flush()}>{t('settingsRetry')}</Button>}
-            {settings.error && (
+            <Notice error>{saveError ?? error}</Notice>
+            {saveError && <Button onClick={() => void flush()}>{t('settingsRetry')}</Button>}
+            {saveError && (
               <Button onClick={() => void settings.discard()}>{t('settingsDiscard')}</Button>
             )}
           </div>
