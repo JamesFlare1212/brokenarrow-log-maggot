@@ -23,7 +23,7 @@ Settings category, development tools, and shared controls and overlays.
 | Appearance mode and ELO choices                                | Both use ToggleGroup `variant="card"` and `cardSurfaceClasses`                                      |
 | Other toggles, inputs, slider, and switches                    | Retain control-specific variants; removed the hardcoded white slider thumb                          |
 | Palette and mode previews                                      | Keep illustration-specific rendering; replaced hardcoded success/warning marks with semantic tokens |
-| Tables and sticky headers                                      | Keep deliberate solid semantic fills for readable scrolling                                         |
+| Tables and sticky headers                                      | Use transparent surfaces with shared clipping for readable scrolling (updated 2026-11-10)           |
 | Dialogs, sheets, menus, tooltips, alerts, and toasts           | Keep their existing overlay/feedback surface roles, focus behavior, and readable semantic fills     |
 | Navigation, titlebars, logo, and recorder canvas               | Retain their documented flat, brand, or media-specific surfaces                                     |
 
@@ -54,10 +54,11 @@ parser, inventories imported Card construction sites, checks direct surface
 overrides and matching CSS selectors, rejects retired card-choice variants,
 and validates local Markdown links in the root, `docs`, and `design-system`.
 
-The static guard complements runtime and interaction checks. Solid table,
-overlay, feedback, media, and illustration surfaces are intentional roles
-listed in the master specification; matching a background declaration alone
-does not make such a component a glass-card violation.
+The static guard complements runtime and interaction checks. Tables now reveal
+their surrounding glass and clip content under pinned labels. Overlay, feedback,
+media, and illustration surfaces retain their intentional roles listed in the
+master specification; matching a background declaration alone does not make such
+a component a glass-card violation.
 
 ## Runtime evidence
 

@@ -133,8 +133,8 @@ independently of result badge colors.
 ## Surfaces and responsiveness
 
 Reuse the existing shadcn components and semantic tokens. The personal summary
-uses the shared glass Card; the scoreboard uses the solid data-table surface
-role. Avoid nested cards around each team and decorative map imagery that
+uses the shared glass Card; the scoreboard follows the transparent table surface
+role and shared sticky-content clipping. Avoid nested cards around each team and decorative map imagery that
 displaces the table. Keep the existing font and radius scale.
 
 At desktop sizes use the workspace width, capped at a readable 1280px content

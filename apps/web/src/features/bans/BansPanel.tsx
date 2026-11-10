@@ -124,16 +124,21 @@ export function BansPanel() {
       </div>
       {request.error && <Notice error>{request.error}</Notice>}
       {loading && <LoadingStatus />}
-      <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-lg bg-card">
+      <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-lg">
         <div
-          className="table-wrap [.report_&]:max-h-120 min-w-0 overflow-auto [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] data-table-scroll flex-1 min-h-0 overflow-auto [scrollbar-gutter:stable] [scroll-padding-block:3rem_1rem] [&>[data-slot='table-container']]:overflow-visible [&_[data-slot='table-header']]:sticky [&_[data-slot='table-header']]:top-0 [&_[data-slot='table-header']]:z-[1] [&_[data-slot='table-header']]:bg-card [&_[data-slot='table-head']]:px-4 [&_[data-slot='table-cell']]:px-4 [&_[data-slot='table-cell']]:py-2.5 [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] bans-table [&_table]:min-w-192 [&_table]:table-fixed [&_[data-slot='table-header']]:z-[3] [&_th:first-child]:sticky [&_th:first-child]:left-0 [&_th:first-child]:z-[1] [&_th:first-child]:bg-card [&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:z-[1] [&_td:first-child]:bg-card ban-list-paged flex-1 min-h-0 overflow-auto [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[2px]"
+          className="table-wrap [.report_&]:max-h-120 min-w-0 overflow-auto [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] data-table-scroll flex-1 min-h-0 overflow-auto [scrollbar-gutter:stable] [scroll-padding-block:3rem_1rem] [&>[data-slot='table-container']]:overflow-visible [&_[data-slot='table-head']]:px-4 [&_[data-slot='table-cell']]:px-4 [&_[data-slot='table-cell']]:py-2.5 [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] bans-table [&_table]:min-w-192 [&_table]:table-fixed ban-list-paged flex-1 min-h-0 overflow-auto [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[2px]"
           ref={list}
           tabIndex={0}
           role="region"
           aria-label={`${t('bans')} · ${t('tableScrollHint')}`}
           aria-busy={request.pending}
         >
-          <Table aria-label={t('bans')} aria-busy={request.pending || loading}>
+          <Table
+            stickyHeader
+            stickyFirstColumn
+            aria-label={t('bans')}
+            aria-busy={request.pending || loading}
+          >
             <colgroup>
               <col />
               <col className="ban-id-column w-24" />

@@ -511,14 +511,14 @@ export function MatchArchive() {
             )}
           </div>
         ) : (
-          <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-lg bg-card">
+          <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-lg">
             <DataTable
               table={dataTable}
               label={t('archive')}
               pending={matches.pending || loading}
               loading={loading}
               scrollRef={table}
-              className="archive-table flex-1 min-h-0 overflow-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:table-fixed [&_[data-slot='table-header']]:sticky [&_[data-slot='table-header']]:top-0 [&_[data-slot='table-header']]:bg-card [&_[data-slot='table-head']:first-child]:pl-4 [&_[data-slot='table-cell']:first-child]:pl-4"
+              className="archive-table flex-1 min-h-0 overflow-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:table-fixed [&_[data-slot='table-head']:first-child]:pl-4 [&_[data-slot='table-cell']:first-child]:pl-4"
               fillColumn="map"
               empty={empty}
               onRowOpen={openMatch}

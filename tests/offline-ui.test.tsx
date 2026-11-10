@@ -168,7 +168,13 @@ describe('UI backed by the complete recorded BATrace service', () => {
     const index = maggot.querySelector('.maggot-score')?.textContent;
     expect(index).toBeTruthy();
     expect(index).not.toBe('—');
-    expect(within(maggot).getByText(translate('zh', 'maggotSample', { n: 12 }))).toBeTruthy();
+    const scope = translate('zh', 'maggotSample', { n: 12 });
+    expect(within(maggot).queryByText(scope)).toBeNull();
+    const sampleInfo = within(maggot).getByRole('button', { name: t('maggotSampleInfo') });
+    fireEvent.click(sampleInfo);
+    expect(explanation().textContent).toContain(scope);
+    fireEvent.click(sampleInfo);
+    await waitFor(() => expect(document.querySelector('[data-slot="popover-content"]')).toBeNull());
     expect(within(maggot).queryByRole('table')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: t('refresh') }));
     await waitFor(() => {

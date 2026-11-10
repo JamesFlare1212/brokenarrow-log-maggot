@@ -534,6 +534,12 @@ export const messages: Record<string, readonly [string, string]> = {
   maggotInsufficient: ['样本不足', 'Insufficient matches'],
   maggotScale: ['指数越低，表现越好', 'Lower is better'],
   maggotSample: ['基于最近 {n} 场有效排位', 'Based on the latest {n} eligible ranked matches'],
+  maggotSampleInfo: ['查看蛐指数样本说明', 'View Maggot Index sample details'],
+  maggotScaleValue: [
+    '指数 {value}，范围 0–10，越低越好',
+    'Index {value} on a 0–10 scale; lower is better',
+  ],
+  maggotScaleUnavailable: ['暂无指数刻度位置', 'No index is available to place on the scale'],
   copy: ['复制', 'Copy'],
   copied: ['已复制', 'Copied'],
   actions: ['操作', 'Actions'],

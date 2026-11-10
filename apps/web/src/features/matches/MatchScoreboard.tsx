@@ -58,7 +58,7 @@ function PlayerDetails({ player }: { player: MatchPlayer }) {
     'medals',
   ];
   return (
-    <div className="match-player-details p-4 bg-muted">
+    <div className="match-player-details p-4 bg-muted/50">
       <div className="match-player-details-heading flex items-center gap-2 justify-between flex-wrap wrap-anywhere">
         <span>
           {player.name} <span className="muted text-muted-foreground">#{player.id}</span>
@@ -168,7 +168,7 @@ export function MatchScoreboard({
           team.id === 100 ? t('spectator') : team.id === null ? t('unknown') : teamLabel(team.id);
         return (
           <section
-            className="match-team flex min-w-0 grow basis-[min(100%,var(--match-team-width,36rem))] flex-col overflow-hidden border border-border rounded-lg bg-card"
+            className="match-team flex min-w-0 grow basis-[min(100%,var(--match-team-width,36rem))] flex-col overflow-hidden border border-border rounded-lg"
             key={String(team.id)}
             data-match-team={String(team.id)}
             style={
@@ -181,7 +181,7 @@ export function MatchScoreboard({
             }
             aria-label={label}
           >
-            <div className="match-team-heading flex items-center gap-2 justify-between [.match-details_&]:flex-wrap [.match-details_&]:min-h-11 [.match-details_&]:py-2 [.match-details_&]:px-3 [.match-details_&]:gap-2 [.match-details_&]:bg-muted">
+            <div className="match-team-heading flex items-center gap-2 justify-between [.match-details_&]:flex-wrap [.match-details_&]:min-h-11 [.match-details_&]:py-2 [.match-details_&]:px-3 [.match-details_&]:gap-2">
               <div className="match-team-identity flex items-center gap-2 flex-wrap text-[0.75rem] [&_svg]:w-3.5 [&_svg]:h-3.5 [&_svg]:text-muted-foreground">
                 {team.outcome === 'win' ? (
                   <Trophy aria-hidden="true" />
@@ -229,7 +229,11 @@ export function MatchScoreboard({
               </span>
             </div>
             <MatchTeamTable label={t('matchTeamTable', { team: label })}>
-              <Table aria-label={t('matchTeamTable', { team: label })} aria-busy={loading}>
+              <Table
+                stickyHeader
+                aria-label={t('matchTeamTable', { team: label })}
+                aria-busy={loading}
+              >
                 <colgroup>
                   <col />
                   {columns.map((metric) => (
@@ -338,7 +342,7 @@ function MatchTeamTable({ label, children }: { label: string; children: ReactNod
     <div className="match-team-data min-w-0">
       <div
         ref={viewport}
-        className="match-team-table max-h-144 overflow-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:min-w-[var(--match-table-width,35rem)] [&_table]:table-auto [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-[1] [&_thead]:bg-muted [&_th]:px-2.5 [&_th]:text-right [&_th]:tabular-nums [&_th]:h-9 [&_th]:text-[0.75rem] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:px-2.5 [&_td]:text-right [&_td]:tabular-nums [&_td]:py-1 [&_td]:text-[0.8125rem] [&_th:first-child]:text-left [&_td:first-child]:text-left [&_tbody_tr]:h-11 [&_[data-self]]:bg-accent [&_[data-self]>td:first-child]:shadow-[inset_3px_0_var(--ring)] [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px]"
+        className="match-team-table max-h-144 overflow-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:min-w-[var(--match-table-width,35rem)] [&_table]:table-auto [&_th]:px-2.5 [&_th]:text-right [&_th]:tabular-nums [&_th]:h-9 [&_th]:text-[0.75rem] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:px-2.5 [&_td]:text-right [&_td]:tabular-nums [&_td]:py-1 [&_td]:text-[0.8125rem] [&_th:first-child]:text-left [&_td:first-child]:text-left [&_tbody_tr]:h-11 [&_[data-self]]:bg-accent/50 [&_[data-self]>td:first-child]:shadow-[inset_3px_0_var(--ring)] [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px]"
         tabIndex={0}
         role="region"
         aria-label={label}

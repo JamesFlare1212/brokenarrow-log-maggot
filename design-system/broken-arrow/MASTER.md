@@ -219,7 +219,7 @@ items, such as recordings; do not add redundant glass wrappers around controls.
 | Workspace, sidebar, and titlebar                                            | Flat semantic background; keep navigation and native caption controls legible                                               |
 | Standard and rich tooltips, pinned explanations, and chart hints            | Shared glass material and semantic foreground; coverage matches the global glass opacity directly                           |
 | Dialog, alert dialog, sheet, other popovers, dropdown, toast                | Shared raised glass material and semantic foreground; coverage follows the global glass preference with a readability floor |
-| Data-table frames, sticky headers, and profile tables                       | Solid semantic surfaces, clear borders, and independent scrolling; rows must not bleed through sticky labels                |
+| Data-table frames, sticky headers, and profile tables                       | Transparent surfaces that reveal the surrounding glass; shared clipping prevents content overlap under sticky labels        |
 | Alerts and selected list rows                                               | Semantic feedback or muted fills; these communicate state within the surrounding layout                                     |
 | Inputs, sliders, switches, badges, and compact filters                      | Their shared control variants and semantic colors; do not add a glass layer to every control                                |
 | Video frames, display previews, and the recorder canvas                     | Media-specific neutral or black fills preserve framing and playback contrast                                                |
@@ -227,8 +227,19 @@ items, such as recordings; do not add redundant glass wrappers around controls.
 | Approved logo                                                               | Preserve the supplied image colors and white background                                                                     |
 
 An exception belongs to a surface role, not to a feature page. A new content card
-must not opt out simply because another surface is solid. Add a justified role
-here before introducing a new surface treatment.
+must use the shared glass material. Add a justified role here before introducing
+a new surface treatment.
+
+Tables, headers, footers, and pinned identity cells have no independent fill.
+Use translucent semantic fills only for hover, selection, expanded content, and
+self-player feedback. Configure `stickyHeader` and `stickyFirstColumn` on the shared
+Table primitive; it clips covered rows and cells instead of masking them with a
+solid or additional glass layer. This keeps the pinned area visually continuous
+with every other column, including on hover and while loading.
+
+Shared Separator and ItemSeparator dividers use semantic 1px borders, matching
+table row borders. Do not use a 1px-high background for these lines: borders and
+element heights snap differently at fractional display scaling.
 
 ## Appearance and semantic color
 
@@ -442,9 +453,17 @@ required by the current interface.
 - Profile and report requests resolve independently. Replace only the placeholders
   supplied by each response; show empty states only after that request settles.
   Refreshes retain existing values and the active record tab. The Maggot Index
-  keeps its score and summary in place while progress appears in its header badge
-  and a reserved track below the sample caption. Loading and loaded content share
-  the same responsive grids and reduced-motion behavior.
+  uses the approved horizontal-scale design: a prominent score, a 0–10 scale with
+  color boundaries at 3.5 and 7, and inline average MVP rank and trend. The marker
+  identifies the score; it is independent of calculation progress. The scale spans
+  the available card width without stretching its labels or marker. Missing scores
+  have no marker. Keep the shared glass Card without an extra fill or caption band.
+  Sample scope and insufficient-sample details live in the title's shared
+  TooltipButton, available on hover/focus and pinnable by click or touch. Keep its
+  accessible name and scale description localized. Refreshes retain the cached
+  score and marker while progress appears in the header badge and a reserved 4px
+  track below the summary metrics. Loading and loaded content share the same
+  responsive geometry and reduced-motion behavior; failures keep the retry notice.
 - Map performance uses the shared `MapPerformanceGrid` in player records and
   report details. Arrange small glass Cards in a responsive grid with 12px gaps
   and a 16rem minimum column width that shrinks to fit narrow containers. Sort

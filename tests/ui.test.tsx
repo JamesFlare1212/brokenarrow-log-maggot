@@ -3870,6 +3870,72 @@ describe('user interaction regressions', () => {
 
 describe('profile refresh and report scopes', () => {
   it.each(['zh', 'en'] as const)(
+    'localizes the index scale and sample tooltip while keeping cached values during refresh in %s',
+    async (locale) => {
+      const initial = bootstrapForApp();
+      initial.config.lang = locale;
+      const next = deferred<RpcOutputs['players.maggot']>();
+      const rows = Array.from({ length: 12 }, (_, index) => ({
+        matchId: capturedMatches[index]!.id,
+        won: true,
+        mvpRank: index >= 3 && index < 10 ? 4 : 3,
+        killRank: 3,
+        lossRank: 3,
+        kdRank: 3,
+        eloDelta: 14,
+      }));
+      const complete = summarizeMaggot(localPlayer.id, rows);
+      let requests = 0;
+      const native = nativeFixture(initial, {
+        'players.maggot': () => (++requests === 1 ? complete : next.promise),
+      });
+      render(<ProfileDialog id={localPlayer.id} name={localPlayer.name} />, {
+        wrapper: wrapper(native.api),
+      });
+      const label = (key: string, vars: Record<string, string | number> = {}) =>
+        translate(locale, key, vars);
+      const card = await screen.findByRole('region', { name: label('maggot') });
+      const scale = await within(card).findByRole('img', {
+        name: label('maggotScaleValue', { value: '7.5' }),
+      });
+      expect(within(card).getByText(label('up'))).toBeTruthy();
+      const scope = label('maggotSample', { n: 12 });
+      expect(within(card).queryByText(scope)).toBeNull();
+      const user = userEvent.setup();
+      await user.click(within(card).getByRole('button', { name: label('maggotSampleInfo') }));
+      expect(explanation().textContent).toContain(scope);
+      expect(card.contains(explanation())).toBe(false);
+      await user.keyboard('{Escape}');
+      fireEvent.click(screen.getByRole('button', { name: label('refresh') }));
+      await waitFor(() => expect(requests).toBe(2));
+      expect(
+        within(card).getByRole('img', {
+          name: label('maggotScaleValue', { value: '7.5' }),
+        }),
+      ).toBe(scale);
+      expect(within(card).getByText('7.5')).toBeTruthy();
+      expect(
+        within(card).getByRole('progressbar', { name: label('maggotCalculating') }),
+      ).toBeTruthy();
+      await act(async () =>
+        next.resolve(
+          summarizeMaggot(
+            localPlayer.id,
+            rows.map((row) => ({ ...row, mvpRank: 2 })),
+          ),
+        ),
+      );
+      expect(
+        within(card).getByRole('img', {
+          name: label('maggotScaleValue', { value: '2.3' }),
+        }),
+      ).toBe(scale);
+      expect(within(card).queryByRole('progressbar')).toBeNull();
+      expect(within(card).getByText(label('flat'))).toBeTruthy();
+    },
+  );
+
+  it.each(['zh', 'en'] as const)(
     'shows deployments, ROI, precise preferences, and missing values in the %s query report',
     async (locale) => {
       const initial = bootstrapForApp();
@@ -4214,7 +4280,12 @@ describe('profile refresh and report scopes', () => {
     fireEvent.click(within(card).getByRole('button', { name: '重试' }));
     await within(card).findByText('样本不足');
     expect(within(card).queryByRole('alert')).toBeNull();
-    expect(within(card).getByText('需要 12 场有效的五人队排位；当前 0 场。')).toBeTruthy();
+    expect(within(card).queryByText('需要 12 场有效的五人队排位；当前 0 场。')).toBeNull();
+    const user = userEvent.setup();
+    await user.click(within(card).getByRole('button', { name: '查看蛐指数样本说明' }));
+    expect(explanation().textContent).toContain('需要 12 场有效的五人队排位；当前 0 场。');
+    await user.keyboard('{Escape}');
+    expect(within(card).getByRole('img', { name: '暂无指数刻度位置' })).toBeTruthy();
     expect(card.querySelector('.maggot-score')?.textContent).toBe('—');
     expect(within(card).queryByText('稳定')).toBeNull();
     expect(within(card).queryByRole('button', { name: '查看计算明细' })).toBeNull();

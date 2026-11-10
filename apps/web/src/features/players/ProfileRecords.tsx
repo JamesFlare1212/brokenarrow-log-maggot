@@ -122,7 +122,7 @@ export function ProfileRecords({
                 </div>
               ))}
             </dl>
-            <div className="profile-table min-w-0 overflow-hidden border border-border rounded-(--radius) [&_table]:min-w-128 [&_th]:bg-muted [&_th]:text-[0.75rem] [&_th]:py-2.5 [&_th]:px-4 [&_td]:py-2.5 [&_td]:px-4 [&_td:first-child_[data-slot='button']]:min-h-6 [&_td:first-child_[data-slot='button']]:h-auto [&_td:first-child_[data-slot='button']]:justify-start [&_td:first-child_[data-slot='button']]:p-0 [&_td:first-child_[data-slot='button']]:whitespace-normal [&_td:first-child_[data-slot='button']]:text-left profile-encounters-table [&_table]:table-fixed [&_th[data-column='team']]:w-24 [&_th[data-column='result']]:w-32 [&_th[data-column='time']]:w-50">
+            <div className="profile-table min-w-0 overflow-hidden border border-border rounded-(--radius) [&_table]:min-w-128 [&_th]:text-[0.75rem] [&_th]:py-2.5 [&_th]:px-4 [&_td]:py-2.5 [&_td]:px-4 [&_td:first-child_[data-slot='button']]:min-h-6 [&_td:first-child_[data-slot='button']]:h-auto [&_td:first-child_[data-slot='button']]:justify-start [&_td:first-child_[data-slot='button']]:p-0 [&_td:first-child_[data-slot='button']]:whitespace-normal [&_td:first-child_[data-slot='button']]:text-left profile-encounters-table [&_table]:table-fixed [&_th[data-column='team']]:w-24 [&_th[data-column='result']]:w-32 [&_th[data-column='time']]:w-50">
               <Table aria-busy={profilePending}>
                 <TableCaption className="sr-only">{t('encounters')}</TableCaption>
                 <TableHeader>

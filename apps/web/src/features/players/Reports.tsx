@@ -247,6 +247,7 @@ export function ReportMatchTable({
         aria-label={`${label ?? t('matchStatistics')} · ${t('tableScrollHint')}`}
       >
         <Table
+          stickyFirstColumn
           aria-busy={pending}
           className="table-auto [&_th]:px-2 [&_th]:py-2.5 [&_td]:px-2 [&_td]:py-2.5 [&_[data-slot='skeleton']]:w-full @[60rem]/report-matches:[&_th]:px-3 @[60rem]/report-matches:[&_td]:px-3"
         >
@@ -265,7 +266,6 @@ export function ReportMatchTable({
                   className={cn(
                     'text-xs',
                     minWidth,
-                    key === 'matchId' && 'sticky left-0 z-1 bg-card',
                     key === 'result' && 'text-center',
                     !['matchId', 'result', 'time'].includes(key) && 'text-right tabular-nums',
                   )}
@@ -279,7 +279,7 @@ export function ReportMatchTable({
             {pending && !report && <ProfileTableSkeleton columns={columns.map(({ key }) => key)} />}
             {report?.recentMatches.map((m) => (
               <TableRow key={m.matchId}>
-                <TableCell data-column="matchId" className="sticky left-0 z-1 bg-card">
+                <TableCell data-column="matchId">
                   <Button
                     variant="link"
                     size="sm"
