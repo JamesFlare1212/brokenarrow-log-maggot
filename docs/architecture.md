@@ -1,5 +1,10 @@
 # 架构
 
+See the [implicit state machine inventory](implicit-state-machines.md) for workflow
+states, transition guards, persistent markers, and cross-process protocols.
+The [state machine risk audit and fixes](state-machine-risk-audit.md) records
+reproduced coverage gaps, their repairs, and development invariants.
+
 职责划分参考 [T3 Code apps](https://github.com/pingdotgg/t3code/tree/main/apps)。
 
 ```text
@@ -18,7 +23,18 @@ server 是可注入平台接口的 Node 业务层，在 Electron 装配，不额
 
 快照和事件共用类型及 revision；过期状态和副作用均被拒绝。查询有 requestId、context 和 generation；报告按目标 / 请求身份接收结果。蛆查全局互斥，订阅返回 cleanup。设置使用独立页面与共享的自动保存队列：本地修改即时反映，按变更字段串行持久化，较旧响应不覆盖新输入，保存失败保留修改并可重试。主题模式与浅色、深色配色分别存储，选择配色不切换模式。
 
+Settings and recording settings share one AppProvider-owned save queue. Directory
+text is staged there before blur/return, and failed patches retain their pre-save
+migration work across tab changes. Replies acknowledge patched fields while
+per-field observation versions preserve newer configuration events.
+
 SQLite 使用 WAL、外键、索引、prepared statements、事务。对局、名单和账号视角分表；删除不使用玩家名构造路径。缓存保留时间和 stale 标记。
+
+Current-roster ownership includes match session identity as well as request ID
+and generation; match start/end invalidates old current queries without relying
+on a lobby reset. Watcher reset clears liveness, recovery, and error evidence.
+Service disposal drains admitted work and closes SQL before returning any
+recording-stop error.
 
 Each database connection reuses its prepared statements and releases them on close.
 Encounter queries load match payloads and account views in batches, preserving each
@@ -63,6 +79,11 @@ the same match again allocates a different token, so IPC from an earlier capture
 cannot affect the new recording. Disabling recording during display discovery
 cancels startup; disabling an active recording waits for the final file.
 
+Recording cleanup publishes retirement before yielding. Finalizers recheck the
+capture owner after each await, share one finish task, and suppress saved callbacks
+after revocation. Per-controller filename reservations keep late cleanup separate
+from replacement outputs, including same-match captures at the same clock time.
+
 The capture page now uses WebCodecs with explicit per-frame quantizers and
 Mediabunny fragmented MP4 output. Before each recording it tries AV1, HEVC and
 H.264 with hardware acceleration preferred, followed by software AV1. A probe
@@ -90,6 +111,12 @@ protection but does not guarantee atomic visibility while bytes are copied.
 Staging files are removed after success or failure, and genuine access-denied
 errors remain errors. The managed previous-match archive intentionally replaces
 its prior version through a rename, as do deck restores.
+
+Managed backup publication and account-switch reminder evaluation share the deck
+queue. Package revisions and current-session checks reject stale commits and
+presentations. Recording migrations serialize and persist verified-copy ownership
+before removing a cross-device source. Retry requires matching file identities
+and SHA-256 bytes; unrelated destinations remain collisions.
 
 Shared shadcn primitives and the application Button, Card, Dialog, Menu, Field,
 Toggle, Badge, and Stats wrappers centralize interaction rules. Radix manages

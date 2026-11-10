@@ -294,9 +294,10 @@ export class Application {
         url: await platform.recordings.playback(await this.files.path(name)),
       }),
       'replays.move': async ({ from, to }) => {
-        if (resolve(from) !== resolve(this.files.dir()))
-          throw new Error('Recording source directory changed; reopen settings');
-        const result = await this.files.move(from, to);
+        const result = await this.files.move(from, to, () => {
+          if (resolve(from) !== resolve(this.files.dir()))
+            throw new Error('Recording source directory changed; reopen settings');
+        });
         if (!result.failed.length) {
           const config = this.db.updateConfig({ replaySaveDir: to });
           this.event({ type: 'config', config });
@@ -509,6 +510,10 @@ export class Application {
   }
   private onLog(event: LogEvent): void {
     if (this.disposed || this.closing) return;
+    if (event.type === 'started' || event.type === 'ended') {
+      this.queryIds.delete('current');
+      this.autoKey = '';
+    }
     if (event.type === 'session') {
       const session = event.session;
       this.event({ type: 'session', session });
@@ -522,6 +527,10 @@ export class Application {
       this.queryIds.clear();
       this.autoKey = '';
       this.restoredSession = '';
+      if (this.deckAlert) {
+        this.deckAlert = null;
+        this.event({ type: 'decks', alert: null });
+      }
       if (this.platform.recordings.status().phase !== 'stopping')
         void this.platform.recordings
           .abort()
@@ -533,7 +542,11 @@ export class Application {
       this.fire(
         this.decks
           .onMatchStart(this.parser.snapshot())
-          .then(() => this.event({ type: 'decks', alert: null }))
+          .then(() => {
+            if (this.parser.snapshot().current?.sessionId !== event.match.sessionId) return;
+            this.deckAlert = null;
+            this.event({ type: 'decks', alert: null });
+          })
           .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e)),
       );
       if (config.replayEnabled)
@@ -579,11 +592,20 @@ export class Application {
           .start(session.current, this.db.config())
           .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e));
     }
+    const isCurrentSession = () => {
+      if (this.disposed || this.closing) return false;
+      const current = this.parser.snapshot();
+      return (
+        current.generation === session.generation &&
+        current.accountKey === session.accountKey &&
+        current.current?.sessionId === session.current?.sessionId
+      );
+    };
     this.fire(
       this.decks
-        .switchAlert(session)
+        .switchAlert(session, isCurrentSession)
         .then((alert) => {
-          if (alert) {
+          if (alert && isCurrentSession()) {
             this.deckAlert = alert;
             this.event({ type: 'decks', alert });
           }
@@ -632,9 +654,15 @@ export class Application {
     this.queryIds.set(input.context, input.requestId);
     let queried = 0,
       cancelled = false;
-    const active = () =>
-      this.queryIds.get(input.context) === input.requestId &&
-      (input.context !== 'current' || this.parser.snapshot().generation === session.generation);
+    const active = () => {
+      const current = this.parser.snapshot();
+      return (
+        this.queryIds.get(input.context) === input.requestId &&
+        (input.context !== 'current' ||
+          (current.generation === session.generation &&
+            current.current?.sessionId === session.current?.sessionId))
+      );
+    };
     await Promise.all(
       unique.map(async (player) => {
         let info = null,
@@ -726,7 +754,12 @@ export class Application {
   private async stopInternal(): Promise<void> {
     if (this.disposed) return;
     this.closing = true;
-    await this.analytics.flush();
+    const failures: unknown[] = [];
+    try {
+      await this.analytics.flush();
+    } catch (error) {
+      failures.push(error);
+    }
     this.analytics.close();
     const match = this.parser.snapshot().current;
     for (const timer of this.timers) clearInterval(timer);
@@ -735,15 +768,25 @@ export class Application {
     this.queryIds.clear();
     this.watcher.stop();
     this.archive.cancel();
-    const recording = this.platform.recordings.stop(match || undefined);
-    void recording.catch(() => {});
-    this.lifetime.abort();
-    await this.client.close();
-    await Promise.allSettled(
-      [...this.tasks, this.banPending].filter((p): p is Promise<unknown> => p !== null),
+    const recording = Promise.resolve().then(() =>
+      this.platform.recordings.stop(match || undefined),
     );
-    await recording;
+    this.lifetime.abort();
+    const results = await Promise.allSettled([
+      recording,
+      Promise.resolve().then(() => this.client.close()),
+      ...[...this.tasks, this.banPending].filter((p): p is Promise<unknown> => p !== null),
+    ]);
+    // RPC/background failures already have their own reporting; disposal still drains them.
+    for (const result of results.slice(0, 2))
+      if (result.status === 'rejected') failures.push(result.reason);
     this.disposed = true;
-    this.db.close();
+    try {
+      this.db.close();
+    } catch (error) {
+      failures.push(error);
+    }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length) throw new AggregateError(failures, 'Application disposal failed');
   }
 }

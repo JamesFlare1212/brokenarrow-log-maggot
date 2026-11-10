@@ -1,5 +1,5 @@
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { FolderOpen } from 'lucide-react';
 import {
   Card,
@@ -29,7 +29,7 @@ import { QUALITIES, normalizeQuality } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
-import { useSettingsAutosave, type SettingsSaveStatus } from '../../hooks/useSettingsAutosave';
+import type { SettingsSaveStatus } from '../../hooks/useSettingsAutosave';
 import { Dialog, Button, Field, Toggle, Notice } from '../../components/ui';
 export function RecordingSettings({
   enable = false,
@@ -40,40 +40,43 @@ export function RecordingSettings({
   inline?: boolean;
   onStatusChange?: (status: SettingsSaveStatus) => void;
 }) {
-  const { api, state, closeModal, backModal, notify } = useApp(),
+  const { api, state, settings, recordingPreferences, closeModal, backModal, notify } = useApp(),
     { t } = useI18n(),
-    [directory, setDirectory] = useState(state.config.replaySaveDir),
     [displays, setDisplays] = useState<Display[]>([]),
     [previewAspectRatio, setPreviewAspectRatio] = useState(16 / 9),
-    [move, setMove] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     thumbnail = useRequest<string | null>();
-  const settings = useSettingsAutosave(api, state.config, async (patch) => {
-    if (!move || !patch.replaySaveDir) return;
-    const { dir } = await api.invoke('replays.directory', null);
-    if (dir === patch.replaySaveDir) return;
-    const result = await api.invoke('replays.move', { from: dir, to: patch.replaySaveDir });
-    if (result.failed.length) throw new Error(t('movePartial', { n: result.failed.length }));
-  });
+  const { moveFiles: move, setMoveFiles: setMove } = recordingPreferences;
+  const prepareDirectory = useCallback(
+    async (patch: Partial<PublicConfig>) => {
+      if (!move || !patch.replaySaveDir) return;
+      const { dir } = await api.invoke('replays.directory', null);
+      if (dir === patch.replaySaveDir) return;
+      const result = await api.invoke('replays.move', { from: dir, to: patch.replaySaveDir });
+      if (result.failed.length) throw new Error(t('movePartial', { n: result.failed.length }));
+    },
+    [api, move, t],
+  );
   const draft = settings.draft ?? state.config;
-  const status =
-    settings.status === 'saved' && directory !== draft.replaySaveDir ? 'pending' : settings.status;
-  const { change, flush } = settings;
+  const directory = draft.replaySaveDir;
+  const status = settings.status;
+  const { stage, prepareField, change, flush } = settings;
+  useEffect(() => {
+    prepareField('replaySaveDir', prepareDirectory);
+  }, [prepareField, prepareDirectory]);
   useEffect(() => {
     onStatusChange?.(status);
   }, [status, onStatusChange]);
-  const latest = useRef({ directory, notify, t, discarded: false });
-  Object.assign(latest.current, { directory, notify, t });
+  const latest = useRef({ notify, t });
+  Object.assign(latest.current, { notify, t });
   useEffect(
     () => () => {
-      if (latest.current.discarded) return;
-      change({ replaySaveDir: latest.current.directory });
       void flush().then((saved) => {
         if (!saved) latest.current.notify(latest.current.t('settingsSaveFailed'), true);
       });
     },
-    [change, flush],
+    [flush],
   );
   useEffect(() => {
     if (enable) change({ replayEnabled: true });
@@ -101,28 +104,22 @@ export function RecordingSettings({
     };
   }, [api, draft.replayDisplayId]);
   const set = <K extends keyof PublicConfig>(key: K, value: PublicConfig[K], delay = 0) =>
-    change({ [key]: value }, delay);
+    change({ [key]: value }, delay, key === 'replaySaveDir' ? prepareDirectory : undefined);
   const close = async (back = false) => {
-    set('replaySaveDir', directory);
     if (await flush()) {
       if (back && backModal) backModal();
       else closeModal();
     }
   };
   const discard = async () => {
-    latest.current.discarded = true;
     await settings.discard();
-    setDirectory(state.config.replaySaveDir);
-    latest.current.directory = state.config.replaySaveDir;
     if (!inline) closeModal();
-    else latest.current.discarded = false;
   };
   const test = async () => {
     if (busy) return;
     setBusy(true);
     setError(null);
     try {
-      set('replaySaveDir', directory);
       if (!(await flush())) return;
       await api.invoke('replays.test', null);
       notify(t('success'));
@@ -320,8 +317,8 @@ export function RecordingSettings({
                 <InputGroupInput
                   id="rec-directory"
                   value={directory}
-                  onChange={(e) => setDirectory(e.target.value)}
-                  onBlur={() => set('replaySaveDir', directory)}
+                  onChange={(e) => stage({ replaySaveDir: e.target.value }, prepareDirectory)}
+                  onBlur={() => void flush()}
                   disabled={busy || settings.status === 'saving'}
                   placeholder={t('defaultDirectory')}
                 />
@@ -333,7 +330,6 @@ export function RecordingSettings({
                         .invoke('directory.select', { kind: 'replays' })
                         .then((dir) => {
                           if (dir) {
-                            setDirectory(dir);
                             set('replaySaveDir', dir);
                           }
                         })

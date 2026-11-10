@@ -20,6 +20,7 @@ export class LogWatcher {
     file: null,
     listening: false,
     recovering: false,
+    live: false,
     error: null,
   };
   constructor(
@@ -54,6 +55,9 @@ export class LogWatcher {
     this.decoder = new StringDecoder('utf8');
     this.identity = '';
     this.state.file = null;
+    this.state.live = false;
+    this.state.recovering = false;
+    this.state.error = null;
   }
   async poll(): Promise<void> {
     if (this.busy || !this.state.listening) return;
@@ -75,15 +79,13 @@ export class LogWatcher {
       );
       const selected = candidates[0];
       if (!selected) {
-        if (this.state.file) {
-          this.clear();
-          this.parser.reset();
-        }
+        const hadFile = !!this.state.file;
+        this.clear();
+        if (hadFile) this.parser.reset();
         this.changed(this.status());
         return;
       }
       const identity = selected.path + ':' + selected.info.ino + ':' + selected.info.birthtimeMs;
-      this.state.live = Date.now() - selected.info.mtimeMs < 120000;
       if (identity !== this.identity || selected.info.size < this.offset) {
         this.clear();
         this.identity = identity;
@@ -91,6 +93,7 @@ export class LogWatcher {
         this.parser.reset(selected.path);
         this.recoveryEnd = selected.info.size;
       }
+      this.state.live = Date.now() - selected.info.mtimeMs < 120000;
       const recovering = this.offset < this.recoveryEnd;
       this.state.recovering = recovering;
       this.state.error = null;
@@ -130,6 +133,7 @@ export class LogWatcher {
       this.changed(this.status());
     } catch (error) {
       if (generation === this.generation) {
+        this.state.live = false;
         this.state.error = errorMessage(error);
         this.changed(this.status());
       }

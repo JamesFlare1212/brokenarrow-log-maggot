@@ -145,6 +145,7 @@ interface AppContextValue {
   openSettings: (tab?: SettingsTab) => void;
   closeSettings: () => void;
   settings: ReturnType<typeof useSettingsAutosave>;
+  recordingPreferences: { moveFiles: boolean; setMoveFiles: (value: boolean) => void };
   modal: ModalRoute;
   openModal: (route: ModalRoute) => void;
   closeModal: () => void;
@@ -180,7 +181,8 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     ),
     [modalStack, setModalStack] = useState<NonNullable<ModalRoute>[]>([]),
     [breadcrumbs, updateBreadcrumbs] = useState<Partial<Record<Panel, PageBreadcrumbDetail>>>({}),
-    [error, setError] = useState<string | null>(null);
+    [error, setError] = useState<string | null>(null),
+    [moveRecordingFiles, setMoveRecordingFiles] = useState(false);
   const setBreadcrumb = useCallback((panel: Panel, detail: PageBreadcrumbDetail | null) => {
     updateBreadcrumbs((current) => {
       if (
@@ -311,6 +313,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     openSettings,
     closeSettings,
     settings,
+    recordingPreferences: { moveFiles: moveRecordingFiles, setMoveFiles: setMoveRecordingFiles },
     modal,
     openModal,
     closeModal: () => openModal(null),
