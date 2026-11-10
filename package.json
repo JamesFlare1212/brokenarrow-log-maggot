@@ -12,7 +12,7 @@
     "node": ">=22.16.0"
   },
   "scripts": {
-    "postinstall": "install-electron",
+    "postinstall": "node scripts/install-electron.mjs",
     "format": "prettier --write apps packages tests scripts docs design-system *.json *.yaml .github/**/*.yml *.md",
     "format:check": "prettier --check apps packages tests scripts docs design-system *.json *.yaml .github/**/*.yml *.md",
     "dev": "node scripts/dev.mjs",

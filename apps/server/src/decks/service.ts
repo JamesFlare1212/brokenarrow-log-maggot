@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { stat, lstat, readdir, readFile, unlink } from 'node:fs/promises';
 import type { DeckFile, DeckList, DeckSwitchAlert, Session } from '@ba/contracts';
@@ -15,6 +15,16 @@ interface DeckState {
   pkgFid: string | null;
   pkgUpdatedAt: number;
   alertedPairs: string[];
+}
+function packageRevision(state: Record<string, unknown>): string | null {
+  if (!text(state.pkgKey)) return null;
+  return (
+    text(state.pkgRevision) ||
+    'legacy:' +
+      createHash('sha256')
+        .update(JSON.stringify([state.pkgKey, state.pkgName, state.pkgFid, state.pkgUpdatedAt]))
+        .digest('hex')
+  );
 }
 export class DeckService {
   private queue: Promise<unknown> = Promise.resolve();
@@ -123,17 +133,18 @@ export class DeckService {
     return { name };
   }
   deploy(name: string): Promise<{ deployed: number }> {
-    return this.exclusive(async () => {
-      const p = await this.paths();
-      if (!p.found) throw new Error('Deck directory not found');
-      const path = childPath(p.backups, name, '.zip'),
-        info = await lstat(path);
-      if (!info.isFile() || info.isSymbolicLink() || info.size > ZIP_LIMITS.total)
-        throw new Error('Unsafe deck backup');
-      const entries = await zipExtract(await readFile(path));
-      for (const e of entries) await atomicWrite(p.decks, e.name, e.data);
-      return { deployed: entries.length };
-    });
+    return this.exclusive(() => this.deployArchive(name));
+  }
+  private async deployArchive(name: string): Promise<{ deployed: number }> {
+    const p = await this.paths();
+    if (!p.found) throw new Error('Deck directory not found');
+    const path = childPath(p.backups, name, '.zip'),
+      info = await lstat(path);
+    if (!info.isFile() || info.isSymbolicLink() || info.size > ZIP_LIMITS.total)
+      throw new Error('Unsafe deck backup');
+    const entries = await zipExtract(await readFile(path));
+    for (const e of entries) await atomicWrite(p.decks, e.name, e.data);
+    return { deployed: entries.length };
   }
   remove(kind: 'decks' | 'backups', names: string[]): Promise<{ removed: number }> {
     return this.exclusive(async () => {
@@ -148,10 +159,13 @@ export class DeckService {
       return { removed };
     });
   }
-  onMatchStart(session: Session): Promise<void> {
+  currentPackageRevision(): string | null {
+    return packageRevision(object(this.db.state('deckSync', {})));
+  }
+  onMatchStart(session: Session): Promise<string | null> {
     return this.exclusive(async () => {
       const list = await this.list();
-      if (!list.found || !list.decks.length) return;
+      if (!list.found || !list.decks.length) return null;
       await this.writeBackup(
         list.decks.map((f) => f.name),
         PREVIOUS,
@@ -166,6 +180,7 @@ export class DeckService {
         alertedPairs: [],
       };
       this.db.setState('deckSync', state);
+      return state.pkgRevision;
     });
   }
   switchAlert(
@@ -206,6 +221,7 @@ export class DeckService {
     if (currentPairs.includes(pair)) return null;
     this.db.setState('deckSync', { ...current, alertedPairs: [...currentPairs, pair] });
     return {
+      packageRevision: packageRevision(current)!,
       pair,
       from: text(raw.pkgName, key),
       to: session.localName,
@@ -214,7 +230,15 @@ export class DeckService {
       fid: text(raw.pkgFid) || null,
     };
   }
-  async switchAction(action: 'restore' | 'ignore' | 'dismiss'): Promise<void> {
-    if (action === 'restore') await this.deploy(PREVIOUS);
+  async switchAction(
+    action: 'restore' | 'ignore' | 'dismiss',
+    expectedRevision?: string,
+  ): Promise<void> {
+    if (action !== 'restore') return;
+    await this.exclusive(async () => {
+      if (!expectedRevision || this.currentPackageRevision() !== expectedRevision)
+        throw new Error('Deck backup changed; reopen the account-switch reminder');
+      await this.deployArchive(PREVIOUS);
+    });
   }
 }

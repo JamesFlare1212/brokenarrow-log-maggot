@@ -61,6 +61,7 @@ export function RecordingSettings({
   const draft = settings.draft ?? state.config;
   const directory = draft.replaySaveDir;
   const status = settings.status;
+  const directorySaving = settings.savingFields.includes('replaySaveDir');
   const { stage, prepareField, change, flush } = settings;
   useEffect(() => {
     prepareField('replaySaveDir', prepareDirectory);
@@ -310,7 +311,7 @@ export function RecordingSettings({
               label={t('migrateFilesOnChange')}
               checked={move}
               onChange={setMove}
-              disabled={busy || settings.status === 'saving'}
+              disabled={busy || directorySaving}
             />
             <Field id="rec-directory" label={t('saveDirectory')}>
               <InputGroup>
@@ -319,12 +320,12 @@ export function RecordingSettings({
                   value={directory}
                   onChange={(e) => stage({ replaySaveDir: e.target.value }, prepareDirectory)}
                   onBlur={() => void flush()}
-                  disabled={busy || settings.status === 'saving'}
+                  disabled={busy || directorySaving}
                   placeholder={t('defaultDirectory')}
                 />
                 <InputGroupAddon align="inline-end">
                   <InputGroupButton
-                    disabled={busy || settings.status === 'saving'}
+                    disabled={busy || directorySaving}
                     onClick={() =>
                       void api
                         .invoke('directory.select', { kind: 'replays' })

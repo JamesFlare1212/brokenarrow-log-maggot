@@ -552,6 +552,9 @@ WebM files. Parameter sources and limitations live in
 The Settings header and recording controls use one AppProvider-owned save queue.
 Errors take precedence over saving or pending work; saved appears only after the
 shared queue settles. Staged directory text and failed edits survive tab changes.
+Unfinished directory text stays outside automatic save batches until blur,
+return, recording test, or teardown. Unrelated saves keep the directory input
+editable and cannot trigger migration of that unfinished text.
 Keep one visible set of Retry and Discard controls for that shared owner: inside
 Recording content or in the other tabs' page error area. Within recording containers up to 28rem,
 place the test-recording action below the title and full-width description so

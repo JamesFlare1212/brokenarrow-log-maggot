@@ -79,9 +79,15 @@ Directory changes and an invalid session predicate reject pending reminder work
 before consuming its pair.
 
 The [application](../apps/server/src/app.ts) also validates session generation,
-account key, and current match before presenting an evaluated reminder. Reset
-clears an existing reminder. An old backup completion cannot clear a reminder
-for a different current match.
+account key, current match, and backup revision before presenting a reminder.
+Publication retires reminders for the superseded archive even if the initiating
+match already ended. A reminder for the newly published archive survives an
+older completion. Reset clears an existing reminder.
+
+The renderer includes the displayed `packageRevision` in `decks.switch` requests.
+The application rejects a restore targeting a different visible reminder, and
+the deck queue rechecks that revision when deployment starts. Imported metadata
+without a UUID receives a stable legacy identity derived from its package facts.
 
 Regressions pause directory discovery before replacing backup metadata, issue
 concurrent evaluations, revoke session ownership mid-evaluation, and return an
@@ -145,8 +151,12 @@ and [recording settings](../apps/web/src/features/replays/RecordingSettings.tsx)
 The migration checkbox preference also survives tab/modal replacement within
 that provider's lifetime.
 
-Directory text is staged into the shared draft without immediately persisting
-incomplete input. Blur, return, test recording, or tab teardown flushes the queue.
+Directory text is held separately from automatically eligible patches. Slider
+debounce saves and in-flight save loops drain only eligible fields; they neither
+persist directory text nor run its migration preparation. Blur, return, test
+recording, or tab teardown explicitly promotes the held draft and flushes it.
+Directory controls remain editable during saves of unrelated fields so those
+saves cannot force blur and accidentally promote incomplete text.
 A staged field can carry preparation work, such as moving recordings before
 saving the new directory. Preparation accompanies a failed patch on retry and
 is discarded with that patch. Updating a preparation callback never writes a
@@ -160,6 +170,26 @@ area, avoiding duplicate recovery controls.
 The UI tests retain their shadcn Tabs, Card, Field, Slider, and Dialog interaction
 contracts. The [design system](../design-system/broken-arrow/MASTER.md) records
 the shared save-status and edit-lifetime rule.
+
+## PR review follow-up
+
+The review of commit `78afe329` identified two additional P2 boundary cases:
+
+- [Directory debounce feedback](https://github.com/JamesFlare1212/brokenarrow-log-maggot/pull/31#discussion_r4526585553):
+  the initial shared queue let a slider timer flush an incomplete directory and
+  potentially move recordings there. A controlled 250 ms test reproduced a patch
+  containing both FPS and the partial directory. Separate held/eligible maps and
+  per-field busy state now preserve the explicit directory commit boundary.
+- [Superseded reminder feedback](https://github.com/JamesFlare1212/brokenarrow-log-maggot/pull/31#discussion_r4526585565):
+  the initial completion guard used active match identity, leaving the old reminder
+  visible if that match ended before its backup committed. An actual ZIP/SQL test
+  reproduced that state. Invalidation now follows the published archive revision;
+  a newer reminder is retained and stale restore inputs are rejected.
+
+The follow-up regressions also cover directory edits during an in-flight save,
+focus-safe input admission, the displayed client revision, queued stale restores,
+and successful legacy restores. Both original review reproductions failed before
+their fixes and pass as ordinary regressions afterward.
 
 ## Regression commands and coverage
 
@@ -229,19 +259,23 @@ timing, power loss, and every possible interleaving are not exhaustively covered
 ## Validation
 
 The original baseline had 1,090 passing normal tests while all eleven audit
-assertions failed. The promoted regression files currently contain 25 passing
-tests, including the original scenarios and adjacent guards.
+assertions failed. The initial repair added 25 ordinary regressions. After the
+PR review follow-up, the two state-machine regression files contain 32 passing
+tests, with an additional client-reminder identity test in the main UI suite.
 
-- `pnpm check`: passed type checking, UI design checks, 46 test files with
-  1,115 passing tests, and web/server/desktop production builds.
+- `pnpm check`: passed type checking, UI design checks, 47 test files with
+  1,127 passing tests, and web/server/desktop production builds.
 - `pnpm format:check`: passed.
+- `pnpm test:ui`: passed all 30 browser interaction tests.
 - `pnpm smoke`: passed Electron service, sandboxed preload, renderer, and
   integrated window-chrome checks.
 - `pnpm smoke:real`: passed with 496 offline real matches and match-navigation,
   local-detail, focus, and responsive-scoreboard checks.
-- `pnpm smoke:recording`: passed synthetic AV1 recording with verified quantizer
-  options, acknowledged writes, MP4 playback, and seeking.
 - Local documentation targets/line bounds and `git diff --check`: passed.
+
+The earlier recording-controller repair also passed `pnpm smoke:recording`
+with synthetic AV1, verified quantizers, acknowledged writes, playback, and seeking.
+That encoder/controller check was not repeated for the PR review follow-up.
 
 The targeted existing regression run initially caught a directory preparation
 effect re-staging an old render value during the repair. Preparation registration

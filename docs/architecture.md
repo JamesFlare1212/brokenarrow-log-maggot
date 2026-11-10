@@ -27,6 +27,8 @@ Settings and recording settings share one AppProvider-owned save queue. Director
 text is staged there before blur/return, and failed patches retain their pre-save
 migration work across tab changes. Replies acknowledge patched fields while
 per-field observation versions preserve newer configuration events.
+Draft-only directory edits are held outside automatically eligible patches;
+unrelated debounce/in-flight saves cannot commit them or force their input to blur.
 
 SQLite 使用 WAL、外键、索引、prepared statements、事务。对局、名单和账号视角分表；删除不使用玩家名构造路径。缓存保留时间和 stale 标记。
 
@@ -114,7 +116,9 @@ its prior version through a rename, as do deck restores.
 
 Managed backup publication and account-switch reminder evaluation share the deck
 queue. Package revisions and current-session checks reject stale commits and
-presentations. Recording migrations serialize and persist verified-copy ownership
+presentations. Reminder retirement follows archive publication even after a match
+ends. Restore requests carry the displayed package revision, which is checked
+again inside the deployment queue. Recording migrations serialize and persist verified-copy ownership
 before removing a cross-device source. Retry requires matching file identities
 and SHA-256 bytes; unrelated destinations remain collisions.
 

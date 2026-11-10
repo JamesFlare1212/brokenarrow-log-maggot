@@ -364,17 +364,145 @@ describe('state-machine ownership regressions', () => {
   it('rejects a switch-alert publication after the application account changes', async () => {
     const events: AppEvent[] = [];
     const app = await application(platform(), events);
+    app.db.setState('deckSync', { pkgRevision: 'account-test', pkgKey: 'persona:Alice' });
     const gate = deferred<Awaited<ReturnType<DeckService['switchAlert']>>>();
     releases.push(() => gate.resolve(null));
     const evaluate = vi.spyOn(DeckService.prototype, 'switchAlert').mockReturnValue(gate.promise);
     app.parser.feed(['Log: GetPersonaName Bob', 'Log: [AUTH] Rest: Login success']);
     await vi.waitFor(() => expect(evaluate).toHaveBeenCalledTimes(1));
     app.parser.feed(['Log: GetPersonaName Charlie']);
-    gate.resolve({ pair: 'Alice>Bob', from: 'Alice', to: 'Bob', count: 1, names: [], fid: '123' });
+    gate.resolve({
+      packageRevision: 'account-test',
+      pair: 'Alice>Bob',
+      from: 'Alice',
+      to: 'Bob',
+      count: 1,
+      names: [],
+      fid: '123',
+    });
     await gate.promise;
     await Promise.resolve();
     expect(events.filter((event) => event.type === 'decks' && event.alert)).toEqual([]);
     expect(app.snapshot().deckAlert).toBeNull();
+  });
+
+  it('clears a superseded deck reminder when its match ends before backup completes', async () => {
+    const app = await application();
+    const decks = app.db.config().decksDir;
+    const backups = join(decks, '..', 'DeckBackups');
+    await mkdir(decks);
+    await mkdir(backups);
+    await writeFile(
+      join(backups, '上一局卡组包.zip'),
+      await zipCreate([{ name: 'Alice.dek', data: Buffer.from('Alice') }]),
+    );
+    await writeFile(join(decks, 'Bob.dek'), 'Bob');
+    app.db.setState('deckSync', {
+      pkgKey: 'persona:Alice',
+      pkgName: 'Alice',
+      pkgFid: '123',
+      pkgUpdatedAt: 1,
+      alertedPairs: [],
+    });
+    app.parser.feed(['Log: GetPersonaName Bob', 'Log: [AUTH] Rest: Login success']);
+    await vi.waitFor(() =>
+      expect(app.snapshot().deckAlert).toMatchObject({ from: 'Alice', to: 'Bob' }),
+    );
+    const gate = deferred<void>(),
+      entered = deferred<void>();
+    releases.push(() => gate.resolve());
+    const original = DeckService.prototype.onMatchStart;
+    const publishing = vi
+      .spyOn(DeckService.prototype, 'onMatchStart')
+      .mockImplementationOnce(async function (this: DeckService, session) {
+        entered.resolve();
+        await gate.promise;
+        return original.call(this, session);
+      });
+    app.parser.feed(['Log: Start loading battle... map: Dam, scenario: Test']);
+    await entered.promise;
+    app.parser.feed(['Log: GameController dispose called']);
+    expect(app.parser.snapshot().current).toBeNull();
+    gate.resolve();
+    await publishing.mock.results[0]!.value;
+    await vi.waitFor(() =>
+      expect(app.db.state('deckSync', {})).toMatchObject({ pkgKey: 'persona:Bob' }),
+    );
+    await vi.waitFor(() => expect(app.snapshot().deckAlert).toBeNull());
+  });
+
+  it('retains a newer reminder for the published backup after an older match completion returns', async () => {
+    const app = await application();
+    const decks = app.db.config().decksDir;
+    await mkdir(decks);
+    await writeFile(join(decks, 'Bob.dek'), 'Bob');
+    const gate = deferred<void>(),
+      published = deferred<void>();
+    releases.push(() => gate.resolve());
+    const original = DeckService.prototype.onMatchStart;
+    const publishing = vi
+      .spyOn(DeckService.prototype, 'onMatchStart')
+      .mockImplementationOnce(async function (this: DeckService, session) {
+        const revision = await original.call(this, session);
+        published.resolve();
+        await gate.promise;
+        return revision;
+      });
+    app.parser.feed([
+      'Log: GetPersonaName Bob',
+      'Log: [AUTH] Rest: Login success',
+      'Log: Start loading battle... map: Dam, scenario: Test',
+    ]);
+    await published.promise;
+    app.parser.feed(['Log: GameController dispose called', 'Log: GetPersonaName Charlie']);
+    await vi.waitFor(() =>
+      expect(app.snapshot().deckAlert).toMatchObject({ from: 'Bob', to: 'Charlie' }),
+    );
+    const alert = app.snapshot().deckAlert;
+    gate.resolve();
+    await publishing.mock.results[0]!.value;
+    expect(app.snapshot().deckAlert).toEqual(alert);
+    await expect(
+      app.invoke('decks.switch', { action: 'restore', packageRevision: 'obsolete' }),
+    ).rejects.toThrow(/backup changed/i);
+    expect(app.snapshot().deckAlert).toEqual(alert);
+  });
+
+  it('checks a reminder backup revision when a queued restore actually starts', async () => {
+    const { service, session, decks, backups } = await deckFixture();
+    const alert = await service.switchAlert(session);
+    expect(alert?.packageRevision).toBeTruthy();
+    await writeFile(join(decks, 'Bob.dek'), 'Bob');
+    const gate = deferred<{ decks: string; backups: string; found: boolean }>();
+    releases.push(() => gate.resolve({ decks, backups, found: true }));
+    const paths = vi.spyOn(service, 'paths').mockReturnValueOnce(gate.promise);
+    const publishing = service.onMatchStart(session);
+    await vi.waitFor(() => expect(paths).toHaveBeenCalledTimes(1));
+    const restoring = expect(
+      service.switchAction('restore', alert!.packageRevision),
+    ).rejects.toThrow(/backup changed/i);
+    gate.resolve({ decks, backups, found: true });
+    await publishing;
+    await restoring;
+    expect(await readFile(join(decks, 'Bob.dek'), 'utf8')).toBe('Bob');
+    expect(await readdir(decks)).toEqual(['Bob.dek']);
+    const current = await service.switchAlert({
+      ...session,
+      localName: 'Charlie',
+      accountKey: 'persona:Charlie',
+    });
+    await writeFile(join(decks, 'Bob.dek'), 'Edited');
+    await service.switchAction('restore', current!.packageRevision);
+    expect(await readFile(join(decks, 'Bob.dek'), 'utf8')).toBe('Bob');
+  });
+
+  it('restores a legacy backup through its stable reminder identity', async () => {
+    const { service, session, decks } = await deckFixture();
+    const alert = await service.switchAlert(session);
+    expect(alert?.packageRevision).toMatch(/^legacy:/);
+    await service.switchAction('restore', alert!.packageRevision);
+    expect(await readFile(join(decks, 'fixture.dek'), 'utf8')).toBe('deck');
+    expect(service.currentPackageRevision()).toBe(alert!.packageRevision);
   });
 
   it('SM-05: losing the selected log clears live status', async () => {

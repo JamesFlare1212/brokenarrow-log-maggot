@@ -12,6 +12,8 @@ jobs:
   check:
     runs-on: windows-latest
     timeout-minutes: 20
+    env:
+      electron_config_cache: ${{ github.workspace }}/.test-data/electron-cache
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -24,8 +26,21 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Restore Electron downloads
+        id: electron-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.electron_config_cache }}
+          key: electron-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: electron-${{ runner.os }}-${{ runner.arch }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Save Electron downloads
+        if: steps.electron-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.electron_config_cache }}
+          key: ${{ steps.electron-cache.outputs.cache-primary-key }}
       - name: Check formatting
         run: pnpm format:check
       - name: Run application checks and production builds

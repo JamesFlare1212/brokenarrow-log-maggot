@@ -35,6 +35,34 @@ uses its own bounded memory queue, request timeout, and retry limits, described 
 [anonymous analytics](analytics.md). No analytics transport setting or administrative
 credential belongs in `app.config.json`.
 
+## CI Electron installation
+
+Both validation and Windows packaging run the same root `postinstall` wrapper,
+`scripts/install-electron.mjs`. It invokes the pinned Electron package's own
+`install.js` through Node without a shell. Already-installed runtimes return
+immediately. A failed install retries after 5 and 15 seconds, for at most three
+attempts; signal termination is not retried and permanent failures remain fatal.
+Installer output is retained, including checksum, download, and extraction errors.
+
+The workflows set `electron_config_cache` to
+`${{ github.workspace }}/.test-data/electron-cache`. This is Electron's archive
+cache, separate from setup-node's pnpm store cache. Cache keys include runner OS,
+architecture, and the pnpm lockfile; restore prefixes allow reuse of unchanged
+runtime archives after unrelated dependency updates. The official installer
+continues to validate the selected artifact against its bundled checksums.
+
+The cache is saved directly after dependency installation, before tests/builds,
+so an unrelated later failure does not require another runtime download. Cold
+cache runs still use the bounded retry policy. This policy handles transient
+download failures such as the `TypeError: fetch failed` in
+[validation run 42840527856](https://github.com/JamesFlare1212/brokenarrow-log-maggot/actions/runs/42840527856);
+it does not suppress persistent installation failures or bypass
+application checks. Application BATrace network settings are independent.
+
+Run `pnpm run postinstall` to retry only runtime setup after an installation
+failure. The installer policy and real child-process exit handling are covered
+by `pnpm exec vitest run tests/install-electron.test.ts` without network access.
+
 ## Cache
 
 - `ttlMs`: cache freshness durations in milliseconds for player information and

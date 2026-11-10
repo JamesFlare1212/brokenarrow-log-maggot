@@ -102,7 +102,10 @@ monotonically per controller so late cleanup cannot delete a replacement recordi
 
 Recording settings use the shared AppProvider autosave queue. Directory text is
 staged before blur, failed edits survive tab replacement, and migration preparation
-is retained with a failed patch. Cross-device migration records verified source
+is retained with a failed patch. Staged directory text is held outside automatic
+save batches until blur, return, recording test, or teardown explicitly commits
+it. Unrelated slider saves keep the directory input enabled and never trigger its
+migration. Cross-device migration records verified source
 and destination identity plus SHA-256 content before source deletion. A locked
 source can retry after restart; unrelated or modified destinations remain errors.
 See the [state machine repair contracts](state-machine-risk-audit.md) for detailed

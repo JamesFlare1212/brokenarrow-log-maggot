@@ -265,10 +265,16 @@ export class Application {
         await platform.openPath(kind === 'decks' ? p.decks : p.backups);
         return null;
       },
-      'decks.switch': async ({ action }) => {
-        await this.decks.switchAction(action);
-        this.deckAlert = null;
-        this.event({ type: 'decks', alert: null });
+      'decks.switch': async ({ action, packageRevision }) => {
+        const alert = this.deckAlert;
+        if (!alert || !packageRevision || alert.packageRevision !== packageRevision) {
+          if (action === 'restore')
+            throw new Error('Deck backup changed; reopen the account-switch reminder');
+          return null;
+        }
+        await this.decks.switchAction(action, packageRevision);
+        if (this.deckAlert === alert) this.deckAlert = null;
+        this.event({ type: 'decks', alert: this.deckAlert });
         return null;
       },
       'replays.list': () => this.files.list(),
@@ -542,10 +548,16 @@ export class Application {
       this.fire(
         this.decks
           .onMatchStart(this.parser.snapshot())
-          .then(() => {
-            if (this.parser.snapshot().current?.sessionId !== event.match.sessionId) return;
-            this.deckAlert = null;
-            this.event({ type: 'decks', alert: null });
+          .then((revision) => {
+            if (
+              !revision ||
+              this.disposed ||
+              this.closing ||
+              this.decks.currentPackageRevision() !== revision
+            )
+              return;
+            if (this.deckAlert?.packageRevision !== revision) this.deckAlert = null;
+            this.event({ type: 'decks', alert: this.deckAlert });
           })
           .catch((e) => this.event({ type: 'error', message: errorMessage(e) }, e)),
       );
@@ -605,7 +617,11 @@ export class Application {
       this.decks
         .switchAlert(session, isCurrentSession)
         .then((alert) => {
-          if (alert && isCurrentSession()) {
+          if (
+            alert &&
+            isCurrentSession() &&
+            alert.packageRevision === this.decks.currentPackageRevision()
+          ) {
             this.deckAlert = alert;
             this.event({ type: 'decks', alert });
           }
