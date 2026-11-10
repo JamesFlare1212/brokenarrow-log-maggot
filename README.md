@@ -109,26 +109,28 @@ of Playwright's Chromium. Tests override bootstrap preferences per page and do n
 save theme changes. The submenu suite verifies painted pointer access, selection,
 keyboard navigation, Escape, and focus return in both themes at 40%/100% opacity.
 
-Palette hover regressions sample full viewport frames from pointer entry through
-the hint delay, visible hint, and dismissal. Preview content and the lower row
+Palette hover regressions use Playwright's paused browser clock to advance the
+tooltip delay while capturing real Chromium viewport frames. Preview content and the lower row
 plus its preceding gap are compared from the same frame. Ordinary entry, rapid
 re-entry, and direct movement within and between cards run in both themes at
 40%, 50%, and 100% glass opacity, at device scale factors 1 and 1.5. The tests
-record actual capture intervals and assert stable scroll and stationary hints,
+record browser-time offsets and real PNG capture durations, and assert stable scroll and stationary hints,
 without saving appearance preferences.
 
 Palette sampling verifies that every frame belongs to the same pointer entry and
-that the final captured hint matches the active swatch. Ordinary entry must also
-capture the phase before the hint appears. Capture latency remains diagnostic;
-the CI runner's first-sample scheduling time is not an application performance
-budget. Pixel, geometry, and tooltip-state assertions still apply to every sample.
+that the final captured hint matches the active swatch. Ordinary entry is checked
+at 0/80/200/380ms before the 400ms tooltip delay and at 520/720ms after it. Host
+scheduling, screenshot capture, and tracing cannot consume this controlled delay.
+PNG capture latency remains diagnostic. Pixel, geometry, and tooltip-state
+assertions still apply to every sample.
 
 Keyboard-tooltip checks scroll the information button into view and drain queued
 scroll frames before focusing it: Radix intentionally dismisses a tooltip when an
 ancestor scrolls. Short-window cases also verify that Escape dismisses the hint
 without closing the profile dialog. Rapid palette re-entry measures card geometry
-before leaving the swatch, keeping host preparation outside the strict 300ms
-pointer-exit-to-entry window. These checks use no test retries or extended waits.
+before leaving the swatch and advances browser time by 1ms before re-entering,
+verifying the 300ms skip-delay window independently of host latency. These checks
+use no test retries or extended wall-clock waits.
 
 | 命令                | 用途                                                                      |
 | ------------------- | ------------------------------------------------------------------------- |

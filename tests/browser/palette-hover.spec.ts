@@ -91,6 +91,7 @@ for (const dpr of [1, 1.5]) {
         }, testInfo) => {
           const rendererErrors: string[] = [];
           page.on('pageerror', (error) => rendererErrors.push(error.message));
+          await page.clock.install();
           await page.route('**/__fixtures/rpc', async (route) => {
             if (route.request().postDataJSON().method !== 'app.bootstrap') return route.continue();
             const response = await route.fetch();
@@ -120,6 +121,8 @@ for (const dpr of [1, 1.5]) {
           await grid.evaluate((node) =>
             node.scrollIntoView({ block: 'center', behavior: 'instant' }),
           );
+          // Native captures keep rendering while tooltip timers wait for explicit advancement.
+          await page.clock.pauseAt(Date.now() + 60_000);
           await page.evaluate(() => {
             document.addEventListener(
               'pointerover',
@@ -165,7 +168,7 @@ for (const dpr of [1, 1.5]) {
             ['direct-next-card', 'orange', 1],
             ['direct-selected-card', 'dark', 0],
           ] as const) {
-            if (interaction === 'ordinary-entry') await page.waitForTimeout(350);
+            if (interaction === 'ordinary-entry') await page.clock.runFor(350);
             const card = page.locator(`[data-theme-library-card=${scheme}]`);
             const box = (await card.boundingBox())!;
             const swatch = (await card
@@ -184,6 +187,7 @@ for (const dpr of [1, 1.5]) {
               // Leave Radix's hover grace area before waiting for dismissal.
               await page.mouse.move(out.x + 1, out.y - 1);
               await expect(tooltip).toHaveCount(0);
+              await page.clock.runFor(1);
             }
             // Coordinates avoid locator hover's automatic scrolling during a paint trial.
             await page.mouse.move(swatch.x + swatch.width / 2, swatch.y + swatch.height / 2);
@@ -200,9 +204,11 @@ for (const dpr of [1, 1.5]) {
             for (const offset of [0, 80, 200, 380, 520, 720]) {
               const now = await page.evaluate(() => performance.now());
               if (entered.entry! + offset > now)
-                await page.waitForTimeout(entered.entry! + offset - now);
+                await page.clock.runFor(entered.entry! + offset - now);
               const before = await paintState(page);
+              const captureStarted = Date.now();
               const frame = await screenshot();
+              const captureMs = Date.now() - captureStarted;
               const after = await paintState(page);
               const differences = await pixelDifferences(page, baseline, frame, {
                 neighbors: lowerRow,
@@ -211,6 +217,7 @@ for (const dpr of [1, 1.5]) {
               frames.push({
                 offset,
                 elapsed: before.at - entered.entry!,
+                captureMs,
                 before,
                 after,
                 differences,
@@ -232,6 +239,15 @@ for (const dpr of [1, 1.5]) {
               }
               for (const difference of Object.values(differences))
                 expect(difference.changed, JSON.stringify(frames.at(-1))).toBe(0);
+              if (interaction === 'ordinary-entry') {
+                if (offset < 400) {
+                  expect(before.hint).toBeNull();
+                  expect(after.hint).toBeNull();
+                } else {
+                  expect(before.hint).not.toBeNull();
+                  expect(after.hint).not.toBeNull();
+                }
+              }
             }
             // Capture latency depends on the runner; verify the observed interaction phases.
             expect(
