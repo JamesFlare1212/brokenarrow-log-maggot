@@ -14,6 +14,7 @@ export default defineConfig({
     channel: process.env.BA_BROWSER_CHANNEL || undefined,
     viewport: { width: 1000, height: 700 },
     screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
   },
   webServer: {
     command: 'pnpm dev:web',

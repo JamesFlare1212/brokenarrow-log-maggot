@@ -57,16 +57,16 @@ const analysis: MaggotReport = {
   })),
 };
 
-for (const [locale, mode, width] of [
-  ['zh', 'dark', 1280],
-  ['en', 'light', 1280],
-  ['zh', 'light', 900],
-  ['en', 'dark', 900],
+for (const [locale, mode, width, height] of [
+  ['zh', 'dark', 1280, 900],
+  ['en', 'light', 1280, 700],
+  ['zh', 'light', 900, 900],
+  ['en', 'dark', 900, 700],
 ] as const) {
-  test(`${locale} scale card at ${width}px in ${mode} mode preserves tooltip and endpoint readability`, async ({
+  test(`${locale} scale card at ${width}x${height} in ${mode} mode preserves tooltip and endpoint readability`, async ({
     page,
   }) => {
-    await page.setViewportSize({ width, height: 900 });
+    await page.setViewportSize({ width, height });
     let index = 7.5;
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -116,20 +116,38 @@ for (const [locale, mode, width] of [
     const scope = label('maggotSample', { n: 12 });
     await expect(card.getByText(scope, { exact: true })).toHaveCount(0);
     const info = card.getByRole('button', { name: label('maggotSampleInfo') });
+    // Radix dismisses hints on ancestor scroll, so finish scrolling before testing focus.
+    await info.evaluate((button) =>
+      button.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: 'instant',
+      }),
+    );
+    await info.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+    await expect(info).toBeInViewport({ ratio: 1 });
     await info.focus();
+    await expect(info).toBeFocused();
     const tooltip = page.locator('[data-slot=tooltip-content]');
     await expect(tooltip).toBeVisible();
     await expect(tooltip).toContainText(scope);
     await page.keyboard.press('Escape');
     await expect(tooltip).toHaveCount(0);
-    const height = (await card.boundingBox())!.height;
+    await expect(dialog).toBeVisible();
+    const cardHeight = (await card.boundingBox())!.height;
     await info.click();
     const pinned = page.locator('[data-slot=popover-content]');
     await expect(pinned).toBeVisible();
     await expect(pinned).toContainText(scope);
-    expect((await card.boundingBox())!.height).toBe(height);
+    expect((await card.boundingBox())!.height).toBe(cardHeight);
     await page.keyboard.press('Escape');
     await expect(pinned).toHaveCount(0);
+    await expect(dialog).toBeVisible();
     for (index of [0, 10]) {
       await dialog.getByRole('button', { name: label('refresh'), exact: true }).click();
       const scale = card.getByRole('img', {

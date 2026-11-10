@@ -83,8 +83,9 @@ unavailable in the browser.
 Both validation and Windows release CI run `pnpm format:check` and `pnpm check`.
 The shared `pnpm check` entry point covers type checking, UI design checks,
 regression tests, and all three production builds. Both workflows also install
-Playwright Chromium and run `pnpm test:ui`; failed browser tests upload their
-artifacts from `.test-data/playwright/`. Desktop smoke tests remain separate:
+Playwright Chromium and run `pnpm test:ui`; failed browser tests upload screenshots
+and retained Playwright traces from `.test-data/playwright/`. Open a downloaded
+trace with `pnpm exec playwright show-trace <path-to-trace.zip>`. Desktop smoke tests remain separate:
 validation CI tests the built application, while release CI tests the packaged
 application, each in normal and real-data modes.
 
@@ -115,6 +116,13 @@ re-entry, and direct movement within and between cards run in both themes at
 40%, 50%, and 100% glass opacity, at device scale factors 1 and 1.5. The tests
 record actual capture intervals and assert stable scroll and stationary hints,
 without saving appearance preferences.
+
+Keyboard-tooltip checks scroll the information button into view and drain queued
+scroll frames before focusing it: Radix intentionally dismisses a tooltip when an
+ancestor scrolls. Short-window cases also verify that Escape dismisses the hint
+without closing the profile dialog. Rapid palette re-entry measures card geometry
+before leaving the swatch, keeping host preparation outside the strict 300ms
+pointer-exit-to-entry window. These checks use no test retries or extended waits.
 
 | 命令                | 用途                                                                      |
 | ------------------- | ------------------------------------------------------------------------- |

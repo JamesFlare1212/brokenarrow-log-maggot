@@ -166,12 +166,6 @@ for (const dpr of [1, 1.5]) {
             ['direct-selected-card', 'dark', 0],
           ] as const) {
             if (interaction === 'ordinary-entry') await page.waitForTimeout(350);
-            if (interaction === 'rapid-reentry') {
-              await page.mouse.move(out.x, out.y, { steps: 2 });
-              await page.mouse.move(out.x + 1, out.y - 1);
-              await expect(tooltip).toHaveCount(0);
-              leftAt = (await paintState(page)).exit!;
-            }
             const card = page.locator(`[data-theme-library-card=${scheme}]`);
             const box = (await card.boundingBox())!;
             const swatch = (await card
@@ -184,11 +178,23 @@ for (const dpr of [1, 1.5]) {
               width: Math.floor(box.width - 16),
               height: Math.floor(box.height - 16),
             };
+            // Measure before leaving so host round trips do not consume the re-entry window.
+            if (interaction === 'rapid-reentry') {
+              await page.mouse.move(out.x, out.y, { steps: 2 });
+              // Leave Radix's hover grace area before waiting for dismissal.
+              await page.mouse.move(out.x + 1, out.y - 1);
+              await expect(tooltip).toHaveCount(0);
+            }
             // Coordinates avoid locator hover's automatic scrolling during a paint trial.
             await page.mouse.move(swatch.x + swatch.width / 2, swatch.y + swatch.height / 2);
             const entered = await paintState(page);
             expect(entered.entry).not.toBeNull();
-            if (interaction === 'rapid-reentry') expect(entered.entry! - leftAt).toBeLessThan(300);
+            if (interaction === 'rapid-reentry') {
+              expect(entered.exit).not.toBeNull();
+              leftAt = entered.exit!;
+              expect(entered.entry!).toBeGreaterThan(leftAt);
+              expect(entered.entry! - leftAt).toBeLessThan(300);
+            }
             const frames = [];
             let savedVisible = false;
             for (const offset of [0, 80, 200, 380, 520, 720]) {
