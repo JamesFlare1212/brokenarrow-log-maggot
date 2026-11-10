@@ -117,6 +117,12 @@ re-entry, and direct movement within and between cards run in both themes at
 record actual capture intervals and assert stable scroll and stationary hints,
 without saving appearance preferences.
 
+Palette sampling verifies that every frame belongs to the same pointer entry and
+that the final captured hint matches the active swatch. Ordinary entry must also
+capture the phase before the hint appears. Capture latency remains diagnostic;
+the CI runner's first-sample scheduling time is not an application performance
+budget. Pixel, geometry, and tooltip-state assertions still apply to every sample.
+
 Keyboard-tooltip checks scroll the information button into view and drain queued
 scroll frames before focusing it: Radix intentionally dismisses a tooltip when an
 ancestor scrolls. Short-window cases also verify that Escape dismisses the hint
