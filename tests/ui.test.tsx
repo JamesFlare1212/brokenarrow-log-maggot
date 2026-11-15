@@ -749,7 +749,7 @@ describe('first-launch analytics consent', () => {
       );
       mounted.unmount();
       render(<App />, { wrapper: wrapper(native.api) });
-      await screen.findByText('监听中');
+      await screen.findByRole('main', { name: '总览' });
       expect(
         screen.queryByRole('dialog', { name: translate('zh', 'analyticsConsentTitle') }),
       ).toBeNull();
@@ -835,7 +835,7 @@ describe('settings pages and automatic saving', () => {
       'external.open': () => null,
     });
     render(<App />, { wrapper: wrapper(native.api) });
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     expect(screen.queryByRole('button', { name: '查看更新' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     const settings = within(await screen.findByRole('main', { name: '设置' }));
@@ -862,7 +862,7 @@ describe('settings pages and automatic saving', () => {
 
   async function openSettings(native: ReturnType<typeof nativeFixture>) {
     render(<App />, { wrapper: wrapper(native.api) });
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     return within(await screen.findByRole('main', { name: '设置' }));
   }
@@ -1008,7 +1008,7 @@ describe('settings pages and automatic saving', () => {
   it('opens a full page, uses addressable tabs, and returns to the previous page with its input intact', async () => {
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     // Include the players page in this fixture's navigation.
     act(() =>
       native.emit({
@@ -1561,7 +1561,7 @@ describe('settings pages and automatic saving', () => {
   it('persists sidebar collapse and shares it between the workspace and settings', async () => {
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     const workspaceToggle = screen.getByRole('button', { name: '折叠侧边栏' });
     expect(workspaceToggle.closest('.topbar')).not.toBeNull();
     expect(workspaceToggle.getAttribute('aria-controls')).toBe('workspace-sidebar');
@@ -1960,7 +1960,7 @@ describe('recording settings automatic saving', () => {
 describe('game log directory detection', () => {
   async function settings(native: ReturnType<typeof nativeFixture>) {
     render(<App />, { wrapper: wrapper(native.api) });
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     const page = within(await screen.findByRole('main', { name: '设置' }));
     fireEvent.click(screen.getByRole('tab', { name: '游戏连接' }));
@@ -2211,6 +2211,50 @@ describe('request and native event ordering', () => {
 });
 
 describe('user interaction regressions', () => {
+  it.each(['zh', 'en'] as const)(
+    'starts every workspace page with its content instead of a heading banner in %s',
+    async (lang) => {
+      const initial = structuredClone(fixtureBootstrap);
+      initial.config.lang = lang;
+      initial.config.panelOrder = [
+        'current',
+        'radar',
+        'players',
+        'archive',
+        'replays',
+        'decks',
+        'bans',
+      ];
+      initial.config.hiddenPanels = [];
+      const native = nativeFixture(initial);
+      render(<App />, { wrapper: wrapper(native.api) });
+      const navigation = within(
+        await screen.findByRole('navigation', { name: translate(lang, 'workspaceNav') }),
+      );
+      for (const panel of initial.config.panelOrder) {
+        const label = translate(lang, panel === 'current' ? 'overview' : panel);
+        fireEvent.click(navigation.getByRole('button', { name: label }));
+        const workspace = await screen.findByRole('main', { name: label });
+        const content = workspace.querySelector('#main-content')!;
+        expect(content.getAttribute('aria-label')).toBe(label);
+        expect(content.hasAttribute('aria-labelledby')).toBe(false);
+        expect(content.querySelector('.page-heading, #page-title, [data-log-status]')).toBeNull();
+        expect(within(workspace).queryByRole('heading', { level: 1 })).toBeNull();
+        expect(within(workspace).queryByText(translate(lang, `pageHint.${panel}`))).toBeNull();
+        expect(within(workspace).queryByText(translate(lang, 'listening'))).toBeNull();
+        expect(
+          content.querySelector(':scope > :not([hidden])')?.classList.contains(`page-${panel}`),
+        ).toBe(true);
+        expect(
+          within(workspace).getByRole('navigation', { name: translate(lang, 'breadcrumb') })
+            .textContent,
+        ).toContain(label);
+        fireEvent.click(screen.getByRole('link', { name: translate(lang, 'skipContent') }));
+        expect(document.activeElement).toBe(content);
+      }
+      expect(native.backend.watcher.listening).toBe(true);
+    },
+  );
   it('sends the displayed backup identity when restoring a deck reminder', async () => {
     const initial = bootstrapForApp();
     initial.deckAlert = {
@@ -3054,7 +3098,7 @@ describe('user interaction regressions', () => {
         <App />
       </AppProvider>,
     );
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     act(() => native.emit({ type: 'bans', list: [ban], newly: [ban], revision: 1 }));
     const alert = screen.getByRole('dialog', { name: translate('zh', 'banAlert') });
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
@@ -3070,14 +3114,14 @@ describe('user interaction regressions', () => {
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 
-  it('changes language in settings while preserving the listening state and live status indicator', async () => {
+  it('changes workspace labels in settings without restoring the removed listening status banner', async () => {
     const native = nativeFixture(bootstrapForApp());
     const view = render(
       <AppProvider api={native.api}>
         <App />
       </AppProvider>,
     );
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     await screen.findByRole('main', { name: '设置' });
     fireEvent.click(screen.getByRole('tab', { name: '常规' }));
@@ -3090,13 +3134,10 @@ describe('user interaction regressions', () => {
     fireEvent.change(language, { target: { value: 'en' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Settings' })).toBeNull());
-    await screen.findByText('Listening');
+    await screen.findByRole('main', { name: 'Overview' });
+    expect(screen.queryByText('Listening')).toBeNull();
     expect(screen.queryByText('Not listening')).toBeNull();
-    expect(
-      view.container
-        .querySelector('[data-log-status] [data-slot=badge]')
-        ?.getAttribute('data-variant'),
-    ).toBe('success');
+    expect(view.container.querySelector('[data-log-status]')).toBeNull();
     expect(document.documentElement.lang).toBe('en');
     expect(native.backend.config.lang).toBe('en');
     expect(native.backend.watcher.listening).toBe(true);
@@ -3120,7 +3161,7 @@ describe('user interaction regressions', () => {
         <App />
       </AppProvider>,
     );
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     fireEvent.click(screen.getByRole('button', { name: '设置' }));
     const dialog = await screen.findByRole('main', { name: '设置' });
     fireEvent.click(screen.getByRole('tab', { name: '导航' }));
@@ -3134,7 +3175,7 @@ describe('user interaction regressions', () => {
         .map((button) => button.textContent?.trim()),
     ).toEqual([translate('zh', 'overview'), '卡组工具', translate('zh', 'players')]);
     fireEvent.click(within(navigation).getByRole('button', { name: '卡组工具' }));
-    expect(screen.getByRole('heading', { level: 1, name: '卡组工具' })).toBeTruthy();
+    expect(screen.getByRole('main', { name: '卡组工具' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '卡组工具 展开' })).toBeNull();
     expect(await screen.findByRole('group', { name: '当前卡组' })).toBeTruthy();
     expect(screen.getByRole('group', { name: '备份卡组' })).toBeTruthy();
@@ -3216,7 +3257,7 @@ describe('user interaction regressions', () => {
     view.unmount();
     vi.stubGlobal('innerWidth', 390);
     view = render(<App />, { wrapper: wrapper(native.api) });
-    await screen.findByRole('heading', { name: '对局工作台' });
+    await screen.findByRole('main', { name: '总览' });
     fireEvent.click(screen.getByRole('button', { name: '打开导航' }));
     const dialog = within(screen.getByRole('dialog', { name: translate('zh', 'workspaceNav') }));
     const navigation = within(dialog.getByRole('navigation', { name: '工作空间' }));
@@ -3277,7 +3318,7 @@ describe('user interaction regressions', () => {
         <App />
       </AppProvider>,
     );
-    await screen.findByRole('heading', { level: 1, name: '对局档案' });
+    await screen.findByRole('main', { name: '对局档案' });
     const scroll = document.querySelector<HTMLElement>('.workspace-scroll')!;
     fireEvent.scroll(scroll, { target: { scrollTop: 180 } });
     const navigation = screen.getByRole('navigation', { name: '工作空间' });
@@ -3316,12 +3357,12 @@ describe('user interaction regressions', () => {
     const list = vi.fn(() => [bannedPlayer()]);
     const native = nativeFixture(initial, { 'bans.list': list });
     render(<App />, { wrapper: wrapper(native.api) });
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     expect(screen.queryByRole('group', { name: '封禁追踪' })).toBeNull();
     expect(list).not.toHaveBeenCalled();
     const nav = within(screen.getByRole('navigation', { name: '工作空间' }));
     fireEvent.click(nav.getByRole('button', { name: '封禁追踪' }));
-    expect(screen.getByRole('heading', { level: 1, name: '封禁追踪' })).toBeTruthy();
+    expect(screen.getByRole('main', { name: '封禁追踪' })).toBeTruthy();
     await screen.findByRole('button', { name: /Banned Arrow/ });
     expect(list).toHaveBeenCalledTimes(1);
     fireEvent.click(nav.getByRole('button', { name: '总览' }));
@@ -3339,7 +3380,7 @@ describe('user interaction regressions', () => {
     }));
     const native = nativeFixture(bootstrap, { 'session.query': query });
     render(<App />, { wrapper: wrapper(native.api) });
-    await screen.findByText('监听中');
+    await screen.findByRole('main', { name: '总览' });
     expect(screen.getByRole('button', { name: '刷新粗查' })).toBeTruthy();
     const overviewPrevious = screen.getByRole('button', { name: '上一局' });
     await waitFor(() => expect(overviewPrevious.hasAttribute('disabled')).toBe(false));
@@ -3348,7 +3389,7 @@ describe('user interaction regressions', () => {
     const nav = within(screen.getByRole('navigation', { name: '工作空间' }));
     fireEvent.click(nav.getByRole('button', { name: '蛐雷达' }));
     expect(location.hash).toBe('#radar');
-    expect(screen.getByRole('heading', { level: 1, name: '蛐雷达' })).toBeTruthy();
+    expect(screen.getByRole('main', { name: '蛐雷达' })).toBeTruthy();
     const previous = await screen.findByRole('button', { name: '上一局' });
     await waitFor(() => expect(previous.hasAttribute('disabled')).toBe(false));
     fireEvent.click(previous);
@@ -3372,7 +3413,7 @@ describe('user interaction regressions', () => {
     history.replaceState(null, '', '#radar');
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
-    expect(await screen.findByRole('heading', { level: 1, name: '蛐雷达' })).toBeTruthy();
+    expect(await screen.findByRole('main', { name: '蛐雷达' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '刷新粗查' })).toBeTruthy();
   });
 

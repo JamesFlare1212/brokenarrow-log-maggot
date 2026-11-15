@@ -143,7 +143,7 @@ export function ReportView({
           </CardAction>
         </CardHeader>
       )}
-      <ReportContent className="report-content flex min-w-0 flex-col gap-4 @container/profile-overview [.report-embedded_&]:p-0">
+      <ReportContent className="report-content flex min-w-0 flex-col gap-(--content-gap) @container/profile-overview [.report-embedded_&]:p-0">
         {report?.stale && (
           <Notice>
             {t('stale')} · {formatTime(report.updatedAt, locale)}

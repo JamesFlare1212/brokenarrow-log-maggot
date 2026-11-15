@@ -23,7 +23,7 @@ import { TooltipButton } from '../components/Tooltip';
 import type { Panel } from '@ba/contracts';
 import { useApp } from './state';
 import { useI18n } from '../hooks/useI18n';
-import { Badge, Button, Loading, Notice } from '../components/ui';
+import { Button, Loading, Notice } from '../components/ui';
 import { BatraceStatus } from '../components/BatraceStatus';
 import { PageToolbar } from '../components/PageToolbar';
 import {
@@ -180,17 +180,7 @@ export function App() {
     decks: <DecksPanel />,
     bans: <BansPanel />,
   };
-  const status =
-    state.watcher.error ||
-    t(
-      state.watcher.recovering
-        ? 'recovering'
-        : state.watcher.listening
-          ? 'listening'
-          : 'notListening',
-    );
-  const isListening = state.watcher.listening && !state.watcher.error;
-  const title = t(page === 'current' ? 'commandCenter' : page);
+  const title = t(panelLabelKey(page));
   const account = state.session.localName || t('noAccount');
   const collapsed = settings.draft?.sidebarCollapsed ?? state.config.sidebarCollapsed;
   return (
@@ -234,6 +224,7 @@ export function App() {
       </Sidebar>
       <SidebarInset
         className="workspace flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden @container/workspace"
+        aria-label={title}
         hidden={Boolean(settingsTab)}
       >
         <PageToolbar className="topbar">
@@ -289,23 +280,8 @@ export function App() {
             )}
             ref={main}
             tabIndex={-1}
-            aria-labelledby="page-title"
+            aria-label={title}
           >
-            <header className="page-heading flex items-start justify-between gap-4 shrink-0 [&_h1]:text-[1.5rem] [&_h1]:font-semibold [&_h1]:tracking-[-0.025em] [&_h1]:leading-[1.3] [&_h1]:text-balance [&_p]:max-w-[65ch] [&_p]:mt-1.5 [&_p]:text-muted-foreground [&_p]:text-[0.875rem] [&_p]:leading-[1.5] viewport-max-767:gap-2 viewport-max-479:flex-wrap workspace-heading grid grid-cols-[minmax(0,_1fr)_auto] [#main-content:has(>_.page-archive:not([hidden])>.match-detail-page)>&]:hidden">
-              <div className="min-w-0">
-                <h1 id="page-title">{title}</h1>
-                <p>{t(`pageHint.${page}`)}</p>
-              </div>
-              <div
-                className="page-heading-status flex flex-wrap items-center gap-2 pt-1.5 max-w-[min(100%,_22rem)] [&_[data-slot='badge']]:whitespace-normal [&_[data-slot='badge']]:wrap-anywhere viewport-max-767:shrink-0 viewport-max-479:pt-1 viewport-max-479:[&_[data-slot='badge']]:max-w-full"
-                role="status"
-                data-log-status
-              >
-                <Badge tone={isListening ? 'success' : state.watcher.error ? 'danger' : 'muted'}>
-                  {status}
-                </Badge>
-              </div>
-            </header>
             {!state.config.logDir && page === 'current' && (
               <Notice>
                 <span>{t('noDirectory')}</span>

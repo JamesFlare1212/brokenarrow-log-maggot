@@ -30,7 +30,7 @@ export function MapPerformanceGrid({
 
   return (
     <ul
-      className="map-performance-grid grid grid-cols-[repeat(auto-fit,_minmax(min(100%,_16rem),_1fr))] gap-3 [&>li]:min-w-0"
+      className="map-performance-grid grid grid-cols-[repeat(auto-fit,_minmax(min(100%,_16rem),_1fr))] gap-(--content-gap) [&>li]:min-w-0"
       aria-label={t('mapStatistics')}
       aria-busy={pending}
     >

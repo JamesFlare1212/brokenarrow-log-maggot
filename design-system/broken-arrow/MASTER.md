@@ -86,18 +86,18 @@ The token chain is theme primitives (`--theme-*`), semantic roles (`--card`,
 `--foreground`, `--ring`), and shared glass tokens. Components consume tokens;
 feature pages arrange components without redefining their surface treatment.
 
-| Token or property   | Light                                                               | Dark                                  |
-| ------------------- | ------------------------------------------------------------------- | ------------------------------------- |
-| Fill                | `color-mix(in srgb, var(--card) var(--glass-opacity), transparent)` | Same formula with the dark card color |
-| Default opacity     | 50%                                                                 | 50%                                   |
-| Floating opacity    | `80% + 20% × glass opacity`; 90% by default                         | Same formula with the dark card color |
-| Tooltip opacity     | Global glass opacity; 50% by default                                | Same formula with the dark card color |
-| Border              | 1px; foreground mixed at 10%                                        | 1px; white at 8%                      |
-| Backdrop blur       | 12px                                                                | 16px                                  |
-| Backdrop saturation | 1.14                                                                | 1.08                                  |
-| Outer shadow        | `0 1px 2px rgb(0 0 0 / 0.05)`                                       | `0 1px 2px rgb(0 0 0 / 0.16)`         |
-| Card radius         | `--radius-xl`, currently 14px                                       | Same token                            |
-| Card spacing        | 16px default; 12px for `size="sm"`                                  | Same sizes                            |
+| Token or property     | Light                                                               | Dark                                  |
+| --------------------- | ------------------------------------------------------------------- | ------------------------------------- |
+| Fill                  | `color-mix(in srgb, var(--card) var(--glass-opacity), transparent)` | Same formula with the dark card color |
+| Default opacity       | 50%                                                                 | 50%                                   |
+| Floating opacity      | `80% + 20% × glass opacity`; 90% by default                         | Same formula with the dark card color |
+| Tooltip opacity       | Global glass opacity; 50% by default                                | Same formula with the dark card color |
+| Border                | 1px; foreground mixed at 10%                                        | 1px; white at 8%                      |
+| Backdrop blur         | 12px                                                                | 16px                                  |
+| Backdrop saturation   | 1.14                                                                | 1.08                                  |
+| Outer shadow          | `0 1px 2px rgb(0 0 0 / 0.05)`                                       | `0 1px 2px rgb(0 0 0 / 0.16)`         |
+| Card radius           | `--radius-xl`, currently 14px                                       | Same token                            |
+| Card internal spacing | 16px default; 12px for `size="sm"`                                  | Same sizes                            |
 
 The base radius is `--radius: 0.625rem`; the radius scale lives in `@theme inline`.
 Use component size variants rather than copying resolved pixel values into pages.
@@ -285,11 +285,17 @@ required by the current interface.
 
 ## Composition and stable layout
 
-- Workspace pages share a visible title, a short localized purpose description,
-  and a log-listening status Badge. Settings categories use the same heading scale
-  and description spacing; their toolbar labels remain breadcrumbs rather than
-  duplicate headings. Dedicated archive details own their heading and hide the
-  workspace heading. Long status messages wrap inside the available width.
+- Card-to-card spacing is a fixed 16px in both axes throughout workspace pages,
+  settings, player reports, and dialogs, including narrow layouts. Use the shared
+  `--content-gap: 16px` token for card grids and stacks; do not override it at
+  viewport or container breakpoints. Card padding, header/content spacing, form
+  controls, and compact list rows retain their independent density settings.
+- Overview, Radar, Players, Archive, Replays, Decks, and Bans start directly with
+  their content below the toolbar. Do not add a shared page-title, purpose-description,
+  or log-listening status banner. The toolbar breadcrumb identifies the current
+  page; the workspace landmark and focus target retain localized accessible names.
+  Settings categories retain their headings and descriptions, and dedicated archive
+  details own their heading.
 - Settings purpose descriptions appear once. Content Cards use specific section
   titles, and the navigation editor shares the workspace's localized panel labels.
   Workspace and Settings navigation retain a narrow active marker independently
@@ -465,7 +471,7 @@ required by the current interface.
   track below the summary metrics. Loading and loaded content share the same
   responsive geometry and reduced-motion behavior; failures keep the retry notice.
 - Map performance uses the shared `MapPerformanceGrid` in player records and
-  report details. Arrange small glass Cards in a responsive grid with 12px gaps
+  report details. Arrange small glass Cards in a responsive grid with 16px gaps
   and a 16rem minimum column width that shrinks to fit narrow containers. Sort
   maps by match count descending without changing the report data. Each card has
   a wrapping map name, match count, shadcn Progress track, and labeled win rate,
@@ -576,8 +582,8 @@ its actions. Preserve the shared Empty alignment and symmetric padding instead
 of forcing top alignment or adding a Radar-only top margin. Keep populated-room
 reservation and Overview's settled no-room compact behavior unchanged.
 Limit the empty viewport to `max(9.5rem, 100svh - 28rem)` while retaining the parent
-roster reservation. The height budget accounts for the caption, page header,
-metrics and actions in a 900px window with a 400px sidebar. Reduce empty-state
+roster reservation. The conservative height budget accommodates the toolbar,
+content padding, metrics and actions in a 900px window with a 400px sidebar. Reduce empty-state
 vertical padding to 1rem below 44rem viewport height so the centered prompt fits
 the 600px native minimum in both languages without changing populated rosters.
 
@@ -777,11 +783,20 @@ disables duplicate parent activation while the save is pending.
 Allow the current segment to truncate in constrained titlebars, preserving its
 complete accessible text and the available parent action.
 
-The shared Switch retains upstream radix-nova geometry: a 32x18.4px default track
-with a 16px thumb and a 24x14px small track with a 12px thumb. Preserve its border,
-state translation, hit area, keyboard semantics and ordinary-theme focus/invalid
-states. Compare against upstream before attributing a screenshot's optical offset
-to the primitive; do not replace its geometry without establishing the cause.
+The shared Switch uses a fixed 2px thumb inset at both endpoints and along the
+top and bottom: a 32x20px default track with a 16px thumb and a 24x16px small
+track with a 12px thumb. This preserves upstream radix-nova widths and thumb
+sizes while increasing track heights for the approved inset. Center the thumb
+on each track end cap using half the track width-minus-height as its offset from
+the track center. Keep this geometry in the shared Switch's Tailwind variables,
+not page-specific styles. Absolute centering prevents native fractional-scale
+border snapping from shifting the endpoints; retain the border, hit area,
+keyboard semantics, state transitions and ordinary-theme focus/invalid states.
+The upstream Radix documentation example also exhibits asymmetric endpoint
+insets at native 1.5x scale (about 0.67px off versus 1.33px on), so copying it
+unchanged does not resolve the issue. Validate actual native scale factors
+1, 1.25, 1.5 and 2 in both themes, including both sizes and disabled/invalid states;
+DPR emulation alone does not reproduce native border snapping.
 In forced-colors mode, use system ButtonFace/Highlight surfaces, a contrasting
 ButtonText/HighlightText thumb, GrayText for disabled controls and a real outline
 for the boundary and keyboard focus. Limit forced-color adjustment to the control

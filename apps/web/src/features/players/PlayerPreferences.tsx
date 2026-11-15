@@ -77,7 +77,7 @@ export function PlayerPreferences({
 
   return (
     <div
-      className="profile-analysis-grid grid grid-cols-[minmax(0,_1fr)_fit-content(36%)] items-stretch gap-3 [&>:only-child]:col-span-full [&>*]:min-w-0 profile-overview-max-52:grid-cols-1"
+      className="profile-analysis-grid grid grid-cols-[minmax(0,_1fr)_fit-content(36%)] items-stretch gap-(--content-gap) [&>:only-child]:col-span-full [&>*]:min-w-0 profile-overview-max-52:grid-cols-1"
       style={
         {
           '--profile-unit-rows': UNIT_PREVIEW_ROWS,
@@ -193,7 +193,7 @@ export function PlayerPreferences({
           </div>
         </CardContent>
       </Card>
-      <div className="profile-analysis-sidebar flex flex-col gap-3">
+      <div className="profile-analysis-sidebar flex flex-col gap-(--content-gap)">
         <Card
           size="sm"
           className="profile-preferences [.profile-analysis-sidebar>&]:flex-1 [&>[data-slot='card-header']]:min-h-7"

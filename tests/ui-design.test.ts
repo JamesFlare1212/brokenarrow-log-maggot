@@ -47,6 +47,11 @@ afterEach(async () => {
 });
 
 describe('UI design guard', () => {
+  it('keeps one fixed 16px card-layout gap without responsive overrides', async () => {
+    const css = await readFile('apps/web/src/styles/layout.css', 'utf8');
+    expect(css.match(/--content-gap\s*:[^;]+;/g)).toEqual(['--content-gap: 16px;']);
+  });
+
   it.each([
     `className={cn('bg-white')}`,
     `className="dark:bg-white"`,

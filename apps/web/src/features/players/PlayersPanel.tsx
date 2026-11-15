@@ -170,7 +170,7 @@ export function PlayersPanel() {
       </form>
       <div
         className={cn(
-          'players-workspace grid min-w-0 gap-5 [align-items:start]',
+          'players-workspace grid min-w-0 gap-(--content-gap) [align-items:start]',
           (results.data?.players.length || results.pending) &&
             'has-search-results [.players-workspace&]:grid-cols-[minmax(14rem,_16rem)_minmax(0,_1fr)] players-max-55:[.players-workspace&]:grid-cols-1',
         )}

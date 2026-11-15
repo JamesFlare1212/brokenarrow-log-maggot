@@ -10,7 +10,7 @@ body {
   overflow: hidden;
 }
 :root {
-  --content-gap: 1.5rem;
+  --content-gap: 16px;
   --toolbar-height: 3rem;
   --window-controls-height: 0px;
   --motion-fast: 140ms;
@@ -195,24 +195,13 @@ button:not(:disabled),
   --appearance-selection: var(--ring);
 }
 @container workspace (max-width: 48rem) {
-  #main-content {
-    --content-gap: 1rem;
-  }
   .session-roster {
     --session-team-rows: 2;
     --session-player-rows: 10;
     --session-team-grid-gap: 1.5rem;
   }
 }
-@container settings (max-width: 48rem) {
-  .settings-content {
-    --content-gap: 1rem;
-  }
-}
 @media (max-width: 767px) {
-  :root {
-    --content-gap: 1rem;
-  }
   .session-roster {
     --session-team-rows: 2;
     --session-player-rows: 10;
