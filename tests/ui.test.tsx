@@ -4070,7 +4070,7 @@ describe('profile refresh and report scopes', () => {
       await screen.findByRole('heading', { name: '玩家概览' });
       expect(screen.getByRole('heading', { name: '作战偏好' })).toBeTruthy();
       expect(screen.getByRole('region', { name: '蛐指数' })).toBeTruthy();
-      const copy = screen.getByRole('button', { name: '复制' });
+      const copy = screen.getByRole('button', { name: '复制玩家战绩摘要' });
       expect(copy.hasAttribute('disabled')).toBe(true);
       const matchTable = screen.getByRole('table', { name: '对局数据' });
       expect(matchTable.getAttribute('aria-busy')).toBe('true');
@@ -4396,8 +4396,10 @@ describe('profile refresh and report scopes', () => {
     expect(screen.getAllByRole('button', { name: '刷新' })).toHaveLength(1);
     expect(screen.queryByRole('button', { name: '查蛆指数' })).toBeNull();
     expect(screen.getByRole('region', { name: '蛐指数' })).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: translate('zh', 'openBatrace') })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: '复制' })).toHaveLength(1);
+    expect(
+      screen.getAllByRole('button', { name: translate('zh', 'openPlayerOnBatrace') }),
+    ).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: '复制玩家战绩摘要' })).toHaveLength(1);
     expect(screen.queryByRole('button', { name: '调查羁绊' })).toBeNull();
     expect(screen.queryByRole('heading', { name: '相遇记录' })).toBeNull();
     expect(screen.getAllByText(/缓存数据，可能已过期/)).toHaveLength(1);
@@ -4567,7 +4569,9 @@ describe('profile refresh and report scopes', () => {
     expect(screen.getByRole('button', { name: '刷新' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByText('1,001')).toBeTruthy();
     expect(screen.getByRole('list', { name: '地图表现' })).toBe(mapsGrid);
-    expect(screen.getByRole('button', { name: '复制' }).hasAttribute('disabled')).toBe(false);
+    expect(screen.getByRole('button', { name: '复制玩家战绩摘要' }).hasAttribute('disabled')).toBe(
+      false,
+    );
     expect(document.querySelector('.profile-overview [data-slot="skeleton"]')).toBeNull();
     await act(async () => {
       refreshProfile.resolve(profile);
@@ -4815,12 +4819,18 @@ describe('UX failure recovery', () => {
     const refresh = screen.getByRole('button', { name: '刷新' });
     const header = refresh.closest<HTMLElement>('[data-slot="dialog-header"]')!;
     expect(header).toBeTruthy();
-    expect(Array.from(header.querySelectorAll('button')).slice(-2)).toEqual([
+    expect(Array.from(header.querySelectorAll('button'))).toEqual([
+      screen.getByRole('button', { name: translate('zh', 'openPlayerOnBatrace') }),
+      screen.getByRole('button', { name: '复制玩家战绩摘要' }),
       refresh,
       screen.getByRole('button', { name: '关闭' }),
     ]);
-    expect(refresh.textContent).toBe('');
-    expect(document.querySelector('.profile-toolbar')?.contains(refresh)).toBe(false);
+    expect(Array.from(header.querySelectorAll('button'), (button) => button.textContent)).toEqual([
+      '',
+      '',
+      '',
+      '',
+    ]);
     fireEvent.click(refresh);
     expect(report.isConnected).toBe(true);
     expect(document.querySelector('.profile-records')).toBe(records);
@@ -5272,8 +5282,9 @@ describe('match detail navigation and disclosure', () => {
   it('opens a local grid card and navigates between local and online records', async () => {
     const local = capturedLocalMatch;
     const remote = capturedMatches[0]!;
+    history.replaceState(null, '', '#archive');
     const native = nativeFixture(bootstrapForApp(), { 'matches.list': () => [remote, local] });
-    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    render(<App />, { wrapper: wrapper(native.api) });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('switch', { name: '隐藏未知结果' }));
     const opener = await screen.findByRole('button', {
@@ -5287,7 +5298,7 @@ describe('match detail navigation and disclosure', () => {
     await user.click(card.getByText('本地日志'));
     const page = within(document.querySelector('.match-detail-page')! as HTMLElement);
     await page.findByText(formatMetric(local.points));
-    await user.click(page.getByRole('button', { name: '上一局' }));
+    await user.click(screen.getByRole('button', { name: '上一局' }));
     await waitFor(() =>
       expect(native.calls).toContainEqual({
         method: 'matches.detail',
@@ -5295,10 +5306,10 @@ describe('match detail navigation and disclosure', () => {
       }),
     );
     expect(page.queryByText('本地日志')).toBeNull();
-    await user.click(page.getByRole('button', { name: '下一局' }));
+    await user.click(screen.getByRole('button', { name: '下一局' }));
     await page.findByText(formatMetric(local.points));
     expect(location.hash).toBe('#archive/match/' + encodeURIComponent(local.id));
-    await user.click(page.getByRole('button', { name: '对局档案' }));
+    await user.click(screen.getByRole('link', { name: '对局档案' }));
     await waitFor(() => expect(document.querySelector('.match-detail-page')).toBeNull());
     expect(document.activeElement).toBe(opener);
   });
@@ -5342,7 +5353,9 @@ describe('match detail navigation and disclosure', () => {
         match.players.length,
       );
       expect(
-        page.getByRole('button', { name: translate(locale, 'refresh') }).hasAttribute('disabled'),
+        screen
+          .getByRole('button', { name: translate(locale, 'matchRefreshCurrent') })
+          .hasAttribute('disabled'),
       ).toBe(true);
       expect(
         page
@@ -5361,7 +5374,9 @@ describe('match detail navigation and disclosure', () => {
         ),
       ).toBe(false);
       expect(location.hash).toBe('#archive/match/' + encodeURIComponent(match.id));
-      await user.click(page.getByRole('button', { name: translate(locale, 'archive') }));
+      await user.click(
+        within(breadcrumb).getByRole('link', { name: translate(locale, 'archive') }),
+      );
       await waitFor(() => expect(document.querySelector('.match-detail-page')).toBeNull());
       expect(document.activeElement).toBe(open);
     },
@@ -5416,7 +5431,7 @@ describe('match detail navigation and disclosure', () => {
       'matches.list': () => rows,
       'matches.detail': ({ fid }) => rows.find((match) => match.fid === fid)!,
     });
-    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByText('First victory');
     fireEvent.click(screen.getByRole('radio', { name: '列表视图' }));
     fireEvent.click(screen.getByRole('radio', { name: '胜利' }));
@@ -5436,7 +5451,7 @@ describe('match detail navigation and disclosure', () => {
     fireEvent.click(screen.getByRole('button', { name: '下一局' }));
     await screen.findByRole('heading', { name: 'Second victory' });
     expect(screen.getByRole('button', { name: '下一局' }).hasAttribute('disabled')).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: '对局档案' }));
+    fireEvent.click(screen.getByRole('link', { name: '对局档案' }));
     await screen.findByRole('table', { name: '对局档案' });
     expect(screen.getByRole('radio', { name: '胜利' }).getAttribute('aria-checked')).toBe('true');
     expect(viewport.scrollTop).toBe(120);
@@ -5476,7 +5491,7 @@ describe('match detail navigation and disclosure', () => {
   });
 
   it.each(['zh', 'en'] as const)(
-    'updates archive breadcrumbs and returns through its parent, back action and sidebar in %s',
+    'shows archive actions only for the detail route and returns through its parent or sidebar in %s',
     async (locale) => {
       const match = matchFixture();
       history.replaceState(null, '', `#archive/match/${match.fid}`);
@@ -5509,11 +5524,15 @@ describe('match detail navigation and disclosure', () => {
       ).toBeNull();
       fireEvent.click(document.querySelector('[data-match-open]')!);
       await screen.findByRole('heading', { name: match.map });
-      fireEvent.click(
-        within(document.querySelector('.match-details')!).getByRole('button', {
+      expect(
+        within(document.querySelector('.match-details')!).queryByRole('button', {
           name: translate(locale, 'archive'),
         }),
-      );
+      ).toBeNull();
+      expect(
+        screen.getByRole('group', { name: translate(locale, 'matchDetail') }).closest('.topbar'),
+      ).toBeTruthy();
+      fireEvent.click(breadcrumb.getByRole('link', { name: translate(locale, 'archive') }));
       expect(await screen.findByRole('list', { name: translate(locale, 'archive') })).toBeTruthy();
       expect(location.hash).toBe('#archive');
       fireEvent.click(document.querySelector('[data-match-open]')!);
@@ -5524,6 +5543,7 @@ describe('match detail navigation and disclosure', () => {
       expect(await screen.findByRole('list', { name: translate(locale, 'archive') })).toBeTruthy();
       expect(location.hash).toBe('#archive');
       expect(document.querySelector('.match-detail-page')).toBeNull();
+      expect(screen.queryByRole('group', { name: translate(locale, 'matchDetail') })).toBeNull();
     },
   );
 
@@ -5577,7 +5597,8 @@ describe('match detail navigation and disclosure', () => {
       'matches.list': () => [first, second],
       'matches.detail': ({ fid }) => (fid === first.fid ? pending.promise : second),
     });
-    render(<MatchArchive />, { wrapper: wrapper(native.api) });
+    history.replaceState(null, '', '#archive');
+    render(<App />, { wrapper: wrapper(native.api) });
     fireEvent.click(await screen.findByRole('button', { name: /查看 Pending match/ }));
     fireEvent.click(screen.getByRole('button', { name: '下一局' }));
     await screen.findByRole('heading', { name: 'Current match' });
@@ -5692,9 +5713,7 @@ describe('match detail navigation and disclosure', () => {
     viewport.scrollTop = 150;
     fireEvent.click(card.querySelector('.archive-card-meta')!);
     await screen.findByRole('heading', { name: match.map });
-    fireEvent.click(
-      within(document.querySelector('.match-details')!).getByRole('button', { name: '对局档案' }),
-    );
+    fireEvent.click(screen.getByRole('link', { name: '对局档案' }));
     await waitFor(() => expect(document.activeElement).toBe(cardOpener));
     expect(viewport.scrollTop).toBe(150);
     await userEvent.setup().keyboard('{Enter}');

@@ -29,7 +29,7 @@ function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimiti
 
 function TooltipContent({
   className,
-  sideOffset = 0,
+  sideOffset,
   children,
   variant = 'default',
   ...props
@@ -38,7 +38,7 @@ function TooltipContent({
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
-        sideOffset={sideOffset}
+        sideOffset={sideOffset ?? (variant === 'default' ? 4 : 0)}
         className={cn(
           variant === 'popover'
             ? popoverSurfaceClasses
@@ -50,9 +50,6 @@ function TooltipContent({
       >
         {/* Keep glass hints stationary; animated backdrop layers can leave stale pixels. */}
         {children}
-        {variant === 'default' && (
-          <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-(--glass-surface) fill-(--glass-surface)" />
-        )}
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );

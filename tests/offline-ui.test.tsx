@@ -61,7 +61,7 @@ describe('UI backed by the complete recorded BATrace service', () => {
       </AppProvider>,
     );
     await screen.findByRole('heading', { name: 'Dam' });
-    expect(document.querySelector('.match-dialog .match-detail-toolbar')).toBeNull();
+    expect(document.querySelector('.match-dialog .match-detail-navigation')).toBeNull();
     const refresh = screen.getByRole('button', { name: t('refresh') });
     expect(refresh.closest('[data-slot="dialog-header"]')).toBeTruthy();
     await waitFor(() => expect(document.querySelectorAll('.match-player-cell')).toHaveLength(10));

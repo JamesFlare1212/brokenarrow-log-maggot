@@ -254,6 +254,13 @@ export function createDevelopmentRuntime(
       if (!match) throw new Error('Development match not found.');
       return match;
     },
+    'matches.timeline': () => ({
+      status: 'unavailable',
+      reason: 'missing-unit-data',
+      data: null,
+      source: 'local',
+      updatedAt: null,
+    }),
     'matches.local': ({ id }) => {
       const match = data().matches.find((match) => match.id === id);
       if (!match) throw new Error('Local match not found');

@@ -158,12 +158,12 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
                         <Button
                           type="button"
                           variant="link"
-                          className="archive-card-player block w-full min-w-0 h-auto p-0 overflow-hidden text-inherit text-[length:inherit] leading-[inherit] font-[weight:inherit] text-left text-ellipsis whitespace-nowrap font-medium"
+                          className="archive-card-player block h-auto w-full min-w-0 p-0 text-left text-[length:inherit] leading-[inherit] font-medium text-inherit underline-offset-2"
                           onClick={() =>
                             openModal({ type: 'profile', id: player.id, name: player.name })
                           }
                         >
-                          {player.name || '#' + player.id}
+                          <span className="block truncate">{player.name || '#' + player.id}</span>
                         </Button>
                         <Tooltip content={t('ELO')}>
                           <strong tabIndex={0}>

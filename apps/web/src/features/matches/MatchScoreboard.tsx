@@ -88,25 +88,27 @@ function PlayerDetails({ player }: { player: MatchPlayer }) {
   );
 }
 
+type TeamWidths = Record<string, { table: number; section: number }>;
+
 export function MatchScoreboard({
   match,
   titles,
   group,
   loading,
   expanded,
-  onExpand,
+  onTogglePlayer,
 }: {
   match: Match | null;
   titles: Record<string, MatchTitle[]>;
   group: MatchMetricGroup;
   loading: boolean;
-  expanded: string | null;
-  onExpand: (id: string | null) => void;
+  expanded: ReadonlySet<string>;
+  onTogglePlayer: (id: string) => void;
 }) {
   const { t, locale } = useI18n();
   const regionId = useId();
   const layout = useRef<HTMLDivElement>(null);
-  const [teamWidths, setTeamWidths] = useState<Record<string, number>>({});
+  const [teamWidths, setTeamWidths] = useState<TeamWidths>({});
   const columns = matchMetricGroups[group];
   useLayoutEffect(() => {
     const root = layout.current;
@@ -116,7 +118,7 @@ export function MatchScoreboard({
       const bounds = root.getBoundingClientRect();
       if (!active || !bounds.width) return;
       const scale = root.offsetWidth ? bounds.width / root.offsetWidth : 1;
-      const widths: Record<string, number> = {};
+      const widths: TeamWidths = {};
       for (const team of root.querySelectorAll<HTMLElement>('[data-match-team]')) {
         const columnWidths: number[] = [];
         for (const row of team.querySelectorAll<HTMLTableRowElement>(
@@ -137,12 +139,17 @@ export function MatchScoreboard({
             );
           });
         }
-        widths[team.dataset.matchTeam!] =
-          Math.ceil(columnWidths.reduce((sum, width) => sum + width, 0)) + 2;
+        const table = Math.ceil(columnWidths.reduce((sum, width) => sum + width, 0));
+        const viewport = team.querySelector<HTMLElement>('.match-team-table')!;
+        const gutter = viewport.offsetWidth - viewport.clientWidth;
+        widths[team.dataset.matchTeam!] = { table, section: table + gutter + 2 };
       }
       setTeamWidths((current) =>
         Object.keys(current).length === Object.keys(widths).length &&
-        Object.entries(widths).every(([id, width]) => current[id] === width)
+        Object.entries(widths).every(
+          ([id, width]) =>
+            current[id]?.table === width.table && current[id]?.section === width.section,
+        )
           ? current
           : widths,
       );
@@ -174,8 +181,8 @@ export function MatchScoreboard({
             style={
               teamWidth
                 ? ({
-                    '--match-team-width': `${teamWidth}px`,
-                    '--match-table-width': `${teamWidth - 2}px`,
+                    '--match-team-width': `${teamWidth.section}px`,
+                    '--match-table-width': `${teamWidth.table}px`,
                   } as CSSProperties)
                 : undefined
             }
@@ -258,11 +265,12 @@ export function MatchScoreboard({
                     ))}
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="[&_tr:last-child]:border-b [&_tr:last-child]:border-b-transparent">
                   {skeleton && <TableSkeletonRows columns={['player', ...columns]} />}
                   {team.players.map((player) => {
-                    const isOpen = expanded === player.id;
+                    const isOpen = expanded.has(player.id);
                     const id = `${regionId}-${player.id}`;
+                    const playerName = player.name || `#${player.id}`;
                     const playerTitles = titles[player.id] ?? [];
                     const scoreLabels =
                       match?.endedAt != null ? (match.scoreLabels?.[player.id] ?? []) : [];
@@ -270,28 +278,34 @@ export function MatchScoreboard({
                     return (
                       <Fragment key={player.id}>
                         <TableRow data-self={player.id === match?.localPlayerId || undefined}>
-                          <TableCell className="match-player-cell whitespace-nowrap">
+                          <TableCell className="match-player-cell relative isolate whitespace-nowrap">
                             <div className="match-player-heading flex items-center gap-2 w-max min-w-0 flex-nowrap">
                               <TooltipButton
-                                variant="ghost"
+                                variant="overlay"
                                 size="sm"
-                                tooltip={player.name || `#${player.id}`}
-                                className="match-player-toggle min-w-0 max-w-56 h-7 shrink-0 items-center gap-1.5 justify-start px-0.5 whitespace-nowrap [&_svg]:text-muted-foreground"
+                                tooltip={playerName}
+                                aria-labelledby={`${id}-name`}
+                                className="match-player-toggle absolute inset-0 size-full rounded-none focus-visible:inset-ring-2 focus-visible:inset-ring-ring active:not-aria-[haspopup]:translate-y-0"
                                 aria-expanded={isOpen}
                                 aria-controls={isOpen ? id : undefined}
-                                onClick={() => onExpand(isOpen ? null : player.id)}
+                                onClick={() => onTogglePlayer(player.id)}
+                              />
+                              <span
+                                aria-hidden="true"
+                                className="pointer-events-none relative inline-flex h-7 max-w-56 items-center gap-1.5 pr-0.5 pl-1.5 text-[0.8rem] font-medium select-none"
                               >
                                 <ChevronRight
-                                  data-icon="inline-start"
-                                  className={cn(isOpen && 'rotate-90')}
-                                  aria-hidden="true"
+                                  className={cn(
+                                    'size-3.5 shrink-0 text-muted-foreground',
+                                    isOpen && 'rotate-90',
+                                  )}
                                 />
-                                <span className="match-player-name min-w-0 text-left truncate">
-                                  {player.name || `#${player.id}`}
+                                <span id={`${id}-name`} className="match-player-name truncate">
+                                  {playerName}
                                 </span>
-                              </TooltipButton>
+                              </span>
                               {hasLabels && (
-                                <div className="match-player-labels flex shrink-0 flex-nowrap items-center gap-1">
+                                <div className="match-player-labels pointer-events-none relative flex shrink-0 flex-nowrap items-center gap-1 [&_button]:pointer-events-auto">
                                   <MatchAwards
                                     key={`${match?.id}:${player.id}`}
                                     titles={playerTitles}
@@ -342,7 +356,7 @@ function MatchTeamTable({ label, children }: { label: string; children: ReactNod
     <div className="match-team-data min-w-0">
       <div
         ref={viewport}
-        className="match-team-table max-h-144 overflow-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:min-w-[var(--match-table-width,35rem)] [&_table]:table-auto [&_th]:px-2.5 [&_th]:text-right [&_th]:tabular-nums [&_th]:h-9 [&_th]:text-[0.75rem] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:px-2.5 [&_td]:text-right [&_td]:tabular-nums [&_td]:py-1 [&_td]:text-[0.8125rem] [&_th:first-child]:text-left [&_td:first-child]:text-left [&_tbody_tr]:h-11 [&_[data-self]]:bg-accent/50 [&_[data-self]>td:first-child]:shadow-[inset_3px_0_var(--ring)] [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px]"
+        className="match-team-table max-h-144 overflow-auto [scrollbar-gutter:stable] [&>[data-slot='table-container']]:overflow-visible [&_table]:min-w-[var(--match-table-width,35rem)] [&_table]:table-auto [&_th]:px-2.5 [&_th]:text-right [&_th]:tabular-nums [&_th]:h-9 [&_th]:text-[0.75rem] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:px-2.5 [&_td]:text-right [&_td]:tabular-nums [&_td]:py-1 [&_td]:text-[0.8125rem] [&_th:first-child]:text-left [&_td:first-child]:text-left [&_tbody_tr]:h-11 [&_[data-self]]:bg-accent/50 [&_[data-self]_.match-player-toggle]:shadow-[inset_3px_0_var(--ring)] [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px]"
         tabIndex={0}
         role="region"
         aria-label={label}

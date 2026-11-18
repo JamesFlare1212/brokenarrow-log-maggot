@@ -23,6 +23,8 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { BATRACE_ORIGIN } from '@ba/contracts';
+import { Copy } from 'lucide-react';
+import { formatPlayerSummary } from './report-summary';
 import type { PlayerReport } from '@ba/contracts';
 import { useRef, type ReactNode } from 'react';
 import { formatMetric, formatDelta, formatTime } from '@ba/shared';
@@ -37,23 +39,30 @@ import { MapPerformanceGrid } from './MapPerformanceGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OverflowHint } from '../../components/OverflowHint';
 
-export function ReportCopyButton({ report }: { report: PlayerReport | null }) {
-  const { t } = useI18n(),
+export function ReportCopyButton({
+  report,
+  headerAction = false,
+}: {
+  report: PlayerReport | null;
+  headerAction?: boolean;
+}) {
+  const { t, locale } = useI18n(),
     { notify } = useApp();
   return (
     <Button
+      variant={headerAction ? 'ghost' : 'outline'}
+      size={headerAction ? 'icon' : 'default'}
+      aria-label={headerAction ? t('copyPlayerSummary') : undefined}
       disabled={!report}
       onClick={() =>
         report &&
         void navigator.clipboard
-          .writeText(
-            `${report.name} · ELO ${formatMetric(report.elo, 0)} · ${t(report.fallback ? 'winRate' : 'recentWinRate')} ${formatMetric(report.winRate, 0)}% (${report.sampleCount}) · ${report.favUnits.map((u) => u.name).join(', ')}`,
-          )
+          .writeText(formatPlayerSummary(report, locale))
           .then(() => notify(t('copied')))
           .catch((e) => notify(String(e), true))
       }
     >
-      {t('copy')}
+      {headerAction ? <Copy aria-hidden="true" /> : t('copy')}
     </Button>
   );
 }

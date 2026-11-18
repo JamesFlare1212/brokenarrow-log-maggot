@@ -1,4 +1,4 @@
-import type { Match, PlayerProfile } from '@ba/contracts';
+import type { Match, MatchTimelineResult, PlayerProfile } from '@ba/contracts';
 import {
   array,
   object,
@@ -11,6 +11,7 @@ import {
   withScoreLabelEvidence,
   SCORE_LABEL_RULE,
   MAX_SCORE_LABELS,
+  buildMatchTimeline,
 } from '@ba/shared';
 import type { Database } from '../storage/database';
 import type { BatraceClient } from '../network/client';
@@ -70,6 +71,38 @@ export class TrackerService {
     const match = this.db.match(id);
     if (!match) throw new Error('Local match not found');
     return this.withAwards(match);
+  }
+  /** Lazy projection of the existing raw match cache; never stored in match summaries. */
+  async timeline(fid: string, force = false): Promise<MatchTimelineResult> {
+    const previous = this.db.match(fid);
+    if (previous?.mode === 'pve')
+      return {
+        status: 'unavailable',
+        reason: 'unsupported-mode',
+        data: null,
+        source: 'local',
+        updatedAt: previous.updatedAt,
+      };
+    let result;
+    try {
+      result = await this.client.match(fid, force);
+    } catch (error) {
+      // Transport failures are not evidence of missing unit data. Offline fixtures
+      // never issue network requests; a missing capture is unavailable in that dataset.
+      if (!this.client.offline) throw error;
+      return {
+        status: 'unavailable',
+        reason: 'missing-unit-data',
+        data: null,
+        source: 'local',
+        updatedAt: previous?.updatedAt ?? null,
+      };
+    }
+    return {
+      ...buildMatchTimeline(result.value),
+      source: result.source,
+      updatedAt: result.at,
+    };
   }
   async detail(fid: string, force = false): Promise<Match> {
     const previous = this.db.match(fid);

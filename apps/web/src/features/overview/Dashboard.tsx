@@ -185,37 +185,48 @@ export function Dashboard() {
               rowClassName="recent-match-loading min-h-17 py-2.5 px-3"
             />
           ) : all.length ? (
-            <ItemGroup className="recent-matches gap-1 has-data-[size=sm]:gap-1 has-data-[size=xs]:gap-1">
+            <ItemGroup
+              aria-label={t('recent')}
+              className="recent-matches gap-1 has-data-[size=sm]:gap-1 has-data-[size=xs]:gap-1"
+            >
               {all.slice(0, 3).map((match) => (
-                <Item size="sm" asChild key={match.id}>
-                  <Button
-                    variant="ghost"
-                    className="recent-match min-h-17 [&_[data-slot='item-content']]:min-w-0 viewport-max-479:[&>[data-slot='item-media']]:hidden h-auto w-full justify-start"
-                    onClick={() => openModal({ type: 'match', fid: match.fid || match.id })}
+                <div key={match.id} role="listitem">
+                  <Item
+                    size="sm"
+                    asChild
+                    className="recent-match min-h-17 flex-nowrap text-left hover:bg-muted"
                   >
-                    <ItemContent>
-                      <ItemTitle>{match.map || `#${match.id}`}</ItemTitle>
-                      <ItemDescription>
-                        {t(match.mode)} · {formatTime(match.endedAt, locale)}
-                      </ItemDescription>
-                    </ItemContent>
-                    <span
-                      className={cn(
-                        'recent-elo w-20 shrink-0 text-right tabular-nums viewport-max-479:w-16',
-                        eloChangeClass(
-                          match.eloAfter !== null && match.eloBefore !== null
-                            ? match.eloAfter - match.eloBefore
-                            : null,
-                        ),
-                      )}
+                    <button
+                      type="button"
+                      aria-haspopup="dialog"
+                      onClick={() => openModal({ type: 'match', fid: match.fid || match.id })}
                     >
-                      {match.eloAfter !== null && match.eloBefore !== null
-                        ? `${match.eloAfter - match.eloBefore > 0 ? '+' : ''}${formatMetric(match.eloAfter - match.eloBefore, 0)}`
-                        : '—'}{' '}
-                      <small>ELO</small>
-                    </span>
-                  </Button>
-                </Item>
+                      <ItemContent className="min-w-0">
+                        <ItemTitle className="block max-w-full truncate">
+                          {match.map || `#${match.id}`}
+                        </ItemTitle>
+                        <ItemDescription>
+                          {t(match.mode)} · {formatTime(match.endedAt, locale)}
+                        </ItemDescription>
+                      </ItemContent>
+                      <span
+                        className={cn(
+                          'recent-elo w-20 shrink-0 text-right tabular-nums viewport-max-479:w-16',
+                          eloChangeClass(
+                            match.eloAfter !== null && match.eloBefore !== null
+                              ? match.eloAfter - match.eloBefore
+                              : null,
+                          ),
+                        )}
+                      >
+                        {match.eloAfter !== null && match.eloBefore !== null
+                          ? `${match.eloAfter - match.eloBefore > 0 ? '+' : ''}${formatMetric(match.eloAfter - match.eloBefore, 0)}`
+                          : '—'}{' '}
+                        <small>ELO</small>
+                      </span>
+                    </button>
+                  </Item>
+                </div>
               ))}
             </ItemGroup>
           ) : (

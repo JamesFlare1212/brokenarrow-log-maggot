@@ -49,6 +49,7 @@ const operations: Partial<Record<RpcMethod, string>> = {
   'session.query': 'session_query',
   'matches.add': 'match_add',
   'matches.detail': 'match_detail',
+  'matches.timeline': 'match_timeline',
   'decks.backup': 'deck_backup',
   'decks.deploy': 'deck_deploy',
   'replays.play': 'recording_play',

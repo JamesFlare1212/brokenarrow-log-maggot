@@ -81,6 +81,7 @@ export function SidebarToggle({ controls }: { controls: string }) {
   return (
     <Tooltip content={label} side="bottom">
       <SidebarTrigger
+        size="icon"
         className="-ml-1 shrink-0"
         aria-label={label}
         aria-expanded={isMobile ? openMobile : open}

@@ -193,6 +193,7 @@ export const rpcSchemas = {
   'matches.scan': empty,
   'matches.local': z.object({ id: z.string().min(1).max(128) }).strict(),
   'matches.detail': z.object({ fid: id, force: z.boolean().default(false) }),
+  'matches.timeline': z.object({ fid: id, force: z.boolean().default(false) }),
   'matches.add': z.object({ fid: id }),
   'matches.delete': z.object({ id: z.string().min(1).max(128) }),
   'bans.list': z.object({ metOnly: z.boolean().default(false) }),
@@ -244,6 +245,7 @@ export interface RpcOutputs {
   'matches.scan': null;
   'matches.local': Match;
   'matches.detail': Match;
+  'matches.timeline': import('./timeline').MatchTimelineResult;
   'matches.add': Match;
   'matches.delete': { removed: boolean };
   'bans.list': Ban[];

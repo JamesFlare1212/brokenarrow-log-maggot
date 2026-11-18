@@ -14,6 +14,7 @@
 - 总览保留房间与对局工具，侧栏「蛐雷达」提供独立入口；封禁列表在「封禁追踪」页面查看。
 - 玩家搜索、粗查报告、最近对局、12 场 MVP 蛆指数、调查羁绊和改名历史。
 - 对局档案、完整评分、手动收录、刷新、删除和多个录像视角。
+- [Match timelines](docs/timeline.md) in archive details and match dialogs: estimated value trends, linked key moments, filters, and minute records when source timing data is available.
 - 卡组备份 / 部署、实时开局自动覆盖唯一的“上一局卡组包”、换号提醒。
 - Local recording: 720–2160p, 30–120 fps, quality score 1–51 (default 20; lower means higher quality), system audio and optional default microphone mixing, previews, playback, and directory migration.
 - Optional ban alerts.

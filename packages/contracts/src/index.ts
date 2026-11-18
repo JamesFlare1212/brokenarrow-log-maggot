@@ -7,3 +7,4 @@ export * from './analytics';
 export * from './titles';
 export * from './score-labels';
 export * from './recording';
+export * from './timeline';

@@ -143,8 +143,18 @@ Match statistics are grouped into core, combat, and support tables. Player
 disclosures retain all metrics and award evidence. Match and recording requests
 settle independently; refresh errors preserve cached content and the active tab.
 Local team membership comes from the player ID, outcomes come from recorded
-results, and incomplete team totals remain unavailable. No new backend schema
-or statistical inference is introduced by the layout.
+results, and incomplete team totals remain unavailable. The scoreboard layout
+introduces no statistical inference or database schema changes.
+
+The match-detail Timeline tab lazily calls `matches.timeline`. Its shared pure
+model derives second-resolution value estimates, minute loss buckets, and
+conservative key moments from cached/raw BATrace unit records. Timeline payloads
+are not persisted in match summaries. Availability is explicit for local-only,
+unsupported, untimed, and malformed records; stale results and request errors stay
+distinct. The renderer reuses the same component in archive pages and match
+dialogs, follows container width, and scrolls the host viewport below its header,
+accounting for dialog padding. Archive details render match navigation and refresh
+in the workspace titlebar; the archive breadcrumb restores the originating list. See [timeline data and presentation](timeline.md).
 
 ## Optional anonymous analytics
 

@@ -116,7 +116,7 @@ export function PlayersPanel() {
               {t('searchLabel')}
             </FieldLabel>
             <div className="player-search-controls flex min-w-0 items-center gap-3">
-              <InputGroup className="h-10 min-w-0 flex-1">
+              <InputGroup size="lg" className="min-w-0 flex-1">
                 <InputGroupAddon>
                   <Search />
                 </InputGroupAddon>
@@ -147,7 +147,6 @@ export function PlayersPanel() {
               </InputGroup>
               <Button
                 size="lg"
-                className="h-10"
                 type="submit"
                 disabled={results.pending || !query.trim()}
                 aria-busy={results.pending}

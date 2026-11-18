@@ -214,6 +214,7 @@ export function ReplaysPanel() {
         actions={
           <>
             <ToggleGroup
+              size="lg"
               type="single"
               variant="outline"
               aria-label={t('replayView')}
@@ -236,6 +237,7 @@ export function ReplaysPanel() {
             )}
             <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
               <Button
+                size="lg"
                 onClick={() =>
                   void api.invoke('replays.open', null).catch((e) => notify(String(e), true))
                 }
@@ -243,11 +245,11 @@ export function ReplaysPanel() {
                 <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                 {t('folder')}
               </Button>
-              <Button onClick={refresh} disabled={request.pending}>
+              <Button size="lg" onClick={refresh} disabled={request.pending}>
                 <Icon icon={faArrowsRotate} size={16} spin={request.pending} aria-hidden="true" />
                 {t('refresh')}
               </Button>
-              <Menu>
+              <Menu size="icon-lg">
                 <Button
                   variant="destructive"
                   onClick={async () => {
