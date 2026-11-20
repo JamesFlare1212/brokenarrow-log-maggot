@@ -38,7 +38,7 @@ function TooltipContent({
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
-        sideOffset={sideOffset ?? (variant === 'default' ? 4 : 0)}
+        sideOffset={sideOffset ?? (variant === 'default' ? 10 : 0)}
         className={cn(
           variant === 'popover'
             ? popoverSurfaceClasses

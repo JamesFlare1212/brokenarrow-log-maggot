@@ -132,7 +132,8 @@ Standard and rich Tooltips, their click-to-pin Popovers, and chart Tooltips use
 `glassTooltipSurfaceClasses`, which applies `--glass-surface` directly for
 40–100% coverage, with 50% at the default. Their blur, saturation, outline,
 radius, shadow, and semantic foreground remain shared with other floating
-surfaces. All tooltips are arrowless. Native text hints for
+surfaces. All tooltips are arrowless. Standard tooltips default to a 10px gap
+from the trigger to keep the glass hint clear of palette previews. Native text hints for
 truncated names, ELO, D/L, and map metrics use the shared shadcn Tooltip rather
 than browser `title` bubbles; static hint triggers also support keyboard focus.
 Collapsed settings tabs and palette-pair actions use the same Tooltip material.
