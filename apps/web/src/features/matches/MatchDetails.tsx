@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -22,6 +21,8 @@ import {
   matchTitles,
   teamLabel,
 } from '@ba/shared';
+import { createPortal } from 'react-dom';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,7 @@ import { useI18n } from '../../hooks/useI18n';
 import { cn } from '@/lib/utils';
 import { eloChangeClass } from '@/lib/elo';
 import { MatchScoreboard } from './MatchScoreboard';
+import { MatchTimeline } from './MatchTimeline';
 import {
   matchMetricGroups,
   matchMetricLabels,
@@ -46,7 +48,7 @@ import {
 export function MatchDetails({
   matchId,
   summary,
-  onBack,
+  actionsHost,
   onPrevious,
   onNext,
   position,
@@ -55,7 +57,7 @@ export function MatchDetails({
 }: {
   matchId: string;
   summary?: Match;
-  onBack?: () => void;
+  actionsHost?: HTMLElement | null;
   onPrevious?: () => void;
   onNext?: () => void;
   position?: number;
@@ -67,7 +69,16 @@ export function MatchDetails({
   const request = useRequest<Match>();
   const replayRequest = useRequest<Replay[]>();
   const [group, setGroup] = useState<MatchMetricGroup>('core');
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [view, setView] = useState<'overview' | 'timeline'>('overview');
+  const [timelineRefresh, setTimelineRefresh] = useState(0);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const togglePlayer = (id: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const heading = useRef<HTMLHeadingElement>(null);
   const localRequest = !/^\d+$/.test(matchId);
   useEffect(() => {
@@ -86,9 +97,10 @@ export function MatchDetails({
       true,
     );
   }, [api, matchId, localRequest, state.replaysRevision, replayRequest.load]);
+  const archivePage = !renderDialog;
   useEffect(() => {
-    if (onBack) heading.current?.focus({ preventScroll: true });
-  }, [matchId]);
+    if (archivePage) heading.current?.focus({ preventScroll: true });
+  }, [archivePage, matchId]);
   const match = request.data ?? summary ?? null;
   const localOnly = match ? !match.fid : localRequest;
   const remoteFid = match?.fid || (!localRequest ? matchId : null);
@@ -103,6 +115,7 @@ export function MatchDetails({
       : null;
   const refresh = () => {
     if (localOnly) return;
+    setTimelineRefresh((version) => version + 1);
     void request.load(() => api.invoke('matches.detail', { fid: remoteFid!, force: true }), true);
     void replayRequest.load(
       async () =>
@@ -137,13 +150,14 @@ export function MatchDetails({
     'dlRatio',
     'objectivesCaptured',
   ] as const;
+  const refreshLabel = t(archivePage ? 'matchRefreshCurrent' : 'refresh');
   const refreshAction = (
     <TooltipButton
       variant="ghost"
-      size="icon-sm"
-      aria-label={t('refresh')}
+      size="icon"
+      aria-label={refreshLabel}
       disabled={localOnly || request.pending || replayRequest.pending}
-      tooltip={localOnly ? t('matchLocalOnlyHint') : t('refresh')}
+      tooltip={localOnly ? t('matchLocalOnlyHint') : refreshLabel}
       aria-busy={request.pending || replayRequest.pending}
       onClick={refresh}
     >
@@ -152,46 +166,6 @@ export function MatchDetails({
   );
   const content = (
     <div className="match-details [.match-detail-page>&]:py-6 @container/match-detail flex flex-col gap-5 w-full max-w-384 mx-auto viewport-max-767:[.match-detail-page>&]:py-5">
-      {!renderDialog && (
-        <div className="match-detail-toolbar flex items-center gap-2 sticky top-0 z-[2] min-h-11 pb-2 border-b border-b-border bg-background">
-          {onBack && (
-            <Button variant="ghost" onClick={onBack}>
-              <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-              {t('archive')}
-            </Button>
-          )}
-          <div className="match-detail-navigation flex items-center gap-2 ml-auto text-[0.75rem] tabular-nums">
-            {position !== undefined && total !== undefined && (
-              <span className="muted text-muted-foreground">
-                {position > 0 ? `${position} / ${total}` : '—'}
-              </span>
-            )}
-            {onBack && (
-              <>
-                <TooltipButton
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t('matchPrevious')}
-                  disabled={!onPrevious}
-                  onClick={onPrevious}
-                >
-                  <ChevronLeft aria-hidden="true" />
-                </TooltipButton>
-                <TooltipButton
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t('matchNext')}
-                  disabled={!onNext}
-                  onClick={onNext}
-                >
-                  <ChevronRight aria-hidden="true" />
-                </TooltipButton>
-              </>
-            )}
-            {refreshAction}
-          </div>
-        </div>
-      )}
       {request.pending && <LoadingStatus />}
       {request.error && <Notice error>{request.error}</Notice>}
       {match?.warning && (
@@ -320,95 +294,156 @@ export function MatchDetails({
             {t('matchReplayError')}: {replayRequest.error}
           </Notice>
         )}
-        {(participant ||
-          (!match && loading) ||
-          (localOnly && match && (match.points !== null || match.localDeck))) && (
-          <Card size="sm" className="match-personal-card gap-3">
-            <CardHeader>
-              <CardTitle>
-                <span className="match-personal-title flex items-center gap-2 [&>span]:ml-auto [&>span]:text-[0.75rem] [&_svg]:w-4 [&_svg]:h-4">
-                  <Swords aria-hidden="true" />
-                  {t('matchYourPerformance')}
-                  <span className="muted text-muted-foreground">{participant?.name}</span>
+      </div>
+      <Tabs value={view} onValueChange={(value) => setView(value as 'overview' | 'timeline')}>
+        <TabsList variant="line" aria-label={t('matchDetailView')} data-testid="match-detail-views">
+          <TabsTrigger value="overview">{t('matchOverview')}</TabsTrigger>
+          <TabsTrigger value="timeline">{t('matchTimeline')}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="flex flex-col gap-(--content-gap)">
+          {(participant ||
+            (!match && loading) ||
+            (localOnly && match && (match.points !== null || match.localDeck))) && (
+            <Card size="sm" className="match-personal-card gap-3">
+              <CardHeader>
+                <CardTitle>
+                  <span className="match-personal-title flex items-center gap-2 [&>span]:ml-auto [&>span]:text-[0.75rem] [&_svg]:w-4 [&_svg]:h-4">
+                    <Swords aria-hidden="true" />
+                    {t('matchYourPerformance')}
+                    <span className="muted text-muted-foreground">{participant?.name}</span>
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="match-summary grid grid-cols-4 gap-4 [&_dt]:text-muted-foreground [&_dt]:text-[0.75rem] [&_dd]:flex [&_dd]:min-h-7.5 [&_dd]:items-center [&_dd]:mt-1 [&_dd]:text-[1.5rem] [&_dd]:font-semibold [&_dd]:tabular-nums match-detail-max-36:grid-cols-2 viewport-max-767:grid-cols-2">
+                  {localOnly ? (
+                    <>
+                      <div>
+                        <dt>{t('matchLogPoints')}</dt>
+                        <dd>{formatMetric(match?.points ?? null)}</dd>
+                      </div>
+                      <div>
+                        <dt>{t('matchLocalDeck')}</dt>
+                        <dd>{match?.localDeck || t('matchUnrecorded')}</dd>
+                      </div>
+                    </>
+                  ) : (
+                    personalMetrics.map((metric) => (
+                      <div key={metric}>
+                        <dt>{t(matchMetricLabels[metric])}</dt>
+                        <dd>
+                          {!participant || (loading && participant[metric] === null) ? (
+                            <Skeleton className="h-7 w-16" />
+                          ) : (
+                            playerMetric(participant, metric)
+                          )}
+                        </dd>
+                      </div>
+                    ))
+                  )}
+                </dl>
+              </CardContent>
+            </Card>
+          )}
+          <section
+            className="match-players [&_[data-slot='tabs']]:gap-4"
+            aria-label={t('matchScoreboard')}
+          >
+            <div className="match-section-heading flex items-center gap-2 justify-between flex-wrap mb-3 [&_h3]:text-[1rem] [&_h3]:font-semibold [&_h3_span]:text-[0.75rem] [&_h3_span]:font-normal [&_h3_span]:ml-2 [&>span]:text-[0.75rem] [&>span]:font-normal match-detail-max-36:[&>span]:hidden">
+              <h3>
+                {t('matchScoreboard')}{' '}
+                <span className="muted text-muted-foreground">
+                  {match && t('playersCount', { n: match.players.length })}
                 </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="match-summary grid grid-cols-4 gap-4 [&_dt]:text-muted-foreground [&_dt]:text-[0.75rem] [&_dd]:flex [&_dd]:min-h-7.5 [&_dd]:items-center [&_dd]:mt-1 [&_dd]:text-[1.5rem] [&_dd]:font-semibold [&_dd]:tabular-nums match-detail-max-36:grid-cols-2 viewport-max-767:grid-cols-2">
-                {localOnly ? (
-                  <>
-                    <div>
-                      <dt>{t('matchLogPoints')}</dt>
-                      <dd>{formatMetric(match?.points ?? null)}</dd>
-                    </div>
-                    <div>
-                      <dt>{t('matchLocalDeck')}</dt>
-                      <dd>{match?.localDeck || t('matchUnrecorded')}</dd>
-                    </div>
-                  </>
-                ) : (
-                  personalMetrics.map((metric) => (
-                    <div key={metric}>
-                      <dt>{t(matchMetricLabels[metric])}</dt>
-                      <dd>
-                        {!participant || (loading && participant[metric] === null) ? (
-                          <Skeleton className="h-7 w-16" />
-                        ) : (
-                          playerMetric(participant, metric)
-                        )}
-                      </dd>
-                    </div>
-                  ))
-                )}
-              </dl>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-      <section
-        className="match-players [&_[data-slot='tabs']]:gap-4"
-        aria-label={t('matchScoreboard')}
-      >
-        <div className="match-section-heading flex items-center gap-2 justify-between flex-wrap mb-3 [&_h3]:text-[1rem] [&_h3]:font-semibold [&_h3_span]:text-[0.75rem] [&_h3_span]:font-normal [&_h3_span]:ml-2 [&>span]:text-[0.75rem] [&>span]:font-normal match-detail-max-36:[&>span]:hidden">
-          <h3>
-            {t('matchScoreboard')}{' '}
-            <span className="muted text-muted-foreground">
-              {match && t('playersCount', { n: match.players.length })}
-            </span>
-          </h3>
-          <span className="muted text-muted-foreground">{t('matchExpandHint')}</span>
-        </div>
-        <Tabs value={group} onValueChange={(value) => setGroup(value as MatchMetricGroup)}>
-          <TabsList variant="line" aria-label={t('matchMetricGroup')}>
-            {(Object.keys(matchMetricGroups) as MatchMetricGroup[]).map((value) => (
-              <TabsTrigger key={value} value={value}>
-                {t(`matchMetrics.${value}`)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {(Object.keys(matchMetricGroups) as MatchMetricGroup[]).map((value) => (
-            <TabsContent key={value} value={value}>
-              {match?.players.length || loading ? (
-                <MatchScoreboard
-                  match={match}
-                  titles={titles}
-                  group={value}
-                  loading={loading}
-                  expanded={expanded}
-                  onExpand={setExpanded}
-                />
-              ) : (
-                <Empty>{t('noMatchStatistics')}</Empty>
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
-      </section>
-      <div className="match-detail-footnote flex items-center gap-2 justify-between flex-wrap text-muted-foreground text-[0.6875rem]">
-        <span>{t('matchRatioHint')}</span>
-        <span>{t('matchMissingHint')}</span>
-      </div>
+              </h3>
+              <span className="muted text-muted-foreground">{t('matchExpandHint')}</span>
+            </div>
+            <Tabs value={group} onValueChange={(value) => setGroup(value as MatchMetricGroup)}>
+              <TabsList variant="line" aria-label={t('matchMetricGroup')}>
+                {(Object.keys(matchMetricGroups) as MatchMetricGroup[]).map((value) => (
+                  <TabsTrigger key={value} value={value}>
+                    {t(`matchMetrics.${value}`)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {(Object.keys(matchMetricGroups) as MatchMetricGroup[]).map((value) => (
+                <TabsContent key={value} value={value}>
+                  {match?.players.length || loading ? (
+                    <MatchScoreboard
+                      match={match}
+                      titles={titles}
+                      group={value}
+                      loading={loading}
+                      expanded={expanded}
+                      onTogglePlayer={togglePlayer}
+                    />
+                  ) : (
+                    <Empty>{t('noMatchStatistics')}</Empty>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
+          </section>
+          <div className="match-detail-footnote flex items-center gap-2 justify-between flex-wrap text-muted-foreground text-[0.6875rem]">
+            <span>{t('matchRatioHint')}</span>
+            <span>{t('matchMissingHint')}</span>
+          </div>
+        </TabsContent>
+        <TabsContent value="timeline" className="min-w-0">
+          <MatchTimeline
+            key={matchId}
+            fid={localRequest ? null : matchId}
+            mode={match?.fid === matchId ? match.mode : undefined}
+            refreshVersion={timelineRefresh}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
-  return renderDialog ? renderDialog(content, refreshAction) : content;
+  if (renderDialog) return renderDialog(content, refreshAction);
+  return (
+    <>
+      {actionsHost &&
+        createPortal(
+          <>
+            <div
+              role="group"
+              aria-label={t('matchDetail')}
+              className="match-detail-navigation flex shrink-0 items-center gap-1 @max-[24rem]/topbar:gap-0"
+            >
+              {position !== undefined && total !== undefined && (
+                <span className="mr-1 text-xs text-muted-foreground tabular-nums whitespace-nowrap @max-[23rem]/topbar:sr-only">
+                  {position > 0 ? `${position} / ${total}` : '—'}
+                </span>
+              )}
+              <TooltipButton
+                variant="ghost"
+                size="icon"
+                aria-label={t('matchPrevious')}
+                disabled={!onPrevious}
+                onClick={onPrevious}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </TooltipButton>
+              <TooltipButton
+                variant="ghost"
+                size="icon"
+                aria-label={t('matchNext')}
+                disabled={!onNext}
+                onClick={onNext}
+              >
+                <ChevronRight aria-hidden="true" />
+              </TooltipButton>
+              {refreshAction}
+            </div>
+            <Separator
+              orientation="vertical"
+              className="ml-2 data-vertical:h-4 data-vertical:self-center @max-[24rem]/topbar:ml-1"
+            />
+          </>,
+          actionsHost,
+        )}
+      {content}
+    </>
+  );
 }

@@ -172,7 +172,12 @@ export function DecksPanel() {
   const loading = !list && (request.pending || !request.error);
   const content = list ?? { found: true, decks: [], backups: [], decksDir: '', backupsDir: '' };
   const refreshButton = (
-    <Button disabled={request.pending || busy} aria-busy={request.pending} onClick={refresh}>
+    <Button
+      size="lg"
+      disabled={request.pending || busy}
+      aria-busy={request.pending}
+      onClick={refresh}
+    >
       <Icon icon={faArrowsRotate} size={15} spin={request.pending} aria-hidden="true" />
       {t('refresh')}
     </Button>
@@ -238,6 +243,7 @@ export function DecksPanel() {
               </small>
               <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
                 <Button
+                  size="lg"
                   disabled={loading || busy || !front.length}
                   onClick={() => {
                     setPackageName('decks-' + new Date().toISOString().slice(0, 10));
@@ -248,6 +254,7 @@ export function DecksPanel() {
                   {t('backupSelected')}
                 </Button>
                 <Button
+                  size="lg"
                   disabled={loading || busy || !content.decks.length}
                   onClick={() => {
                     setPackageName('decks-' + new Date().toISOString().slice(0, 10));
@@ -257,6 +264,7 @@ export function DecksPanel() {
                   {t('backupAll')}
                 </Button>
                 <Button
+                  size="lg"
                   disabled={loading}
                   onClick={() => void operate(() => api.invoke('decks.open', { kind: 'decks' }))}
                 >
@@ -264,6 +272,7 @@ export function DecksPanel() {
                   {t('folder')}
                 </Button>
                 <Button
+                  size="lg"
                   variant="destructive"
                   disabled={busy || !front.length}
                   onClick={async () => {
@@ -303,6 +312,7 @@ export function DecksPanel() {
               </small>
               <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
                 <Button
+                  size="lg"
                   disabled={loading || busy || back.length !== 1}
                   variant="default"
                   onClick={async () => {
@@ -321,12 +331,14 @@ export function DecksPanel() {
                   {t('deploy')}
                 </Button>
                 <Button
+                  size="lg"
                   disabled={loading}
                   onClick={() => void operate(() => api.invoke('decks.open', { kind: 'backups' }))}
                 >
                   {t('folder')}
                 </Button>
                 <Button
+                  size="lg"
                   variant="destructive"
                   disabled={busy || !back.length}
                   onClick={async () => {

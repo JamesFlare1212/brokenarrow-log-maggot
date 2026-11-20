@@ -16,7 +16,7 @@ export function MatchDialog({ fid }: { fid: string }) {
           onClose={closeModal}
           onBack={backModal}
           title={`${t('matchDetail')} · ${/^\d+$/.test(fid) ? '#' + fid : t('matchLocalOnly')}`}
-          className="dialog-wide match-dialog w-[calc(100%_-_3rem)] max-w-400 sm:max-w-400 viewport-max-767:w-[calc(100%_-_1.5rem)]"
+          className="dialog-wide match-dialog h-[min(72rem,calc(100svh_-_var(--window-controls-height)_-_3rem))] w-[calc(100%_-_3rem)] max-w-400 sm:max-w-400 viewport-max-767:w-[calc(100%_-_1.5rem)]"
           headerActions={actions}
         >
           {content}

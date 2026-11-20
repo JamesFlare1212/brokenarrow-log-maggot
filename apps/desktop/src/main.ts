@@ -348,8 +348,12 @@ async function start(): Promise<void> {
       result.matches = await window.webContents.executeJavaScript(
         "window.assistant.invoke('matches.list', {}).then(matches => matches.length)",
       );
+      console.log('SMOKE_STAGE match-details');
       const { verifyMatchDetails } = await import('./match-smoke');
       result.matchDetails = await verifyMatchDetails(window);
+      console.log('SMOKE_STAGE timeline');
+      const { verifyMatchTimeline } = await import('./timeline-smoke');
+      result.timeline = await verifyMatchTimeline(window);
     }
     console.log('SMOKE_RESULT', JSON.stringify(result));
     await shutdown();

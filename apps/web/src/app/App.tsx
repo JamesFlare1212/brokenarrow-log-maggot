@@ -141,8 +141,11 @@ function ModalRouter() {
 }
 
 export function App() {
-  const { state, api, page, settingsTab, settings, openSettings, openModal } = useApp(),
+  const { state, api, page, breadcrumbs, settingsTab, settings, openSettings, openModal } =
+      useApp(),
     { t } = useI18n();
+  const archiveDetail = page === 'archive' && !!breadcrumbs.archive;
+  const [archiveActionsHost, setArchiveActionsHost] = useState<HTMLDivElement | null>(null);
   const [visited, setVisited] = useState<Panel[]>([page]);
   useEffect(() => {
     if (
@@ -175,7 +178,7 @@ export function App() {
     current: <Dashboard />,
     radar: <SessionPanel standalone />,
     players: <PlayersPanel />,
-    archive: <MatchArchive />,
+    archive: <MatchArchive actionsHost={archiveActionsHost} />,
     replays: <ReplaysPanel />,
     decks: <DecksPanel />,
     bans: <BansPanel />,
@@ -227,16 +230,33 @@ export function App() {
         aria-label={title}
         hidden={Boolean(settingsTab)}
       >
-        <PageToolbar className="topbar">
+        <PageToolbar
+          className={cn(
+            'topbar @container/topbar',
+            archiveDetail &&
+              'viewport-max-479:px-2 max-[22rem]:[--control-standard:var(--control-compact)]',
+          )}
+        >
           <div className="topbar-location flex items-center gap-2 min-w-0 [&_[data-slot='breadcrumb-list']]:flex-nowrap [&_[data-slot='breadcrumb-item']:last-child]:min-w-0 [&_[data-slot='breadcrumb-page']]:overflow-hidden [&_[data-slot='breadcrumb-page']]:text-ellipsis [&_[data-slot='breadcrumb-page']]:whitespace-nowrap">
             <SidebarToggle controls="workspace-sidebar" />
             <Separator
               orientation="vertical"
-              className="mx-2 data-vertical:h-4 data-vertical:self-center"
+              className={cn(
+                'mx-2 data-vertical:h-4 data-vertical:self-center',
+                archiveDetail && '@max-[26rem]/topbar:hidden',
+              )}
             />
             <WorkspaceBreadcrumb />
           </div>
-          <div className="topbar-actions flex items-center gap-2 shrink-0">
+          <div
+            className={cn(
+              'topbar-actions flex items-center gap-2 shrink-0',
+              archiveDetail && '@max-[24rem]/topbar:gap-1',
+            )}
+          >
+            {page === 'archive' && !settingsTab && (
+              <div ref={setArchiveActionsHost} className="flex items-center empty:hidden" />
+            )}
             <div className="topbar-health flex items-center gap-2 viewport-max-767:hidden workspace-max-48:hidden">
               <BatraceStatus
                 health={state.health}

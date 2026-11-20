@@ -119,12 +119,18 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
   );
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
+function TableRow({
+  className,
+  emphasis = 'default',
+  ...props
+}: React.ComponentProps<'tr'> & { emphasis?: 'default' | 'current' }) {
   return (
     <tr
       data-slot="table-row"
       className={cn(
         'border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted/50',
+        emphasis === 'current' &&
+          '[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-transparent data-[state=selected]:bg-accent data-[state=selected]:text-accent-foreground data-[state=selected]:[&>td]:text-accent-foreground data-[state=selected]:[&>td:first-child]:border-l-ring',
         className,
       )}
       {...props}

@@ -20,6 +20,7 @@ const methods = new Set<RpcMethod>([
   'matches.scan',
   'matches.local',
   'matches.detail',
+  'matches.timeline',
   'matches.add',
   'matches.delete',
   'bans.list',

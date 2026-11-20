@@ -117,23 +117,22 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const actions = (
     <>
       <Button
-        size="sm"
-        className="button-borderless"
+        size="lg"
         disabled={!previous || pending}
         onClick={previousView}
         aria-pressed={view === 'previous'}
       >
-        <Icon icon={faClockRotateLeft} size={15} aria-hidden="true" />
+        <Icon icon={faClockRotateLeft} aria-hidden="true" />
         {view === 'previous' ? t('back') : t('previous')}
       </Button>
       <Button
         variant="default"
-        size="sm"
+        size="lg"
         disabled={pending || !players.length}
         aria-busy={pending}
         onClick={() => void query(view)}
       >
-        <Icon icon={faArrowsRotate} size={15} spin={pending} aria-hidden="true" />
+        <Icon icon={faArrowsRotate} spin={pending} aria-hidden="true" />
         {t('query')}
       </Button>
     </>
@@ -200,7 +199,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
             </div>
           </div>
         )}
-        <div className="session-actions flex flex-wrap items-center justify-end gap-2 ml-auto">
+        <div className="session-actions ml-auto flex flex-wrap items-center justify-end gap-2">
           {actions}
         </div>
       </div>

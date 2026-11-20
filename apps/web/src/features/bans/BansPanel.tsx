@@ -71,6 +71,7 @@ export function BansPanel() {
     <section className="bans-panel flex flex-1 flex-col min-h-0 gap-3.5" aria-label={t('bans')}>
       <div className="bans-toolbar flex flex-wrap items-center gap-3 justify-between">
         <ToggleGroup
+          size="lg"
           type="single"
           variant="outline"
           aria-label={t('metBans')}
@@ -85,7 +86,10 @@ export function BansPanel() {
           <ToggleGroupItem value="all">{t('allBans')}</ToggleGroupItem>
           <ToggleGroupItem value="met">{t('metBans')}</ToggleGroupItem>
         </ToggleGroup>
-        <InputGroup className="ban-search [flex:1_1_12rem] w-auto min-w-[min(12rem,_100%)] max-w-68 ml-auto viewport-max-767:flex-1 viewport-max-767:ml-0 viewport-max-767:max-w-none viewport-max-767:min-w-40">
+        <InputGroup
+          size="lg"
+          className="ban-search [flex:1_1_12rem] w-auto min-w-[min(12rem,_100%)] max-w-68 ml-auto viewport-max-767:flex-1 viewport-max-767:ml-0 viewport-max-767:max-w-none viewport-max-767:min-w-40"
+        >
           <InputGroupAddon>
             <Search aria-hidden="true" />
           </InputGroupAddon>
@@ -102,6 +106,7 @@ export function BansPanel() {
           />
         </InputGroup>
         <Button
+          size="lg"
           variant="default"
           disabled={syncing}
           aria-busy={syncing}

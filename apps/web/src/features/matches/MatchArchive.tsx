@@ -55,7 +55,7 @@ import { MatchDetails } from './MatchDetails';
 import { archiveMatchFromHash, archiveMatchHash } from './routes';
 import { usePageBreadcrumb } from '../../hooks/usePageBreadcrumb';
 const PAGE_SIZE = 50;
-export function MatchArchive() {
+export function MatchArchive({ actionsHost }: { actionsHost?: HTMLElement | null }) {
   const { api, state, notify } = useApp(),
     { t, locale } = useI18n(),
     matches = useRequest<Match[]>(),
@@ -133,6 +133,7 @@ export function MatchArchive() {
         : `${t('matchDetail')} · ${t('matchLocalOnly')}`
       : null,
     returnToArchive,
+    detailId && /^\d+$/.test(detailId) ? `#${detailId}` : t('matchLocalOnly'),
   );
   const navigateMatch = (matchId: string) => {
     history.replaceState(history.state, '', archiveMatchHash(matchId));
@@ -340,6 +341,7 @@ export function MatchArchive() {
     <div className="archive-filters flex flex-wrap items-center gap-3 min-w-0 max-w-full [&>[data-slot='field-group']]:[container-type:normal] [&>[data-slot='field-group']]:w-auto [&>[data-slot='field-group']]:max-w-full [&>[data-slot='field-group']]:flex-none [&>[data-slot='field-group']:has(#archive-account)]:w-44 [&_[data-slot='field-content']]:flex-none [.archive-filter-popover_&]:flex-col [.archive-filter-popover_&]:items-stretch [.archive-filter-popover_&]:gap-4 [.archive-filter-popover_&>[data-slot='field-group']:has(#archive-account)]:w-full viewport-max-479:w-full viewport-max-479:[&>[data-slot='field-group']:has(#archive-account)]:w-full">
       <Field id="archive-account" label={t('account')} labelHidden>
         <NativeSelect
+          size="lg"
           id="archive-account"
           value={account}
           onChange={(e) => {
@@ -356,6 +358,7 @@ export function MatchArchive() {
         </NativeSelect>
       </Field>
       <ToggleGroup
+        size="lg"
         type="single"
         variant="outline"
         value={outcome}
@@ -385,7 +388,7 @@ export function MatchArchive() {
     </div>
   );
   const addButton = (
-    <Button variant="default" onClick={() => setAddDialog(true)}>
+    <Button size="lg" variant="default" onClick={() => setAddDialog(true)}>
       <Icon icon={faPlus} />
       {t('addMatch')}
     </Button>
@@ -405,6 +408,7 @@ export function MatchArchive() {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    size="lg"
                     aria-label={t('archiveFilters')}
                     aria-description={t('activeFilters', {
                       count:
@@ -441,6 +445,7 @@ export function MatchArchive() {
               {loading ? <Skeleton className="h-4 w-8" aria-hidden="true" /> : filtered.length}
             </small>
             <ToggleGroup
+              size="lg"
               type="single"
               variant="outline"
               aria-label={t('archiveView')}
@@ -457,6 +462,7 @@ export function MatchArchive() {
               </ToggleGroupItem>
             </ToggleGroup>
             <Button
+              size="lg"
               disabled={matches.pending || scanning}
               onClick={() => void scan()}
               aria-busy={scanning}
@@ -633,7 +639,7 @@ export function MatchArchive() {
             key={detailId}
             matchId={detailId}
             summary={detailSummary}
-            onBack={returnToArchive}
+            actionsHost={actionsHost}
             onPrevious={previous ? () => navigateMatch(previous.fid || previous.id) : undefined}
             onNext={next ? () => navigateMatch(next.fid || next.id) : undefined}
             position={detailIndex + 1}

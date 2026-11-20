@@ -41,7 +41,8 @@ profile dialogs and replay overlays.
   Cancelling deletion also restores the arrow button without opening details.
 - Grid cards open details when clicking their noninteractive content, without a
   separate footer button. Use a native, text-styled button in the map heading for
-  keyboard entry and focus restoration. Keep player-profile buttons independent
+  keyboard entry and focus restoration. Keep player-profile buttons independent,
+  truncate the name inside the button without clipping its hover underline,
   and ignore text selections. Cards without an online match ID open their local
   details using the saved record ID.
 - Restore account/result filters, sort order, pagination, scroll position, and
@@ -117,7 +118,18 @@ Show colored award badges beside each player name using the same `MatchAwards`
 component as Radar. Keep both title and score-label groups visible, with the same
 colors, limits, hover/focus explanations, and click-to-pin popovers. Let badges
 wrap within the player column and allow row heights to grow when needed. Award
-interactions remain independent of the player disclosure.
+buttons keep their own hit targets. The rest of the player cell, including its
+padding and the space after the name, toggles that player's details. Numeric
+cells do not toggle the disclosure. The row supplies the hover background across
+all columns; the cell-sized button stays transparent and keeps its keyboard focus ring.
+Keep the last row’s divider space even when its line is invisible, so opening a
+player does not shift the name, badges, or stat values.
+
+The match dialog uses a viewport-bounded height independent of its contents, so
+inserting details does not recenter the dialog. Each player opens and closes
+independently: opening a lower row must not remove a panel above it. Reserve
+native scrollbar space in team tables, including it in the side-by-side fit
+calculation. Do not automatically scroll to or focus the inserted panel.
 
 Expanded content contains every original metric, before/after ELO where known,
 player ID, and a production link to the existing player profile dialog. Keep
@@ -147,11 +159,12 @@ scroll context.
 
 The detail-page scroll viewport fills the workspace below the titlebar, with its
 vertical scrollbar at the window's right edge. Keep page gutters inside that
-viewport and apply the readable width limit to the detail content only. Preserve
-the sticky detail toolbar and the archive's independent scroll position. Apply
-vertical gutters to the inner detail content, not the scroll viewport, so the
-toolbar sticks directly below the titlebar without exposing content above it.
-Verify the toolbar and scrollbar at intermediate and bottom scroll positions.
+viewport and apply the readable width limit to the detail content only. Keep navigation in the workspace titlebar, outside this scrollport: the archive
+breadcrumb returns to the list, and position, Previous, Next, and Refresh form
+one group before global health and account actions. Do not add a second Back
+button or sticky toolbar. On narrow titlebars, remove the overview ancestor and
+shorten the current crumb to the match ID or local-log label before sacrificing
+navigation. Keep native caption space and a draggable gap between controls.
 
 ## Integration and validation
 

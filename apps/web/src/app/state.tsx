@@ -132,6 +132,7 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
 }
 export interface PageBreadcrumbDetail {
   label: string;
+  compactLabel?: string;
   onBack: () => void;
 }
 interface AppContextValue {
@@ -187,7 +188,9 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     updateBreadcrumbs((current) => {
       if (
         detail
-          ? current[panel]?.label === detail.label && current[panel]?.onBack === detail.onBack
+          ? current[panel]?.label === detail.label &&
+            current[panel]?.compactLabel === detail.compactLabel &&
+            current[panel]?.onBack === detail.onBack
           : !current[panel]
       )
         return current;

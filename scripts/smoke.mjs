@@ -39,10 +39,13 @@ child.stdout.on('data', (data) => {
 child.stderr.on('data', (data) => {
   errors += data.toString();
 });
-const timeout = setTimeout(() => {
-  timedOut = true;
-  child.kill();
-}, 30000);
+const timeout = setTimeout(
+  () => {
+    timedOut = true;
+    child.kill();
+  },
+  realData ? 60000 : 30000,
+);
 const code = await new Promise((resolve, reject) => {
   child.once('error', reject);
   child.once('exit', resolve);
@@ -64,13 +67,16 @@ if (
   (realData &&
     (result.matches !== expectedMatches ||
       !result.matchDetails ||
-      Object.values(result.matchDetails).some((passed) => passed !== true)))
+      Object.values(result.matchDetails).some((passed) => passed !== true) ||
+      !result.timeline ||
+      Object.values(result.timeline).some((passed) => passed !== true)))
 ) {
   console.error(errors || 'Electron smoke test failed to initialize');
+  console.error(JSON.stringify({ timedOut, exitCode: code, result }, null, 2));
   process.exitCode = 1;
 } else
   console.log(
     realData
-      ? `Electron real-data smoke passed: ${result.matches} real matches loaded offline; match navigation, disclosures, and responsive scoreboards verified.`
+      ? `Electron real-data smoke passed: ${result.matches} real matches loaded offline; match navigation, scoreboards, and integrated timeline verified.`
       : 'Electron smoke passed: SQLite service, sandboxed preload, React renderer and integrated window chrome initialized.',
   );

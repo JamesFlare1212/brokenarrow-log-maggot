@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../../../apps/web/src/*"],
+      "lucide-react": ["../../../apps/web/node_modules/lucide-react"],
+      "recharts": ["../../../apps/web/node_modules/recharts"]
+    }
+  },
+  "include": ["./*.ts", "./*.tsx"]
+}

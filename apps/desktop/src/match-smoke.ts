@@ -40,7 +40,17 @@ export async function verifyMatchDetails(window: BrowserWindow) {
         const requiredWidths = Array.from(teams, team => parseFloat(team.style.getPropertyValue('--match-team-width')));
         const fits = requiredWidths.reduce((sum, required) => sum + required, 0) + gap <= available + 0.1;
         const paired = teamBounds.length === 2 && Math.abs(teamBounds[0].top - teamBounds[1].top) < 1;
+        const topbar = document.querySelector('.topbar');
+        const actions = topbar.querySelector('.topbar-actions');
+        const pager = actions.querySelector('.match-detail-navigation');
+        const id = topbar.querySelector('[aria-current="page"]');
+        const left = topbar.querySelector('.topbar-location').getBoundingClientRect().right;
+        const right = actions.getBoundingClientRect().left;
+        const dragTarget = document.elementFromPoint((left + right) / 2, topbar.getBoundingClientRect().height / 2);
+        const caption = navigator.windowControlsOverlay?.getTitlebarAreaRect();
         const initial = {
+          mergedTitlebar: pager?.querySelectorAll('button').length === 3 && !page.querySelector('.match-detail-navigation') && id.scrollWidth <= id.clientWidth + 1,
+          nativeTitlebarSpace: !navigator.windowControlsOverlay?.visible || (getComputedStyle(dragTarget).webkitAppRegion === 'drag' && right - left >= 8 && actions.getBoundingClientRect().right < caption.right && Array.from(pager.querySelectorAll('button')).every(button => getComputedStyle(button).webkitAppRegion === 'no-drag')),
           route: location.hash.startsWith('#archive/match/'),
           scoreboard: teams.length >= 2 && Array.from(teams).every(team => team.querySelectorAll('thead th').length === 6),
           responsive: requiredWidths.every(Number.isFinite) && paired === fits &&
@@ -52,7 +62,7 @@ export async function verifyMatchDetails(window: BrowserWindow) {
         };
         page.scrollTop = page.scrollHeight;
         await new Promise(resolve => requestAnimationFrame(resolve));
-        const back = page.querySelector('.match-detail-toolbar button');
+        const back = document.querySelector('.topbar a[href="#archive"]');
         const rect = back.getBoundingClientRect();
         const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
         initial.backAccessible = back.contains(hit);
@@ -71,18 +81,21 @@ export async function verifyMatchDetails(window: BrowserWindow) {
     }
     const interaction = await window.webContents.executeJavaScript(`(async () => {
       const page = document.querySelector('.match-detail-page');
-      page.querySelector('[role="tab"][data-state="inactive"]').click();
+      const metricTab = page.querySelector('.match-players [role="tab"][data-state="inactive"]');
+      metricTab.focus();
+      metricTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await new Promise(resolve => requestAnimationFrame(resolve));
       const player = page.querySelector('.match-player-toggle');
       player.click();
       await new Promise(resolve => requestAnimationFrame(resolve));
       const expanded = page.querySelectorAll('.match-player-metrics dt').length === 13;
+      const metricTabSelected = metricTab.getAttribute('aria-selected') === 'true';
       const selected = document.querySelector('.archive-panel [data-match-open]:not(:disabled)');
-      page.querySelector('.match-detail-toolbar button').click();
+      document.querySelector('.topbar a[href="#archive"]').click();
       const deadline = Date.now() + 5000;
       while (document.querySelector('.match-detail-page') && Date.now() < deadline)
         await new Promise(resolve => setTimeout(resolve, 25));
-      return { expanded, returned: !document.querySelector('.match-detail-page'), focusRestored: document.activeElement === selected };
+      return { expanded, metricTabSelected, returned: !document.querySelector('.match-detail-page'), focusRestored: document.activeElement === selected };
     })()`);
     Object.assign(checks, interaction);
     const archiveActions = await window.webContents.executeJavaScript(`(async () => {
@@ -110,7 +123,7 @@ export async function verifyMatchDetails(window: BrowserWindow) {
       const heading = await waitFor('detail heading', () => document.querySelector('.match-detail-page h2[tabindex="-1"]'));
       await waitFor('detail heading focus', () => document.activeElement === heading);
       const menuDetailNavigation = location.hash.startsWith('#archive/match/');
-      document.querySelector('.match-detail-page .match-detail-toolbar button').click();
+      document.querySelector('.topbar a[href="#archive"]').click();
       await waitFor('archive return', () => !document.querySelector('.match-detail-page'));
       await waitFor('menu exit animation', () => !document.querySelector('[role="menu"]'));
       const returnedTrigger = Array.from(document.querySelectorAll('.archive-table [data-menu-trigger]')).find(
@@ -145,7 +158,7 @@ export async function verifyMatchDetails(window: BrowserWindow) {
           !page.querySelector('[data-slot="skeleton"]') && page;
       });
       const remote = Array.from(page.querySelectorAll('button')).find(button => button.textContent.includes('BATrace'));
-      const refresh = page.querySelector('button[aria-label="刷新"], button[aria-label="Refresh"]');
+      const refresh = document.querySelector('.match-detail-navigation button[aria-busy]');
       const points = new Intl.NumberFormat('en', { maximumFractionDigits: 2 }).format(local.points);
       const result = {
         localArchiveDetail: /本地日志|Local log/.test(page.textContent),
@@ -154,7 +167,7 @@ export async function verifyMatchDetails(window: BrowserWindow) {
         localArchiveRemoteDisabled: remote?.disabled === true && refresh?.disabled === true,
         localArchiveIdentityHidden: !page.textContent.includes(local.id),
       };
-      page.querySelector('.match-detail-toolbar button').click();
+      document.querySelector('.topbar a[href="#archive"]').click();
       await waitFor(() => !document.querySelector('.match-detail-page'));
       const unknownFilter = document.querySelector('.archive-panel [role="switch"]');
       if (unknownFilter?.getAttribute('aria-checked') === 'true') unknownFilter.click();
