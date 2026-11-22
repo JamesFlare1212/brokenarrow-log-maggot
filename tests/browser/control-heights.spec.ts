@@ -26,7 +26,11 @@ for (const touch of [false, true]) {
         ],
         ['archive', '.archive-toolbar :is(button:not([role="switch"]), select)', actions],
         ['replays', '.replay-library .panel-card-actions button', actions],
-        ['decks', '.deck-columns section > .actions button', actions],
+        [
+          'decks',
+          '.deck-columns :is([data-slot=card-action], [data-slot=card-footer]) button',
+          actions,
+        ],
         ['bans', '.bans-toolbar :is(button, [data-slot="input-group"])', actions],
         ['archive/match/9484902', '.topbar button', 32],
       ];

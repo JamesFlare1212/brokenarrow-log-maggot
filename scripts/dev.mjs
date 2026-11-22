@@ -26,7 +26,10 @@ const environment = {
   ),
 };
 console.log('Real-data development profile:', environment.BA_USER_DATA);
-const server = await createServer({ configFile: 'apps/web/vite.config.ts' });
+const server = await createServer({
+  configFile: 'apps/web/vite.config.ts',
+  mode: 'desktop-fixtures',
+});
 await server.listen();
 server.printUrls();
 delete environment.ELECTRON_RUN_AS_NODE;

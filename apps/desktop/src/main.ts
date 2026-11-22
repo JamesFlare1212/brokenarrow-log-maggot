@@ -132,7 +132,7 @@ async function start(): Promise<void> {
     updates,
     version: app.getVersion(),
     http: {
-      offline,
+      offline: offline && !smoke && !app.isPackaged && allowedDevUrl ? 'fixture-cache' : offline,
       fetch: offline
         ? async () => {
             throw new Error('Network disabled in offline real-data mode');

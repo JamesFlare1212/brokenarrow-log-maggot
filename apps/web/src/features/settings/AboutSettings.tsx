@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
 export function AboutSettings() {
-  const { api, state, notify } = useApp(),
+  const { api, access, state, notify } = useApp(),
     { t } = useI18n();
   return (
     <Card
@@ -40,6 +40,7 @@ export function AboutSettings() {
               <Button
                 className="w-full @min-[32rem]/about-settings:w-auto"
                 key={label}
+                disabled={!access.method('external.open')}
                 onClick={() =>
                   void api
                     .invoke('external.open', { url: url! })

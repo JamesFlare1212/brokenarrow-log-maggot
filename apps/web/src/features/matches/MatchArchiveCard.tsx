@@ -96,7 +96,7 @@ export function MatchArchiveCard({ match, onOpen }: { match: Match; onOpen: () =
           <Button
             type="button"
             variant="link"
-            className="archive-card-map block w-full min-w-0 h-auto p-0 overflow-hidden text-inherit text-[length:inherit] leading-[inherit] font-[weight:inherit] text-left text-ellipsis whitespace-normal"
+            className="archive-card-map block h-auto w-full min-w-0 p-0 text-left text-inherit text-[length:inherit] leading-[inherit] font-[weight:inherit] whitespace-normal wrap-anywhere underline-offset-2"
             data-match-open={match.id}
             aria-label={t('matchOpenDetail', {
               map: mapName,

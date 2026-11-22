@@ -25,8 +25,10 @@ for (const [lang, width] of [
     const detail = page.locator('.match-detail-page');
     await detail
       .getByRole('button', { name: 'JamesFlare', exact: true })
-      .click({ position: { x: 16, y: 16 } });
-    await detail.locator('.match-player-details button').click();
+      .click({ button: 'right', position: { x: 32, y: 14 } });
+    await page
+      .getByRole('menuitem', { name: lang === 'zh' ? '查看玩家资料' : 'View player profile' })
+      .click();
     const header = page.locator('.profile-dialog [data-slot="dialog-header"]');
     await expect(header).toBeVisible();
     await page.setViewportSize({ width, height: 800 });

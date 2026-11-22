@@ -25,7 +25,7 @@ export function MatchArchiveActions({
   onOpen: () => void;
   onUpdated: () => Promise<unknown>;
 }) {
-  const { api, notify } = useApp();
+  const { api, access, notify } = useApp();
   const { t, locale } = useI18n();
   const confirm = useConfirmation();
   const [refreshing, setRefreshing] = useState(false);
@@ -133,7 +133,7 @@ export function MatchArchiveActions({
               {t('matchViewDetails')}
             </DropdownMenuItem>
             <DropdownMenuItem
-              disabled={!match.fid || match.mode === 'pve'}
+              disabled={!match.fid || match.mode === 'pve' || !access.method('external.open')}
               onSelect={() =>
                 void api
                   .invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${match.fid}` })

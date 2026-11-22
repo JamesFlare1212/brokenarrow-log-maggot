@@ -33,14 +33,21 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
     return () => clearInterval(timer);
   }, [state.session.phase, view]);
   useEffect(() => {
+    let active = true;
     void api
       .invoke('matches.list', {})
-      .then((matches) =>
-        setPrevious(
-          matches.find((m) => m.fid !== null && m.fid !== state.session.current?.fid) || null,
-        ),
-      )
-      .catch((e) => notify(String(e), true));
+      .then((matches) => {
+        if (active)
+          setPrevious(
+            matches.find((m) => m.fid !== null && m.fid !== state.session.current?.fid) || null,
+          );
+      })
+      .catch((e) => {
+        if (active) notify(String(e), true);
+      });
+    return () => {
+      active = false;
+    };
   }, [api, state.matchesRevision, state.session.current?.fid]);
   useEffect(() => {
     if (view !== 'previous' || !previous?.fid) return;

@@ -3,8 +3,16 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { rm } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
-import type { AppEvent, Bridge, RpcInputs, RpcMethod, RpcOutputs } from '@ba/contracts';
+import {
+  browserFixtureAccess,
+  type AppEvent,
+  type Bridge,
+  type RpcInputs,
+  type RpcMethod,
+  type RpcOutputs,
+} from '@ba/contracts';
 import { AppProvider } from '../apps/web/src/app/state';
+import { App } from '../apps/web/src/app/App';
 import { MatchDialog } from '../apps/web/src/features/matches/MatchDialog';
 import { ProfileDialog } from '../apps/web/src/features/players/ProfileDialog';
 import { createBrowserFixtures } from '../apps/server/src/dev/browser';
@@ -43,6 +51,7 @@ async function setup() {
 }
 afterEach(async () => {
   cleanup();
+  history.replaceState(null, '', '/');
   for (const service of services.splice(0)) {
     await service.stop();
     if (!service.directory.startsWith(root + sep))
@@ -52,6 +61,61 @@ afterEach(async () => {
 });
 
 describe('UI backed by the complete recorded BATrace service', () => {
+  it('can navigate the captured workspace without denied background requests', async () => {
+    const { api, calls, completed } = await setup();
+    render(
+      <AppProvider api={api} access={browserFixtureAccess}>
+        <App />
+      </AppProvider>,
+    );
+    await waitFor(() =>
+      expect(completed.some(({ method }) => method === 'replays.directory')).toBe(true),
+    );
+    for (const [panel, method] of [
+      ['radar', 'matches.list'],
+      ['players', null],
+      ['archive', 'accounts.list'],
+      ['replays', 'replays.list'],
+      ['decks', 'decks.list'],
+      ['bans', 'bans.list'],
+    ] as const) {
+      const before = completed.length;
+      fireEvent.click(
+        document.querySelector<HTMLButtonElement>(`.nav-item[aria-label="${t(panel)}"]`)!,
+      );
+      await waitFor(() => {
+        expect(document.querySelector(`.page-${panel}:not([hidden])`)).toBeTruthy();
+        if (method)
+          expect(completed.slice(before).some((call) => call.method === method)).toBe(true);
+      });
+    }
+    fireEvent.click(document.querySelector<HTMLButtonElement>('.settings-button')!);
+    fireEvent.click(
+      await screen.findByRole('tab', { name: t('recordingSettings') }, { timeout: 5000 }),
+    );
+    expect(document.querySelector<HTMLInputElement>('#settings-log')?.readOnly).toBe(true);
+    expect(
+      document.querySelector<HTMLButtonElement>('#setting-autoQueryCurrentMatch')?.disabled,
+    ).toBe(true);
+    expect(document.querySelector<HTMLButtonElement>('#setting-multiAccountBond')?.disabled).toBe(
+      false,
+    );
+    const recording = await screen.findByRole('tabpanel', { name: t('recordingSettings') });
+    expect(within(recording).getByText(t('devModeHint.captured'))).toBeTruthy();
+    expect(
+      (within(recording).getByRole('button', { name: t('recordingTest') }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      calls.some(({ method }) => method === 'displays.thumbnail' || method === 'config.update'),
+    ).toBe(false);
+    await waitFor(() =>
+      expect(completed.map((call) => call.method).sort()).toEqual(
+        calls.map((call) => call.method).sort(),
+      ),
+    );
+  }, 30000);
+
   it('renders real match statistics, titles, score labels, and evidence after an offline refresh', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected network'));
     const { api, completed } = await setup();

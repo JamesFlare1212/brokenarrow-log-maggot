@@ -100,7 +100,7 @@ export function ReportView({
   name?: string;
 }) {
   const { t, locale } = useI18n(),
-    { api, openModal, notify } = useApp();
+    { api, access, openModal, notify } = useApp();
   const playerId = report?.id ?? id ?? '';
   const ReportContainer = embedded ? 'div' : ReportCard;
   const ReportContent = embedded ? 'div' : CardContent;
@@ -196,7 +196,7 @@ export function ReportView({
           <Button
             variant="ghost"
             className="self-start"
-            disabled={!report}
+            disabled={!report || !access.method('external.open')}
             onClick={() =>
               report &&
               void api

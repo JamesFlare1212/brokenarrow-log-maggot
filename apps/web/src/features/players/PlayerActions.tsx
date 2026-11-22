@@ -5,7 +5,7 @@ import { useApp } from '../../app/state';
 import { Button, Menu } from '../../components/ui';
 import { useI18n } from '../../hooks/useI18n';
 export function PlayerActions({ player, info }: { player: Player; info?: MiniInfo | null }) {
-  const { api, openModal, notify } = useApp(),
+  const { api, access, openModal, notify } = useApp(),
     { t } = useI18n();
   return (
     <Menu label={`${t('actions')}: ${player.name}`}>
@@ -13,6 +13,7 @@ export function PlayerActions({ player, info }: { player: Player; info?: MiniInf
         {t('investigate')}
       </Button>
       <Button
+        disabled={!access.method('external.open')}
         onClick={() => {
           void api
             .invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${player.id}` })

@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { rpcSchemas } from '@ba/contracts';
 import { emptyMatch } from '@ba/shared';
@@ -119,6 +120,32 @@ describe('lazy timeline match RPC and cache behavior', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it('reads fresh fixture match and player data without persisting derived records', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    const { db, tracker } = setup({ offline: 'fixture-cache', fetch });
+    db.saveCache(`match:${fid}`, recorded.value, 120_000, recorded.at);
+    db.saveCache(
+      'analysis:1',
+      { matchCount: 3, mapPerformance: [{ mapId: 1, mapName: 'Map' }] },
+      120_000,
+      recorded.at,
+    );
+    db.saveCache('myMatches:1:10', { matches: [] }, 120_000, recorded.at);
+    db.saveCache('info:2', { info: { name: 'Fixture' } }, 120_000, recorded.at);
+    db.setState('activeAccountId', '1');
+    const changes = () => db.sql.prepare('SELECT total_changes() AS n').get()!.n;
+    const before = changes();
+    expect((await tracker.detail(fid)).warning).toBeUndefined();
+    expect(await tracker.profile('1')).toMatchObject({
+      info: { stale: false, fallback: false },
+      recentError: null,
+    });
+    expect(await tracker.profile('2')).toMatchObject({ info: { stale: false, fallback: true } });
+    await tracker.sync();
+    expect(changes()).toBe(before);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('reports summary-only and malformed cached matches as unavailable rather than zero charts', async () => {
     const { db, tracker } = setup({ offline: true, fetch: vi.fn<typeof fetch>() });
     for (const [value, reason] of [
@@ -207,7 +234,13 @@ describe('lazy timeline match RPC and cache behavior', () => {
     expect(await app.invoke('matches.list', {})).toEqual([]);
   });
 
-  it('allows the timeline endpoint in browser fixture mode', async () => {
+  it('uses the recorded expiry for timeline reads in browser fixture mode', async () => {
+    const realNow = Date.now;
+    let time = realNow();
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => time);
+    cleanups.push(async () => {
+      clock.mockRestore();
+    });
     const service = await createBrowserFixtures(
       resolve('tests/fixtures/real'),
       resolve('.test-data/timeline-browser'),
@@ -218,11 +251,25 @@ describe('lazy timeline match RPC and cache behavior', () => {
       await service.stop();
       await rm(service.directory, { recursive: true, force: true });
     });
-    expect(await service.invoke('matches.timeline', { fid, force: true })).toMatchObject({
-      status: 'ready',
-      source: 'stale',
-      updatedAt: recorded.at,
-      data: { duration: 1339 },
-    });
+    const db = new DatabaseSync(resolve(service.directory, 'assistant.sqlite'), { readOnly: true });
+    try {
+      const expires = Number(
+        db.prepare('SELECT expires_at FROM api_cache WHERE key=?').get(`match:${fid}`)!.expires_at,
+      );
+      for (const [now, source] of [
+        [expires - 1, 'cache'],
+        [expires, 'stale'],
+      ] as const) {
+        time = now;
+        expect(await service.invoke('matches.timeline', { fid, force: true })).toMatchObject({
+          status: 'ready',
+          source,
+          updatedAt: recorded.at,
+          data: { duration: 1339 },
+        });
+      }
+    } finally {
+      db.close();
+    }
   }, 30000);
 });

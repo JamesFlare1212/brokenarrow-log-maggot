@@ -2302,7 +2302,12 @@ describe('user interaction regressions', () => {
       history.replaceState(null, '', `#${page}`);
       const bootstrap = bootstrapForApp();
       bootstrap.config.panelOrder = [page];
-      const native = nativeFixture(bootstrap);
+      const native = nativeFixture(bootstrap, {
+        'cache.stats': () => ({
+          api: { entries: 0, expired: 0, bytes: 0 },
+          snapshots: { entries: 0, expired: 0, bytes: 0 },
+        }),
+      });
       render(<DevelopmentApp api={native.api} />);
       const tools = within(
         document
@@ -2312,7 +2317,7 @@ describe('user interaction regressions', () => {
       fireEvent.click(tools.getByRole('button', { name: '开发工具' }));
       const lobby = within(await tools.findByRole('radiogroup', { name: '组队大厅人数' }));
       expect(lobby.getByRole('radio', { name: '1' }).hasAttribute('disabled')).toBe(true);
-      fireEvent.click(tools.getByRole('radio', { name: '模拟数据' }));
+      fireEvent.click(tools.getByRole('radio', { name: '状态模拟' }));
       await waitFor(() =>
         expect(lobby.getByRole('radio', { name: '1' }).hasAttribute('disabled')).toBe(false),
       );
@@ -2327,24 +2332,26 @@ describe('user interaction regressions', () => {
         expect(within(roster).getByRole('heading', { name: '组队大厅' })).toBeTruthy();
         expect(within(roster).getByRole('heading', { name: /^Alpha/ })).toBeTruthy();
         expect(within(roster).getByText('等待开局')).toBeTruthy();
-        expect(within(roster).queryByRole('heading', { name: 'Dam' })).toBeNull();
-        expect(within(roster).queryByText('Armored.deck')).toBeNull();
+        expect(within(roster).queryByRole('heading', { name: capturedMatches[0]!.map })).toBeNull();
+        expect(within(roster).queryByText(capturedMatches[0]!.localDeck)).toBeNull();
         expect(roster.querySelectorAll('.team-column')).toHaveLength(1);
         expect(roster.querySelectorAll('.team-0 .player-card')).toHaveLength(count);
         expect(roster.querySelector('.team-1, .team-100, .team-null, .match-id')).toBeNull();
         const localCard = within(roster)
-          .getByRole('button', { name: 'Raven' })
+          .getByRole('button', { name: localPlayer.name })
           .closest('.player-card')!;
-        expect(localCard.querySelector('.player-analysis')?.textContent).toContain('58%');
+        expect(localCard.querySelector('.player-analysis')?.textContent).toContain(
+          `${capturedReports[localPlayer.id]!.winRate}%`,
+        );
         expect(localCard.querySelector('.player-rating')?.textContent).toContain(
-          formatMetric(1520, 0),
+          formatMetric(capturedReports[localPlayer.id]!.elo, 0),
         );
       }
       fireEvent.click(lobby.getByRole('radio', { name: '5v5' }));
       await waitFor(() =>
         expect(document.querySelectorAll(`.page-${page} .player-card`)).toHaveLength(10),
       );
-      expect(screen.getByRole('heading', { name: 'Dam' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: capturedMatches[0]!.map })).toBeTruthy();
       expect(document.querySelectorAll(`.page-${page} .team-0 .player-card`)).toHaveLength(5);
       expect(document.querySelectorAll(`.page-${page} .team-1 .player-card`)).toHaveLength(5);
       expect(native.calls.filter((call) => call.method === 'config.update')).toHaveLength(0);
@@ -2422,6 +2429,10 @@ describe('user interaction regressions', () => {
     render(<DecksPanel />, { wrapper: wrapper(native.api) });
     const files = within(await screen.findByRole('group', { name: '当前卡组' }));
     const user = userEvent.setup();
+    const emptyBackups = within(screen.getByRole('group', { name: '备份卡组' }));
+    expect(emptyBackups.getByText('暂无备份')).toBeTruthy();
+    expect(emptyBackups.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: '恢复到当前卡组' })).toBeNull();
     const all = files.getByRole('checkbox', { name: '全选' });
     const first = files.getByRole('checkbox', { name: 'Armored.deck' });
     const second = files.getByRole('checkbox', { name: 'Airborne.deck' });
@@ -2736,7 +2747,7 @@ describe('user interaction regressions', () => {
     fireEvent.click(screen.getByRole('radio', { name: '网格视图' }));
     const grid = within(screen.getByRole('list', { name: '对局档案' }));
     expect(grid.getByText('4 位玩家')).toBeTruthy();
-    expect(grid.getByRole('heading', { name: 'Alpha · 对方队伍' })).toBeTruthy();
+    expect(grid.getByRole('heading', { name: 'Alpha · 敌方队伍' })).toBeTruthy();
     expect(grid.getByRole('heading', { name: 'Bravo · 我方队伍' })).toBeTruthy();
     expect(grid.getByRole('heading', { name: '观战' })).toBeTruthy();
     expect(grid.getByRole('heading', { name: '未知' })).toBeTruthy();
@@ -2825,7 +2836,7 @@ describe('user interaction regressions', () => {
     expect(screen.getByRole('heading', { name: '未记录' })).toBeTruthy();
     expect(screen.queryByText(match.id)).toBeNull();
     expect(screen.getByText('暂无玩家数据')).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: /我方队伍|对方队伍/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /我方队伍|敌方队伍/ })).toBeNull();
     expect(native.calls.filter((call) => call.method === 'matches.list')).toHaveLength(1);
   });
 
@@ -3550,7 +3561,19 @@ describe('user interaction regressions', () => {
     expect(screen.getByRole('dialog')).toBe(dialog);
     fireEvent.click(name);
     expect(name.getAttribute('aria-expanded')).toBe('true');
-    expect(dialog.querySelectorAll('.match-player-metrics dt')).toHaveLength(13);
+    const labels = Array.from(
+      dialog.querySelectorAll('.match-player-metrics dt'),
+      (term) => term.textContent,
+    );
+    expect(labels).toHaveLength(12);
+    expect(labels).toContain(translate('zh', 'matchRatingBefore'));
+    expect(labels).toContain(translate('zh', 'matchRatingAfter'));
+    expect(labels).not.toContain(translate('zh', 'eloDelta'));
+    expect(
+      within(name.closest('table')!).getByRole('columnheader', {
+        name: translate('zh', 'eloDelta'),
+      }),
+    ).toBeTruthy();
     expect(document.querySelector('button button')).toBeNull();
   });
 
@@ -5154,7 +5177,15 @@ describe('application loading layouts', () => {
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => expect(dialog.querySelectorAll('.match-team-table table')).toHaveLength(2));
     const overview = dialog.querySelector('.match-overview');
-    expect(dialog.querySelectorAll('.match-summary dt')).toHaveLength(4);
+    expect(dialog.querySelector('.match-personal-card')).toBeNull();
+    expect(dialog.querySelector('.match-detail-footnote')).toBeNull();
+    expect(within(dialog).getAllByRole('tablist')).toHaveLength(1);
+    expect(
+      within(dialog)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent),
+    ).toEqual(['核心战绩', '战斗数据', '支援数据', '时间线']);
+    expect(within(dialog).queryByText('点击玩家展开详情')).toBeNull();
     for (const table of dialog.querySelectorAll('.match-team-table table')) {
       expect(table.querySelectorAll('th')).toHaveLength(6);
       expect(table.querySelectorAll('tbody td')).toHaveLength(30);
@@ -5346,7 +5377,7 @@ describe('match detail navigation and disclosure', () => {
       expect(breadcrumb.textContent).toContain(translate(locale, 'matchLocalOnly'));
       expect(breadcrumb.textContent).not.toContain(match.id);
       expect(page.getByText(translate(locale, 'matchLocalOnly'))).toBeTruthy();
-      const points = page.getByText(translate(locale, 'matchLogPoints')).closest('div')!;
+      const points = page.getByText(translate(locale, 'matchLogPoints'));
       expect(points.textContent).toContain(formatMetric(match.points));
       const scoreboard = page.getByRole('region', { name: translate(locale, 'matchScoreboard') });
       expect(scoreboard.querySelectorAll('.match-player-toggle')).toHaveLength(
@@ -5680,7 +5711,7 @@ describe('match detail navigation and disclosure', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: local.name }));
     const expansion = document.querySelector('.match-player-details')!;
-    expect(expansion.querySelectorAll('dt')).toHaveLength(13);
+    expect(expansion.querySelectorAll('dt')).toHaveLength(12);
     fireEvent.click(screen.getByRole('button', { name: '刷新' }));
     await screen.findByText('Detail refresh failed');
     expect(document.querySelector('.match-player-details')).toBe(expansion);
@@ -5720,8 +5751,9 @@ describe('match detail navigation and disclosure', () => {
     await screen.findByRole('heading', { name: match.map });
     const player = match.players.find((player) => capturedProfiles[player.id])!;
     fireEvent.click(screen.getByRole('button', { name: player.name }));
-    const opener = screen.getByRole('button', { name: '查看玩家资料' });
-    await userEvent.setup().click(opener);
+    const opener = screen.getByRole('button', { name: player.name });
+    fireEvent.contextMenu(opener, { button: 2, clientX: 20, clientY: 30 });
+    await userEvent.setup().click(screen.getByRole('menuitem', { name: '查看玩家资料' }));
     const profile = await screen.findByRole('dialog');
     fireEvent.click(within(profile).getByRole('button', { name: '关闭' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

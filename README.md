@@ -87,7 +87,18 @@ Electron. A development-only local interface loads `tests/fixtures/real` into an
 isolated `.test-data/web-dev/` copy on each launch. Queries use recorded offline
 responses and report missing data as errors. Settings and data changes affect only
 that copy; native directory selection, recording, and update installation are
-unavailable in the browser.
+unavailable in the browser. In **Dev tools → Simulation**, the archive, players,
+reports and bans still come from the same offline fixtures. The tool replays a
+recorded 5v5 roster as a live match or a 1–5 player party. Switch recording to
+Recording, then Idle to create a playable test clip without capturing a display.
+Scene edits stay in the tab; resetting Simulation discards them. **Empty** starts
+with no history or roster. The same scene controls are available in the offline
+desktop launcher (`pnpm dev`); packaged builds do not include them. Toggle
+**Cache expiration** to control the UI independently of the actual cache age.
+On shows the expired state even for fresh entries; off (the default) hides it
+even for expired entries. The switch works across scenes without changing cache
+timestamps or lifetimes. Cache cleanup previews counts locally; reset the scene
+to restore them.
 
 Both validation and Windows release CI run `pnpm format:check` and `pnpm check`.
 The shared `pnpm check` entry point covers type checking, UI design checks,

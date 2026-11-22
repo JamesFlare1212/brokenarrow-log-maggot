@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePageBreadcrumb } from '../../hooks/usePageBreadcrumb';
 import { ArrowLeft, Search, Users, X } from 'lucide-react';
 import type { PlayerReport, RpcOutputs } from '@ba/contracts';
@@ -62,10 +62,14 @@ export function PlayersPanel() {
       (trigger ?? searchInput.current)?.focus();
     }
   }, [selectedId]);
+  const loadReport = report.load;
+  useEffect(() => {
+    if (selectedId) void loadReport(() => api.invoke('players.report', { id: selectedId }));
+  }, [api, selectedId, loadReport]);
   const selectPlayer = (id: string, trigger?: HTMLButtonElement) => {
     if (trigger) selectionTrigger.current = trigger;
-    setSelectedId(id);
-    void report.load(() => api.invoke('players.report', { id }));
+    if (selectedId === id) void loadReport(() => api.invoke('players.report', { id }));
+    else setSelectedId(id);
   };
   const backToPlayers = useCallback(() => {
     returningToPlayers.current = true;

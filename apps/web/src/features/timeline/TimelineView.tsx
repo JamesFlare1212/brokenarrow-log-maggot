@@ -776,7 +776,10 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
   ] as const;
   const [mode, setMode] = useState<View>('force');
   const [selected, setSelected] = useState<string | null>(null);
-  const [second, setSecond] = useState(data.duration);
+  const [position, setPosition] = useState<{ second: number; eventStartId?: string }>({
+    second: data.duration,
+  });
+  const { second } = position;
   const [hovered, setHovered] = useState<number | null>(null);
   const [player, setPlayer] = useState('all');
   const [kind, setKind] = useState('all');
@@ -810,7 +813,7 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
   }, []);
   useEffect(() => {
     setSelected(null);
-    setSecond(data.duration);
+    setPosition({ second: data.duration });
     setWindowCenter(data.duration);
     setHovered(null);
     setPlayer('all');
@@ -874,15 +877,14 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
     return () => observer.disconnect();
   }, [narrow, chartExpanded, active?.id, stickyOffset]);
   const current = frameAt(data.frames, hovered ?? second, data.sorties);
-  const atRangeStart = (time: number) =>
-    !!active && active.end > active.start && time === active.start;
-  const losses = pointAt(data.points, current.second, atRangeStart(current.second));
-  const inspectedMinute = pointAt(data.points, second, atRangeStart(second));
-  const windowAnchor = atRangeStart(second) ? (active!.start + active!.end) / 2 : second;
+  const atRangeStart = active && active.end > active.start && position.eventStartId === active.id;
+  const losses = pointAt(data.points, current.second, hovered === null && atRangeStart);
+  const inspectedMinute = pointAt(data.points, second, atRangeStart);
+  const windowAnchor = atRangeStart ? (active.start + active.end) / 2 : second;
   const positionLabel = t(
     hovered !== null
       ? 'timeline.hover'
-      : atRangeStart(second)
+      : atRangeStart
         ? 'timeline.start'
         : active && active.end > active.start && second === active.end
           ? 'timeline.end'
@@ -938,7 +940,10 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
     if (narrow && chartExpanded && moment.id !== selected)
       setLossesExpanded(moment.kind === 'loss');
     setSelected(moment.id === selected ? null : moment.id);
-    setSecond(moment.start);
+    setPosition({
+      second: moment.start,
+      eventStartId: moment.id === selected ? undefined : moment.id,
+    });
     setWindowCenter((moment.start + moment.end) / 2);
     setHovered(null);
     if (narrow && !chartExpanded && moment.id !== selected) {
@@ -949,7 +954,7 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
   };
   const locateMoment = (moment: Moment) => {
     setSelected(moment.id);
-    setSecond(moment.start);
+    setPosition({ second: moment.start, eventStartId: moment.id });
     setWindowCenter((moment.start + moment.end) / 2);
     setHovered(null);
     if (narrow && chartExpanded) setLossesExpanded(moment.kind === 'loss');
@@ -960,7 +965,7 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
   };
   const changeTime = (value: number) => {
     value = Math.max(0, Math.min(data.duration, value));
-    setSecond(value);
+    setPosition({ second: value });
     if (value < window.start || value > window.end) setWindowCenter(value);
     setHovered(null);
   };
@@ -1043,13 +1048,13 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
     changeTime(time);
     focusChart();
   };
-  const inspectDetail = (time: number) => {
+  const inspectDetail = (time?: number) => {
     // Keep the original hit target until the tap's compatibility click finishes.
     requestAnimationFrame(() => {
       setChartExpanded(true);
       setDetail(true);
-      setSecond(time);
-      setWindowCenter(active && atRangeStart(time) ? (active.start + active.end) / 2 : time);
+      if (time !== undefined) setPosition({ second: time });
+      setWindowCenter(time ?? windowAnchor);
       setHovered(null);
       setLossesExpanded(active?.kind === 'loss');
       focusChart();
@@ -1058,7 +1063,7 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
   const viewChart = () => {
     setChartExpanded(true);
     if (active) {
-      setSecond(active.start);
+      setPosition({ second: active.start, eventStartId: active.id });
       setWindowCenter((active.start + active.end) / 2);
       setDetail(true);
       setLossesExpanded(!narrow || active.kind === 'loss');
@@ -1244,7 +1249,7 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
                   variant="outline"
                   size="default"
                   aria-label={t('timeline.inspectDetail')}
-                  onClick={() => inspectDetail(second)}
+                  onClick={() => inspectDetail()}
                 >
                   {t('timeline.inspect')}
                   <ZoomIn data-icon="inline-end" />
@@ -1310,7 +1315,7 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      inspectDetail(second);
+                      inspectDetail();
                     }
                   }}
                   className="cursor-zoom-in touch-pan-y touch-pinch-zoom rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

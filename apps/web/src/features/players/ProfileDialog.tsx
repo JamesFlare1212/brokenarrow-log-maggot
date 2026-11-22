@@ -25,14 +25,14 @@ import { ProfileOverview } from './ProfileOverview';
 import { ProfileRecords } from './ProfileRecords';
 
 export function ProfileDialog({ id, name }: { id: string; name: string }) {
-  const { api, closeModal, backModal, notify, runMaggot } = useApp(),
+  const { api, access, closeModal, backModal, notify, runMaggot } = useApp(),
     { t, locale } = useI18n(),
     profile = useRequest<PlayerProfile>(),
     report = useRequest<PlayerReport>();
   const load = async (force = false) => {
     await Promise.all([
-      profile.load(() => api.invoke('players.profile', { id, force }), true),
-      report.load(() => api.invoke('players.report', { id, force }), true),
+      profile.load(() => api.invoke('players.profile', { id, force }), force),
+      report.load(() => api.invoke('players.report', { id, force }), force),
     ]);
     if (force) await runMaggot(id, true);
   };
@@ -59,6 +59,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
             variant="ghost"
             size="icon"
             aria-label={t('openPlayerOnBatrace')}
+            disabled={!access.method('external.open')}
             onClick={() =>
               void api
                 .invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${id}` })

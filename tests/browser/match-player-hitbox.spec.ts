@@ -16,8 +16,23 @@ test('the player disclosure fills its cell without capturing awards or stats', a
     for (const key of ['x', 'y', 'width', 'height'] as const) {
       expect(Math.abs(button[key] - bounds[key])).toBeLessThanOrEqual(1);
     }
+    const name = cell.locator('.match-player-name');
+    await toggle.hover({ position: { x: 32, y: 14 } });
+    await expect(name).not.toHaveAttribute('data-slot', 'tooltip-trigger');
+    await toggle.click({ button: 'right', position: { x: 32, y: 14 } });
+    const menu = page.getByRole('menu');
+    await expect(menu).toContainText('#');
+    await expect(menu.getByRole('menuitem')).toHaveCount(1);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await page.keyboard.press('Escape');
+    await expect(toggle).toBeFocused();
+    await toggle.press('Shift+F10');
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('Escape');
     await cell.click({ position: { x: bounds.width - 3, y: 3 } });
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const panel = details.locator('.match-player-details');
+    await expect(panel.getByRole('button')).toHaveCount(0);
     await cell.click({ position: { x: 3, y: bounds.height - 3 } });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   }

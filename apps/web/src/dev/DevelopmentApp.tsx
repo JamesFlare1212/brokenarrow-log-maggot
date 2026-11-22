@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { FlaskConical, GripVertical, RefreshCw, Users, Video } from 'lucide-react';
+import { FlaskConical, GripVertical, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { glassOverlaySurfaceClasses } from '@/lib/surfaces';
 import toolStyles from './tools.css?inline';
@@ -9,8 +9,11 @@ import { errorMessage } from '@ba/shared';
 import type { Bridge } from '@ba/contracts';
 import { App } from '../app/App';
 import { AppProvider } from '../app/state';
+import { archiveMatchFromHash } from '../features/matches/routes';
 import { translate } from '../hooks/useI18n';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -20,7 +23,7 @@ import {
   PopoverContent,
   PopoverHeader,
   PopoverTitle,
-  PopoverDescription,
+  PopoverAnchor,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -77,51 +80,69 @@ function DevelopmentTools({
           data-dev-tools
         >
           <Popover open={open} onOpenChange={setOpen}>
-            <div
-              className={cn(
-                'development-tools-launcher flex items-center gap-1 p-1 border border-transparent',
-                glassOverlaySurfaceClasses,
-              )}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="development-tools-handle touch-none cursor-grab [&:active]:cursor-grabbing"
-                aria-label={t('devMoveTools')}
-                aria-describedby="development-move-hint"
-                {...handle}
+            <PopoverAnchor asChild>
+              <div
+                className={cn(
+                  'development-tools-launcher flex items-center gap-1 p-1 border border-transparent',
+                  glassOverlaySurfaceClasses,
+                )}
               >
-                <GripVertical aria-hidden="true" />
-              </Button>
-              <span className="sr-only" id="development-move-hint">
-                {t('devMoveToolsHint')}
-              </span>
-              <PopoverTrigger asChild>
-                <Button ref={trigger} variant="ghost" aria-label={t('devTools')}>
-                  <FlaskConical data-icon="inline-start" aria-hidden="true" />
-                  <span>{t('devTools')}</span>
-                  <Badge variant="secondary">DEV</Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="development-tools-handle touch-none cursor-grab [&:active]:cursor-grabbing"
+                  aria-label={t('devMoveTools')}
+                  aria-describedby="development-move-hint"
+                  {...handle}
+                >
+                  <GripVertical aria-hidden="true" />
                 </Button>
-              </PopoverTrigger>
-            </div>
+                <span className="sr-only" id="development-move-hint">
+                  {t('devMoveToolsHint')}
+                </span>
+                <PopoverTrigger asChild>
+                  <Button ref={trigger} variant="ghost" aria-label={t('devTools')}>
+                    <FlaskConical data-icon="inline-start" aria-hidden="true" />
+                    <span>{t('devTools')}</span>
+                    <Badge variant="secondary">DEV</Badge>
+                  </Button>
+                </PopoverTrigger>
+              </div>
+            </PopoverAnchor>
             <PopoverContent
-              align="end"
+              align={
+                position.x + (dock.current?.offsetWidth ?? 0) / 2 < innerWidth / 2 ? 'start' : 'end'
+              }
               side="top"
+              sideOffset={8}
+              collisionPadding={8}
               container={container}
               updatePositionStrategy="always"
               aria-labelledby="development-tools-title"
-              className="development-tools-panel flex max-h-[calc(100dvh_-_5rem)] flex-col gap-5 overflow-y-auto pointer-events-auto [&_[data-slot='field-label']>svg]:w-4 [&_[data-slot='field-label']>svg]:h-4 w-80 max-w-[calc(100vw-2rem)]"
+              className="development-tools-panel pointer-events-auto w-80 max-w-[calc(100dvw-1rem)] max-h-(--radix-popover-content-available-height) gap-4 overflow-x-hidden overflow-y-auto overscroll-contain p-4"
             >
-              <PopoverHeader>
-                <PopoverTitle id="development-tools-title">{t('devTools')}</PopoverTitle>
-                <PopoverDescription>{t('devToolsHint')}</PopoverDescription>
+              <PopoverHeader className="flex-row items-center justify-between gap-2">
+                <PopoverTitle id="development-tools-title" className="font-semibold">
+                  {t('devTools')}
+                </PopoverTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={t('devReset')}
+                  disabled={snapshot.pending}
+                  aria-busy={snapshot.pending}
+                  onClick={() => changeMode(snapshot.mode)}
+                >
+                  <RefreshCw data-icon="inline-start" aria-hidden="true" />
+                  {t('devResetShort')}
+                </Button>
               </PopoverHeader>
-              <FieldGroup>
+              <FieldGroup className="gap-4">
                 <Field>
                   <FieldLabel id="development-scene-label">{t('devScene')}</FieldLabel>
                   <ToggleGroup
                     type="single"
-                    variant="outline"
+                    variant="filter"
                     className="grid w-full grid-cols-3"
                     aria-labelledby="development-scene-label"
                     value={snapshot.mode}
@@ -140,11 +161,8 @@ function DevelopmentTools({
                     {t(snapshot.pending ? 'loading' : 'devModeHint.' + snapshot.mode)}
                   </FieldDescription>
                 </Field>
-                <Field data-disabled={snapshot.mode !== 'demo' || snapshot.pending}>
-                  <FieldLabel id="development-lobby-label">
-                    <Users aria-hidden="true" />
-                    {t('devLobbyPlayers')}
-                  </FieldLabel>
+                <Field data-disabled={!snapshot.hasLobbyRoster || snapshot.pending}>
+                  <FieldLabel id="development-lobby-label">{t('devLobbyPlayers')}</FieldLabel>
                   <ToggleGroup
                     type="single"
                     variant="outline"
@@ -152,13 +170,13 @@ function DevelopmentTools({
                     className="grid w-full grid-cols-6"
                     spacing={1}
                     aria-labelledby="development-lobby-label"
-                    aria-describedby="development-lobby-hint"
+                    aria-description={t('devLobbyPlayersHint')}
                     value={
                       snapshot.lobbyPlayerCount === null
                         ? 'match'
                         : String(snapshot.lobbyPlayerCount)
                     }
-                    disabled={snapshot.mode !== 'demo' || snapshot.pending}
+                    disabled={!snapshot.hasLobbyRoster || snapshot.pending}
                     onValueChange={(value) => {
                       if (value)
                         runtime.controls.setLobbyPlayerCount(
@@ -173,18 +191,13 @@ function DevelopmentTools({
                       </ToggleGroupItem>
                     ))}
                   </ToggleGroup>
-                  <FieldDescription id="development-lobby-hint">
-                    {t('devLobbyPlayersHint')}
-                  </FieldDescription>
                 </Field>
-                <Field data-disabled={!local || snapshot.pending}>
-                  <FieldLabel htmlFor="development-recording">
-                    <Video aria-hidden="true" />
-                    {t('devRecording')}
-                  </FieldLabel>
+                <Separator />
+                <Field orientation="horizontal" data-disabled={!local || snapshot.pending}>
+                  <FieldLabel htmlFor="development-recording">{t('devRecording')}</FieldLabel>
                   <NativeSelect
                     id="development-recording"
-                    className="w-full"
+                    className="max-w-[60%]"
                     value={snapshot.recording}
                     disabled={!local || snapshot.pending}
                     onChange={(event) =>
@@ -198,15 +211,15 @@ function DevelopmentTools({
                     ))}
                   </NativeSelect>
                 </Field>
-                <Button
-                  variant="outline"
-                  disabled={snapshot.pending}
-                  aria-busy={snapshot.pending}
-                  onClick={() => changeMode(snapshot.mode)}
-                >
-                  <RefreshCw data-icon="inline-start" aria-hidden="true" />
-                  {t('devReset')}
-                </Button>
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="development-cache-expired">{t('devCacheExpiry')}</FieldLabel>
+                  <Switch
+                    id="development-cache-expired"
+                    checked={snapshot.cacheExpiryEnabled}
+                    disabled={snapshot.pending}
+                    onCheckedChange={runtime.controls.setCacheExpiryEnabled}
+                  />
+                </Field>
                 {error && (
                   <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
@@ -222,13 +235,24 @@ function DevelopmentTools({
   );
 }
 
-export function DevelopmentApp({ api }: { api: Bridge }) {
-  const [runtime] = useState(() => createDevelopmentRuntime(api));
+export function DevelopmentApp({ api, desktop = false }: { api: Bridge; desktop?: boolean }) {
+  const runtime = useMemo(() => createDevelopmentRuntime(api), [api]);
   const snapshot = useSyncExternalStore(runtime.controls.subscribe, runtime.controls.getSnapshot);
   useEffect(() => () => runtime.dispose(), [runtime]);
+  useEffect(() => {
+    if (snapshot.mode === 'empty' && archiveMatchFromHash(location.hash)) {
+      history.replaceState(null, '', '#archive');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  }, [snapshot.mode, snapshot.generation]);
   return (
     <>
-      <AppProvider key={snapshot.generation} api={runtime.api}>
+      <AppProvider
+        key={snapshot.generation}
+        api={runtime.api}
+        bootstrapApi={runtime.bootstrapApi}
+        access={desktop && snapshot.mode === 'captured' ? undefined : runtime.access}
+      >
         <App />
       </AppProvider>
       <DevelopmentTools runtime={runtime} snapshot={snapshot} />

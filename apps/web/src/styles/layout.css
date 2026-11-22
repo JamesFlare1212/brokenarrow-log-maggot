@@ -192,9 +192,6 @@ button:not(:disabled),
 .map-performance-card[data-tone='danger'] {
   --map-performance-color: var(--destructive);
 }
-.match-personal-card {
-  --card-spacing: 1rem;
-}
 [data-row-action] {
   cursor: pointer;
 }

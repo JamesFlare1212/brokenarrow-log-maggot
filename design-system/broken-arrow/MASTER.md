@@ -76,7 +76,8 @@ prove that the desktop layout was preserved.
 ## Visual direction
 
 Use flat, theme-colored workspace and sidebar backgrounds with quiet glass cards
-for persistent content. Cards have one uniform translucent fill, a fine border,
+for persistent content. The workspace meets the sidebar at a straight edge in
+both sidebar states. Cards have one uniform translucent fill, a fine border,
 a small shadow, and a restrained backdrop blur. Text, icons, charts, and controls
 remain fully opaque. Do not add gradients, sheen overlays, colored edge lighting,
 or a second card solely to create padding around an existing card or option group.
@@ -234,6 +235,11 @@ items, such as recordings; do not add redundant glass wrappers around controls.
 | Theme wireframes and palette swatches                                       | Illustrations of palettes; decorative gradients and preview-specific edge effects are confined to these illustrations       |
 | Approved logo                                                               | Preserve the supplied image colors and white background                                                                     |
 
+The development tools popover anchors to the entire draggable launcher, not its
+inner button. Align their outer edges on the docked side, leave an 8px gap,
+and flip or scroll the panel vertically when the available viewport height is
+limited. All controls must fit without horizontal scrolling.
+
 An exception belongs to a surface role, not to a feature page. A new content card
 must use the shared glass material. Add a justified role here before introducing
 a new surface treatment.
@@ -314,6 +320,10 @@ required by the current interface.
   titles, and the navigation editor shares the workspace's localized panel labels.
   Workspace and Settings navigation retain a narrow active marker independently
   of hover and keyboard focus.
+- Deck cards keep the directory path and folder/refresh actions in the header.
+  Empty lists shrink to their message; show selection counts and batch actions
+  only for populated lists or their loading placeholders. Long lists scroll
+  independently of the selection controls and footer.
 - Responsive teams and deck panels follow the workspace's available content width,
   including the space taken by an expanded sidebar. Stack below 48rem instead of
   relying only on the viewport. Room metadata uses the shared 12px secondary-text
@@ -383,7 +393,7 @@ required by the current interface.
   Derive the table's minimum width from its column sizes and keep horizontal
   scrolling within the table viewport. Loading and populated rows share widths.
 - Match details share one content component between the page and dialog. Show
-  identity/outcome, recording actions, a compact personal summary, and core,
+  identity/outcome, recording actions, and core,
   combat, and support tabs. Team tables use six columns with tabular numbers.
   Size numeric columns to their headers and values, leaving the remaining width
   for player names and awards instead of distributing extra space by percentage;
@@ -402,13 +412,14 @@ required by the current interface.
   vertically centered line. Every collapsed player row has the same 2.75rem
   height, including players without awards. Identify the local participant with
   the existing row highlight; omit the redundant self badge. Bound unusually long names with
-  ellipsis while retaining their full text for accessible naming and hover.
+  ellipsis while retaining their full text for accessible naming. Player names
+  open the profile action menu on right-click, without a name tooltip.
   Award collections never wrap in the scoreboard. Preserve the shared hover/focus
   explanations and click-to-pin popovers. Use the table's labeled horizontal
   scroller and visible overflow cue when the complete row exceeds the available
   width. Match dialogs may grow to 100rem so normal desktop data can fit both
-  teams without unnecessary scrolling. Player disclosures contain every metric
-  and the profile action; award interactions do not toggle the disclosure.
+  teams without unnecessary scrolling. Player disclosures contain the metrics;
+  right-clicks and award interactions do not toggle the disclosure.
   Preserve unknown outcomes, observers, missing values, and saved ELO colors.
 - Mode labels use `PvE` in both Chinese and English for recognized cooperative
   scenarios, using the existing mode Badge in lists and details. PvE match details
@@ -418,7 +429,7 @@ required by the current interface.
   list action is `View`, and grid cards and detail-menu items stay interactive.
   Identify the source with a `Local log` Badge and a shared informational Alert;
   label missing modes and outcomes `Not recorded` and numeric metrics with an em
-  dash. Present logged total points and the deck in the personal summary. Keep
+  dash. Present logged total points and the deck in the match metadata when available. Keep
   local record identifiers out of the visible UI, disable remote-only actions,
   and preserve navigation, filters, scrolling, and initiating-button focus.
 - While a lazy dialog module loads, announce loading through an out-of-flow

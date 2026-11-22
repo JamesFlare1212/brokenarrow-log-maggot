@@ -76,8 +76,9 @@ No upstream UI or source implementation is copied.
   identified in the readout; five-minute inspection centers the whole interval.
   Exact-second selection, cursor, slider, and field values agree. An interval
   starting on a minute boundary selects its following loss bucket and table
-  sample, without moving the exact-second cursor. The selected event remains anchored while the user inspects
-  other seconds; only explicit clearing, deselecting, or changing event filters
+  sample, without moving the exact-second cursor. Hovering or selecting a loss
+  bar or seeking from the minute table uses the explicitly inspected bucket,
+  even when it ends at the event start. The selected event remains anchored; only explicit clearing, deselecting, or changing event filters
   removes its context. The loss chart separately labels its minute bucket.
 - Each moment uses the same aligned timestamp column, unit/player hierarchy, and
   right-aligned value. Selection reveals only relevant evidence, inline on desktop

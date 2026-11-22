@@ -63,6 +63,17 @@ describe('application startup with the removed demo query', () => {
     expect(renderedBridge()).toBe(api);
   });
 
+  it('runs desktop fixture scenes against the native isolated profile, not the browser server', async () => {
+    vi.stubEnv('MODE', 'desktop-fixtures');
+    vi.stubEnv('DEV', true);
+    window.assistant = { invoke: vi.fn(), subscribe: vi.fn() } as Bridge;
+    await import('../apps/web/src/main');
+    await vi.dynamicImportSettled();
+    expect(renderedBridge()).toBe(window.assistant);
+    expect(render.mock.calls[0]![0].props.children.props.desktop).toBe(true);
+    expect(createFixtureBridge).not.toHaveBeenCalled();
+  });
+
   it('uses the native bridge when available', async () => {
     vi.stubEnv('MODE', 'development');
     vi.stubEnv('DEV', true);

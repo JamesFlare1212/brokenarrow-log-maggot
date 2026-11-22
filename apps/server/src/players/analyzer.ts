@@ -36,7 +36,7 @@ export class Analyzer {
       for (const map of maps) {
         const mapId = number(map.mapId),
           name = text(map.mapName);
-        if (mapId !== null && name) {
+        if (!this.client.fixtureCache && mapId !== null && name) {
           MAP_NAMES[mapId] = name;
           this.db.sql
             .prepare(
@@ -108,7 +108,7 @@ export class Analyzer {
         })),
         style: text(object(a.playStyle).primaryStyle) || null,
       };
-      this.db.saveSnapshot(id, this.mini(report));
+      if (!this.client.offline) this.db.saveSnapshot(id, this.mini(report));
       return report;
     } catch (analysisError) {
       try {
@@ -143,7 +143,7 @@ export class Analyzer {
           mapStats: [],
           style: null,
         };
-        this.db.saveSnapshot(id, this.mini(report));
+        if (!this.client.offline) this.db.saveSnapshot(id, this.mini(report));
         return report;
       } catch {
         throw analysisError;

@@ -81,14 +81,14 @@ export async function verifyMatchDetails(window: BrowserWindow) {
     }
     const interaction = await window.webContents.executeJavaScript(`(async () => {
       const page = document.querySelector('.match-detail-page');
-      const metricTab = page.querySelector('.match-players [role="tab"][data-state="inactive"]');
+      const metricTab = page.querySelector('[data-testid="match-detail-views"] [role="tab"][data-state="inactive"]');
       metricTab.focus();
       metricTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await new Promise(resolve => requestAnimationFrame(resolve));
       const player = page.querySelector('.match-player-toggle');
       player.click();
       await new Promise(resolve => requestAnimationFrame(resolve));
-      const expanded = page.querySelectorAll('.match-player-metrics dt').length === 13;
+      const expanded = player.getAttribute('aria-expanded') === 'true' && page.querySelectorAll('.match-player-metrics dt').length === 12;
       const metricTabSelected = metricTab.getAttribute('aria-selected') === 'true';
       const selected = document.querySelector('.archive-panel [data-match-open]:not(:disabled)');
       document.querySelector('.topbar a[href="#archive"]').click();

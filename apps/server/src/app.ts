@@ -206,7 +206,7 @@ export class Application {
               rating: number(p.rating),
             }))
             .filter((p) => /^\d+$/.test(p.id));
-          this.db.observe(players);
+          if (!this.client.fixtureCache) this.db.observe(players);
           return { players, source: r.source };
         } catch {
           return {

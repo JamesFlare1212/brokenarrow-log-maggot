@@ -132,7 +132,7 @@ for (const locale of ['zh', 'en'] as const) {
       animations: 'disabled',
     });
     await detail
-      .getByRole('tab', { name: locale === 'zh' ? '对局概览' : 'Match overview', exact: true })
+      .getByRole('tab', { name: locale === 'zh' ? '核心战绩' : 'Core stats', exact: true })
       .click();
     await expect(detail.locator('.match-player-cell').first()).toBeVisible();
   });
@@ -199,6 +199,25 @@ test('legacy timing gaps and local-only matches remain honest empty states', asy
   await expect(page.getByTestId('timeline-card')).toHaveCount(0);
 });
 
+test('explicit minute inspection keeps the bucket ending at a selected event start', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1800, height: 1000 });
+  await prepare(page, 'en');
+  await page.goto('/#archive/match/9485138');
+  await page.getByRole('tab', { name: 'Timeline', exact: true }).click();
+  const timeline = page.getByTestId('match-timeline');
+  await timeline.getByTestId('moment-row').getByRole('button', { name: /19:00/ }).click();
+  await expect(timeline.getByTestId('loss-time')).toHaveText('19:00–20:00');
+  const minuteData = timeline.getByRole('button', { name: 'Minute data', exact: true });
+  await minuteData.click();
+  const dialog = page.getByRole('dialog', { name: /Minute data/ });
+  await dialog.getByRole('button', { name: 'Seek to 19:00', exact: true }).click();
+  await expect(timeline.getByTestId('loss-time')).toHaveText('18:00–19:00');
+  await minuteData.click();
+  await expect(dialog.locator('tr[aria-current="time"]')).toContainText('19:00');
+});
+
 test('match dialog supports nested minute navigation without closing the match', async ({
   page,
   request,
@@ -208,8 +227,8 @@ test('match dialog supports nested minute navigation without closing the match',
   const detail = page.locator('.match-detail-page');
   await detail
     .getByRole('button', { name: 'JamesFlare', exact: true })
-    .click({ position: { x: 16, y: 16 } });
-  await detail.getByRole('button', { name: '查看玩家资料', exact: true }).click();
+    .click({ button: 'right', position: { x: 32, y: 14 } });
+  await page.getByRole('menuitem', { name: '查看玩家资料' }).click();
   const profile = page.locator('.profile-dialog');
   await expect(profile).toBeVisible();
   const matches = profile.locator('td[data-column="matchId"] button');

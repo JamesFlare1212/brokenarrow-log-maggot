@@ -17,7 +17,13 @@ const { invoke, api, notify, openModal } = vi.hoisted(() => {
   return { invoke, api: { invoke }, notify: vi.fn(), openModal: vi.fn() };
 });
 vi.mock('../apps/web/src/app/state', () => ({
-  useApp: () => ({ api, state: { replaysRevision: 0 }, notify, openModal }),
+  useApp: () => ({
+    api,
+    access: { method: () => true },
+    state: { replaysRevision: 0 },
+    notify,
+    openModal,
+  }),
 }));
 vi.mock('../apps/web/src/features/timeline/TimelineView', () => ({
   TimelineView: ({ data, stickyOffset }: { data: TimelineData; stickyOffset: number }) => (
@@ -94,11 +100,16 @@ describe('match timeline integration', () => {
   it('loads timeline data only when its match-detail tab is selected', async () => {
     render(<MatchDetails matchId="9485138" />, { wrapper });
     await screen.findByRole('heading', { name: 'Baltiisk' });
+    const user = userEvent.setup();
+    for (const name of ['战斗数据', '支援数据']) {
+      await user.click(screen.getByRole('tab', { name }));
+      expect(screen.getByRole('tab', { name }).getAttribute('aria-selected')).toBe('true');
+    }
     expect(invoke.mock.calls.some(([method]) => method === 'matches.timeline')).toBe(false);
     await userEvent.setup().click(screen.getByRole('tab', { name: '时间线' }));
     await screen.findByTestId('timeline-presentation');
     expect(invoke).toHaveBeenCalledWith('matches.timeline', { fid: '9485138', force: false });
-    await userEvent.setup().click(screen.getByRole('tab', { name: '对局概览' }));
+    await userEvent.setup().click(screen.getByRole('tab', { name: '核心战绩' }));
     expect(screen.queryByTestId('timeline-presentation')).toBeNull();
     expect(screen.getByRole('tab', { name: '核心战绩' })).toBeTruthy();
   });

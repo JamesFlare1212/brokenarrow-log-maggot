@@ -136,6 +136,7 @@ export class TrackerService {
     });
     let analysis: unknown;
     if (
+      !this.client.offline &&
       result.source !== 'stale' &&
       ((match.endedAt !== null && match.durationSec) ||
         (match.mode === 'custom' && match.outcome === 'unknown'))
@@ -154,7 +155,7 @@ export class TrackerService {
     match = this.withAwards(match, result.value, analysis);
     if (result.source === 'stale')
       return { ...match, warning: 'Cached match data; BATrace is unavailable' };
-    this.db.saveMatch(match);
+    if (!this.client.offline) this.db.saveMatch(match);
     return match;
   }
   async recent(id: string, force = false): Promise<{ matches: Match[]; stale: boolean }> {
@@ -172,7 +173,7 @@ export class TrackerService {
         });
       })
       .filter((m) => /^\d+$/.test(m.id));
-    if (result.source !== 'stale')
+    if (!this.client.offline && result.source !== 'stale')
       for (const match of matches) {
         if (match.mode !== 'custom' || match.outcome !== 'unknown') continue;
         try {
@@ -226,6 +227,7 @@ export class TrackerService {
     return profile;
   }
   async sync(): Promise<void> {
+    if (this.client.fixtureCache) return;
     const id = this.db.state<string | null>('activeAccountId', null);
     if (!id) return;
     const result = await this.recent(id);

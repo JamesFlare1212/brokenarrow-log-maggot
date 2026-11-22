@@ -1,5 +1,6 @@
 export * from './models';
 export * from './rpc';
+export * from './browser-fixture';
 export * from './cache';
 export * from './updates';
 export * from './batrace';

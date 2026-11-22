@@ -23,6 +23,20 @@ test('recent match items open the dialog from the whole row and restore keyboard
   }
 });
 
+test('archive map hover keeps the entire underline visible and opens its match', async ({
+  page,
+}) => {
+  await page.goto('/#archive');
+  const map = page.locator('.archive-card-map[data-match-open="9485454"]');
+  await map.hover();
+  await expect(map).toHaveCSS('text-decoration-line', 'underline');
+  await expect(map).toHaveCSS('overflow', 'visible');
+  await expect(map).toHaveCSS('overflow-wrap', 'anywhere');
+  await map.focus();
+  await map.press('Enter');
+  await expect(page).toHaveURL(/#archive\/match\/9485454$/);
+});
+
 test('archive player hover keeps the rounded focus target from clipping the underline', async ({
   page,
 }) => {

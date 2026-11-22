@@ -1,16 +1,16 @@
-import { rpcSchemas } from '@ba/contracts';
+import { browserFixtureAccess, rpcSchemas } from '@ba/contracts';
 import type {
   AppEvent,
   Bridge,
   Player,
-  PlayerReport,
   RpcInputs,
   RpcMethod,
   RpcOutputs,
   Session,
 } from '@ba/contracts';
-import { createDevelopmentData, developmentPreview, type DevelopmentData } from './data';
+import { loadDevelopmentData, developmentPreview, type DevelopmentData } from './data';
 import { createDevelopmentVideo } from './media';
+import { previewCacheStats, previewEvent, previewResponse } from './cache-preview';
 
 export type DevelopmentMode = 'captured' | 'empty' | 'demo';
 export type DevelopmentRecording = 'idle' | 'recording' | 'error';
@@ -23,6 +23,8 @@ export interface DevelopmentSnapshot {
   pending: boolean;
   recording: DevelopmentRecording;
   lobbyPlayerCount: DevelopmentLobbyPlayerCount | null;
+  hasLobbyRoster: boolean;
+  cacheExpiryEnabled: boolean;
 }
 type WithoutRevision<T> = T extends unknown ? Omit<T, 'revision'> : never;
 type Handlers = {
@@ -43,12 +45,31 @@ export function createDevelopmentRuntime(
     pending: false,
     recording: 'idle',
     lobbyPlayerCount: null,
+    hasLobbyRoster: false,
+    cacheExpiryEnabled: false,
   };
   let local: DevelopmentData | null = null;
   let demoSession: Session | null = null;
   let rosterHydrated = false;
   let clock: ReturnType<typeof setInterval> | undefined;
   let video: Promise<string> | null = null;
+  let cacheAfterClear: RpcOutputs['cache.stats'] | null = null;
+  const cacheUsage = () => cacheAfterClear ?? local?.cache ?? base.invoke('cache.stats', null);
+  let capturedRevision = 0;
+  let capturedOffset = 0;
+  type RosterEvent = Extract<AppEvent, { type: 'roster' }>;
+  const rosters = {
+    current: new Map<string, RosterEvent>(),
+    previous: new Map<string, RosterEvent>(),
+  };
+  const rememberRoster = (event: AppEvent) => {
+    if (event.type !== 'roster') return;
+    const rows = rosters[event.context];
+    const first = rows.values().next().value;
+    if (first && (first.requestId !== event.requestId || first.generation !== event.generation))
+      rows.clear();
+    rows.set(event.player.id, event);
+  };
   const observers = new Set<() => void>();
   const listeners = new Set<{ generation: number; callback: (event: AppEvent) => void }>();
   const data = () => {
@@ -59,11 +80,16 @@ export function createDevelopmentRuntime(
     snapshot = { ...snapshot, ...patch };
     observers.forEach((listener) => listener());
   };
+  const notifyEvent = (value: AppEvent) => {
+    listeners.forEach((listener) => {
+      if (listener.generation === snapshot.generation)
+        listener.callback(previewEvent(value, snapshot.cacheExpiryEnabled));
+    });
+  };
   const emit = (event: WithoutRevision<AppEvent>) => {
     const value = { ...event, revision: ++data().bootstrap.revision } as AppEvent;
-    listeners.forEach((listener) => {
-      if (listener.generation === snapshot.generation) listener.callback(structuredClone(value));
-    });
+    rememberRoster(value);
+    notifyEvent(value);
   };
   const stopClock = () => {
     clearInterval(clock);
@@ -79,7 +105,10 @@ export function createDevelopmentRuntime(
         map: recording.map || 'Development recording',
         uploaderId: scene.bootstrap.session.localPlayerId,
         uploaderName: scene.bootstrap.session.localName || 'Development',
-        teamId: 0,
+        teamId:
+          scene.bootstrap.session.current?.players.find(
+            (player) => player.id === scene.bootstrap.session.localPlayerId,
+          )?.teamId ?? null,
         size: 2_000_000,
         createdAt: now(),
         durationSec: recording.seconds,
@@ -126,8 +155,8 @@ export function createDevelopmentRuntime(
     state.recording = {
       phase,
       sessionId: 'development-recording',
-      fid: data().matches[0]?.fid ?? null,
-      map: 'Dam',
+      fid: state.session.current?.fid ?? null,
+      map: state.session.current?.map ?? '',
       sourceId: 'development-display',
       startedAt: now(),
       seconds: 0,
@@ -146,57 +175,36 @@ export function createDevelopmentRuntime(
     publish({ recording: phase });
     ensureClock();
   };
-  const reportFor = (id: string): PlayerReport =>
-    data().reports[id] ?? {
-      id,
-      name: data().bans.find((ban) => ban.id === id)?.name ?? `Development player #${id}`,
-      level: 1,
-      fallback: false,
-      matchCount: 0,
-      sampleCount: 0,
-      elo: null,
-      kd: null,
-      dmr: null,
-      winRate: null,
-      wins: 0,
-      losses: 0,
-      updatedAt: now(),
-      stale: false,
-      ratingTrend: [],
-      recentMatches: [],
-      favUnits: [],
-      categories: [],
-      mapStats: [],
-      style: null,
-    };
   const publishRoster = (context: 'current' | 'previous', players: Player[], requestId: string) => {
     for (const player of players) {
-      const report = reportFor(player.id);
+      const report = data().reports[player.id];
       emit({
         type: 'roster',
         requestId,
         context,
         generation: data().bootstrap.session.generation,
         player,
-        info: {
-          name: report.name,
-          elo: report.elo,
-          kd: report.kd,
-          winRate: report.winRate,
-          matchCount: report.matchCount,
-          sampleCount: report.sampleCount,
-          fallback: report.fallback,
-          category: report.categories[0]?.key ?? null,
-          topUnits: report.favUnits.map((unit) => unit.name).join(', '),
-          updatedAt: report.updatedAt,
-          stale: report.stale,
-        },
+        info: report
+          ? {
+              name: report.name,
+              elo: report.elo,
+              kd: report.kd,
+              winRate: report.winRate,
+              matchCount: report.matchCount,
+              sampleCount: report.sampleCount,
+              fallback: report.fallback,
+              category: report.categories[0]?.key ?? null,
+              topUnits: report.favUnits.map((unit) => unit.name).join(', '),
+              updatedAt: report.updatedAt,
+              stale: report.stale,
+            }
+          : null,
         error: null,
       });
     }
   };
   const setLobbyPlayerCount = (count: DevelopmentLobbyPlayerCount | null) => {
-    if (snapshot.mode !== 'demo' || snapshot.pending || !demoSession) return;
+    if (snapshot.mode !== 'demo' || snapshot.pending || !demoSession?.current) return;
     const scene = data();
     const session = structuredClone(demoSession);
     session.generation = scene.bootstrap.session.generation + 1;
@@ -218,7 +226,12 @@ export function createDevelopmentRuntime(
       );
     publish({ lobbyPlayerCount: count });
   };
+  const requireSceneMatch = (fid: string) => {
+    if (snapshot.mode === 'empty' && !data().matches.some((match) => match.fid === fid))
+      throw new Error('Match is not in this scene.');
+  };
   const handlers: Handlers = {
+    'external.open': (input) => base.invoke('external.open', input),
     'app.bootstrap': () => {
       const bootstrap = structuredClone(data().bootstrap);
       if (!rosterHydrated && bootstrap.config.autoQueryCurrentMatch) {
@@ -250,33 +263,26 @@ export function createDevelopmentRuntime(
     'matches.list': (input) =>
       data().matches.filter((match) => !input.accountId || match.localPlayerId === input.accountId),
     'matches.detail': (input) => {
-      const match = data().matches.find((match) => match.fid === input.fid);
-      if (!match) throw new Error('Development match not found.');
-      return match;
+      requireSceneMatch(input.fid);
+      return base.invoke('matches.detail', input);
     },
-    'matches.timeline': () => ({
-      status: 'unavailable',
-      reason: 'missing-unit-data',
-      data: null,
-      source: 'local',
-      updatedAt: null,
-    }),
+    'matches.timeline': (input) => {
+      requireSceneMatch(input.fid);
+      return base.invoke('matches.timeline', input);
+    },
     'matches.local': ({ id }) => {
       const match = data().matches.find((match) => match.id === id);
       if (!match) throw new Error('Local match not found');
       return match;
     },
     'matches.scan': () => null,
-    'matches.add': (input) => {
+    'matches.add': async (input) => {
       const scene = data(),
         existing = scene.matches.find((match) => match.fid === input.fid);
       if (existing) return existing;
-      const match = {
-        ...createDevelopmentData(scene.bootstrap, false, now()).matches[0]!,
-        id: `development-added-${input.fid}`,
-        fid: input.fid,
-      };
-      scene.matches.unshift(match);
+      const match = await base.invoke('matches.detail', { fid: input.fid, force: true });
+      if (local !== scene) throw new Error('Development scene changed.');
+      if (!scene.matches.some((row) => row.fid === match.fid)) scene.matches.unshift(match);
       emit({ type: 'matches' });
       return match;
     },
@@ -296,62 +302,45 @@ export function createDevelopmentRuntime(
       emit({ type: 'matches' });
       return { removedMatches: before - scene.matches.length };
     },
-    'players.search': (input) => ({
-      source: 'local',
-      players: data().players.filter((player) =>
-        `${player.name} ${player.id}`.toLocaleLowerCase().includes(input.query.toLocaleLowerCase()),
-      ),
-    }),
-    'players.report': (input) => reportFor(input.id),
-    'players.profile': (input) => {
-      const scene = data(),
-        report = reportFor(input.id);
-      return {
-        id: input.id,
-        name: report.name,
-        names: [],
-        firstSeen: now() - 86400000,
-        lastSeen: now(),
-        encounters: [],
-        banned: scene.bans.find((ban) => ban.id === input.id) ?? null,
-        recentMatches: scene.matches
-          .filter((match) => match.players.some((player) => player.id === input.id))
-          .slice(0, 6),
-        recentError: null,
-        latestElo: report.elo,
-        info: {
-          name: report.name,
-          elo: report.elo,
-          kd: report.kd,
-          winRate: report.winRate,
-          matchCount: report.matchCount,
-          sampleCount: report.sampleCount,
-          category: null,
-          topUnits: 'M1A2 Abrams',
-          updatedAt: now(),
-          stale: false,
-        },
-      };
-    },
-    'players.maggot': (input) => ({
-      id: input.id,
-      complete: true,
-      index: 0.55,
-      averageRank: 3,
-      trend: 'flat',
-      rows: [],
-      calls: 0,
-      warning: null,
-    }),
-    'session.query': (input) => {
-      const scene = data(),
-        requestId = input.requestId ?? `development-roster-${scene.bootstrap.revision}`;
+    'players.search': (input) =>
+      snapshot.mode === 'empty'
+        ? { source: 'local', players: [] }
+        : base.invoke('players.search', input),
+    'players.report': (input) =>
+      (!input.force && data().reports[input.id]) || base.invoke('players.report', input),
+    'players.profile': (input) => base.invoke('players.profile', input),
+    'players.maggot': (input) => base.invoke('players.maggot', input),
+    'session.query': async (input) => {
+      const scene = data();
+      const session = scene.bootstrap.session;
       const players =
         input.context === 'previous'
           ? (input.players ?? scene.matches.find((match) => match.fid === input.fid)?.players ?? [])
-          : (scene.bootstrap.session.current?.players ?? scene.bootstrap.session.lobbyPlayers);
-      publishRoster(input.context, players, requestId);
-      return { requestId, queried: players.length, skipped: 0, cancelled: false };
+          : (session.current?.players ?? session.lobbyPlayers);
+      const unique = [
+        ...new Map(
+          players
+            .filter((player) => /^[1-9]\d*$/.test(player.id) && player.teamId !== 100)
+            .map((player) => [player.id, player]),
+        ).values(),
+      ];
+      const missing = unique.filter((player) => !scene.reports[player.id]);
+      const results = await Promise.allSettled(
+        missing.map((player) => base.invoke('players.report', { id: player.id })),
+      );
+      const cancelled =
+        local !== scene || (input.context === 'current' && session !== scene.bootstrap.session);
+      if (!cancelled) {
+        for (const result of results)
+          if (result.status === 'fulfilled') scene.reports[result.value.id] = result.value;
+        publishRoster(input.context, unique, input.requestId);
+      }
+      return {
+        requestId: input.requestId,
+        queried: cancelled ? 0 : unique.filter((p) => scene.reports[p.id]).length,
+        skipped: players.length - unique.length,
+        cancelled,
+      };
     },
     'bans.list': (input) => data().bans.filter((ban) => !input.metOnly || ban.encountered),
     'bans.sync': () => data().bans,
@@ -402,20 +391,22 @@ export function createDevelopmentRuntime(
       `C:/Development/${input.kind === 'logs' ? 'GameLogs' : input.kind === 'decks' ? 'Decks' : 'Recordings'}`,
     'directory.detect': () => 'C:/Development/GameLogs',
     'decks.list': () => data().decks,
-    'cache.stats': () => data().cache,
-    'cache.clear': (input) => {
-      const scene = data();
+    'cache.stats': async () => previewCacheStats(await cacheUsage(), snapshot.cacheExpiryEnabled),
+    'cache.clear': async ({ mode }) => {
+      const generation = snapshot.generation;
+      const stats = previewCacheStats(await cacheUsage(), snapshot.cacheExpiryEnabled);
+      if (generation !== snapshot.generation) throw new Error('Development scene changed.');
       let removed = 0;
-      for (const usage of Object.values(scene.cache)) {
-        const count = input.mode === 'all' ? usage.entries : usage.expired;
-        removed += count;
-        usage.bytes = usage.entries
-          ? Math.round((usage.bytes * (usage.entries - count)) / usage.entries)
-          : 0;
+      for (const usage of Object.values(stats)) {
+        const count = mode === 'all' ? usage.entries : usage.expired;
+        if (count === 0) continue;
+        usage.bytes = Math.round((usage.bytes * (usage.entries - count)) / usage.entries);
         usage.entries -= count;
         usage.expired = 0;
+        removed += count;
       }
-      return { removed, stats: scene.cache };
+      if (removed) cacheAfterClear = stats;
+      return { removed, stats };
     },
     'api.health': () => data().bootstrap.health,
     'updates.check': () => data().bootstrap.updates,
@@ -427,23 +418,30 @@ export function createDevelopmentRuntime(
       async invoke<K extends RpcMethod>(method: K, input: RpcInputs[K]): Promise<RpcOutputs[K]> {
         if (generation !== snapshot.generation) throw new Error('Development scene changed.');
         const mode = snapshot.mode;
+        const offset = capturedOffset;
         const handler = handlers[method] as
           ((value: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>) | undefined;
         if (mode !== 'captured' && !handler)
           throw new Error('This native operation is unavailable in the development preview.');
         const result =
-          mode === 'captured'
+          mode === 'captured' && method !== 'cache.stats' && method !== 'cache.clear'
             ? await base.invoke(method, input)
             : await handler!(rpcSchemas[method].parse(input) as RpcInputs[K]);
         if (generation !== snapshot.generation) throw new Error('Development scene changed.');
         if (method === 'app.bootstrap') {
-          const locale = (result as RpcOutputs['app.bootstrap']).config.lang;
+          const bootstrap = result as RpcOutputs['app.bootstrap'];
+          if (mode === 'captured')
+            capturedRevision = Math.max(capturedRevision, bootstrap.revision);
+          const locale = bootstrap.config.lang;
           if (locale !== snapshot.locale) publish({ locale });
         } else if (method === 'config.update') {
           const locale = (result as RpcOutputs['config.update']).lang;
           if (locale !== snapshot.locale) publish({ locale });
         }
-        return structuredClone(result);
+        const value = previewResponse(method, result, snapshot.cacheExpiryEnabled);
+        if (mode === 'captured' && method === 'app.bootstrap')
+          (value as RpcOutputs['app.bootstrap']).revision += offset;
+        return value;
       },
       subscribe(callback) {
         const listener = { generation, callback };
@@ -452,7 +450,14 @@ export function createDevelopmentRuntime(
           if (generation === snapshot.generation && snapshot.mode === 'captured') {
             if (event.type === 'config' && event.config.lang !== snapshot.locale)
               publish({ locale: event.config.lang });
-            callback(event);
+            capturedRevision = Math.max(capturedRevision, event.revision);
+            rememberRoster(event);
+            callback(
+              previewEvent(
+                { ...event, revision: event.revision + capturedOffset },
+                snapshot.cacheExpiryEnabled,
+              ),
+            );
           }
         });
         return () => {
@@ -462,8 +467,24 @@ export function createDevelopmentRuntime(
       },
     };
   };
+  const capturedAccess = {
+    ...browserFixtureAccess,
+    method: (method: RpcMethod) =>
+      method === 'external.open' || browserFixtureAccess.method(method),
+  };
+  const simulatedAccess = {
+    method: (method: RpcMethod) => Object.hasOwn(handlers, method),
+    preference: () => true,
+  };
   let api = createBridge();
+  let bootstrapApi = api;
   return {
+    get bootstrapApi() {
+      return bootstrapApi;
+    },
+    get access() {
+      return snapshot.mode === 'captured' ? capturedAccess : simulatedAccess;
+    },
     get api() {
       return api;
     },
@@ -480,24 +501,48 @@ export function createDevelopmentRuntime(
         publish({ pending: true });
         try {
           const baseState = await base.invoke('app.bootstrap', null);
+          const next =
+            mode === 'captured'
+              ? null
+              : await loadDevelopmentData(base, baseState, mode === 'empty', now());
           stopClock();
-          local =
-            mode === 'captured' ? null : createDevelopmentData(baseState, mode === 'empty', now());
+          local = next;
           demoSession = mode === 'demo' ? structuredClone(local!.bootstrap.session) : null;
           rosterHydrated = false;
+          cacheAfterClear = null;
+          capturedOffset = 0;
+          capturedRevision = 0;
+          rosters.current.clear();
+          rosters.previous.clear();
           snapshot = {
+            cacheExpiryEnabled: snapshot.cacheExpiryEnabled,
             locale: baseState.config.lang,
             mode,
             generation: snapshot.generation + 1,
             pending: false,
             recording: 'idle',
             lobbyPlayerCount: null,
+            hasLobbyRoster: !!demoSession?.current,
           };
-          api = createBridge();
+          bootstrapApi = api = createBridge();
           observers.forEach((listener) => listener());
         } catch (error) {
           publish({ pending: false });
           throw error;
+        }
+      },
+      setCacheExpiryEnabled(enabled: boolean) {
+        if (snapshot.pending || snapshot.cacheExpiryEnabled === enabled) return;
+        api = createBridge();
+        publish({ cacheExpiryEnabled: enabled });
+        for (const rows of Object.values(rosters)) {
+          for (const event of rows.values()) {
+            if (!event.info) continue;
+            const revision = local
+              ? ++local.bootstrap.revision
+              : capturedRevision + ++capturedOffset;
+            notifyEvent({ ...event, revision });
+          }
         }
       },
       setRecording,
