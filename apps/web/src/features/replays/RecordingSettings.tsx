@@ -1,4 +1,11 @@
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { FolderOpen } from 'lucide-react';
 import {
@@ -178,19 +185,28 @@ export function RecordingSettings({
         <CardContent>
           <FieldGroup>
             <Field id="rec-display" label={t('display')}>
-              <NativeSelect
-                id="rec-display"
+              <Select
                 disabled={!canRecord}
-                value={draft.replayDisplayId}
-                onChange={(e) => set('replayDisplayId', e.target.value)}
+                value={draft.replayDisplayId || 'auto'}
+                onValueChange={(value) => set('replayDisplayId', value === 'auto' ? '' : value)}
               >
-                <NativeSelectOption value="">{t('autoDisplay')}</NativeSelectOption>
-                {displays.map((display) => (
-                  <NativeSelectOption key={display.id} value={display.id}>
-                    {display.label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger id="rec-display">
+                  <SelectValue>
+                    {displays.find((display) => display.id === draft.replayDisplayId)?.label ??
+                      t('autoDisplay')}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="auto">{t('autoDisplay')}</SelectItem>
+                    {displays.map((display) => (
+                      <SelectItem key={display.id} value={display.id}>
+                        {display.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <div className="recording-video-grid grid grid-cols-2 gap-6 items-center viewport-max-767:grid-cols-1">
               <div
@@ -294,15 +310,21 @@ export function RecordingSettings({
         <CardContent>
           <FieldGroup>
             <Field id="rec-audio" label={t('audio')}>
-              <NativeSelect
-                id="rec-audio"
+              <Select
                 disabled={!canRecord}
                 value={draft.replayAudio}
-                onChange={(e) => set('replayAudio', e.target.value === 'off' ? 'off' : 'default')}
+                onValueChange={(value) => set('replayAudio', value === 'off' ? 'off' : 'default')}
               >
-                <NativeSelectOption value="default">{t('audio')}</NativeSelectOption>
-                <NativeSelectOption value="off">{t('audioOff')}</NativeSelectOption>
-              </NativeSelect>
+                <SelectTrigger id="rec-audio">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="default">{t('audio')}</SelectItem>
+                    <SelectItem value="off">{t('audioOff')}</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <Toggle
               id="rec-microphone"

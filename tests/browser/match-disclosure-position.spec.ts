@@ -9,7 +9,7 @@ for (const [layout, width, height] of [
   }) => {
     await page.setViewportSize({ width, height });
     await page.goto('/#current');
-    await page.locator('.recent-match').filter({ hasText: '#28' }).click();
+    await page.locator('.recent-matches').getByRole('button', { name: '#28' }).click();
     const dialog = page.locator('.match-dialog');
     await expect(dialog.locator('[data-slot="dialog-title"]')).toContainText('#9484902');
     const player = (name: string) => dialog.getByRole('button', { name, exact: true });

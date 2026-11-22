@@ -18,6 +18,7 @@ import { MaggotCard } from './MaggotCard';
 import { OverflowHint } from '../../components/OverflowHint';
 
 const UNIT_PREVIEW_ROWS = 4;
+const UNIT_LOADING_ROWS = 15;
 const CATEGORY_PREVIEW_ROWS = 3;
 
 export function PlayerPreferences({
@@ -58,7 +59,7 @@ export function PlayerPreferences({
     : categories.slice(0, CATEGORY_PREVIEW_ROWS);
   const unitRows = loading
     ? Array.from(
-        { length: Math.max(UNIT_PREVIEW_ROWS, units.length) },
+        { length: Math.max(UNIT_LOADING_ROWS, units.length) },
         (_, index) => units[index] ?? null,
       )
     : units;
@@ -95,13 +96,9 @@ export function PlayerPreferences({
           <CardTitle role="heading" aria-level={3}>
             {t('units')}
           </CardTitle>
-          {(units.length > 0 || loading) && (
+          {unitRows.length > 0 && (
             <CardAction>
-              {loading ? (
-                <Skeleton className="h-5 w-8" aria-hidden="true" />
-              ) : (
-                <Badge>{units.length}</Badge>
-              )}
+              <Badge>{unitRows.length}</Badge>
             </CardAction>
           )}
         </CardHeader>
@@ -179,7 +176,7 @@ export function PlayerPreferences({
           </div>
           <div className="profile-preference-actions flex min-h-7 items-center profile-unit-actions justify-between gap-1 [&>button]:shrink-0 [&>button]:ms-auto">
             <OverflowHint viewport={unitScroll} axis="both" compact />
-            {units.length > UNIT_PREVIEW_ROWS && (
+            {unitRows.length > UNIT_PREVIEW_ROWS && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -187,7 +184,7 @@ export function PlayerPreferences({
                 aria-controls={unitListId}
                 onClick={() => setExpandedUnitsFor(unitsExpanded ? null : id)}
               >
-                {unitsExpanded ? t('showLess') : t('showAllUnits', { count: units.length })}
+                {unitsExpanded ? t('showLess') : t('showAllUnits', { count: unitRows.length })}
               </Button>
             )}
           </div>

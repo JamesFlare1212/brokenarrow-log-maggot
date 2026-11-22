@@ -141,7 +141,7 @@ function PlayerDetails({ player }: { player: MatchPlayer }) {
     'medals',
   ];
   return (
-    <div className="match-player-details p-4 bg-muted/50">
+    <div className="match-player-details py-4 pe-4 ps-(--player-name-inset) bg-muted/50">
       <dl className="match-player-metrics grid grid-cols-4 gap-4 [&_dt]:text-muted-foreground [&_dt]:text-[0.75rem] [&_dd]:mt-1 [&_dd]:tabular-nums">
         {metrics.map((metric) => (
           <div key={metric}>
@@ -406,7 +406,7 @@ function MatchTeamTable({ label, children }: { label: string; children: ReactNod
     <div className="match-team-data min-w-0">
       <div
         ref={viewport}
-        className="match-team-table overflow-x-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:min-w-[var(--match-table-width,35rem)] [&_table]:table-auto [&_th]:px-2.5 [&_th]:text-right [&_th]:tabular-nums [&_th]:h-9 [&_th]:text-[0.75rem] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:px-2.5 [&_td]:text-right [&_td]:tabular-nums [&_td]:py-1 [&_td]:text-[0.8125rem] [&_th:first-child]:text-left [&_td:first-child]:text-left [&_tbody_tr]:h-11 [&_[data-self]]:bg-accent/50 [&_[data-self]_.match-player-toggle]:shadow-[inset_3px_0_var(--ring)] [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px]"
+        className="match-team-table [--player-name-inset:--spacing(9)] overflow-x-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:min-w-[var(--match-table-width,35rem)] [&_table]:table-auto [&_th]:px-2.5 [&_th]:text-right [&_th]:tabular-nums [&_th]:h-9 [&_th]:text-[0.75rem] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:px-2.5 [&_td]:text-right [&_td]:tabular-nums [&_td]:py-1 [&_td]:text-[0.8125rem] [&_th:first-child]:text-left [&_th:first-child]:ps-(--player-name-inset) [&_td:first-child]:text-left [&_tbody_tr]:h-11 [&_[data-self]]:bg-accent/50 [&_[data-self]_.match-player-toggle]:shadow-[inset_3px_0_var(--ring)] [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px]"
         tabIndex={0}
         role="region"
         aria-label={label}

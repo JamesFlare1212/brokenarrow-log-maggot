@@ -1803,6 +1803,26 @@ describe('recording settings automatic saving', () => {
     return within(await screen.findByRole('dialog', { name: '录像设置' }));
   }
 
+  it('saves display and audio choices and restores automatic display selection', async () => {
+    const native = nativeFixture(bootstrapForApp(), {
+      'displays.list': () => [{ id: 'screen:1:0', label: 'Display 2', thumbnail: '' }],
+      'displays.thumbnail': () => null,
+    });
+    const dialog = await open(native);
+    const user = userEvent.setup();
+    const display = dialog.getByRole('combobox', { name: '显示器' });
+    await user.click(display);
+    await user.click(screen.getByRole('option', { name: 'Display 2' }));
+    await waitFor(() => expect(native.backend.config.replayDisplayId).toBe('screen:1:0'));
+    await user.click(display);
+    await user.click(screen.getByRole('option', { name: '自动选择游戏所在屏幕' }));
+    await waitFor(() => expect(native.backend.config.replayDisplayId).toBe(''));
+    await user.click(dialog.getByRole('combobox', { name: '系统声音' }));
+    await user.click(screen.getByRole('option', { name: '关闭声音' }));
+    await waitFor(() => expect(native.backend.config.replayAudio).toBe('off'));
+    expect(dialog.getByRole('switch', { name: /录制麦克风/ }).hasAttribute('disabled')).toBe(true);
+  });
+
   it('starts at the new minimums and saves the highest resolution, frame rate and quality score', async () => {
     const initial = bootstrapForApp();
     Object.assign(initial.config, { replayQuality: 720, replayFps: 30, replayQualityScore: 20 });
@@ -2923,8 +2943,6 @@ describe('user interaction regressions', () => {
     );
     await screen.findByText('Archive map 524');
     fireEvent.click(screen.getByRole('radio', { name: '列表视图' }));
-    expect(screen.getByRole('option', { name: 'Shared name · #1' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Shared name · #2' })).toBeTruthy();
     const table = document.querySelector<HTMLDivElement>('.archive-table')!;
     table.scrollTop = 900;
     expect(screen.getAllByRole('row')).toHaveLength(51);
@@ -2956,7 +2974,10 @@ describe('user interaction regressions', () => {
     expect(screen.getByText('样本数: 263')).toBeTruthy();
     fireEvent.click(screen.getByRole('radio', { name: '全部结果' }));
     fireEvent.click(screen.getByRole('link', { name: '第 11 页' }));
-    fireEvent.change(screen.getByLabelText('账号'), { target: { value: '2' } });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: '账号' }));
+    expect(screen.getByRole('option', { name: 'Shared name · #1' })).toBeTruthy();
+    await user.click(screen.getByRole('option', { name: 'Shared name · #2' }));
     await waitFor(() => expect(screen.getByText('样本数: 262')).toBeTruthy());
     expect(screen.getByRole('link', { name: '第 1 页' }).getAttribute('aria-current')).toBe('page');
   });
@@ -3040,7 +3061,9 @@ describe('user interaction regressions', () => {
     expect(screen.getByText('样本数: 6')).toBeTruthy();
     expect(toggle.getAttribute('aria-checked') === 'true').toBe(true);
     fireEvent.click(screen.getByRole('radio', { name: '全部结果' }));
-    fireEvent.change(screen.getByLabelText('账号'), { target: { value: '2' } });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: '账号' }));
+    await user.click(screen.getByRole('option', { name: 'Unknown account · #2' }));
     await screen.findByText('样本数: 0');
     expect(screen.getByRole('navigation', { name: '对局档案分页' })).toBeTruthy();
     expect(screen.getByText('第 0–0 条，共 0 条')).toBeTruthy();
@@ -3049,7 +3072,7 @@ describe('user interaction regressions', () => {
     expect(toggle.getAttribute('aria-checked') === 'true').toBe(false);
     expect(screen.getByText('样本数: 63')).toBeTruthy();
     expect(screen.getByRole('link', { name: '第 2 页' })).toBeTruthy();
-    expect((screen.getByLabelText('账号') as HTMLSelectElement).value).toBe('');
+    expect(screen.getByRole('combobox', { name: '账号' }).textContent).toBe('全部账号');
   });
 
   it('scans local logs before refreshing the archive and exposes a busy state during the scan', async () => {
@@ -3137,12 +3160,10 @@ describe('user interaction regressions', () => {
     await screen.findByRole('main', { name: '设置' });
     fireEvent.click(screen.getByRole('tab', { name: '常规' }));
     const language = screen.getByRole('combobox', { name: '语言' });
-    expect(
-      within(language)
-        .getAllByRole('option')
-        .map((option) => option.getAttribute('value')),
-    ).toEqual(['zh', 'en']);
-    fireEvent.change(language, { target: { value: 'en' } });
+    const user = userEvent.setup();
+    await user.click(language);
+    expect(screen.getByRole('option', { name: '中文' })).toBeTruthy();
+    await user.click(screen.getByRole('option', { name: 'English' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
     await waitFor(() => expect(screen.queryByRole('main', { name: 'Settings' })).toBeNull());
     await screen.findByRole('main', { name: 'Overview' });
@@ -3538,7 +3559,7 @@ describe('user interaction regressions', () => {
     const map = await screen.findByRole('heading', { name: match.map });
     const dialog = map.closest('[role="dialog"]') as HTMLElement;
     const overview = dialog.querySelector('.match-overview') as HTMLElement;
-    expect(overview.textContent).toContain(match.localPersona);
+    expect(overview.textContent).not.toContain(match.localPersona);
     expect(within(overview).getByText(formatDuration(match.durationSec))).toBeTruthy();
     expect(within(overview).getByText(formatTime(match.endedAt, 'zh'))).toBeTruthy();
     expect(dialog.querySelectorAll('tbody tr')).toHaveLength(match.players.length);
@@ -3830,16 +3851,14 @@ describe('user interaction regressions', () => {
       native.emit({ type: 'maggot', ...firstInput, done: 6, scanned: 8, total: 12, revision: 1 }),
     );
     expect(
-      screen.getByRole('progressbar', { name: '自动计算中' }).getAttribute('aria-valuenow'),
-    ).toBe('6');
+      within(screen.getByRole('region', { name: '蛐指数' })).getByRole('status').textContent,
+    ).toContain('6/12');
     fireEvent.click(screen.getByRole('button', { name: /^Second Player/ }));
     await screen.findByRole('heading', { name: `Second Player #${secondPlayer.id}` });
     expect((await screen.findAllByText('等待计算')).length).toBeGreaterThan(0);
     expect(
-      within(screen.getByRole('region', { name: '蛐指数' }))
-        .getByRole('progressbar')
-        .getAttribute('aria-valuenow'),
-    ).toBe('0');
+      within(screen.getByRole('region', { name: '蛐指数' })).getByRole('status').textContent,
+    ).toContain('0/12');
     expect(native.calls.filter((call) => call.method === 'players.maggot')).toHaveLength(1);
     const complete = (id: string, rank: number) =>
       summarizeMaggot(
@@ -4001,9 +4020,7 @@ describe('profile refresh and report scopes', () => {
         }),
       ).toBe(scale);
       expect(within(card).getByText('7.5')).toBeTruthy();
-      expect(
-        within(card).getByRole('progressbar', { name: label('maggotCalculating') }),
-      ).toBeTruthy();
+      expect(within(card).getByRole('status').textContent).toContain(label('maggotCalculating'));
       await act(async () =>
         next.resolve(
           summarizeMaggot(
@@ -4127,7 +4144,9 @@ describe('profile refresh and report scopes', () => {
       const loadedTable = screen.getByRole('table', { name: '对局数据' });
       expect(loadedTable.getAttribute('aria-busy')).toBe('false');
       expect(within(loadedTable).getByText('#' + report.recentMatches[0]!.matchId)).toBeTruthy();
-      expect(screen.getByRole('progressbar', { name: '自动计算中' })).toBeTruthy();
+      expect(
+        within(screen.getByRole('region', { name: '蛐指数' })).getByRole('status').textContent,
+      ).toContain('0/12');
       await act(async () => maggotRequest.resolve(summarizeMaggot(localPlayer.id, [])));
       expect(screen.queryByRole('progressbar', { name: '自动计算中' })).toBeNull();
     },
@@ -4167,7 +4186,8 @@ describe('profile refresh and report scopes', () => {
       const unitRow = table.querySelector('tbody tr');
       const preferences = screen.getByRole('region', { name: label('preference') });
       const categoryList = preferences.querySelector('ul');
-      const unitRowCount = table.querySelectorAll('tbody tr').length;
+      const unitRowCount = 15;
+      expect(table.querySelectorAll('tbody tr')).toHaveLength(unitRowCount);
       const categoryRowCount = categoryList!.children.length;
 
       await act(async () => profileRequest.resolve(profile));
@@ -5067,11 +5087,11 @@ describe('application loading layouts', () => {
     await waitFor(() =>
       expect(document.querySelectorAll('.metric-content strong[aria-busy="true"]')).toHaveLength(3),
     );
-    expect(document.querySelectorAll('.recent-match-loading')).toHaveLength(3);
+    expect(document.querySelectorAll('.recent-matches tbody tr')).toHaveLength(3);
     expect(document.querySelectorAll('.metric-content strong[aria-busy="false"]')).toHaveLength(1);
     expect(screen.queryByText(translate('zh', 'noMatchesHint'))).toBeNull();
     await act(async () => pending.resolve([]));
-    expect(document.querySelector('.recent-match-loading')).toBeNull();
+    expect(document.querySelector('.recent-matches tbody')).toBeNull();
     expect(screen.getByText(translate('zh', 'noMatchesHint'))).toBeTruthy();
   });
 

@@ -11,7 +11,6 @@ type Presentation = {
     visuals: string;
     details: string;
     navigation: string;
-    compact: string;
     evidence: string;
   };
 };
@@ -40,7 +39,6 @@ export function TimelinePresentationProvider({
         visuals: `${id}-visuals`,
         details: `${id}-details`,
         navigation: `${id}-navigation`,
-        compact: `${id}-compact`,
         evidence: `${id}-evidence`,
       },
     }),

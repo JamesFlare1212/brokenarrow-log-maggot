@@ -35,21 +35,23 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Button as SharedButton } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import {
-  ToggleGroup,
-  ToggleGroupItem as SharedToggleGroupItem,
-} from '@/components/ui/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import {
-  NativeSelect,
-  NativeSelectOption,
-  NativeSelectOptGroup,
-} from '@/components/ui/native-select';
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import {
@@ -85,21 +87,6 @@ import {
 import { EventMarkers } from './EventMarkers';
 import { PlotSelection, PlotSelectionRoot } from './PlotSelection';
 
-function Button({ className, ...props }: React.ComponentProps<typeof SharedButton>) {
-  return (
-    <SharedButton
-      className={cn('min-h-(--control-touch) min-w-(--control-touch)', className)}
-      {...props}
-    />
-  );
-}
-
-function ToggleGroupItem({
-  className,
-  ...props
-}: React.ComponentProps<typeof SharedToggleGroupItem>) {
-  return <SharedToggleGroupItem className={cn('min-h-(--control-touch)', className)} {...props} />;
-}
 const compact = (value: number) =>
   Math.abs(value) >= 1000 ? `${Math.round(value / 100) / 10}k` : String(value);
 const chartConfig = {
@@ -605,16 +592,13 @@ function Evidence({
   moment,
   onViewChart,
   inContext = false,
-  showInspect = true,
 }: {
   moment: Moment;
   onViewChart: () => void;
   inContext?: boolean;
-  showInspect?: boolean;
 }) {
   const { t, number } = useTimeline();
   const single = moment.playerId !== null && moment.sorties.length === 1 ? moment.sorties[0] : null;
-  if (!inContext && !showInspect && moment.kind === 'recon') return null;
   const attribution = (
     <div
       className="flex flex-wrap items-center gap-x-1.5 text-sm text-foreground/80"
@@ -659,13 +643,8 @@ function Evidence({
           </div>
         </dl>
       )}
-      {((!inContext && showInspect) || !single) && (
-        <div
-          className={cn(
-            'flex flex-wrap items-center gap-1',
-            !inContext && !showInspect ? 'justify-end' : 'justify-between',
-          )}
-        >
+      {(!inContext || !single) && (
+        <div className="flex flex-wrap items-center justify-between gap-1">
           {inContext ? (
             <div className="flex min-w-0 flex-1 flex-col">
               {attribution}
@@ -673,7 +652,7 @@ function Evidence({
                 {t('timeline.lossValue', { value: number(moment.value) })}
               </span>
             </div>
-          ) : showInspect ? (
+          ) : (
             <Button
               variant="ghost"
               size="default"
@@ -683,7 +662,7 @@ function Evidence({
               <ArrowUp data-icon="inline-start" />
               {t('timeline.inspectWindow')}
             </Button>
-          ) : null}
+          )}
           {!single && <RecordDialog moment={moment} />}
         </div>
       )}
@@ -792,7 +771,6 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
   const overviewRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<HTMLDivElement>(null);
-  const compactContextRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const element = workspaceRef.current;
@@ -857,13 +835,8 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
       ? 72
       : 52;
   useLayoutEffect(() => {
-    // Keep located event rows below whichever compact context surface is sticky.
     const update = () => {
-      const sticky = narrow
-        ? chartExpanded
-          ? contextRef.current
-          : compactContextRef.current
-        : null;
+      const sticky = narrow && chartExpanded ? contextRef.current : null;
       workspaceRef.current?.style.setProperty(
         '--timeline-context-height',
         `${Math.ceil(sticky?.getBoundingClientRect().height ?? 0) + stickyOffset + 16}px`,
@@ -873,7 +846,6 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
     const observer = new ResizeObserver(update);
     if (cardRef.current) observer.observe(cardRef.current);
     if (contextRef.current) observer.observe(contextRef.current);
-    if (compactContextRef.current) observer.observe(compactContextRef.current);
     return () => observer.disconnect();
   }, [narrow, chartExpanded, active?.id, stickyOffset]);
   const current = frameAt(data.frames, hovered ?? second, data.sorties);
@@ -928,7 +900,7 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
     element: HTMLElement | null | undefined,
     align: 'start' | 'nearest' | 'center' = 'nearest',
   ) => {
-    const sticky = narrow ? (contextRef.current ?? compactContextRef.current) : null;
+    const sticky = narrow ? contextRef.current : null;
     scrollToElement(
       element,
       scrollContainer,
@@ -1752,213 +1724,169 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
             )}
           </CardContent>
         </Card>
-        <section
-          className="flex min-w-0 flex-col gap-(--content-gap)"
-          aria-label={t('timeline.moments')}
+        <Tabs
+          asChild
+          className="min-w-0 gap-(--content-gap)"
+          value={kind}
+          onValueChange={(value) => {
+            setKind(value);
+            setSelected(null);
+          }}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 text-base font-medium">
-              {t('timeline.moments')}
-              <span className="text-sm font-normal text-foreground/80">{visible.length}</span>
-            </h2>
-            <NativeSelect
-              value={player}
-              aria-label={t('timeline.filterPlayer')}
-              onChange={(event) => {
-                setPlayer(event.target.value);
-                setSelected(null);
-              }}
-              className="max-w-48 [&>select]:min-h-(--control-touch)"
-            >
-              <NativeSelectOption value="all">{t('timeline.allPlayers')}</NativeSelectOption>
-              {[0, 1].map((team) => (
-                <NativeSelectOptGroup key={team} label={team === 0 ? 'Alpha' : 'Bravo'}>
-                  {data.players
-                    .filter((p) => p.team === team)
-                    .map((p) => (
-                      <NativeSelectOption key={p.id} value={p.id}>
-                        {p.name}
-                      </NativeSelectOption>
-                    ))}
-                </NativeSelectOptGroup>
-              ))}
-            </NativeSelect>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <ToggleGroup
-              type="single"
-              size="default"
-              spacing={1}
-              variant="filter"
-              className="flex-wrap"
-              value={kind}
-              aria-label={t('timeline.filterKind')}
-              onKeyDownCapture={(event) =>
-                selectRadioWithArrow(event, ['all', 'highlight', 'loss', 'recon'], (value) => {
-                  setKind(value);
+          <section aria-label={t('timeline.moments')}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 ps-2.5 text-base font-medium">
+                {t('timeline.moments')}
+                <span className="text-sm font-normal text-foreground/80">{visible.length}</span>
+              </h2>
+              <Select
+                value={player}
+                onValueChange={(value) => {
+                  setPlayer(value);
                   setSelected(null);
-                })
-              }
-              onValueChange={(value) => {
-                if (value) {
-                  setKind(value);
-                  setSelected(null);
-                }
-              }}
-            >
-              <ToggleGroupItem value="all" data-choice="all">
-                {kind === 'all' && <Check data-icon="inline-start" />}
-                {t('timeline.all')}
-              </ToggleGroupItem>
-              {(['highlight', 'loss', 'recon'] as const).map((value) => {
-                return (
-                  <ToggleGroupItem key={value} value={value} data-choice={value}>
-                    {kind === value && <Check data-icon="inline-start" />}
-                    {t(`timeline.kind.${value}`)}
-                  </ToggleGroupItem>
-                );
-              })}
-            </ToggleGroup>
-          </div>
-          {narrow && !chartExpanded && active && (
-            <Card
-              ref={compactContextRef}
-              size="sm"
-              className="sticky top-(--timeline-sticky-top) z-20"
-              data-testid="compact-event-summary"
-              id={ids.compact}
-              role="region"
-              aria-label={t('timeline.selectedSummary')}
-            >
-              <CardHeader className="sr-only">
-                <CardTitle>{t('timeline.selectedEvent')}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-2">
-                <time className="text-sm tabular-nums">{clock(active.start)}</time>
-                <span className="min-w-0 flex-1 truncate font-medium">{active.unit}</span>
-                <Button
-                  variant="outline"
-                  onClick={viewChart}
-                  aria-label={t('timeline.inspectAt', { time: clock(active.start) })}
+                }}
+              >
+                <SelectTrigger
+                  aria-label={t('timeline.filterPlayer')}
+                  className="w-48 max-w-full pointer-coarse:min-h-(--control-touch)"
                 >
-                  {t('timeline.inspect')}
-                  <ZoomIn data-icon="inline-end" />
-                </Button>
-                <IconAction label={t('timeline.clearSelection')} onClick={clearMoment}>
-                  <X />
-                </IconAction>
-              </CardContent>
-            </Card>
-          )}
-          <Card className="gap-0 py-0">
-            <CardHeader className="sr-only">
-              <CardTitle>{t('timeline.eventList')}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-0">
-              {visible.length === 0 ? (
-                <Empty>
-                  <EmptyHeader>
-                    <EmptyTitle>
-                      {t(data.moments.length ? 'timeline.noEvents' : 'timeline.noDerivedEvents')}
-                    </EmptyTitle>
-                    <EmptyDescription>
-                      {t(
-                        data.moments.length
-                          ? 'timeline.tryFilters'
-                          : 'timeline.inspectWithoutEvents',
-                      )}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                  {data.moments.length > 0 && (
-                    <Button variant="outline" size="default" onClick={resetFilter}>
-                      {t('timeline.resetFilters')}
-                    </Button>
-                  )}
-                </Empty>
-              ) : (
-                visible.map((moment, index) => {
-                  const chosen = active?.id === moment.id;
-                  return (
-                    <div
-                      key={moment.id}
-                      className={cn(
-                        'scroll-mt-(--timeline-context-height)',
-                        chosen && 'bg-accent/35',
-                      )}
-                      data-testid="moment-row"
-                    >
-                      {index > 0 && <Separator />}
-                      <Button
-                        variant="ghost"
-                        type="button"
-                        className="group grid h-auto w-full scroll-mt-(--timeline-context-height) grid-cols-[4rem_minmax(0,1fr)_auto] items-start gap-3 whitespace-normal px-4 py-4 text-left @min-[640px]/timeline:grid-cols-[4.5rem_minmax(0,1fr)_auto]"
-                        ref={(element) => {
-                          eventRefs.current[moment.id] = element;
-                        }}
-                        aria-expanded={chosen}
-                        aria-controls={
-                          chosen
-                            ? narrow
-                              ? chartExpanded
-                                ? ids.details
-                                : `${ids.compact} ${ids.evidence}-${moment.id}`
-                              : `${ids.evidence}-${moment.id}`
-                            : undefined
-                        }
-                        onClick={() => selectMoment(moment)}
-                      >
-                        <span className="flex flex-col gap-1 pt-0.5 font-mono text-sm tabular-nums">
-                          <span className="text-foreground">{clock(moment.start)}</span>
-                          {moment.end !== moment.start && (
-                            <span className="text-foreground/80">
-                              {t('timeline.until', { time: clock(moment.end) })}
-                            </span>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">{t('timeline.allPlayers')}</SelectItem>
+                  </SelectGroup>
+                  {[0, 1].map((team) => (
+                    <SelectGroup key={team}>
+                      <SelectLabel>{team === 0 ? 'Alpha' : 'Bravo'}</SelectLabel>
+                      {data.players
+                        .filter((p) => p.team === team)
+                        .map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-0 max-w-full overflow-x-auto py-1">
+              <TabsList variant="line" aria-label={t('timeline.filterKind')}>
+                {(['all', 'highlight', 'loss', 'recon'] as const).map((value) => (
+                  <TabsTrigger key={value} value={value}>
+                    {t(value === 'all' ? 'timeline.all' : `timeline.kind.${value}`)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+            <TabsContent asChild value={kind}>
+              <Card className="gap-0 py-0">
+                <CardHeader className="sr-only">
+                  <CardTitle>{t('timeline.eventList')}</CardTitle>
+                </CardHeader>
+                <CardContent className="px-0">
+                  {visible.length === 0 ? (
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyTitle>
+                          {t(
+                            data.moments.length ? 'timeline.noEvents' : 'timeline.noDerivedEvents',
                           )}
-                        </span>
-                        <span className="flex min-w-0 flex-col gap-1.5">
-                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 break-all font-medium">
-                            {moment.unit}
-                          </span>
-                          <span className="flex flex-wrap items-center gap-1.5 text-sm text-foreground/80">
-                            <TeamMark team={moment.team} />
-                            <span className="break-all">{moment.player}</span>
-                            <span>·</span>
-                            {moment.title}
-                          </span>
-                        </span>
-                        <span className="flex flex-col items-end gap-2">
-                          <span className="whitespace-nowrap font-medium tabular-nums">
-                            {moment.kind === 'highlight'
-                              ? t('timeline.kills', { count: moment.value })
-                              : moment.kind === 'loss'
-                                ? `≈${number(moment.value)}`
-                                : ''}
-                          </span>
-                          <ChevronDown
-                            className={cn(
-                              'size-3.5 text-muted-foreground transition-transform',
-                              chosen && 'rotate-180',
-                            )}
-                          />
-                        </span>
-                      </Button>
-                      {chosen && !(narrow && chartExpanded) && (
-                        <div id={`${ids.evidence}-${moment.id}`}>
-                          <Evidence
-                            key={moment.id}
-                            moment={moment}
-                            onViewChart={viewChart}
-                            showInspect={!narrow}
-                          />
-                        </div>
+                        </EmptyTitle>
+                        <EmptyDescription>
+                          {t(
+                            data.moments.length
+                              ? 'timeline.tryFilters'
+                              : 'timeline.inspectWithoutEvents',
+                          )}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                      {data.moments.length > 0 && (
+                        <Button variant="outline" size="default" onClick={resetFilter}>
+                          {t('timeline.resetFilters')}
+                        </Button>
                       )}
-                    </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-        </section>
+                    </Empty>
+                  ) : (
+                    visible.map((moment, index) => {
+                      const chosen = active?.id === moment.id;
+                      return (
+                        <div
+                          key={moment.id}
+                          className={cn(
+                            'scroll-mt-(--timeline-context-height)',
+                            chosen && 'bg-accent/35',
+                          )}
+                          data-testid="moment-row"
+                        >
+                          {index > 0 && <Separator />}
+                          <Button
+                            variant="ghost"
+                            type="button"
+                            className="group grid h-auto w-full scroll-mt-(--timeline-context-height) grid-cols-[4rem_minmax(0,1fr)_auto] items-start gap-3 whitespace-normal px-4 py-4 text-left @min-[640px]/timeline:grid-cols-[4.5rem_minmax(0,1fr)_auto]"
+                            ref={(element) => {
+                              eventRefs.current[moment.id] = element;
+                            }}
+                            aria-expanded={chosen}
+                            aria-controls={
+                              chosen
+                                ? narrow && chartExpanded
+                                  ? ids.details
+                                  : `${ids.evidence}-${moment.id}`
+                                : undefined
+                            }
+                            onClick={() => selectMoment(moment)}
+                          >
+                            <span className="flex flex-col gap-1 pt-0.5 font-mono text-sm tabular-nums">
+                              <span className="text-foreground">{clock(moment.start)}</span>
+                              {moment.end !== moment.start && (
+                                <span className="text-foreground/80">
+                                  {t('timeline.until', { time: clock(moment.end) })}
+                                </span>
+                              )}
+                            </span>
+                            <span className="flex min-w-0 flex-col gap-1.5">
+                              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 break-all font-medium">
+                                {moment.unit}
+                              </span>
+                              <span className="flex flex-wrap items-center gap-1.5 text-sm text-foreground/80">
+                                <TeamMark team={moment.team} />
+                                <span className="break-all">{moment.player}</span>
+                                <span>·</span>
+                                {moment.title}
+                              </span>
+                            </span>
+                            <span className="flex flex-col items-end gap-2">
+                              <span className="whitespace-nowrap font-medium tabular-nums">
+                                {moment.kind === 'highlight'
+                                  ? t('timeline.kills', { count: moment.value })
+                                  : moment.kind === 'loss'
+                                    ? `≈${number(moment.value)}`
+                                    : ''}
+                              </span>
+                              <ChevronDown
+                                className={cn(
+                                  'size-3.5 text-muted-foreground transition-transform',
+                                  chosen && 'rotate-180',
+                                )}
+                              />
+                            </span>
+                          </Button>
+                          {chosen && !(narrow && chartExpanded) && (
+                            <div id={`${ids.evidence}-${moment.id}`}>
+                              <Evidence key={moment.id} moment={moment} onViewChart={viewChart} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </section>
+        </Tabs>
       </Collapsible>
     </section>
   );

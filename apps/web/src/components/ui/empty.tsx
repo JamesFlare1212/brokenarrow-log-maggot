@@ -34,7 +34,7 @@ const emptyMediaVariants = cva(
       },
       size: {
         default: "size-8 [&_svg:not([class*='size-'])]:size-4",
-        lg: "size-12 [&_svg:not([class*='size-'])]:size-6",
+        lg: "size-12 [&_svg:not([class*='size-'])]:size-5",
       },
     },
     defaultVariants: {

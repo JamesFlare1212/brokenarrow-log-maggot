@@ -11,6 +11,7 @@ export function DataTable<T>({
   label,
   pending,
   loading = false,
+  loadingRows,
   empty,
   scrollRef,
   className,
@@ -21,6 +22,7 @@ export function DataTable<T>({
   label: string;
   pending: boolean;
   loading?: boolean;
+  loadingRows?: number;
   empty: ReactNode;
   scrollRef?: Ref<HTMLDivElement>;
   className?: string;
@@ -133,6 +135,7 @@ export function DataTable<T>({
             ))
           ) : loading ? (
             <TableSkeletonRows
+              rows={loadingRows}
               columns={table.getVisibleLeafColumns().map((column) => column.id)}
               alignRight={table
                 .getVisibleLeafColumns()

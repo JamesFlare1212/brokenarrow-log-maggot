@@ -31,7 +31,7 @@ export function TableSkeletonRows({
           <div
             className={cn(
               'flex items-center',
-              compact ? 'h-6' : 'h-8',
+              compact ? 'h-6' : 'h-(--table-skeleton-content-height,2rem)',
               alignRight.includes(column) && 'justify-end',
             )}
           >

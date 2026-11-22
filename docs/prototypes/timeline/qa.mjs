@@ -355,7 +355,8 @@ async function verifyCompactBrowsing(surface) {
   assert(sticky.y >= 0 && sticky.height <= 88);
   await players.scrollIntoViewIfNeeded();
   await assertUncovered(players);
-  await players.selectOption('75402');
+  await players.tap();
+  await surface.getByRole('option', { name: 'JamesFlare', exact: true }).tap();
   await expect(summary).toHaveCount(0);
   await expect(surface.getByTestId('moment-row')).toHaveCount(2);
   await surface.getByRole('radio', { name: '高光', exact: true }).tap();
@@ -486,7 +487,8 @@ async function verifyAnalysisNavigation(surface) {
     'Both detail entry paths must put the overview exit in the same location',
   );
   await expect(back).toHaveCount(1);
-  await surface.getByLabel('筛选事件玩家').selectOption('75402');
+  await surface.getByRole('combobox', { name: '筛选事件玩家' }).click();
+  await surface.getByRole('option', { name: 'JamesFlare', exact: true }).click();
   await expect(surface.getByTestId('analysis-context')).toBeVisible();
   await surface.getByRole('button', { name: '查看当前定位图表', exact: true }).tap();
   await expect(back).toBeVisible();
@@ -798,7 +800,8 @@ try {
   await shot('method');
   await page.keyboard.press('Escape');
   const initialAlpha = await page.getByTestId('alpha-value').innerText();
-  await page.getByLabel('筛选事件玩家').selectOption('75402');
+  await page.getByRole('combobox', { name: '筛选事件玩家' }).click();
+  await page.getByRole('option', { name: 'JamesFlare', exact: true }).click();
   assert.equal(await page.getByTestId('moment-row').count(), 2);
   assert.equal(await page.getByTestId('alpha-value').innerText(), initialAlpha);
   await page.getByRole('radio', { name: '高光', exact: true }).click();
@@ -1225,7 +1228,8 @@ try {
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '切换浅色' }).click();
   await shot('light-mobile');
-  await page.getByLabel('筛选事件玩家').selectOption('265522');
+  await page.getByRole('combobox', { name: '筛选事件玩家' }).click();
+  await page.getByRole('option', { name: '[Ginger_Cat]แมวส้ม', exact: true }).click();
   await fit('long-name-mobile');
   await shot('long-name-mobile');
   await page.close();

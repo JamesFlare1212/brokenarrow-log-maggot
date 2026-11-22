@@ -24,7 +24,7 @@ for (const touch of [false, true]) {
           '.player-search-controls :is([data-slot="input-group"], button[type="submit"])',
           actions,
         ],
-        ['archive', '.archive-toolbar :is(button:not([role="switch"]), select)', actions],
+        ['archive', '.archive-toolbar button:not([role="switch"])', actions],
         ['replays', '.replay-library .panel-card-actions button', actions],
         [
           'decks',
@@ -60,6 +60,18 @@ for (const touch of [false, true]) {
         expect(overflow, route).toEqual([]);
       }
       await page.locator('.topbar a[href="#archive"]').click();
+      const grid = page.locator('.archive-grid');
+      await expect(grid).toBeVisible();
+      const { x, width } = (await grid.boundingBox())!;
+      const start = page
+        .locator(touch ? '.archive-compact-actions button' : '#archive-account')
+        .first();
+      const end = page
+        .locator(touch ? '.archive-compact-actions button' : '.archive-results-actions button')
+        .last();
+      expect(Math.abs((await start.boundingBox())!.x - x)).toBeLessThan(1);
+      const endBox = (await end.boundingBox())!;
+      expect(Math.abs(endBox.x + endBox.width - x - width)).toBeLessThan(1);
       await page.getByRole('radio', { name: touch ? 'List view' : '列表视图' }).click();
       const split = page.locator('.archive-table [role="group"]').first().getByRole('button');
       await expect(split).toHaveCount(2);

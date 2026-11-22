@@ -31,6 +31,7 @@ export const messages: Record<string, readonly [string, string]> = {
   devTools: ['开发工具', 'Dev tools'],
   devScene: ['数据场景', 'Data scene'],
   devCacheExpiry: ['缓存过期', 'Cache expiration'],
+  devLoadingState: ['加载状态', 'Loading state'],
   'devMode.captured': ['仓库样本', 'Fixtures'],
   'devMode.empty': ['空数据', 'Empty'],
   'devMode.demo': ['状态模拟', 'Simulation'],

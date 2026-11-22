@@ -8,7 +8,8 @@ import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Empty, Notice } from '../../components/ui';
-import { LoadingStatus, ListSkeletonRows } from '../../components/LoadingState';
+import { LoadingStatus } from '../../components/LoadingState';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -45,6 +46,7 @@ export function PlayersPanel() {
   const returningToPlayers = useRef(false);
   const results = useRequest<RpcOutputs['players.search']>();
   const report = useRequest<PlayerReport>();
+  const resultCount = (results.data ?? results.previewData)?.players.length;
   const noResults = Boolean(results.data && !results.data.players.length && !results.pending);
   const roster = state.session.current?.players ?? state.session.lobbyPlayers;
   useLayoutEffect(() => {
@@ -183,7 +185,7 @@ export function PlayersPanel() {
             size="sm"
             className={cn(
               'player-results-card min-w-0 sticky top-0 players-max-55:static',
-              results.data?.players.length === 1 &&
+              resultCount === 1 &&
                 'is-single-result players-max-55:[.player-results-card&]:grid players-max-55:[.player-results-card&]:grid-cols-[minmax(10rem,_0.65fr)_minmax(0,_1.35fr)] players-max-55:[.player-results-card&]:items-center players-max-55:[.player-results-card&]:gap-0 players-max-30:[.player-results-card&]:grid-cols-1 players-max-30:[.player-results-card&]:gap-2',
             )}
           >
@@ -209,16 +211,31 @@ export function PlayersPanel() {
             <CardContent>
               <div className="player-results-viewport min-h-16" aria-busy={results.pending}>
                 <div className="player-results-scroll max-h-128 overflow-auto players-max-55:max-h-60">
-                  {results.pending && !results.data && (
-                    <>
-                      <ListSkeletonRows
-                        rows={5}
-                        className="search-results flex flex-col gap-1"
-                        rowClassName="player-result-loading min-h-16"
-                      />
-                    </>
-                  )}
                   <ItemGroup className="search-results flex flex-col gap-1">
+                    {results.pending &&
+                      !results.data &&
+                      Array.from({ length: resultCount || 5 }, (_, index) => (
+                        <Item
+                          key={index}
+                          size="xs"
+                          aria-hidden="true"
+                          className="player-result-loading gap-1 flex-nowrap px-1"
+                        >
+                          <ItemContent className="min-w-0">
+                            <div className="flex min-w-0 flex-col gap-1 border border-transparent p-2">
+                              <div className="flex h-5 items-center">
+                                <Skeleton className="h-3.5 w-24 max-w-full" />
+                              </div>
+                              <div className="flex h-lh items-center text-[0.75rem]">
+                                <Skeleton className="h-2.5 w-32 max-w-full" />
+                              </div>
+                            </div>
+                          </ItemContent>
+                          <ItemActions className="size-(--control-standard) justify-center">
+                            <Skeleton className="size-4" />
+                          </ItemActions>
+                        </Item>
+                      ))}
                     {results.data?.players.length ? (
                       results.data.players.map((player) => (
                         <Item

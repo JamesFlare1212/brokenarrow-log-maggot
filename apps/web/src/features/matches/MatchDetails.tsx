@@ -96,8 +96,6 @@ export function MatchDetails({
   const remoteFid = match?.fid || (!localRequest ? matchId : null);
   const canOpenBatrace = !localOnly && !!remoteFid && match?.mode !== 'pve';
   const loading = !request.data && (request.pending || !request.error);
-  const local = match?.players.find((player) => player.id === match.localPlayerId);
-  const participant = local && (local.teamId === 0 || local.teamId === 1) ? local : null;
   const titles = useMemo(() => (match ? (match.titles ?? matchTitles(match)) : {}), [match]);
   const delta =
     match && match.eloBefore !== null && match.eloAfter !== null
@@ -122,6 +120,31 @@ export function MatchDetails({
       notify(errorMessage(error), true);
     }
   };
+  const batraceAction = (
+    <TooltipButton
+      variant={archivePage ? 'outline' : 'ghost'}
+      size={archivePage ? 'default' : 'icon'}
+      aria-label={t('openBatrace')}
+      className={
+        archivePage
+          ? '@max-[38rem]/match-detail:size-(--control-standard) @max-[38rem]/match-detail:p-0'
+          : undefined
+      }
+      disabled={!canOpenBatrace || !access.method('external.open')}
+      onClick={() =>
+        void api
+          .invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${remoteFid}` })
+          .catch((error) => notify(errorMessage(error), true))
+      }
+    >
+      {archivePage && (
+        <span aria-hidden="true" className="@max-[38rem]/match-detail:hidden">
+          BATrace
+        </span>
+      )}
+      <ExternalLink aria-hidden="true" />
+    </TooltipButton>
+  );
   const refreshLabel = t(archivePage ? 'matchRefreshCurrent' : 'refresh');
   const refreshAction = (
     <TooltipButton
@@ -214,15 +237,11 @@ export function MatchDetails({
             </span>
           </div>
         </div>
-        <div className="match-outcome flex min-w-0 max-w-[45%] flex-col text-right wrap-anywhere items-end gap-1.5 [&>strong]:flex [&>strong]:items-baseline [&>strong]:gap-1.5 [&>strong]:text-[1.875rem] [&>strong]:font-semibold [&>strong]:tabular-nums [&>span]:text-[0.75rem] [&_strong>span]:text-[0.75rem] [&_strong>span]:text-muted-foreground [&_strong>span]:font-normal">
+        <div className="match-outcome flex min-w-0 max-w-[45%] flex-col text-right wrap-anywhere items-end gap-1.5 [&>strong]:flex [&>strong]:items-baseline [&>strong]:gap-1.5 [&>strong]:text-[1.875rem] [&>strong]:font-semibold [&>strong]:tabular-nums [&_strong>span]:text-[0.75rem] [&_strong>span]:text-muted-foreground [&_strong>span]:font-normal">
           <strong className={eloChangeClass(delta)}>
             {delta === null && loading ? <Skeleton className="h-9 w-24" /> : formatDelta(delta)}
             <span>ELO</span>
           </strong>
-          <span className="muted text-muted-foreground">
-            {match?.localPersona || local?.name || '—'}
-            {participant && ` · ${teamLabel(participant.teamId)}`}
-          </span>
         </div>
       </div>
       <Tabs
@@ -247,7 +266,7 @@ export function MatchDetails({
               </TabsTrigger>
             </TabsList>
           </div>
-          <div className="match-detail-actions ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
+          <div className="match-detail-actions empty:hidden ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
             {replayRequest.data?.map((replay, index) => (
               <Button
                 variant={index === 0 ? 'default' : 'outline'}
@@ -268,22 +287,7 @@ export function MatchDetails({
               </Button>
             ))}
             {!replayRequest.data && replayRequest.pending && <Skeleton className="h-8 w-28" />}
-            <Button
-              variant="outline"
-              aria-label={t('openBatrace')}
-              className="@max-[38rem]/match-detail:size-(--control-standard) @max-[38rem]/match-detail:p-0"
-              disabled={!canOpenBatrace || !access.method('external.open')}
-              onClick={() =>
-                void api
-                  .invoke('external.open', { url: `${BATRACE_ORIGIN}/match/${remoteFid}` })
-                  .catch((error) => notify(errorMessage(error), true))
-              }
-            >
-              <span aria-hidden="true" className="@max-[38rem]/match-detail:hidden">
-                BATrace
-              </span>
-              <ExternalLink aria-hidden="true" />
-            </Button>
+            {archivePage && batraceAction}
           </div>
         </div>
         {replayRequest.error && (
@@ -320,7 +324,14 @@ export function MatchDetails({
       </Tabs>
     </div>
   );
-  if (renderDialog) return renderDialog(content, refreshAction);
+  if (renderDialog)
+    return renderDialog(
+      content,
+      <>
+        {batraceAction}
+        {refreshAction}
+      </>,
+    );
   return (
     <>
       {actionsHost &&

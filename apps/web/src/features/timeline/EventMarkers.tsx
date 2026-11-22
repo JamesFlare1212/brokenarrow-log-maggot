@@ -28,7 +28,7 @@ function EventMark({
   const labels = markerLabels(moments, t);
   const position = { '--event-position': `${percent}%` } as CSSProperties;
   const classes =
-    'pointer-events-auto absolute top-0 left-(--event-position) -translate-x-1/2 min-h-(--control-touch) min-w-(--control-touch) max-w-full px-2';
+    'pointer-events-auto absolute top-0 left-(--event-position) -translate-x-1/2 pointer-coarse:min-h-(--control-touch) pointer-coarse:min-w-(--control-touch) max-w-full px-2';
   if (moments.length === 1) {
     return (
       <Tooltip>
@@ -122,7 +122,7 @@ function EventMark({
             <Button
               key={item.id}
               variant="ghost"
-              className="h-auto min-h-(--control-touch) w-full justify-start whitespace-normal p-2 text-left"
+              className="h-auto pointer-coarse:min-h-(--control-touch) w-full justify-start whitespace-normal p-2 text-left"
               onClick={() => {
                 navigated.current = true;
                 setOpen(false);

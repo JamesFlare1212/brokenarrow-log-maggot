@@ -38,7 +38,14 @@ import { panelLabelKey } from '@/lib/navigation';
 import { LoadingStatus } from '../../components/LoadingState';
 import { Tooltip } from '@/components/Tooltip';
 import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowUp as faArrowUp,
@@ -485,15 +492,20 @@ export function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <Field id="settings-language" label={t('language')} orientation="horizontal">
-                      <NativeSelect
-                        className="w-44"
-                        id="settings-language"
+                      <Select
                         value={draft.lang}
-                        onChange={(e) => set('lang', e.target.value as PublicConfig['lang'])}
+                        onValueChange={(value) => set('lang', value as PublicConfig['lang'])}
                       >
-                        <NativeSelectOption value="zh">中文</NativeSelectOption>
-                        <NativeSelectOption value="en">English</NativeSelectOption>
-                      </NativeSelect>
+                        <SelectTrigger id="settings-language" className="w-44">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="zh">中文</SelectItem>
+                            <SelectItem value="en">English</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                     </Field>
                   </CardContent>
                 </Card>

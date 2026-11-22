@@ -55,8 +55,9 @@ describe('production timeline presentation', () => {
   it('recovers a filtered empty result without replacing real data', async () => {
     render(<TimelineView data={data} />);
     const user = userEvent.setup();
-    await user.selectOptions(screen.getByLabelText('筛选事件玩家'), '75402');
-    await user.click(screen.getByRole('radio', { name: '高光' }));
+    await user.click(screen.getByRole('combobox', { name: '筛选事件玩家' }));
+    await user.click(screen.getByRole('option', { name: 'JamesFlare' }));
+    await user.click(screen.getByRole('tab', { name: '高光' }));
     expect(screen.getByText('没有匹配的时刻')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '清除筛选' }));
     expect(screen.getAllByTestId('moment-row')).toHaveLength(6);

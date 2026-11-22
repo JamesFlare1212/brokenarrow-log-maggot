@@ -98,7 +98,9 @@ desktop launcher (`pnpm dev`); packaged builds do not include them. Toggle
 On shows the expired state even for fresh entries; off (the default) hides it
 even for expired entries. The switch works across scenes without changing cache
 timestamps or lifetimes. Cache cleanup previews counts locally; reset the scene
-to restore them.
+to restore them. Enable **Loading state** to hold request-backed views in their
+loading presentation and preview the radar refresh spinner. The Maggot Index card\nshows its calculating state even when a score is cached. Disable the switch to show
+current results without resetting the scene or delaying real requests.
 
 Both validation and Windows release CI run `pnpm format:check` and `pnpm check`.
 The shared `pnpm check` entry point covers type checking, UI design checks,

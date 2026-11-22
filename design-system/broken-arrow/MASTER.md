@@ -57,8 +57,9 @@ including fractional container widths.
 caption geometry, shared asynchronous row-budget variables, forced-color
 support, and reduced-motion safeguards. These rules have global, native, or
 calculated behavior that benefits from a shared stylesheet. The development
-panel retains its Shadow DOM host rules; the isolated recorder keeps its tiny
-capture-document stylesheet.
+panel retains its Shadow DOM host rules. Its Select listbox renders into a light-DOM
+slot on the same top-layer host so Radix can track the focused option through
+`document.activeElement`. The isolated recorder keeps its tiny capture-document stylesheet.
 
 When replacing an unlayered rule, verify the resulting shadcn state styles and
 `cn()` merging. A font-size utility can remove a primitive's earlier line-height
@@ -77,7 +78,8 @@ prove that the desktop layout was preserved.
 
 Use flat, theme-colored workspace and sidebar backgrounds with quiet glass cards
 for persistent content. The workspace meets the sidebar at a straight edge in
-both sidebar states. Cards have one uniform translucent fill, a fine border,
+both sidebar states. A collapsed desktop sidebar reserves no gutter; the workspace
+and its toolbar start at the window edge. Cards have one uniform translucent fill, a fine border,
 a small shadow, and a restrained backdrop blur. Text, icons, charts, and controls
 remain fully opaque. Do not add gradients, sheen overlays, colored edge lighting,
 or a second card solely to create padding around an existing card or option group.
@@ -270,8 +272,9 @@ sync with the active preferences.
 
 Use `--background`, `--foreground`, `--muted-foreground`, `--border`, `--input`,
 `--primary`, `--ring`, and feedback tokens. Do not introduce raw page colors or
-per-card light/dark overrides. Native select options use system Canvas colors;
-overlay scrims and media canvases keep their purpose-specific treatment.
+per-card light/dark overrides. Use the shared Select for dropdown choices; its listbox
+uses the shared glass overlay surface. Overlay scrims and media canvases keep their
+purpose-specific treatment.
 
 ELO changes use `eloChangeClass` with `--elo-increase` and `--elo-decrease`.
 Positive changes include a plus sign, zero is neutral, and unavailable values
@@ -293,7 +296,11 @@ control typography follows the shared shadcn components; use tabular figures for
 numerical comparisons. Keep long names and labels within their layout bounds.
 
 Use `lucide-react` icons or the shared `Icon` adapter. Components own control icon
-sizes; meaningful standalone graphics may specify contextual sizes. Decorative
+sizes: use 12px in inset controls, 14px in compact controls, and 16px in
+standard controls and standalone inline icons. Card title icons follow the
+title font size. Navigation keeps its 18px glyphs; large empty states use a
+20px glyph inside the 48px tile. Change glyph size independently of hit area.
+Meaningful standalone graphics may specify contextual sizes. Decorative
 icons use `aria-hidden`; icon-only controls need localized accessible names and
 tooltips. Use `data-icon` for leading/trailing button icons.
 
@@ -364,8 +371,9 @@ required by the current interface.
   menu tooltips in mobile navigation.
 - Overview has four equal summary columns, followed by a full-width room panel
   and the recent-results/tools grid. Summary details hide when their individual
-  cards are too narrow; primary values stay on one line. Recent matches use a
-  shared Item per dialog trigger; the full row is a keyboard-accessible target.
+  cards are too narrow; primary values stay on one line. Recent matches reuse the archive table and its Mode, Map, and ELO change columns.
+  Match the three skeleton rows to the single-line data rows so loading does not shift the cards.
+  Keep the newest three rows in chronological descending order; the map button or a row click opens details.
   Latest ELO and recent win rate use the current session's player ID, falling
   back to the persisted active account while the room is empty or the game is
   closed. Keep that account through idle session events, and replace it when a
@@ -441,7 +449,7 @@ required by the current interface.
   link; omit unavailable metrics and flag stale data. All actions remain in
   reach while the overview scrolls; Copy needs a loaded report, and Refresh
   reloads the profile and report together.
-- Match dialogs use the same single header action area for Refresh and Close.
+- Match dialogs group Open BATrace, Refresh, and Close in that order in the header.
   Archive detail pages use one workspace titlebar: the archive breadcrumb returns
   to the list, and match position, Previous, Next and Refresh are grouped before
   global controls. Neither the detail body nor dialogs repeat this row. Cached-service
@@ -485,7 +493,8 @@ required by the current interface.
   so the table receives the remaining space. Use tabular numbers and theme tokens;
   narrow containers stack the cards, and any table overflow stays inside its
   scroll container. Loading placeholders retain the same headers and automatic
-  column sizing.
+  column sizing. Render 15 highlight-unit rows during loading inside the same
+  scrollable preview, retaining the count and expansion control.
 - Profile and report requests resolve independently. Replace only the placeholders
   supplied by each response; show empty states only after that request settles.
   Refreshes retain existing values and the active record tab. The Maggot Index
@@ -497,8 +506,7 @@ required by the current interface.
   Sample scope and insufficient-sample details live in the title's shared
   TooltipButton, available on hover/focus and pinnable by click or touch. Keep its
   accessible name and scale description localized. Refreshes retain the cached
-  score and marker while progress appears in the header badge and a reserved 4px
-  track below the summary metrics. Loading and loaded content share the same
+  score and marker while calculation progress appears only in the header badge. Loading and loaded content share the same
   responsive geometry and reduced-motion behavior; failures keep the retry notice.
 - Map performance uses the shared `MapPerformanceGrid` in player records and
   report details. Arrange small glass Cards in a responsive grid with 16px gaps
@@ -515,7 +523,7 @@ required by the current interface.
   with six skeleton cards, and refreshes retain the populated grid.
 - ELO color options sit directly under their section heading. Do not restore
   the removed explanatory paragraph or an additional wrapper card.
-- Quick tools keep their actions without an extra visible heading.
+- Quick tools use the recording title, status, and settings action as the card header. Beside recent matches, stretch both cards to the same height and distribute the three shortcut rows evenly below the recording header. Use ghost buttons with muted icons so idle shortcuts have no fill. When the cards stack, return the shortcuts to three equal-width tiles without imposing a shared height.
 - Archive opens in grid view by default, with a toggle for list view. Preserve
   the selected view when returning from match details. Filters and actions wrap
   as complete controls when space is limited.
@@ -601,11 +609,9 @@ disabled, idle, waiting, saving, error and available-image states. Prefer the
 16:9 ratio above the minimum and contain the image without distortion. The shared
 Empty title and full helper text must fit inside the frame at narrow widths.
 
-Keep roster space reserved for a populated room or a known room awaiting player
-details. On Overview, a settled no-room
-state uses a compact waiting message so available history stays near the top;
-restore the normal reservation when a room arrives. Radar retains its focused
-roster workspace.
+Overview and Radar use the same responsive roster reservation whether the game
+is idle, a known room is awaiting players, or the roster is populated. An empty
+database must not shorten the waiting panel or move the following cards.
 
 Use three heights for standalone actions: compact (28px) for dense row actions,
 standard (32px) for window and dialog controls, pagination and ordinary forms,
@@ -624,8 +630,8 @@ are not ordinary toolbar buttons; preserve their content or accessibility sizing
 
 Center SessionPanel's waiting icon and message within the available space below
 its actions. Preserve the shared Empty alignment and symmetric padding instead
-of forcing top alignment or adding a Radar-only top margin. Keep populated-room
-reservation and Overview's settled no-room compact behavior unchanged.
+of forcing top alignment or adding a Radar-only top margin. Use the same parent reservation
+for both empty and populated rooms.
 Limit the empty viewport to `max(9.5rem, 100svh - 28rem)` while retaining the parent
 roster reservation. The conservative height budget accommodates the toolbar,
 content padding, metrics and actions in a 900px window with a 400px sidebar. Reduce empty-state
@@ -676,6 +682,9 @@ shape. Shared row placeholders and localized loading announcements live in
   title, metadata, action, and thumbnail slots. Initial budgets are three recent
   matches, five search/table rows, six archive/replay cards, four deck file rows
   per panel, and one recognized-account row. Budgets do not cap real results.
+  In loading preview, retain known search result counts and archive team sizes.
+  Align search placeholders to the name, metadata, and action slots. Archive
+  team headings are static text; show side affiliation only when known.
 - Media owns a responsive frame before a URL, thumbnail, or metadata arrives.
   Replay playback reserves a 16:9 stage with a 12rem minimum and a 65svh maximum;
   loading, retry, and failure feedback overlay this frame. Keep the video and

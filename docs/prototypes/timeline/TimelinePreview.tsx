@@ -43,10 +43,14 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import {
-  NativeSelect,
-  NativeSelectOption,
-  NativeSelectOptGroup,
-} from '@/components/ui/native-select';
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import {
@@ -1684,28 +1688,34 @@ function TimelinePreview() {
               关键时刻
               <span className="text-sm font-normal text-foreground/80">{visible.length}</span>
             </h2>
-            <NativeSelect
+            <Select
               value={player}
-              aria-label="筛选事件玩家"
-              onChange={(event) => {
-                setPlayer(event.target.value);
+              onValueChange={(value) => {
+                setPlayer(value);
                 setSelected(null);
               }}
-              className="max-w-48 max-sm:min-h-10"
             >
-              <NativeSelectOption value="all">全部玩家</NativeSelectOption>
-              {[0, 1].map((team) => (
-                <NativeSelectOptGroup key={team} label={team === 0 ? 'Alpha' : 'Bravo'}>
-                  {data.players
-                    .filter((p) => p.team === team)
-                    .map((p) => (
-                      <NativeSelectOption key={p.id} value={p.id}>
-                        {p.name}
-                      </NativeSelectOption>
-                    ))}
-                </NativeSelectOptGroup>
-              ))}
-            </NativeSelect>
+              <SelectTrigger aria-label="筛选事件玩家" className="max-w-48 max-sm:min-h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">全部玩家</SelectItem>
+                </SelectGroup>
+                {[0, 1].map((team) => (
+                  <SelectGroup key={team}>
+                    <SelectLabel>{team === 0 ? 'Alpha' : 'Bravo'}</SelectLabel>
+                    {data.players
+                      .filter((p) => p.team === team)
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <ToggleGroup

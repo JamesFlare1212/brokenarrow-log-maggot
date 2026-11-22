@@ -35,7 +35,7 @@ const result = await build({
                 'toggle-group',
                 'slider',
                 'separator',
-                'native-select',
+                'select',
                 'popover',
                 'empty',
                 'dialog',

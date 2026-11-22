@@ -17,7 +17,14 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverAnchor, PopoverTrigger } from '@/components/ui/popover';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
@@ -30,10 +37,16 @@ import {
   type DevelopmentRecording,
 } from './runtime';
 
+import { LoadingPreviewContext } from '../hooks/useLoadingPreview';
+
 function DevelopmentTools({
   runtime,
   snapshot,
+  loadingPreview,
+  setLoadingPreview,
 }: {
+  loadingPreview: boolean;
+  setLoadingPreview: (value: boolean) => void;
   runtime: DevelopmentRuntime;
   snapshot: DevelopmentSnapshot;
 }) {
@@ -47,7 +60,7 @@ function DevelopmentTools({
   }, []);
   const layer = useDevelopmentLayer(escape),
     theme = useDevelopmentTheme();
-  const { dock, position, handle } = useToolPosition(layer);
+  const { dock, position, handle } = useToolPosition(layer?.root ?? null);
   const t = (key: string) => translate(snapshot.locale, key);
   const changeMode = (mode: DevelopmentMode) => {
     setError(null);
@@ -185,21 +198,26 @@ function DevelopmentTools({
                 <Separator />
                 <Field orientation="horizontal" data-disabled={!local || snapshot.pending}>
                   <FieldLabel htmlFor="development-recording">{t('devRecording')}</FieldLabel>
-                  <NativeSelect
-                    id="development-recording"
-                    className="max-w-[60%]"
+                  <Select
                     value={snapshot.recording}
                     disabled={!local || snapshot.pending}
-                    onChange={(event) =>
-                      runtime.controls.setRecording(event.target.value as DevelopmentRecording)
+                    onValueChange={(value) =>
+                      runtime.controls.setRecording(value as DevelopmentRecording)
                     }
                   >
-                    {(['idle', 'recording', 'error'] as const).map((value) => (
-                      <NativeSelectOption key={value} value={value}>
-                        {t('devRecording.' + value)}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
+                    <SelectTrigger id="development-recording" className="max-w-[60%]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent container={layer.selectPortal}>
+                      <SelectGroup>
+                        {(['idle', 'recording', 'error'] as const).map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {t('devRecording.' + value)}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </Field>
                 <Field orientation="horizontal">
                   <FieldLabel htmlFor="development-cache-expired">{t('devCacheExpiry')}</FieldLabel>
@@ -208,6 +226,14 @@ function DevelopmentTools({
                     checked={snapshot.cacheExpiryEnabled}
                     disabled={snapshot.pending}
                     onCheckedChange={runtime.controls.setCacheExpiryEnabled}
+                  />
+                </Field>
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="development-loading">{t('devLoadingState')}</FieldLabel>
+                  <Switch
+                    id="development-loading"
+                    checked={loadingPreview}
+                    onCheckedChange={setLoadingPreview}
                   />
                 </Field>
                 {error && (
@@ -220,12 +246,14 @@ function DevelopmentTools({
           </Popover>
         </div>
       </div>
+      <slot name="select-content" />
     </>,
-    layer,
+    layer.root,
   );
 }
 
 export function DevelopmentApp({ api, desktop = false }: { api: Bridge; desktop?: boolean }) {
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const runtime = useMemo(() => createDevelopmentRuntime(api), [api]);
   const snapshot = useSyncExternalStore(runtime.controls.subscribe, runtime.controls.getSnapshot);
   useEffect(() => () => runtime.dispose(), [runtime]);
@@ -243,9 +271,16 @@ export function DevelopmentApp({ api, desktop = false }: { api: Bridge; desktop?
         bootstrapApi={runtime.bootstrapApi}
         access={desktop && snapshot.mode === 'captured' ? undefined : runtime.access}
       >
-        <App />
+        <LoadingPreviewContext value={loadingPreview}>
+          <App />
+        </LoadingPreviewContext>
       </AppProvider>
-      <DevelopmentTools runtime={runtime} snapshot={snapshot} />
+      <DevelopmentTools
+        runtime={runtime}
+        snapshot={snapshot}
+        loadingPreview={loadingPreview}
+        setLoadingPreview={setLoadingPreview}
+      />
     </>
   );
 }

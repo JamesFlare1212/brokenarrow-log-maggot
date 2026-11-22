@@ -15,6 +15,26 @@ async function prepare(page: Page, locale: 'zh' | 'en' = 'zh') {
   });
 }
 
+test('compact overview keeps recon selection and inspection in the event row', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await prepare(page);
+  await page.goto('/#archive/match/9485454');
+  await page.getByRole('tab', { name: '时间线', exact: true }).click();
+  const timeline = page.getByTestId('match-timeline');
+  const row = timeline.getByTestId('moment-row').filter({ hasText: 'RQ-170 Sentinel' }).first();
+  const trigger = row.getByRole('button', { name: /RQ-170 Sentinel/ });
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(timeline.getByTestId('compact-event-summary')).toHaveCount(0);
+  const inspect = row.getByRole('button', { name: /附近 5 分钟/ });
+  await expect(inspect).toBeVisible();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await inspect.click();
+  await expect(timeline.getByTestId('event-context')).toBeVisible();
+});
+
 for (const locale of ['zh', 'en'] as const) {
   test(`match detail tab underlines follow the ${locale} label width`, async ({ page }) => {
     await prepare(page, locale);
@@ -106,20 +126,43 @@ for (const locale of ['zh', 'en'] as const) {
       }),
     ).toBe(true);
     expect(await page.evaluate(() => scrollY)).toBe(0);
-    await timeline
-      .getByLabel(locale === 'zh' ? '筛选事件玩家' : 'Filter events by player')
-      .selectOption('75402');
-    await timeline
-      .getByRole('radio', { name: locale === 'zh' ? '高光' : 'Highlights', exact: true })
+    const players = timeline.getByRole('combobox', {
+      name: locale === 'zh' ? '筛选事件玩家' : 'Filter events by player',
+    });
+    await players.click();
+    const options = page.getByRole('listbox');
+    await expect(options.getByRole('group', { name: 'Bravo' })).toBeVisible();
+    await options
+      .getByRole('group', { name: 'Alpha' })
+      .getByRole('option', { name: 'JamesFlare', exact: true })
       .click();
+    await expect(players).toHaveText('JamesFlare');
+    const highlights = timeline.getByRole('tab', {
+      name: locale === 'zh' ? '高光' : 'Highlights',
+      exact: true,
+    });
+    await highlights.click();
+    await expect(highlights).toHaveAttribute('aria-selected', 'true');
+    expect(
+      await highlights.evaluate((el) => {
+        const label = document.createRange();
+        label.selectNodeContents(el);
+        return Math.abs(
+          label.getBoundingClientRect().width - parseFloat(getComputedStyle(el, '::after').width),
+        );
+      }),
+    ).toBeLessThan(1);
     await expect(
       timeline.getByText(locale === 'zh' ? '没有匹配的时刻' : 'No matching moments', {
         exact: true,
       }),
     ).toBeVisible();
-    await timeline
-      .getByRole('button', { name: locale === 'zh' ? '清除筛选' : 'Clear filters', exact: true })
-      .click();
+    const clearFilters = timeline.getByRole('button', {
+      name: locale === 'zh' ? '清除筛选' : 'Clear filters',
+      exact: true,
+    });
+    await expect(clearFilters).toHaveCSS('height', '32px');
+    await clearFilters.click();
     await expect(timeline.getByTestId('moment-row')).toHaveCount(6);
     await page.setViewportSize({ width: 1100, height: 800 });
     await expect(timeline.getByTestId('overview-chart')).toBeVisible();

@@ -40,10 +40,9 @@ No upstream UI or source implementation is copied.
   when it would otherwise be clipped. Explicit five-minute inspection opens the
   detailed view and the secondary chart for loss events. Desktop retains its
   chart-footer summary, list-location link, and previous/next controls. In narrow
-  overview mode the full chart always scrolls normally. A single-row event summary
-  after the filters provides the selected time/unit, inspect, and clear actions;
-  only this small summary can stick, without covering the preceding filters.
-  Inline evidence does not repeat its inspection action. Five-minute inspection
+  overview mode the full chart scrolls normally. Selection expands evidence and the
+  inspection action within the event row, without a separate sticky summary.
+  Activate the same row again to clear the selection. Five-minute inspection
   restores the plots. Expanded narrow layouts keep one sticky navigation card
   above the plots, inside the scrollport below the workspace or dialog header. Its “返回概览” exit has the same name
   and top position for overview and event entry. Selection adds evidence,
@@ -96,7 +95,7 @@ No upstream UI or source implementation is copied.
   and seek the corresponding minute-end sample, revealing the plots and moving
   keyboard focus there after dismissal. An out-of-window seek recenters the
   existing window without discarding the selected event. A calculated six-row
-  native viewport accommodates 44px time actions and avoids clipped initial
+  native viewport measures the rendered time actions and avoids clipped initial
   records; continuation steps align to full rows. Recalculate
   sticky body clipping after the shared
   Dialog's opening scale animation to prevent header/row overlap.
@@ -145,11 +144,13 @@ screens show the concise “轻点定位” hint rather than desktop arrow-key w
 keyboard support is unchanged. Segmented radio groups select on arrow navigation; signed
 chart scales use rounded ticks including a labeled zero.
 The time slider, event buttons, dialogs, tables, and filters use semantic controls.
-Touch controls, including portal close buttons and the actual native select,
-provide at least 44px height on narrow screens. Checked filters retain a checkmark
-independent of hover. Cluster category labels match the filters, while individual
-marks identify the event directly, avoiding a separate icon legend. The shared opt-in Toggle `filter` variant adds an accent
-fill and ring-colored border to checked options, with a lighter hover fill;
+The event-type selector uses the same line tabs as the match detail views: a
+text-width underline marks the selection without a checkmark or pill. Timeline
+actions, segmented options, and dialog close buttons use their shared control
+sizes. Plot markers keep larger hit targets on coarse pointers. The player filter uses the shared Select with a glass listbox, team
+groups, the standard desktop trigger height, and a 44px touch target. Cluster category labels match the filters, while
+individual marks identify the event directly. The chart’s Toggle `filter`
+variant retains its checked accent fill, border, and checkmark;
 existing variants remain unchanged. Essential axis labels, timestamps, event
 metadata, and minute data use 14px text with compact column padding. Essential
 secondary values, evidence labels, table losses, and continuation status use 80%

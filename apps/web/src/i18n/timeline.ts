@@ -148,7 +148,6 @@ export const timelineMessages: Record<string, readonly [string, string]> = {
   'timeline.allPlayers': ['全部玩家', 'All players'],
   'timeline.filterKind': ['筛选事件类型', 'Filter event type'],
   'timeline.all': ['全部', 'All'],
-  'timeline.selectedSummary': ['所选事件摘要', 'Selected event summary'],
   'timeline.eventList': ['关键时刻列表', 'Key moments list'],
   'timeline.noEvents': ['没有匹配的时刻', 'No matching moments'],
   'timeline.noDerivedEvents': ['没有可识别的关键时刻', 'No derived key moments'],

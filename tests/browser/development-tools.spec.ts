@@ -67,6 +67,81 @@ test('the open player dialog shows the selected expiry state even for a fresh re
   await expect(dialog).toBeVisible();
 });
 
+test('loading preview masks and restores a calculated Maggot Index in the open profile', async ({
+  page,
+}) => {
+  let calculations = 0;
+  page.on('request', (request) => {
+    if (
+      request.url().endsWith('/__fixtures/rpc') &&
+      request.postDataJSON()?.method === 'players.maggot'
+    )
+      calculations++;
+  });
+  await page.goto('/#archive/match/9485138');
+  await page
+    .locator('.match-detail-page')
+    .getByRole('button', { name: 'JamesFlare', exact: true })
+    .click({ button: 'right', position: { x: 32, y: 14 } });
+  await page.getByRole('menuitem', { name: '查看玩家资料' }).click();
+  const card = page.locator('.profile-dialog .maggot-card');
+  const score = card.locator('.maggot-score');
+  await expect(score).toBeVisible();
+  const initialScore = await score.innerText();
+  const initialCalculations = calculations;
+  const layout = () =>
+    page
+      .locator(
+        '.profile-dialog .profile-analysis-grid, .profile-dialog .maggot-score-row > span:last-child, .profile-dialog .profile-unit-actions',
+      )
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const { top, height } = element.getBoundingClientRect();
+          return [top, height];
+        }),
+      );
+  await page.locator('.development-tools-launcher [data-slot="popover-trigger"]').click();
+  const toggle = page.getByRole('switch', { name: '加载状态' });
+  const initialLayout = await layout();
+  await toggle.click();
+  await expect(score).toHaveCount(0);
+  await expect(card.locator('.maggot-score-row [data-slot="skeleton"]')).toBeVisible();
+  await expect(card.getByRole('status')).toContainText('0/12');
+  await expect(card.getByRole('progressbar')).toHaveCount(0);
+  const units = page.locator('.profile-dialog .profile-highlights');
+  await expect(units.locator('tbody tr')).toHaveCount(15);
+  await expect(units.locator('tbody tr').last()).toContainText('15');
+  await expect(units.getByRole('button', { expanded: false })).toContainText('15');
+  expect(await layout()).toEqual(initialLayout);
+  await toggle.click();
+  await expect(score).toHaveText(initialScore);
+  await expect(card.getByRole('progressbar')).toHaveCount(0);
+  expect(await layout()).toEqual(initialLayout);
+  expect(calculations).toBe(initialCalculations);
+});
+
+test('previews loading in place and restores the active scene', async ({ page }) => {
+  await page.goto('/#current');
+  const recent = page.locator('.recent-matches');
+  await expect(recent.getByRole('button', { name: 'River' })).toBeVisible();
+  await page.getByRole('button', { name: '开发工具', exact: true }).click();
+  const toggle = page.getByRole('switch', { name: '加载状态' });
+  await expect(toggle).not.toBeChecked();
+  await toggle.click();
+  await expect(recent.locator('[data-slot="skeleton"]').first()).toBeVisible();
+  await expect(page.locator('.session-actions [aria-busy="true"] .animate-spin')).toBeVisible();
+  await page.getByRole('radio', { name: '空数据', exact: true }).click();
+  await expect(page.getByRole('radio', { name: '空数据', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(toggle).toBeChecked();
+  await expect(recent.locator('[data-slot="skeleton"]').first()).toBeVisible();
+  await toggle.click();
+  await expect(page.locator('.recent-card [data-slot="empty"]')).toBeVisible();
+  await expect(page.locator('.session-actions .animate-spin')).toHaveCount(0);
+});
+
 for (const { width, height, x, y, side, edge, theme } of [
   { width: 900, height: 600, x: 800, y: 560, side: 'top', edge: 'right', theme: 'dark' },
   { width: 375, height: 350, x: 12, y: 8, side: 'bottom', edge: 'left', theme: 'light' },

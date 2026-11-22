@@ -16,7 +16,7 @@ test('team results stay in the scoreboard and expanded rows reach the right edge
     .click();
   await expect(page).toHaveURL(/#archive\/match\/9485454$/);
   const detail = page.locator('.match-detail-page');
-  await expect(detail.locator('.match-outcome')).toContainText('+35.76');
+  await expect(detail.locator('.match-outcome')).toHaveText(/^\+35\.76\s*ELO$/);
   await expect(detail.locator('.match-outcome [data-slot="badge"]')).toHaveCount(0);
   await expect(detail.getByRole('heading', { name: '敌方队伍 · Bravo' })).toBeVisible();
   await expect(detail.locator('.match-team-heading [data-slot="badge"]')).toHaveText([
@@ -37,5 +37,20 @@ test('team results stay in the scoreboard and expanded rows reach the right edge
       );
     });
     expect(Math.abs(gap)).toBeLessThanOrEqual(1);
+    const offsets = await panel.evaluate((el) => {
+      const textStart = (node: Element) => {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect().left;
+      };
+      const player = el.closest('tr')!.previousElementSibling!.querySelector('.match-player-name')!;
+      const start = textStart(player);
+      return [
+        el.closest('table')!.querySelector('th')!,
+        el.querySelector('dt')!,
+        el.querySelector('dd')!,
+      ].map((node) => Math.abs(textStart(node) - start));
+    });
+    expect(Math.max(...offsets)).toBeLessThan(1);
   }
 });

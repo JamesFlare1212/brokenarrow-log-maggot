@@ -87,10 +87,10 @@ same column geometry while loading, sorting, filtering, or paginating.
 
 1. Navigation: back to archive and previous/next match.
 2. Identity: map title beside the copyable match ID, with mode, duration, and date below.
-3. Show signed ELO change and account/team; keep the win/loss badges in the team headings rather than repeating one above the ELO.
+3. Show only the signed ELO change in the outcome summary; keep the win/loss badges in the team headings rather than repeating one above the ELO.
 4. Actions: watch replay as the main action, open in BATrace as a secondary one;
    retain refresh in the header.
-5. Use one direct tablist: Core stats (default), Combat, Support, Timeline. Place the recording and BATrace actions at its trailing edge, wrapping on narrow surfaces. Do not repeat an Overview tab or scoreboard title.
+5. Use one direct tablist: Core stats (default), Combat, Support, Timeline. Place recording actions at its trailing edge, wrapping on narrow surfaces. On archive detail pages, BATrace stays beside those actions; in dialogs, place it before Refresh in the header. Do not repeat an Overview tab or scoreboard title.
 6. Scoreboard: local team first, opponent second, aligned columns and clear team
    headers. Do not assume Alpha is always local or that ELO implies victory.
 
@@ -134,7 +134,7 @@ independently: opening a lower row must not remove a panel above it. Let the det
 does not introduce a scrollbar or an empty gutter inside either team table.
 Keep horizontal scrolling local to a narrow team table. Do not automatically scroll to or focus the inserted panel.
 
-Expanded content starts with the metrics, including before/after ELO where known.
+Align the Player column header and the first expanded metric with the player name, not the disclosure chevron. Expanded content starts with the metrics, including before/after ELO where known.
 Right-click the player cell or use Shift+F10 on its disclosure to open a context
 menu containing the ID and View player profile. Do not repeat the name in a tooltip or add a profile
 action to the expanded panel. Primary clicks on the name, chevron and blank player-cell area toggle the metrics. Show ELO change in the scoreboard row

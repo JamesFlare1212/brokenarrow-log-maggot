@@ -193,7 +193,7 @@ export function App() {
       open={!collapsed}
       onOpenChange={(open) => settings.change({ sidebarCollapsed: !open })}
       className={cn(
-        "app-shell h-[100svh] min-h-0 overflow-hidden [&_[data-slot='sidebar-inset']]:m-0 [&_[data-slot='sidebar-inset']]:rounded-none! [&_[data-slot='sidebar-inset']]:shadow-none [&_[data-slot='sidebar-container']]:py-0",
+        "app-shell h-[100svh] min-h-0 overflow-hidden [&_[data-slot='sidebar-inset']]:m-0! [&_[data-slot='sidebar-inset']]:rounded-none! [&_[data-slot='sidebar-inset']]:shadow-none [&_[data-slot='sidebar-container']]:py-0",
         settingsTab && 'app-shell-settings',
       )}
       data-ready="true"

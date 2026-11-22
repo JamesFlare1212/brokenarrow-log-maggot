@@ -9,6 +9,7 @@ export function Icon({
 }: LucideProps & { icon: LucideIcon; spin?: boolean }) {
   return (
     <Component
+      size={16}
       data-icon="inline-start"
       className={cn(spin && 'animate-spin', className)}
       {...props}
