@@ -18,14 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverAnchor,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverAnchor, PopoverTrigger } from '@/components/ui/popover';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   createDevelopmentRuntime,
@@ -118,28 +111,25 @@ function DevelopmentTools({
               collisionPadding={8}
               container={container}
               updatePositionStrategy="always"
-              aria-labelledby="development-tools-title"
+              aria-label={t('devTools')}
               className="development-tools-panel pointer-events-auto w-80 max-w-[calc(100dvw-1rem)] max-h-(--radix-popover-content-available-height) gap-4 overflow-x-hidden overflow-y-auto overscroll-contain p-4"
             >
-              <PopoverHeader className="flex-row items-center justify-between gap-2">
-                <PopoverTitle id="development-tools-title" className="font-semibold">
-                  {t('devTools')}
-                </PopoverTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t('devReset')}
-                  disabled={snapshot.pending}
-                  aria-busy={snapshot.pending}
-                  onClick={() => changeMode(snapshot.mode)}
-                >
-                  <RefreshCw data-icon="inline-start" aria-hidden="true" />
-                  {t('devResetShort')}
-                </Button>
-              </PopoverHeader>
               <FieldGroup className="gap-4">
                 <Field>
-                  <FieldLabel id="development-scene-label">{t('devScene')}</FieldLabel>
+                  <div className="flex items-center justify-between gap-2">
+                    <FieldLabel id="development-scene-label">{t('devScene')}</FieldLabel>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={t('devReset')}
+                      disabled={snapshot.pending}
+                      aria-busy={snapshot.pending}
+                      onClick={() => changeMode(snapshot.mode)}
+                    >
+                      <RefreshCw data-icon="inline-start" aria-hidden="true" />
+                      {t('devResetShort')}
+                    </Button>
+                  </div>
                   <ToggleGroup
                     type="single"
                     variant="filter"

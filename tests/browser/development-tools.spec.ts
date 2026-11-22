@@ -86,6 +86,9 @@ for (const { width, height, x, y, side, edge, theme } of [
     await tools.click();
     const panel = page.locator('.development-tools-panel');
     await expect(panel).toHaveAttribute('data-side', side);
+    await expect(panel).toHaveAccessibleName('开发工具');
+    await expect(panel.getByText('开发工具', { exact: true })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: '重置当前场景' })).toBeVisible();
     await expect
       .poll(async () => {
         const dock = await page.locator('.development-tools-launcher').boundingBox();

@@ -149,7 +149,7 @@ export function MatchDetails({
       )}
       {localOnly && <Notice>{t('matchLocalOnlyHint')}</Notice>}
       <div className="match-overview flex justify-between items-start gap-4">
-        <div className="match-identity min-w-0">
+        <div className="match-identity min-w-0 ps-2">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h2
               ref={heading}

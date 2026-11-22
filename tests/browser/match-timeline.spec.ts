@@ -16,6 +16,25 @@ async function prepare(page: Page, locale: 'zh' | 'en' = 'zh') {
 }
 
 for (const locale of ['zh', 'en'] as const) {
+  test(`match detail tab underlines follow the ${locale} label width`, async ({ page }) => {
+    await prepare(page, locale);
+    await page.goto('/#archive/match/9485454');
+    const tabs = page.getByTestId('match-detail-views').getByRole('tab');
+    await expect(tabs).toHaveCount(4);
+    await page.evaluate(() => document.fonts.ready.then(() => true));
+    for (const tab of await tabs.all()) {
+      await tab.click();
+      await expect(tab).toHaveAttribute('aria-selected', 'true');
+      const difference = await tab.evaluate((el) => {
+        const text = document.createRange();
+        text.selectNodeContents(el);
+        return Math.abs(
+          text.getBoundingClientRect().width - parseFloat(getComputedStyle(el, '::after').width),
+        );
+      });
+      expect(difference).toBeLessThan(1);
+    }
+  });
   test(`recorded match timeline integrates with the archive, nested scrolling and ${locale} UI`, async ({
     page,
   }) => {

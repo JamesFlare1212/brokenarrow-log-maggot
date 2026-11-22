@@ -68,8 +68,9 @@ describe('UI backed by the complete recorded BATrace service', () => {
         <App />
       </AppProvider>,
     );
-    await waitFor(() =>
-      expect(completed.some(({ method }) => method === 'replays.directory')).toBe(true),
+    await waitFor(
+      () => expect(completed).toContainEqual({ method: 'replays.directory', input: null }),
+      { timeout: 10000 },
     );
     for (const [panel, method] of [
       ['radar', 'matches.list'],
