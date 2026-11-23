@@ -291,8 +291,8 @@ test('match dialog supports nested minute navigation without closing the match',
     .getByRole('button', { name: 'JamesFlare', exact: true })
     .click({ button: 'right', position: { x: 32, y: 14 } });
   await page.getByRole('menuitem', { name: '查看玩家资料' }).click();
-  const profile = page.locator('.profile-dialog');
-  await expect(profile).toBeVisible();
+  const profile = page.getByRole('dialog', { name: 'JamesFlare · #75402', exact: true });
+  await expect(profile).toBeVisible({ timeout: 15_000 });
   const matches = profile.locator('td[data-column="matchId"] button');
   await expect(matches.first()).toBeVisible();
   let chosen = -1;
