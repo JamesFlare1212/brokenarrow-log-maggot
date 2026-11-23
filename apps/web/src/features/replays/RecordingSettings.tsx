@@ -1,4 +1,11 @@
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { FolderOpen } from 'lucide-react';
 import {
@@ -40,13 +47,15 @@ export function RecordingSettings({
   inline?: boolean;
   onStatusChange?: (status: SettingsSaveStatus) => void;
 }) {
-  const { api, state, settings, recordingPreferences, closeModal, backModal, notify } = useApp(),
+  const { api, access, state, settings, recordingPreferences, closeModal, backModal, notify } =
+      useApp(),
     { t } = useI18n(),
     [displays, setDisplays] = useState<Display[]>([]),
     [previewAspectRatio, setPreviewAspectRatio] = useState(16 / 9),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     thumbnail = useRequest<string | null>();
+  const canRecord = access.preference('replayEnabled');
   const { moveFiles: move, setMoveFiles: setMove } = recordingPreferences;
   const prepareDirectory = useCallback(
     async (patch: Partial<PublicConfig>) => {
@@ -80,15 +89,17 @@ export function RecordingSettings({
     [flush],
   );
   useEffect(() => {
-    if (enable) change({ replayEnabled: true });
-  }, [enable, change]);
+    if (enable && canRecord) change({ replayEnabled: true });
+  }, [enable, canRecord, change]);
   useEffect(() => {
+    if (!canRecord) return;
     void api
       .invoke('displays.list', null)
       .then(setDisplays)
       .catch((e) => setError(String(e)));
-  }, [api]);
+  }, [api, canRecord]);
   useEffect(() => {
+    if (!canRecord) return;
     let active = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const refresh = async () => {
@@ -103,7 +114,7 @@ export function RecordingSettings({
       active = false;
       clearTimeout(timer);
     };
-  }, [api, draft.replayDisplayId]);
+  }, [api, canRecord, draft.replayDisplayId]);
   const set = <K extends keyof PublicConfig>(key: K, value: PublicConfig[K], delay = 0) =>
     change({ [key]: value }, delay, key === 'replaySaveDir' ? prepareDirectory : undefined);
   const close = async (back = false) => {
@@ -139,7 +150,9 @@ export function RecordingSettings({
           <CardAction>
             <Button
               disabled={
-                busy || ['recording', 'starting', 'stopping'].includes(state.recording.phase)
+                !canRecord ||
+                busy ||
+                ['recording', 'starting', 'stopping'].includes(state.recording.phase)
               }
               aria-busy={busy}
               onClick={() => void test()}
@@ -154,10 +167,13 @@ export function RecordingSettings({
               id="rec-enabled"
               label={t('autoRecord')}
               labelClickable={false}
+              disabled={!canRecord}
               checked={draft.replayEnabled}
               onChange={(value) => set('replayEnabled', value)}
             />
-            <FieldDescription>{t('recordingTestHint')}</FieldDescription>
+            <FieldDescription>
+              {t(canRecord ? 'recordingTestHint' : 'devModeHint.captured')}
+            </FieldDescription>
           </FieldGroup>
         </CardContent>
       </Card>
@@ -169,18 +185,28 @@ export function RecordingSettings({
         <CardContent>
           <FieldGroup>
             <Field id="rec-display" label={t('display')}>
-              <NativeSelect
-                id="rec-display"
-                value={draft.replayDisplayId}
-                onChange={(e) => set('replayDisplayId', e.target.value)}
+              <Select
+                disabled={!canRecord}
+                value={draft.replayDisplayId || 'auto'}
+                onValueChange={(value) => set('replayDisplayId', value === 'auto' ? '' : value)}
               >
-                <NativeSelectOption value="">{t('autoDisplay')}</NativeSelectOption>
-                {displays.map((display) => (
-                  <NativeSelectOption key={display.id} value={display.id}>
-                    {display.label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger id="rec-display">
+                  <SelectValue>
+                    {displays.find((display) => display.id === draft.replayDisplayId)?.label ??
+                      t('autoDisplay')}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="auto">{t('autoDisplay')}</SelectItem>
+                    {displays.map((display) => (
+                      <SelectItem key={display.id} value={display.id}>
+                        {display.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <div className="recording-video-grid grid grid-cols-2 gap-6 items-center viewport-max-767:grid-cols-1">
               <div
@@ -212,6 +238,7 @@ export function RecordingSettings({
               <FieldGroup>
                 <Field id="rec-quality" label={`${t('quality')} · ${draft.replayQuality}p`}>
                   <Slider
+                    disabled={!canRecord}
                     id="rec-quality"
                     min={0}
                     max={QUALITIES.length - 1}
@@ -226,6 +253,7 @@ export function RecordingSettings({
                 </Field>
                 <Field id="rec-fps" label={`${t('fps')} · ${draft.replayFps}`}>
                   <Slider
+                    disabled={!canRecord}
                     id="rec-fps"
                     min={RECORDING_FPS.min}
                     max={RECORDING_FPS.max}
@@ -242,6 +270,7 @@ export function RecordingSettings({
                   label={`${t('recordingQualityScore')} · ${draft.replayQualityScore}`}
                 >
                   <Slider
+                    disabled={!canRecord}
                     id="rec-quality-score"
                     min={RECORDING_QUALITY_SCORE.min}
                     max={RECORDING_QUALITY_SCORE.max}
@@ -281,20 +310,27 @@ export function RecordingSettings({
         <CardContent>
           <FieldGroup>
             <Field id="rec-audio" label={t('audio')}>
-              <NativeSelect
-                id="rec-audio"
+              <Select
+                disabled={!canRecord}
                 value={draft.replayAudio}
-                onChange={(e) => set('replayAudio', e.target.value === 'off' ? 'off' : 'default')}
+                onValueChange={(value) => set('replayAudio', value === 'off' ? 'off' : 'default')}
               >
-                <NativeSelectOption value="default">{t('audio')}</NativeSelectOption>
-                <NativeSelectOption value="off">{t('audioOff')}</NativeSelectOption>
-              </NativeSelect>
+                <SelectTrigger id="rec-audio">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="default">{t('audio')}</SelectItem>
+                    <SelectItem value="off">{t('audioOff')}</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <Toggle
               id="rec-microphone"
               label={t('recordMicrophone')}
               checked={draft.replayMicrophone}
-              disabled={draft.replayAudio === 'off'}
+              disabled={!canRecord || draft.replayAudio === 'off'}
               onChange={(value) => set('replayMicrophone', value)}
             />
           </FieldGroup>
@@ -311,7 +347,7 @@ export function RecordingSettings({
               label={t('migrateFilesOnChange')}
               checked={move}
               onChange={setMove}
-              disabled={busy || directorySaving}
+              disabled={!canRecord || busy || directorySaving}
             />
             <Field id="rec-directory" label={t('saveDirectory')}>
               <InputGroup>
@@ -320,12 +356,12 @@ export function RecordingSettings({
                   value={directory}
                   onChange={(e) => stage({ replaySaveDir: e.target.value }, prepareDirectory)}
                   onBlur={() => void flush()}
-                  disabled={busy || directorySaving}
+                  disabled={!canRecord || busy || directorySaving}
                   placeholder={t('defaultDirectory')}
                 />
                 <InputGroupAddon align="inline-end">
                   <InputGroupButton
-                    disabled={busy || directorySaving}
+                    disabled={!canRecord || busy || directorySaving}
                     onClick={() =>
                       void api
                         .invoke('directory.select', { kind: 'replays' })

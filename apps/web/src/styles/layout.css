@@ -10,6 +10,11 @@ body {
   overflow: hidden;
 }
 :root {
+  --control-inset: 1.5rem;
+  --control-compact: 1.75rem;
+  --control-standard: 2rem;
+  --control-large: 2.25rem;
+  --control-touch: 2.75rem;
   --content-gap: 16px;
   --toolbar-height: 3rem;
   --window-controls-height: 0px;
@@ -21,6 +26,11 @@ body {
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 58%, transparent);
   --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 70%, transparent);
   --scrollbar-thumb-active: color-mix(in oklab, var(--foreground) 80%, transparent);
+}
+@media (pointer: coarse) {
+  :root {
+    --control-large: var(--control-touch);
+  }
 }
 @supports selector(::-webkit-scrollbar) {
   ::-webkit-scrollbar {
@@ -181,9 +191,6 @@ button:not(:disabled),
 }
 .map-performance-card[data-tone='danger'] {
   --map-performance-color: var(--destructive);
-}
-.match-personal-card {
-  --card-spacing: 1rem;
 }
 [data-row-action] {
   cursor: pointer;

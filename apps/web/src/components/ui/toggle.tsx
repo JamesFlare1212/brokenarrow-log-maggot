@@ -13,6 +13,8 @@ const toggleVariants = cva(
       variant: {
         default: 'bg-transparent',
         outline: 'border border-input bg-transparent hover:bg-muted',
+        filter:
+          'border border-transparent bg-transparent hover:bg-muted/40 data-[state=on]:border-ring data-[state=on]:bg-accent data-[state=on]:text-accent-foreground',
         card: cn(
           cardSurfaceClasses,
           'hover:border-foreground/20 hover:bg-(--glass-surface) aria-pressed:bg-(--glass-surface) data-[state=on]:border-(--appearance-selection) data-[state=on]:bg-(--glass-surface)',
@@ -22,9 +24,9 @@ const toggleVariants = cva(
       },
       size: {
         default:
-          'h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: 'h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+          'h-(--control-standard) min-w-(--control-standard) px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+        sm: "h-(--control-compact) min-w-(--control-compact) rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: 'h-(--control-large) min-w-(--control-large) px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
       },
     },
     defaultVariants: {

@@ -25,7 +25,7 @@ export interface DataResult {
 }
 export interface HttpPort {
   fetch: typeof fetch;
-  offline?: boolean;
+  offline?: boolean | 'fixture-cache';
 }
 export class BatraceClient {
   private pending = new Map<string, Promise<DataResult>>();
@@ -42,7 +42,10 @@ export class BatraceClient {
     private settings: NetworkConfig = projectConfig.network,
   ) {}
   get offline(): boolean {
-    return this.http.offline === true;
+    return !!this.http.offline;
+  }
+  get fixtureCache(): boolean {
+    return this.http.offline === 'fixture-cache';
   }
   onResult(listener: (check: ApiHealthCheck) => void): () => void {
     this.resultListeners.add(listener);
@@ -72,7 +75,12 @@ export class BatraceClient {
           throw Object.assign(new Error(failure.message), { status: failure.status, attempts: 0 });
         throw new Error('Offline real-data mode: no recorded response for this request');
       }
-      return { value: hit.value, source: 'stale', at: hit.at, attempts: 0 };
+      return {
+        value: hit.value,
+        source: this.fixtureCache && !hit.stale ? 'cache' : 'stale',
+        at: hit.at,
+        attempts: 0,
+      };
     }
     if (!options.force) {
       const hit = this.db.cache(key, false, this.now());

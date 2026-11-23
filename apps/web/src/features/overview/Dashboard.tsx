@@ -11,32 +11,22 @@ import {
   Video,
 } from 'lucide-react';
 import type { Match } from '@ba/contracts';
-import { formatDuration, formatMetric, formatTime } from '@ba/shared';
-import { cn } from '@/lib/utils';
-import { eloChangeClass } from '@/lib/elo';
+import { formatDuration, formatMetric } from '@ba/shared';
+import { RecentMatchTable } from './RecentMatchTable';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
 import { Button, Card, Empty, Notice } from '../../components/ui';
-import { LoadingStatus, ListSkeletonRows } from '../../components/LoadingState';
+import { LoadingStatus } from '../../components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Card as MetricCard,
+  Card as SurfaceCard,
   CardAction,
   CardContent,
   CardDescription,
+  CardTitle,
   CardHeader,
 } from '@/components/ui/card';
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from '@/components/ui/item';
-import { Separator } from '@/components/ui/separator';
 import { SessionPanel } from '../session/SessionPanel';
 
 function Metric({
@@ -53,7 +43,7 @@ function Metric({
   pending?: boolean;
 }) {
   return (
-    <MetricCard size="sm">
+    <SurfaceCard size="sm">
       <CardHeader>
         <CardDescription>{label}</CardDescription>
         <CardAction>{icon}</CardAction>
@@ -66,13 +56,13 @@ function Metric({
           {pending ? <Skeleton className="h-4 w-20" aria-hidden="true" /> : detail}
         </div>
       </CardContent>
-    </MetricCard>
+    </SurfaceCard>
   );
 }
 
 export function Dashboard() {
   const { api, state, setPage, openModal } = useApp(),
-    { t, locale } = useI18n();
+    { t } = useI18n();
   const { data, pending, error, load } = useRequest<Match[]>();
   const {
     data: replayCount,
@@ -179,45 +169,8 @@ export function Dashboard() {
             </Button>
           }
         >
-          {loading ? (
-            <ListSkeletonRows
-              className="recent-matches gap-1 has-data-[size=sm]:gap-1 has-data-[size=xs]:gap-1"
-              rowClassName="recent-match-loading min-h-17 py-2.5 px-3"
-            />
-          ) : all.length ? (
-            <ItemGroup className="recent-matches gap-1 has-data-[size=sm]:gap-1 has-data-[size=xs]:gap-1">
-              {all.slice(0, 3).map((match) => (
-                <Item size="sm" asChild key={match.id}>
-                  <Button
-                    variant="ghost"
-                    className="recent-match min-h-17 [&_[data-slot='item-content']]:min-w-0 viewport-max-479:[&>[data-slot='item-media']]:hidden h-auto w-full justify-start"
-                    onClick={() => openModal({ type: 'match', fid: match.fid || match.id })}
-                  >
-                    <ItemContent>
-                      <ItemTitle>{match.map || `#${match.id}`}</ItemTitle>
-                      <ItemDescription>
-                        {t(match.mode)} · {formatTime(match.endedAt, locale)}
-                      </ItemDescription>
-                    </ItemContent>
-                    <span
-                      className={cn(
-                        'recent-elo w-20 shrink-0 text-right tabular-nums viewport-max-479:w-16',
-                        eloChangeClass(
-                          match.eloAfter !== null && match.eloBefore !== null
-                            ? match.eloAfter - match.eloBefore
-                            : null,
-                        ),
-                      )}
-                    >
-                      {match.eloAfter !== null && match.eloBefore !== null
-                        ? `${match.eloAfter - match.eloBefore > 0 ? '+' : ''}${formatMetric(match.eloAfter - match.eloBefore, 0)}`
-                        : '—'}{' '}
-                      <small>ELO</small>
-                    </span>
-                  </Button>
-                </Item>
-              ))}
-            </ItemGroup>
+          {loading || all.length ? (
+            <RecentMatchTable matches={all.slice(0, 3)} loading={loading} />
           ) : (
             <Empty icon={<Archive />} description={t('noMatchesHint')}>
               {t('empty')}
@@ -228,24 +181,17 @@ export function Dashboard() {
           className="dashboard-side flex min-w-0 flex-col gap-(--content-gap)"
           aria-label={t('quickTools')}
         >
-          <Card
-            title={t('quickTools')}
-            showHeader={false}
-            className="quick-tools [.dashboard-side>&]:flex-1 [&_[data-slot='item-group']]:gap-0.5"
-            contentClassName="gap-2"
-          >
-            <Item size="xs">
-              <ItemMedia variant="icon">
-                <Video />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{t('replays')}</ItemTitle>
-                <ItemDescription>
-                  {t(recordingLabel)}
-                  {recordingActive && <> · {formatDuration(recording.seconds)}</>}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
+          <SurfaceCard className="quick-tools flex-1">
+            <CardHeader>
+              <CardTitle role="heading" aria-level={2} className="flex items-center gap-2">
+                <Video aria-hidden="true" />
+                {t('replays')}
+              </CardTitle>
+              <CardDescription>
+                {t(recordingLabel)}
+                {recordingActive && <> · {formatDuration(recording.seconds)}</>}
+              </CardDescription>
+              <CardAction className="self-center">
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -256,41 +202,36 @@ export function Dashboard() {
                     openModal({ type: 'recordingSettings', enable: !state.config.replayEnabled })
                   }
                 >
-                  <Settings />
+                  <Settings aria-hidden="true" />
                 </Button>
-              </ItemActions>
-            </Item>
-            {recording.error && <Notice error>{recording.error}</Notice>}
-            <Separator />
-            <ItemGroup>
-              {(
-                [
-                  { page: 'players', icon: Search, hint: 'playerShortcut' },
-                  { page: 'decks', icon: Layers, hint: 'deckShortcut' },
-                  { page: 'bans', icon: ShieldCheck, hint: 'banShortcut' },
-                ] as const
-              ).map(({ page, icon: ToolIcon, hint }) => (
-                <Item size="xs" asChild key={page}>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col gap-3">
+              {recording.error && <Notice error>{recording.error}</Notice>}
+              <nav
+                aria-label={t('quickTools')}
+                className="grid flex-1 auto-rows-fr gap-2 border-t border-border pt-3 workspace-max-48:grid-cols-3"
+              >
+                {(
+                  [
+                    { page: 'players', icon: Search },
+                    { page: 'decks', icon: Layers },
+                    { page: 'bans', icon: ShieldCheck },
+                  ] as const
+                ).map(({ page, icon: ToolIcon }) => (
                   <Button
+                    key={page}
                     variant="ghost"
-                    className="h-auto w-full justify-start"
+                    className="h-auto min-h-9 min-w-0 justify-start gap-3 px-3 py-2 whitespace-normal workspace-max-48:min-h-16 workspace-max-48:flex-col workspace-max-48:justify-center workspace-max-48:gap-2 workspace-max-48:px-1 workspace-max-48:text-xs"
                     onClick={() => setPage(page)}
                   >
-                    <ItemMedia variant="icon">
-                      <ToolIcon />
-                    </ItemMedia>
-                    <ItemContent>
-                      <ItemTitle>{t(page)}</ItemTitle>
-                      <ItemDescription>{t(hint)}</ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <ArrowRight />
-                    </ItemActions>
+                    <ToolIcon aria-hidden="true" className="text-muted-foreground" />
+                    {t(page)}
                   </Button>
-                </Item>
-              ))}
-            </ItemGroup>
-          </Card>
+                ))}
+              </nav>
+            </CardContent>
+          </SurfaceCard>
         </aside>
       </div>
     </div>

@@ -19,6 +19,7 @@ import type {
   Panel,
   Player,
   PublicConfig,
+  RpcMethod,
   MiniInfo,
 } from '@ba/contracts';
 import { LocaleContext, translate } from '../hooks/useI18n';
@@ -132,9 +133,16 @@ export function reduce(state: AppState | null, action: Action): AppState | null 
 }
 export interface PageBreadcrumbDetail {
   label: string;
+  compactLabel?: string;
   onBack: () => void;
 }
+interface RendererAccess {
+  method: (method: RpcMethod) => boolean;
+  preference: (key: keyof PublicConfig) => boolean;
+}
+const unrestricted: RendererAccess = { method: () => true, preference: () => true };
 interface AppContextValue {
+  access: RendererAccess;
   api: Bridge;
   state: AppState;
   page: Panel;
@@ -167,7 +175,17 @@ function notify(message: string, error = false) {
   else toast.success(message);
 }
 
-export function AppProvider({ api, children }: { api: Bridge; children: ReactNode }) {
+export function AppProvider({
+  api,
+  bootstrapApi = api,
+  access = unrestricted,
+  children,
+}: {
+  api: Bridge;
+  bootstrapApi?: Bridge;
+  access?: RendererAccess;
+  children: ReactNode;
+}) {
   const [state, dispatch] = useReducer(reduce, null),
     [page, updatePage] = useState<Panel>(
       () =>
@@ -187,7 +205,9 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     updateBreadcrumbs((current) => {
       if (
         detail
-          ? current[panel]?.label === detail.label && current[panel]?.onBack === detail.onBack
+          ? current[panel]?.label === detail.label &&
+            current[panel]?.compactLabel === detail.compactLabel &&
+            current[panel]?.onBack === detail.onBack
           : !current[panel]
       )
         return current;
@@ -261,12 +281,12 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
         openModal({ type: 'banAlert', players: event.newly });
       if (event.type === 'error') toast.error(event.message);
     };
-    const unsubscribe = api.subscribe((event) => {
+    const unsubscribe = bootstrapApi.subscribe((event) => {
       if (!active) return;
       if (!ready) buffered.push(event);
       else handle(event);
     });
-    void api
+    void bootstrapApi
       .invoke('app.bootstrap', null)
       .then((bootstrap) => {
         if (!active) return;
@@ -283,7 +303,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
       active = false;
       unsubscribe();
     };
-  }, [api]);
+  }, [bootstrapApi]);
   useAppearance(settings.draft ?? state?.config);
   useEffect(() => {
     if (!state) return;
@@ -304,6 +324,7 @@ export function AppProvider({ api, children }: { api: Bridge; children: ReactNod
     );
   const value: AppContextValue = {
     api,
+    access,
     state,
     page,
     setPage,

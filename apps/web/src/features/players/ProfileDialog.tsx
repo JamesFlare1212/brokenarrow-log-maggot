@@ -25,14 +25,14 @@ import { ProfileOverview } from './ProfileOverview';
 import { ProfileRecords } from './ProfileRecords';
 
 export function ProfileDialog({ id, name }: { id: string; name: string }) {
-  const { api, closeModal, backModal, notify, runMaggot } = useApp(),
+  const { api, access, closeModal, backModal, notify, runMaggot } = useApp(),
     { t, locale } = useI18n(),
     profile = useRequest<PlayerProfile>(),
     report = useRequest<PlayerReport>();
   const load = async (force = false) => {
     await Promise.all([
-      profile.load(() => api.invoke('players.profile', { id, force }), true),
-      report.load(() => api.invoke('players.report', { id, force }), true),
+      profile.load(() => api.invoke('players.profile', { id, force }), force),
+      report.load(() => api.invoke('players.report', { id, force }), force),
     ]);
     if (force) await runMaggot(id, true);
   };
@@ -54,58 +54,63 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
       title={`${p?.name || r?.name || name} · #${id}`}
       className="dialog-wide profile-dialog w-[calc(100%_-_3rem)] max-w-288 sm:max-w-288 h-[min(52rem,_calc(100svh_-_var(--window-controls-height)_-_3rem))] viewport-max-767:w-[calc(100%_-_1.5rem)]"
       headerActions={
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t('refresh')}
-          onClick={() => void load(true)}
-          disabled={profile.pending || report.pending}
-          aria-busy={profile.pending || report.pending}
-        >
-          <Icon icon={faArrowsRotate} spin={profile.pending || report.pending} aria-hidden="true" />
-        </Button>
-      }
-    >
-      <div className="profile-toolbar flex items-center flex-wrap justify-between gap-4">
-        <div className="profile-heading flex min-w-0 flex-col gap-1.5">
-          <div className="profile-heading-title flex flex-wrap items-baseline gap-2 [&_h2]:text-[1.125rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.025em]">
-            <h2>{t('profileOverview')}</h2>
-            {p?.banned && <Badge tone="danger">{t('banned')}</Badge>}
-          </div>
-          <dl
-            className="profile-meta flex flex-wrap items-baseline gap-4 text-[0.75rem] [&>div]:flex [&>div]:flex-wrap [&>div]:items-center [&>div]:gap-2 [&_dt]:text-muted-foreground [&_dd]:flex [&_dd]:min-w-6 [&_dd]:min-h-4.5 [&_dd]:items-center [&_dd]:font-medium [&_dd]:tabular-nums"
-            aria-busy={metaPending}
-          >
-            {[
-              { label: t('totalMatches'), value: info?.matchCount },
-              { label: t('samples'), value: info?.sampleCount },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>
-                  {metaPending ? (
-                    <Skeleton className="h-4 w-6" aria-hidden="true" />
-                  ) : (
-                    formatMetric(value ?? null, 0)
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-        <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
+        <>
           <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t('openPlayerOnBatrace')}
+            disabled={!access.method('external.open')}
             onClick={() =>
               void api
                 .invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${id}` })
                 .catch((error) => notify(String(error), true))
             }
           >
-            <ExternalLink data-icon="inline-start" aria-hidden="true" />
-            {t('openBatrace')}
+            <ExternalLink aria-hidden="true" />
           </Button>
-          <ReportCopyButton report={r} />
+          <ReportCopyButton report={r} headerAction />
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t('refresh')}
+            onClick={() => void load(true)}
+            disabled={profile.pending || report.pending}
+            aria-busy={profile.pending || report.pending}
+          >
+            <Icon
+              icon={faArrowsRotate}
+              spin={profile.pending || report.pending}
+              aria-hidden="true"
+            />
+          </Button>
+        </>
+      }
+    >
+      <div className="profile-heading flex min-w-0 flex-col gap-1.5">
+        <div className="profile-heading-title flex flex-wrap items-baseline gap-2 [&_h2]:text-[1.125rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.025em]">
+          <h2>{t('profileOverview')}</h2>
+          {p?.banned && <Badge tone="danger">{t('banned')}</Badge>}
         </div>
+        <dl
+          className="profile-meta flex flex-wrap items-baseline gap-4 text-[0.75rem] [&>div]:flex [&>div]:flex-wrap [&>div]:items-center [&>div]:gap-2 [&_dt]:text-muted-foreground [&_dd]:flex [&_dd]:min-w-6 [&_dd]:min-h-4.5 [&_dd]:items-center [&_dd]:font-medium [&_dd]:tabular-nums"
+          aria-busy={metaPending}
+        >
+          {[
+            { label: t('totalMatches'), value: info?.matchCount },
+            { label: t('samples'), value: info?.sampleCount },
+          ].map(({ label, value }) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>
+                {metaPending ? (
+                  <Skeleton className="h-4 w-6" aria-hidden="true" />
+                ) : (
+                  formatMetric(value ?? null, 0)
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
       <span className="sr-only" role="status">
         {(profilePending || reportPending) && t('loading')}

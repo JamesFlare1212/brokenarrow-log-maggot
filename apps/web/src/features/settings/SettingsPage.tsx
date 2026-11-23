@@ -38,7 +38,14 @@ import { panelLabelKey } from '@/lib/navigation';
 import { LoadingStatus } from '../../components/LoadingState';
 import { Tooltip } from '@/components/Tooltip';
 import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowUp as faArrowUp,
@@ -105,6 +112,7 @@ export function SettingsPage() {
   const confirm = useConfirmation();
   const {
       api,
+      access,
       state,
       page,
       settings,
@@ -484,15 +492,20 @@ export function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <Field id="settings-language" label={t('language')} orientation="horizontal">
-                      <NativeSelect
-                        className="w-44"
-                        id="settings-language"
+                      <Select
                         value={draft.lang}
-                        onChange={(e) => set('lang', e.target.value as PublicConfig['lang'])}
+                        onValueChange={(value) => set('lang', value as PublicConfig['lang'])}
                       >
-                        <NativeSelectOption value="zh">中文</NativeSelectOption>
-                        <NativeSelectOption value="en">English</NativeSelectOption>
-                      </NativeSelect>
+                        <SelectTrigger id="settings-language" className="w-44">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="zh">中文</SelectItem>
+                            <SelectItem value="en">English</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                     </Field>
                   </CardContent>
                 </Card>
@@ -561,18 +574,22 @@ export function SettingsPage() {
                         <InputGroup>
                           <InputGroupInput
                             id="settings-log"
+                            readOnly={!access.preference('logDir')}
                             value={draft.logDir}
                             onChange={(e) => set('logDir', e.target.value, 500)}
                             onBlur={() => void flush()}
                             aria-describedby={logFeedback ? 'settings-log-feedback' : undefined}
                           />
                           <InputGroupAddon align={sidebar.isMobile ? 'block-end' : 'inline-end'}>
-                            <InputGroupButton onClick={() => void choose('logs')}>
+                            <InputGroupButton
+                              disabled={!access.method('directory.select')}
+                              onClick={() => void choose('logs')}
+                            >
                               <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                               {t('select')}
                             </InputGroupButton>
                             <InputGroupButton
-                              disabled={detecting}
+                              disabled={detecting || !access.method('directory.detect')}
                               aria-busy={detecting}
                               onClick={() => void detect()}
                             >
@@ -594,13 +611,17 @@ export function SettingsPage() {
                         <InputGroup>
                           <InputGroupInput
                             id="settings-decks"
+                            readOnly={!access.preference('decksDir')}
                             value={draft.decksDir || defaultDecksDir}
                             onChange={(e) => set('decksDir', e.target.value, 500)}
                             onBlur={() => void flush()}
                             placeholder={t('defaultDirectory')}
                           />
                           <InputGroupAddon align="inline-end">
-                            <InputGroupButton onClick={() => void choose('decks')}>
+                            <InputGroupButton
+                              disabled={!access.method('directory.select')}
+                              onClick={() => void choose('decks')}
+                            >
                               <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                               {t('select')}
                             </InputGroupButton>
@@ -690,6 +711,7 @@ export function SettingsPage() {
                               id={'setting-' + key}
                               className="@max-[24rem]/automation-options:col-start-3 @max-[24rem]/automation-options:row-start-1"
                               aria-describedby={'setting-' + key + '-description'}
+                              disabled={!access.preference(key)}
                               checked={draft[key]}
                               onCheckedChange={(value) => set(key, value)}
                             />

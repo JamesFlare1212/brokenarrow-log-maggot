@@ -7,6 +7,7 @@ import {
   RefreshCw as faArrowsRotate,
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
+import { Tooltip } from '../../components/Tooltip';
 import type { DeckList, DeckFile } from '@ba/contracts';
 import { formatSize } from '@ba/shared';
 import { useApp } from '../../app/state';
@@ -17,7 +18,15 @@ import { Button, Dialog, Field, Notice, Empty } from '../../components/ui';
 import { LoadingStatus } from '../../components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardHeader, CardTitle, CardAction, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+} from '@/components/ui/card';
 import {
   FieldSet,
   FieldLegend,
@@ -32,6 +41,10 @@ function DeckFiles({
   selected,
   onChange,
   actions,
+  directory,
+  emptyLabel,
+  onOpenDirectory,
+  children,
   pending = false,
 }: {
   id: string;
@@ -39,10 +52,15 @@ function DeckFiles({
   files: DeckFile[];
   selected: string[];
   onChange: (names: string[]) => void;
-  actions?: ReactNode;
+  actions: ReactNode;
+  directory: string;
+  emptyLabel: string;
+  onOpenDirectory: () => void;
+  children: ReactNode;
   pending?: boolean;
 }) {
   const { t } = useI18n();
+  const { access } = useApp();
   const selectedCount = files.filter((file) => selected.includes(file.name)).length;
   const allSelected = files.length > 0 && selectedCount === files.length;
   const rows = pending ? Array.from({ length: 4 }, () => null) : files;
@@ -52,16 +70,60 @@ function DeckFiles({
         <CardTitle role="heading" aria-level={2}>
           {title}
         </CardTitle>
-        <CardAction>{actions}</CardAction>
+        <CardDescription className="min-w-0">
+          {pending ? (
+            <Skeleton className="h-4 w-44 max-w-full" />
+          ) : (
+            <Tooltip content={<span className="wrap-anywhere">{directory}</span>}>
+              <span className="block truncate text-xs" tabIndex={0}>
+                {directory}
+              </span>
+            </Tooltip>
+          )}
+        </CardDescription>
+        <CardAction className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            aria-label={t('folder')}
+            disabled={pending || !access.method('decks.open')}
+            onClick={onOpenDirectory}
+          >
+            <Icon icon={faFolderOpen} aria-hidden="true" />
+          </Button>
+          {actions}
+        </CardAction>
       </CardHeader>
       <CardContent>
-        <FieldSet className="field deck-fieldset">
+        <FieldSet className="field deck-fieldset min-w-0 gap-1">
           <FieldLegend className="sr-only">{title}</FieldLegend>
+          {rows.length > 0 && (
+            <PrimitiveField orientation="horizontal" className="deck-selection border-b pb-2">
+              <Checkbox
+                id={`${id}-all`}
+                checked={allSelected ? true : selectedCount > 0 ? 'indeterminate' : false}
+                onCheckedChange={(checked) =>
+                  onChange(checked === true ? files.map((file) => file.name) : [])
+                }
+                disabled={pending || !files.length}
+              />
+              <FieldLabel htmlFor={`${id}-all`}>{t('selectAll')}</FieldLabel>
+              <small className="muted text-muted-foreground">
+                {pending ? (
+                  <Skeleton className="h-4 w-12" aria-hidden="true" />
+                ) : (
+                  <>
+                    {selectedCount} / {files.length}
+                  </>
+                )}
+              </small>
+            </PrimitiveField>
+          )}
           <div
             id={id}
-            className="deck-file-list min-h-48 max-h-104 overflow-auto [&_[data-slot='field-group']]:gap-0 [&_[data-slot='field']]:py-2.5 [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[2px]"
+            className="deck-file-list min-w-0 max-h-104 overflow-auto [&_[data-slot='field-group']]:gap-0 [&_[data-slot='field']]:py-2.5 [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[2px]"
             aria-busy={pending}
-            tabIndex={0}
+            tabIndex={files.length ? 0 : undefined}
             onKeyDown={(e) => {
               if (pending) return;
               if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
@@ -111,37 +173,18 @@ function DeckFiles({
                 ))}
               </FieldGroup>
             ) : (
-              <Empty>{t('empty')}</Empty>
+              <Empty>{emptyLabel}</Empty>
             )}
           </div>
-          <PrimitiveField orientation="horizontal" className="deck-selection py-2.5">
-            <Checkbox
-              id={`${id}-all`}
-              checked={allSelected ? true : selectedCount > 0 ? 'indeterminate' : false}
-              onCheckedChange={(checked) =>
-                onChange(checked === true ? files.map((file) => file.name) : [])
-              }
-              disabled={pending || !files.length}
-            />
-            <FieldLabel htmlFor={`${id}-all`}>{t('selectAll')}</FieldLabel>
-            <small className="muted text-muted-foreground">
-              {pending ? (
-                <Skeleton className="h-4 w-12" aria-hidden="true" />
-              ) : (
-                <>
-                  {selectedCount} / {files.length}
-                </>
-              )}
-            </small>
-          </PrimitiveField>
         </FieldSet>
       </CardContent>
+      {rows.length > 0 && <CardFooter className="flex-wrap gap-2">{children}</CardFooter>}
     </Card>
   );
 }
 export function DecksPanel() {
   const confirm = useConfirmation();
-  const { api, state, notify, openSettings } = useApp(),
+  const { api, access, state, notify, openSettings } = useApp(),
     { t } = useI18n(),
     request = useRequest<DeckList>(),
     [front, setFront] = useState<string[]>([]),
@@ -172,9 +215,15 @@ export function DecksPanel() {
   const loading = !list && (request.pending || !request.error);
   const content = list ?? { found: true, decks: [], backups: [], decksDir: '', backupsDir: '' };
   const refreshButton = (
-    <Button disabled={request.pending || busy} aria-busy={request.pending} onClick={refresh}>
+    <Button
+      variant="ghost"
+      size="icon-lg"
+      aria-label={t('refresh')}
+      disabled={request.pending || busy}
+      aria-busy={request.pending}
+      onClick={refresh}
+    >
       <Icon icon={faArrowsRotate} size={15} spin={request.pending} aria-hidden="true" />
-      {t('refresh')}
     </Button>
   );
   return (
@@ -187,7 +236,7 @@ export function DecksPanel() {
             {(['restore', 'ignore', 'dismiss'] as const).map((action) => (
               <Button
                 key={action}
-                disabled={busy}
+                disabled={busy || !access.method('decks.switch')}
                 onClick={() =>
                   void operate(() =>
                     api.invoke('decks.switch', {
@@ -222,7 +271,7 @@ export function DecksPanel() {
         </Card>
       ) : (
         (list?.found || loading) && (
-          <div className="deck-columns grid grid-cols-2 gap-(--content-gap) [&>section]:flex [&>section]:min-w-0 [&>section]:flex-col [&>section]:gap-3.5 workspace-max-48:grid-cols-1 viewport-max-767:grid-cols-1">
+          <div className="deck-columns grid grid-cols-2 items-start gap-(--content-gap) [&>section]:min-w-0 workspace-max-48:grid-cols-1 viewport-max-767:grid-cols-1">
             <section>
               <DeckFiles
                 id="front-decks"
@@ -232,13 +281,15 @@ export function DecksPanel() {
                 selected={front}
                 onChange={setFront}
                 actions={refreshButton}
-              />
-              <small className="path text-muted-foreground text-[0.75rem] wrap-anywhere [.deck-columns_&]:flex [.deck-columns_&]:min-h-4.5 [.deck-columns_&]:items-center">
-                {loading ? <Skeleton className="h-4 w-48" aria-hidden="true" /> : content.decksDir}
-              </small>
-              <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
+                directory={content.decksDir}
+                emptyLabel={t('noCurrentDecks')}
+                onOpenDirectory={() =>
+                  void operate(() => api.invoke('decks.open', { kind: 'decks' }))
+                }
+              >
                 <Button
-                  disabled={loading || busy || !front.length}
+                  size="lg"
+                  disabled={loading || busy || !front.length || !access.method('decks.backup')}
                   onClick={() => {
                     setPackageName('decks-' + new Date().toISOString().slice(0, 10));
                     setBackupNames(front);
@@ -248,7 +299,10 @@ export function DecksPanel() {
                   {t('backupSelected')}
                 </Button>
                 <Button
-                  disabled={loading || busy || !content.decks.length}
+                  size="lg"
+                  disabled={
+                    loading || busy || !content.decks.length || !access.method('decks.backup')
+                  }
                   onClick={() => {
                     setPackageName('decks-' + new Date().toISOString().slice(0, 10));
                     setBackupNames(content.decks.map((d) => d.name));
@@ -257,15 +311,9 @@ export function DecksPanel() {
                   {t('backupAll')}
                 </Button>
                 <Button
-                  disabled={loading}
-                  onClick={() => void operate(() => api.invoke('decks.open', { kind: 'decks' }))}
-                >
-                  <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
-                  {t('folder')}
-                </Button>
-                <Button
+                  size="lg"
                   variant="destructive"
-                  disabled={busy || !front.length}
+                  disabled={busy || !front.length || !access.method('decks.delete')}
                   onClick={async () => {
                     if (
                       await confirm({
@@ -282,7 +330,7 @@ export function DecksPanel() {
                 >
                   {t('delete')}
                 </Button>
-              </div>
+              </DeckFiles>
             </section>
             <section>
               <DeckFiles
@@ -293,17 +341,15 @@ export function DecksPanel() {
                 selected={back}
                 onChange={setBack}
                 actions={refreshButton}
-              />
-              <small className="path text-muted-foreground text-[0.75rem] wrap-anywhere [.deck-columns_&]:flex [.deck-columns_&]:min-h-4.5 [.deck-columns_&]:items-center">
-                {loading ? (
-                  <Skeleton className="h-4 w-48" aria-hidden="true" />
-                ) : (
-                  content.backupsDir
-                )}
-              </small>
-              <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
+                directory={content.backupsDir}
+                emptyLabel={t('noDeckBackups')}
+                onOpenDirectory={() =>
+                  void operate(() => api.invoke('decks.open', { kind: 'backups' }))
+                }
+              >
                 <Button
-                  disabled={loading || busy || back.length !== 1}
+                  size="lg"
+                  disabled={loading || busy || back.length !== 1 || !access.method('decks.deploy')}
                   variant="default"
                   onClick={async () => {
                     if (
@@ -321,14 +367,9 @@ export function DecksPanel() {
                   {t('deploy')}
                 </Button>
                 <Button
-                  disabled={loading}
-                  onClick={() => void operate(() => api.invoke('decks.open', { kind: 'backups' }))}
-                >
-                  {t('folder')}
-                </Button>
-                <Button
+                  size="lg"
                   variant="destructive"
-                  disabled={busy || !back.length}
+                  disabled={busy || !back.length || !access.method('decks.delete')}
                   onClick={async () => {
                     if (
                       await confirm({
@@ -345,7 +386,7 @@ export function DecksPanel() {
                 >
                   {t('delete')}
                 </Button>
-              </div>
+              </DeckFiles>
             </section>
           </div>
         )

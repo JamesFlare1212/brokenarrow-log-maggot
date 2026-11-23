@@ -22,12 +22,15 @@ export function WorkspaceBreadcrumb() {
   const { page, setPage, breadcrumbs } = useApp();
   const { t } = useI18n();
   const detail = breadcrumbs[page];
+  const homeVisibility = detail?.compactLabel
+    ? '@max-[38rem]/topbar:hidden'
+    : 'workspace-max-36:hidden';
   return (
     <Breadcrumb className="min-w-0" aria-label={t('breadcrumb')}>
-      <BreadcrumbList>
+      <BreadcrumbList className={detail?.compactLabel ? '@max-[24rem]/topbar:gap-0.5' : undefined}>
         {page !== 'current' && (
           <>
-            <BreadcrumbItem className="shrink-0 whitespace-nowrap workspace-max-36:hidden">
+            <BreadcrumbItem className={cn('shrink-0 whitespace-nowrap', homeVisibility)}>
               <BreadcrumbLink
                 href="#current"
                 onClick={(event) => follow(event, () => setPage('current'))}
@@ -35,15 +38,26 @@ export function WorkspaceBreadcrumb() {
                 {t('overview')}
               </BreadcrumbLink>
             </BreadcrumbItem>
-            <BreadcrumbSeparator className="shrink-0 workspace-max-36:hidden" />
+            <BreadcrumbSeparator className={cn('shrink-0', homeVisibility)} />
           </>
         )}
         <BreadcrumbItem
           className={cn(detail && 'shrink-0 whitespace-nowrap', !detail && 'min-w-0')}
         >
           {detail ? (
-            <BreadcrumbLink href={'#' + page} onClick={(event) => follow(event, detail.onBack)}>
-              {t(panelLabelKey(page))}
+            <BreadcrumbLink
+              href={'#' + page}
+              aria-label={t(panelLabelKey(page))}
+              onClick={(event) => follow(event, detail.onBack)}
+            >
+              {page === 'archive' ? (
+                <>
+                  <span className="@max-[24rem]/topbar:hidden">{t('archive')}</span>
+                  <span className="hidden @max-[24rem]/topbar:inline">{t('archiveShort')}</span>
+                </>
+              ) : (
+                t(panelLabelKey(page))
+              )}
             </BreadcrumbLink>
           ) : (
             <BreadcrumbPage>{t(panelLabelKey(page))}</BreadcrumbPage>
@@ -53,7 +67,16 @@ export function WorkspaceBreadcrumb() {
           <>
             <BreadcrumbSeparator className="shrink-0" />
             <BreadcrumbItem className="min-w-0">
-              <BreadcrumbPage>{detail.label}</BreadcrumbPage>
+              <BreadcrumbPage aria-label={detail.label}>
+                {detail.compactLabel ? (
+                  <>
+                    <span className="@max-[38rem]/topbar:hidden">{detail.label}</span>
+                    <span className="hidden @max-[38rem]/topbar:inline">{detail.compactLabel}</span>
+                  </>
+                ) : (
+                  detail.label
+                )}
+              </BreadcrumbPage>
             </BreadcrumbItem>
           </>
         )}

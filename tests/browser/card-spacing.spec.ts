@@ -123,6 +123,21 @@ for (const [width, lang] of [
           ];
         });
         for (const gap of gaps) expect(gap).toBeCloseTo(16, 1);
+        const left = (await page.locator('.recent-card').boundingBox())!;
+        const right = (await page.locator('.quick-tools').boundingBox())!;
+        const shortcuts = await page
+          .locator('.quick-tools nav button')
+          .evaluateAll((buttons) =>
+            buttons.map((button) => button.getBoundingClientRect().toJSON()),
+          );
+        if (width === 1440) {
+          expect(right.y).toBeCloseTo(left.y, 1);
+          expect(right.height).toBeCloseTo(left.height, 1);
+          expect(shortcuts[2].top).toBeGreaterThan(shortcuts[0].bottom);
+        } else if (width === 390) {
+          expect(right.y).toBeGreaterThan(left.y + left.height);
+          expect(shortcuts[2].top).toBeCloseTo(shortcuts[0].top, 1);
+        }
         await page.screenshot({ path: testInfo.outputPath('dashboard.png') });
       }
     }

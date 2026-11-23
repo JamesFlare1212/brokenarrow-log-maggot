@@ -1,4 +1,4 @@
-import type { Match, PlayerProfile } from '@ba/contracts';
+import type { Match, MatchTimelineResult, PlayerProfile } from '@ba/contracts';
 import {
   array,
   object,
@@ -11,6 +11,7 @@ import {
   withScoreLabelEvidence,
   SCORE_LABEL_RULE,
   MAX_SCORE_LABELS,
+  buildMatchTimeline,
 } from '@ba/shared';
 import type { Database } from '../storage/database';
 import type { BatraceClient } from '../network/client';
@@ -71,6 +72,38 @@ export class TrackerService {
     if (!match) throw new Error('Local match not found');
     return this.withAwards(match);
   }
+  /** Lazy projection of the existing raw match cache; never stored in match summaries. */
+  async timeline(fid: string, force = false): Promise<MatchTimelineResult> {
+    const previous = this.db.match(fid);
+    if (previous?.mode === 'pve')
+      return {
+        status: 'unavailable',
+        reason: 'unsupported-mode',
+        data: null,
+        source: 'local',
+        updatedAt: previous.updatedAt,
+      };
+    let result;
+    try {
+      result = await this.client.match(fid, force);
+    } catch (error) {
+      // Transport failures are not evidence of missing unit data. Offline fixtures
+      // never issue network requests; a missing capture is unavailable in that dataset.
+      if (!this.client.offline) throw error;
+      return {
+        status: 'unavailable',
+        reason: 'missing-unit-data',
+        data: null,
+        source: 'local',
+        updatedAt: previous?.updatedAt ?? null,
+      };
+    }
+    return {
+      ...buildMatchTimeline(result.value),
+      source: result.source,
+      updatedAt: result.at,
+    };
+  }
   async detail(fid: string, force = false): Promise<Match> {
     const previous = this.db.match(fid);
     if (previous?.mode === 'pve') return this.withAwards(previous);
@@ -103,6 +136,7 @@ export class TrackerService {
     });
     let analysis: unknown;
     if (
+      !this.client.offline &&
       result.source !== 'stale' &&
       ((match.endedAt !== null && match.durationSec) ||
         (match.mode === 'custom' && match.outcome === 'unknown'))
@@ -121,7 +155,7 @@ export class TrackerService {
     match = this.withAwards(match, result.value, analysis);
     if (result.source === 'stale')
       return { ...match, warning: 'Cached match data; BATrace is unavailable' };
-    this.db.saveMatch(match);
+    if (!this.client.offline) this.db.saveMatch(match);
     return match;
   }
   async recent(id: string, force = false): Promise<{ matches: Match[]; stale: boolean }> {
@@ -139,7 +173,7 @@ export class TrackerService {
         });
       })
       .filter((m) => /^\d+$/.test(m.id));
-    if (result.source !== 'stale')
+    if (!this.client.offline && result.source !== 'stale')
       for (const match of matches) {
         if (match.mode !== 'custom' || match.outcome !== 'unknown') continue;
         try {
@@ -193,6 +227,7 @@ export class TrackerService {
     return profile;
   }
   async sync(): Promise<void> {
+    if (this.client.fixtureCache) return;
     const id = this.db.state<string | null>('activeAccountId', null);
     if (!id) return;
     const result = await this.recent(id);

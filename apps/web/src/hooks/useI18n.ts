@@ -4,6 +4,7 @@ import { messages } from '../i18n/messages';
 import { taxonomy } from '../i18n/taxonomy';
 import { titleMessages } from '../i18n/titles';
 import { scoreLabelMessages } from '../i18n/score-labels';
+import { timelineMessages } from '../i18n/timeline';
 export const LocaleContext = createContext<Locale>('zh');
 export function translate(
   locale: Locale,
@@ -12,8 +13,11 @@ export function translate(
 ): string {
   const index = { zh: 0, en: 1 }[locale];
   let value =
-    (messages[key] ?? taxonomy[key] ?? titleMessages[key] ?? scoreLabelMessages[key])?.[index] ??
-    key;
+    (messages[key] ??
+      taxonomy[key] ??
+      titleMessages[key] ??
+      scoreLabelMessages[key] ??
+      timelineMessages[key])?.[index] ?? key;
   for (const [name, replacement] of Object.entries(vars))
     value = value.split('{' + name + '}').join(String(replacement));
   return value;

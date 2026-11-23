@@ -27,7 +27,9 @@ export function clampToolPosition(
 
 /** Native top-layer placement and a shadow boundary isolate the tools from the application. */
 export function useDevelopmentLayer(onEscape: () => void) {
-  const [layer, setLayer] = useState<ShadowRoot | null>(null);
+  const [layer, setLayer] = useState<{ root: ShadowRoot; selectPortal: HTMLDivElement } | null>(
+    null,
+  );
   useLayoutEffect(() => {
     const host = document.createElement('div');
     host.setAttribute('data-development-layer', '');
@@ -48,11 +50,18 @@ export function useDevelopmentLayer(onEscape: () => void) {
       maxHeight: 'none',
     });
     const root = host.attachShadow({ mode: 'open' });
+    const selectPortal = document.createElement('div');
+    selectPortal.slot = 'select-content';
+    host.append(selectPortal);
     const stop = (event: Event) => event.stopPropagation();
     for (const event of ['pointerdown', 'pointerup', 'click', 'focusin', 'focusout', 'keydown'])
       root.addEventListener(event, stop);
     const escape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape' && event.composedPath().includes(host)) {
+      if (
+        event.key === 'Escape' &&
+        event.composedPath().includes(host) &&
+        !event.composedPath().includes(selectPortal)
+      ) {
         event.preventDefault();
         event.stopImmediatePropagation();
         onEscape();
@@ -62,7 +71,7 @@ export function useDevelopmentLayer(onEscape: () => void) {
     document.body.append(host);
     if (typeof host.showPopover === 'function') host.showPopover();
     else host.style.zIndex = '2147483647';
-    setLayer(root);
+    setLayer({ root, selectPortal });
     return () => {
       window.removeEventListener('keydown', escape, true);
       host.remove();

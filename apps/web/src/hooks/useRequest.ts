@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { errorMessage } from '@ba/shared';
+import { useLoadingPreview } from './useLoadingPreview';
+
 export function useRequest<T>() {
+  const preview = useLoadingPreview();
   const generation = useRef(0);
   const [data, setData] = useState<T | null>(null),
     [pending, setPending] = useState(false),
@@ -33,5 +36,13 @@ export function useRequest<T>() {
     setData(null);
     setError(null);
   }, []);
-  return { data, pending, error, load, invalidate, setData };
+  return {
+    data: preview ? null : data,
+    previewData: preview ? data : null,
+    pending: preview || pending,
+    error: preview ? null : error,
+    load,
+    invalidate,
+    setData,
+  };
 }

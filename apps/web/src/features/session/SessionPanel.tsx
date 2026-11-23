@@ -19,13 +19,16 @@ import { MatchAwards } from '../matches/MatchAwards';
 import { Button as PrimitiveButton } from '@/components/ui/button';
 import { Item, ItemContent, ItemActions } from '@/components/ui/item';
 import { Separator } from '@/components/ui/separator';
+import { useLoadingPreview } from '../../hooks/useLoadingPreview';
+
 export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const { state, api, openModal, notify } = useApp(),
     { t } = useI18n();
   const [previous, setPrevious] = useState<Match | null>(null),
     [view, setView] = useState<'current' | 'previous'>('current'),
-    [pending, setPending] = useState(false),
+    [queryPending, setPending] = useState(false),
     [now, setNow] = useState(Date.now());
+  const pending = useLoadingPreview() || queryPending;
   const lastPrevious = useRef<string | null>(null);
   useEffect(() => {
     if (state.session.phase !== 'match' || view !== 'current') return;
@@ -33,14 +36,21 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
     return () => clearInterval(timer);
   }, [state.session.phase, view]);
   useEffect(() => {
+    let active = true;
     void api
       .invoke('matches.list', {})
-      .then((matches) =>
-        setPrevious(
-          matches.find((m) => m.fid !== null && m.fid !== state.session.current?.fid) || null,
-        ),
-      )
-      .catch((e) => notify(String(e), true));
+      .then((matches) => {
+        if (active)
+          setPrevious(
+            matches.find((m) => m.fid !== null && m.fid !== state.session.current?.fid) || null,
+          );
+      })
+      .catch((e) => {
+        if (active) notify(String(e), true);
+      });
+    return () => {
+      active = false;
+    };
   }, [api, state.matchesRevision, state.session.current?.fid]);
   useEffect(() => {
     if (view !== 'previous' || !previous?.fid) return;
@@ -117,32 +127,28 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
   const actions = (
     <>
       <Button
-        size="sm"
-        className="button-borderless"
+        size="lg"
         disabled={!previous || pending}
         onClick={previousView}
         aria-pressed={view === 'previous'}
       >
-        <Icon icon={faClockRotateLeft} size={15} aria-hidden="true" />
+        <Icon icon={faClockRotateLeft} aria-hidden="true" />
         {view === 'previous' ? t('back') : t('previous')}
       </Button>
       <Button
         variant="default"
-        size="sm"
+        size="lg"
         disabled={pending || !players.length}
         aria-busy={pending}
         onClick={() => void query(view)}
       >
-        <Icon icon={faArrowsRotate} size={15} spin={pending} aria-hidden="true" />
+        <Icon icon={faArrowsRotate} spin={pending} aria-hidden="true" />
         {t('query')}
       </Button>
     </>
   );
   const content = (
-    <div
-      className="session-layout flex min-w-0 flex-col gap-(--session-layout-gap) min-h-[calc(_var(--session-banner-height)+2_*_var(--session-layout-gap)+var(--session-separator-height)+var(--session-roster-height)_)] [.page-current_&[data-empty='true']]:min-h-0 [&>[data-slot='separator']]:h-(--session-separator-height) [&>[data-slot='empty']]:py-8 [&>[data-slot='empty']]:max-h-[max(9.5rem,_calc(100svh_-_28rem))] [@media(max-height:44rem)]:[&>[data-slot='empty']]:py-4"
-      data-empty={!players.length && !pending && !match && !isLobby}
-    >
+    <div className="session-layout flex min-w-0 flex-col gap-(--session-layout-gap) min-h-[calc(_var(--session-banner-height)+2_*_var(--session-layout-gap)+var(--session-separator-height)+var(--session-roster-height)_)] [&>[data-slot='separator']]:h-(--session-separator-height) [&>[data-slot='empty']]:py-8 [&>[data-slot='empty']]:max-h-[max(9.5rem,_calc(100svh_-_28rem))] [@media(max-height:44rem)]:[&>[data-slot='empty']]:py-4">
       <div className="session-banner flex flex-wrap items-start justify-between gap-4 [&_h2]:text-[1.25rem] [&_h2]:leading-[var(--session-map-line-height)] [&_h2]:font-semibold [&_h2]:tracking-[-0.025em]">
         {players.length > 0 && (
           <div className="session-banner-content flex min-w-0 [flex:1_1_16rem] flex-col gap-(--session-banner-content-gap)">
@@ -200,7 +206,7 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
             </div>
           </div>
         )}
-        <div className="session-actions flex flex-wrap items-center justify-end gap-2 ml-auto">
+        <div className="session-actions ml-auto flex flex-wrap items-center justify-end gap-2">
           {actions}
         </div>
       </div>

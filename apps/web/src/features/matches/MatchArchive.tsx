@@ -16,7 +16,14 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
@@ -29,8 +36,9 @@ import {
 } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { Match, Account } from '@ba/contracts';
-import { formatTime, formatDelta, formatDuration, outcomeTone } from '@ba/shared';
-import { eloChangeClass } from '@/lib/elo';
+import { formatTime, formatDuration, outcomeTone } from '@ba/shared';
+import { archiveSummaryColumns } from './archive-summary-columns';
+import { cn } from '@/lib/utils';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
@@ -55,7 +63,7 @@ import { MatchDetails } from './MatchDetails';
 import { archiveMatchFromHash, archiveMatchHash } from './routes';
 import { usePageBreadcrumb } from '../../hooks/usePageBreadcrumb';
 const PAGE_SIZE = 50;
-export function MatchArchive() {
+export function MatchArchive({ actionsHost }: { actionsHost?: HTMLElement | null }) {
   const { api, state, notify } = useApp(),
     { t, locale } = useI18n(),
     matches = useRequest<Match[]>(),
@@ -72,6 +80,8 @@ export function MatchArchive() {
     [sorting, setSorting] = useState<SortingState>([{ id: 'time', desc: true }]),
     [outcome, setOutcome] = useState<'all' | 'win' | 'loss'>('all');
   const compact = useIsMobile();
+  const gridEdgeSpacing =
+    view === 'grid' && '-my-1 shrink-0 overflow-hidden p-1 [scrollbar-gutter:stable]';
   const table = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
   const detailPage = useRef<HTMLDivElement>(null);
@@ -133,6 +143,7 @@ export function MatchArchive() {
         : `${t('matchDetail')} · ${t('matchLocalOnly')}`
       : null,
     returnToArchive,
+    detailId && /^\d+$/.test(detailId) ? `#${detailId}` : t('matchLocalOnly'),
   );
   const navigateMatch = (matchId: string) => {
     history.replaceState(history.state, '', archiveMatchHash(matchId));
@@ -140,16 +151,17 @@ export function MatchArchive() {
   };
   const validFid = /^\d+$/.test(fid.trim());
   const fidError = addError || (fid.trim() && !validFid ? t('matchIdInvalid') : null);
+  const gridData = matches.data ?? (view === 'grid' ? matches.previewData : null);
   const filtered = useMemo(
     () =>
-      [...(matches.data || [])]
+      [...(gridData || [])]
         .sort((a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0))
         .filter(
           (m) =>
             (outcome === 'all' || m.outcome === outcome) &&
             (!hideUnknown || m.outcome !== 'unknown'),
         ),
-    [matches.data, outcome, hideUnknown],
+    [gridData, outcome, hideUnknown],
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages);
@@ -196,51 +208,7 @@ export function MatchArchive() {
           </Badge>
         ),
       },
-      {
-        id: 'mode',
-        accessorKey: 'mode',
-        header: t('mode'),
-        size: locale === 'en' ? 120 : 84,
-        cell: ({ row }) => (
-          <Badge>
-            {t(
-              !row.original.fid && row.original.mode === 'unknown'
-                ? 'matchUnrecorded'
-                : row.original.mode,
-            )}
-          </Badge>
-        ),
-      },
-      {
-        id: 'map',
-        accessorKey: 'map',
-        header: t('map'),
-        size: 160,
-        cell: ({ row }) => (
-          <span className="archive-map-name whitespace-normal wrap-anywhere">
-            {row.original.map || (row.original.fid ? '#' + row.original.fid : t('matchUnrecorded'))}
-          </span>
-        ),
-      },
-      {
-        id: 'eloDelta',
-        accessorFn: (match) =>
-          match.eloAfter !== null && match.eloBefore !== null
-            ? match.eloAfter - match.eloBefore
-            : undefined,
-        header: t('eloDelta'),
-        size: locale === 'en' ? 128 : 112,
-        meta: { align: 'right' },
-        sortUndefined: 'last',
-        cell: ({ row }) => {
-          const match = row.original,
-            delta =
-              match.eloAfter !== null && match.eloBefore !== null
-                ? match.eloAfter - match.eloBefore
-                : null;
-          return <span className={eloChangeClass(delta)}>{formatDelta(delta)}</span>;
-        },
-      },
+      ...archiveSummaryColumns(locale),
       {
         id: 'duration',
         accessorKey: 'durationSec',
@@ -339,23 +307,30 @@ export function MatchArchive() {
   const filters = (
     <div className="archive-filters flex flex-wrap items-center gap-3 min-w-0 max-w-full [&>[data-slot='field-group']]:[container-type:normal] [&>[data-slot='field-group']]:w-auto [&>[data-slot='field-group']]:max-w-full [&>[data-slot='field-group']]:flex-none [&>[data-slot='field-group']:has(#archive-account)]:w-44 [&_[data-slot='field-content']]:flex-none [.archive-filter-popover_&]:flex-col [.archive-filter-popover_&]:items-stretch [.archive-filter-popover_&]:gap-4 [.archive-filter-popover_&>[data-slot='field-group']:has(#archive-account)]:w-full viewport-max-479:w-full viewport-max-479:[&>[data-slot='field-group']:has(#archive-account)]:w-full">
       <Field id="archive-account" label={t('account')} labelHidden>
-        <NativeSelect
-          id="archive-account"
-          value={account}
-          onChange={(e) => {
-            setAccount(e.target.value);
+        <Select
+          value={account || 'all'}
+          onValueChange={(value) => {
+            setAccount(value === 'all' ? '' : value);
             setPage(1);
           }}
         >
-          <NativeSelectOption value="">{t('allAccounts')}</NativeSelectOption>
-          {accounts.map((a) => (
-            <NativeSelectOption key={a.id} value={a.id}>
-              {a.name} · #{a.id}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          <SelectTrigger size="lg" id="archive-account">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">{t('allAccounts')}</SelectItem>
+              {accounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name} · #{a.id}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </Field>
       <ToggleGroup
+        size="lg"
         type="single"
         variant="outline"
         value={outcome}
@@ -385,7 +360,7 @@ export function MatchArchive() {
     </div>
   );
   const addButton = (
-    <Button variant="default" onClick={() => setAddDialog(true)}>
+    <Button size="lg" variant="default" onClick={() => setAddDialog(true)}>
       <Icon icon={faPlus} />
       {t('addMatch')}
     </Button>
@@ -399,12 +374,18 @@ export function MatchArchive() {
         ref={panel}
         tabIndex={-1}
       >
-        <div className="archive-toolbar flex flex-wrap items-center gap-3 justify-between viewport-max-479:w-full">
+        <div
+          className={cn(
+            'archive-toolbar flex flex-wrap items-center gap-3 justify-between viewport-max-479:w-full',
+            gridEdgeSpacing,
+          )}
+        >
           {compact ? (
             <div className="archive-compact-actions flex w-full items-center justify-between gap-3">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    size="lg"
                     aria-label={t('archiveFilters')}
                     aria-description={t('activeFilters', {
                       count:
@@ -441,6 +422,7 @@ export function MatchArchive() {
               {loading ? <Skeleton className="h-4 w-8" aria-hidden="true" /> : filtered.length}
             </small>
             <ToggleGroup
+              size="lg"
               type="single"
               variant="outline"
               aria-label={t('archiveView')}
@@ -457,6 +439,7 @@ export function MatchArchive() {
               </ToggleGroupItem>
             </ToggleGroup>
             <Button
+              size="lg"
               disabled={matches.pending || scanning}
               onClick={() => void scan()}
               aria-busy={scanning}
@@ -487,7 +470,14 @@ export function MatchArchive() {
               >
                 {dataTable.getRowModel().rows.map((row) => (
                   <li key={row.id}>
-                    <MatchArchiveCard match={row.original} onOpen={() => openMatch(row.original)} />
+                    {loading ? (
+                      <MatchArchiveCardSkeleton match={row.original} />
+                    ) : (
+                      <MatchArchiveCard
+                        match={row.original}
+                        onOpen={() => openMatch(row.original)}
+                      />
+                    )}
                   </li>
                 ))}
               </ul>
@@ -526,7 +516,12 @@ export function MatchArchive() {
             <OverflowHint viewport={table} />
           </div>
         )}
-        <div className="results-pagination shrink-0 mt-auto [&_[data-slot='pagination']]:py-0.5">
+        <div
+          className={cn(
+            "results-pagination shrink-0 mt-auto [&_[data-slot='pagination']]:py-0.5",
+            gridEdgeSpacing,
+          )}
+        >
           <Pagination
             page={currentPage}
             pageSize={PAGE_SIZE}
@@ -633,7 +628,7 @@ export function MatchArchive() {
             key={detailId}
             matchId={detailId}
             summary={detailSummary}
-            onBack={returnToArchive}
+            actionsHost={actionsHost}
             onPrevious={previous ? () => navigateMatch(previous.fid || previous.id) : undefined}
             onNext={next ? () => navigateMatch(next.fid || next.id) : undefined}
             position={detailIndex + 1}

@@ -83,9 +83,12 @@ function ReplaySkeleton({ view }: { view: 'grid' | 'list' }) {
 }
 export function ReplaysPanel() {
   const confirm = useConfirmation();
-  const { api, state, openModal, patchConfig, notify } = useApp(),
+  const { api, access, state, openModal, patchConfig, notify } = useApp(),
     { t, locale } = useI18n(),
     request = useRequest<Replay[]>();
+  const canRecord = access.preference('replayEnabled');
+  const openDirectory = () =>
+    void api.invoke('replays.open', null).catch((e) => notify(String(e), true));
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const refresh = () => void request.load(() => api.invoke('replays.list', null), true);
   useEffect(() => {
@@ -140,6 +143,7 @@ export function ReplaysPanel() {
               id="auto-record"
               label={t('autoRecord')}
               labelClickable={false}
+              disabled={!canRecord}
               checked={state.config.replayEnabled}
               onChange={(value) => void patchConfig({ replayEnabled: value }).catch(() => {})}
             />
@@ -188,11 +192,8 @@ export function ReplaysPanel() {
                   <InputGroupButton
                     size="icon-sm"
                     aria-label={t('folder')}
-                    onClick={() =>
-                      void api
-                        .invoke('replays.open', null)
-                        .catch((error) => notify(String(error), true))
-                    }
+                    disabled={!access.method('replays.open')}
+                    onClick={openDirectory}
                   >
                     <Icon icon={faFolderOpen} />
                   </InputGroupButton>
@@ -214,6 +215,7 @@ export function ReplaysPanel() {
         actions={
           <>
             <ToggleGroup
+              size="lg"
               type="single"
               variant="outline"
               aria-label={t('replayView')}
@@ -235,21 +237,18 @@ export function ReplaysPanel() {
               <Badge>{list.length}</Badge>
             )}
             <div className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
-              <Button
-                onClick={() =>
-                  void api.invoke('replays.open', null).catch((e) => notify(String(e), true))
-                }
-              >
+              <Button size="lg" disabled={!access.method('replays.open')} onClick={openDirectory}>
                 <Icon icon={faFolderOpen} size={16} aria-hidden="true" />
                 {t('folder')}
               </Button>
-              <Button onClick={refresh} disabled={request.pending}>
+              <Button size="lg" onClick={refresh} disabled={request.pending}>
                 <Icon icon={faArrowsRotate} size={16} spin={request.pending} aria-hidden="true" />
                 {t('refresh')}
               </Button>
-              <Menu>
+              <Menu size="icon-lg">
                 <Button
                   variant="destructive"
+                  disabled={!access.method('replays.clean')}
                   onClick={async () => {
                     if (
                       await confirm({
@@ -268,6 +267,7 @@ export function ReplaysPanel() {
                 </Button>
                 <Button
                   variant="destructive"
+                  disabled={!access.method('replays.clean')}
                   onClick={async () => {
                     if (
                       await confirm({
@@ -327,6 +327,7 @@ export function ReplaysPanel() {
                     variant="ghost"
                     className="replay-play [.replay-grid_&]:w-full [.replay-grid_&]:flex-col [.replay-grid_&]:items-stretch [.replay-grid_&]:gap-0 [.replay-grid_&]:p-0 flex h-auto min-w-0 flex-1 items-center justify-start gap-4 p-0 text-left"
                     aria-label={`${t('play')}: ${r.map || r.uploaderName}`}
+                    disabled={!access.method('replays.play')}
                     onClick={() =>
                       openModal({ type: 'replay', id: r.id, title: r.map || r.uploaderName })
                     }
@@ -365,11 +366,12 @@ export function ReplaysPanel() {
                           {t('matchDetail')}
                         </Button>
                       )}
-                      <Button onClick={() => void api.invoke('replays.open', null)}>
+                      <Button disabled={!access.method('replays.open')} onClick={openDirectory}>
                         {t('folder')}
                       </Button>
                       <Button
                         variant="destructive"
+                        disabled={!access.method('replays.delete')}
                         onClick={async () => {
                           if (
                             await confirm({
@@ -397,11 +399,13 @@ export function ReplaysPanel() {
           !request.pending && (
             <Empty
               icon={<Icon icon={faVideo} size={28} />}
-              description={t('recordingHint')}
+              description={t(canRecord ? 'recordingHint' : 'devModeHint.captured')}
               action={
-                <Button onClick={() => openModal({ type: 'recordingSettings', enable: true })}>
-                  {t('enableRecording')}
-                </Button>
+                canRecord && (
+                  <Button onClick={() => openModal({ type: 'recordingSettings', enable: true })}>
+                    {t('enableRecording')}
+                  </Button>
+                )
               }
             >
               {t('empty')}

@@ -42,6 +42,30 @@ afterEach(async () => {
 });
 
 describe('BATrace scheduling and cache boundaries', () => {
+  it.each([true, 'fixture-cache'] as const)(
+    'preserves offline reads and checks the stored expiry only for fixture rendering (%s)',
+    async (offline) => {
+      const fetch = vi.fn<typeof globalThis.fetch>();
+      const { db, client, clock } = setup({ offline, fetch });
+      const at = clock.now;
+      db.saveCache('entry', { id: 1 }, 100, at);
+      for (const [age, source] of [
+        [99, offline === true ? 'stale' : 'cache'],
+        [100, 'stale'],
+      ] as const) {
+        clock.now = at + age;
+        expect(await client.get('/api/test', 'entry', 1, { force: true })).toEqual({
+          value: { id: 1 },
+          source,
+          at,
+          attempts: 0,
+        });
+      }
+      await expect(client.get('/api/test', 'missing', 1)).rejects.toThrow('no recorded response');
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     { random: 0, offset: 0 },
     { random: 0.5, offset: 150 },

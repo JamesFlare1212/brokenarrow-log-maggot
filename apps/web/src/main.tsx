@@ -44,14 +44,19 @@ else {
         </AppProvider>
       </StrictMode>,
     );
-  if (native) render(native);
-  else if (fixtures)
-    void Promise.all([import('./dev/bridge'), import('./dev/DevelopmentApp')]).then(
-      ([bridge, module]) =>
-        root.render(
-          <StrictMode>
-            <module.DevelopmentApp api={bridge.createFixtureBridge()} />
-          </StrictMode>,
-        ),
+  if (
+    import.meta.env.DEV &&
+    (fixtures || (native && import.meta.env.MODE === 'desktop-fixtures'))
+  ) {
+    void Promise.all([
+      import('./dev/DevelopmentApp'),
+      native ?? import('./dev/bridge').then(({ createFixtureBridge }) => createFixtureBridge()),
+    ]).then(([{ DevelopmentApp }, api]) =>
+      root.render(
+        <StrictMode>
+          <DevelopmentApp api={api} desktop={!!native} />
+        </StrictMode>,
+      ),
     );
+  } else if (native) render(native);
 }

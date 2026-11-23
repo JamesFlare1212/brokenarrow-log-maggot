@@ -1,5 +1,6 @@
 export * from './models';
 export * from './rpc';
+export * from './browser-fixture';
 export * from './cache';
 export * from './updates';
 export * from './batrace';
@@ -7,3 +8,4 @@ export * from './analytics';
 export * from './titles';
 export * from './score-labels';
 export * from './recording';
+export * from './timeline';

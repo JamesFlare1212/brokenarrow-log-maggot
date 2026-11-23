@@ -14,6 +14,7 @@
 - 总览保留房间与对局工具，侧栏「蛐雷达」提供独立入口；封禁列表在「封禁追踪」页面查看。
 - 玩家搜索、粗查报告、最近对局、12 场 MVP 蛆指数、调查羁绊和改名历史。
 - 对局档案、完整评分、手动收录、刷新、删除和多个录像视角。
+- [Match timelines](docs/timeline.md) in archive details and match dialogs: estimated value trends, linked key moments, filters, and minute records when source timing data is available.
 - 卡组备份 / 部署、实时开局自动覆盖唯一的“上一局卡组包”、换号提醒。
 - Local recording: 720–2160p, 30–120 fps, quality score 1–51 (default 20; lower means higher quality), system audio and optional default microphone mixing, previews, playback, and directory migration.
 - Optional ban alerts.
@@ -86,7 +87,20 @@ Electron. A development-only local interface loads `tests/fixtures/real` into an
 isolated `.test-data/web-dev/` copy on each launch. Queries use recorded offline
 responses and report missing data as errors. Settings and data changes affect only
 that copy; native directory selection, recording, and update installation are
-unavailable in the browser.
+unavailable in the browser. In **Dev tools → Simulation**, the archive, players,
+reports and bans still come from the same offline fixtures. The tool replays a
+recorded 5v5 roster as a live match or a 1–5 player party. Switch recording to
+Recording, then Idle to create a playable test clip without capturing a display.
+Scene edits stay in the tab; resetting Simulation discards them. **Empty** starts
+with no history or roster. The same scene controls are available in the offline
+desktop launcher (`pnpm dev`); packaged builds do not include them. Toggle
+**Cache expiration** to control the UI independently of the actual cache age.
+On shows the expired state even for fresh entries; off (the default) hides it
+even for expired entries. The switch works across scenes without changing cache
+timestamps or lifetimes. Cache cleanup previews counts locally; reset the scene
+to restore them. Enable **Loading state** to hold request-backed views in their
+loading presentation and preview the radar refresh spinner. The Maggot Index card\nshows its calculating state even when a score is cached. Disable the switch to show
+current results without resetting the scene or delaying real requests.
 
 Both validation and Windows release CI run `pnpm format:check` and `pnpm check`.
 The shared `pnpm check` entry point covers type checking, UI design checks,

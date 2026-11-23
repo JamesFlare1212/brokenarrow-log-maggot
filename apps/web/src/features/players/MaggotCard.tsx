@@ -4,13 +4,13 @@ import { ArrowDownRight, ArrowUpRight, Info, Minus } from 'lucide-react';
 import { TooltipButton } from '@/components/Tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { Button, Notice } from '../../components/ui';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
+import { useLoadingPreview } from '../../hooks/useLoadingPreview';
 
 export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boolean }) {
   const { maggot, runMaggot, state } = useApp();
@@ -18,7 +18,7 @@ export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boole
   useEffect(() => {
     if (enabled) void runMaggot(id);
   }, [id, runMaggot, enabled]);
-  const request = maggot[id];
+  const request = useLoadingPreview() ? undefined : maggot[id];
   const report = request?.data;
   const pending = !request || request.status === 'queued' || request.status === 'loading';
   const progress =
@@ -71,7 +71,7 @@ export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boole
           <>
             <div className="maggot-summary flex min-w-0 items-end justify-between gap-3">
               <div
-                className="maggot-score-row flex min-h-11 items-baseline gap-2 [&>[data-slot='skeleton']]:self-center"
+                className="maggot-score-row flex min-h-11 items-end gap-2"
                 aria-busy={pending && !report}
               >
                 {report ? (
@@ -92,7 +92,7 @@ export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boole
                 ) : (
                   <Skeleton className="h-11 w-20" aria-hidden="true" />
                 )}
-                <span className="text-sm text-muted-foreground">/ 10</span>
+                <span className="pb-0.5 text-sm text-muted-foreground">/ 10</span>
               </div>
               <p className="pb-0.5 text-xs text-muted-foreground">{t('maggotScale')}</p>
             </div>
@@ -100,7 +100,7 @@ export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boole
             <dl className="maggot-summary-metrics flex flex-wrap items-center justify-between gap-x-5 gap-y-2 text-xs">
               <div className="flex items-center gap-2">
                 <dt className="text-muted-foreground">{t('averageRank')}</dt>
-                <dd className="flex min-h-5 min-w-8 items-center text-base font-medium tabular-nums">
+                <dd className="flex min-h-lh min-w-8 items-center text-base font-medium tabular-nums">
                   {report ? (
                     formatMetric(report.averageRank, 1)
                   ) : (
@@ -132,15 +132,6 @@ export function MaggotCard({ id, enabled = true }: { id: string; enabled?: boole
                 </dd>
               </div>
             </dl>
-            <div className="maggot-progress h-1">
-              {pending && (
-                <Progress
-                  max={12}
-                  value={progress?.done ?? 0}
-                  aria-label={t('maggotCalculating')}
-                />
-              )}
-            </div>
           </>
         )}
         {request?.error && (

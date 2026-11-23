@@ -41,7 +41,9 @@ profile dialogs and replay overlays.
   Cancelling deletion also restores the arrow button without opening details.
 - Grid cards open details when clicking their noninteractive content, without a
   separate footer button. Use a native, text-styled button in the map heading for
-  keyboard entry and focus restoration. Keep player-profile buttons independent
+  keyboard entry and focus restoration. Wrap long map names without clipping
+  the underline at the rounded corners. Keep player-profile buttons independent,
+  truncate the name inside the button without clipping its hover underline,
   and ignore text selections. Cards without an online match ID open their local
   details using the saved record ID.
 - Restore account/result filters, sort order, pagination, scroll position, and
@@ -51,7 +53,7 @@ profile dialogs and replay overlays.
 Local-only details show a `Local log` badge and an inline explanation that the
 log has no online match ID. Use `Not recorded` for absent mode and outcome, and
 an em dash for missing numeric metrics. Keep the saved roster and team membership;
-show logged total points and the deck name in the personal summary. Do not show
+show available logged total points and deck name in the match metadata. Do not show
 the internal local record ID or an ID-copy action. Disable online refresh and the
 BATrace link. Do not associate recordings by a shared null match ID. Local-only
 records participate in previous/next navigation, reloadable deep links, and opener
@@ -84,18 +86,20 @@ same column geometry while loading, sorting, filtering, or paginating.
 ## Detail hierarchy
 
 1. Navigation: back to archive and previous/next match.
-2. Identity: map title, match ID, mode, duration, and date.
-3. Outcome: a text/icon result badge, signed ELO change, and account/team.
+2. Identity: map title beside the copyable match ID, with mode, duration, and date below.
+3. Show only the signed ELO change in the outcome summary; keep the win/loss badges in the team headings rather than repeating one above the ELO.
 4. Actions: watch replay as the main action, open in BATrace as a secondary one;
    retain refresh in the header.
-5. Personal summary: destruction value, losses value, D/L, and objectives.
+5. Use one direct tablist: Core stats (default), Combat, Support, Timeline. Place recording actions at its trailing edge, wrapping on narrow surfaces. On archive detail pages, BATrace stays beside those actions; in dialogs, place it before Refresh in the header. Do not repeat an Overview tab or scoreboard title.
 6. Scoreboard: local team first, opponent second, aligned columns and clear team
    headers. Do not assume Alpha is always local or that ELO implies victory.
 
 Use source outcome and team membership in production. The preview uses synthetic
 Alpha details and demonstrates won/lost states. Unknown outcomes, draws,
 unassigned players, observers, and missing local records must retain their actual
-semantics. Hide the personal summary if no local participant can be identified.
+semantics. Go directly to the scoreboard without a duplicate personal summary,
+aggregate player count, expansion hint, or footer legend. Keep counts on team
+headings and the D/L explanation on the column header.
 
 ## Scoreboard and progressive disclosure
 
@@ -117,10 +121,24 @@ Show colored award badges beside each player name using the same `MatchAwards`
 component as Radar. Keep both title and score-label groups visible, with the same
 colors, limits, hover/focus explanations, and click-to-pin popovers. Let badges
 wrap within the player column and allow row heights to grow when needed. Award
-interactions remain independent of the player disclosure.
+buttons keep their own hit targets. The rest of the player cell, including its
+padding and the space after the name, toggles that player's details. Numeric
+cells do not toggle the disclosure. The row supplies the hover background across
+all columns; the cell-sized button stays transparent and keeps its keyboard focus ring.
+Keep the last row’s divider space even when its line is invisible, so opening a
+player does not shift the name, badges, or stat values.
 
-Expanded content contains every original metric, before/after ELO where known,
-player ID, and a production link to the existing player profile dialog. Keep
+The match dialog uses a viewport-bounded height independent of its contents, so
+inserting details does not recenter the dialog. Each player opens and closes
+independently: opening a lower row must not remove a panel above it. Let the detail page or dialog body own vertical scrolling, so expanding players
+does not introduce a scrollbar or an empty gutter inside either team table.
+Keep horizontal scrolling local to a narrow team table. Do not automatically scroll to or focus the inserted panel.
+
+Align the Player column header and the first expanded metric with the player name, not the disclosure chevron. Expanded content starts with the metrics, including before/after ELO where known.
+Right-click the player cell or use Shift+F10 on its disclosure to open a context
+menu containing the ID and View player profile. Do not repeat the name in a tooltip or add a profile
+action to the expanded panel. Primary clicks on the name, chevron and blank player-cell area toggle the metrics. Show ELO change in the scoreboard row
+only, not again in the expanded metrics. Keep
 award badges in the player heading without duplicating them in the expansion.
 Close the profile dialog back to the same match and expanded player.
 
@@ -132,8 +150,7 @@ independently of result badge colors.
 
 ## Surfaces and responsiveness
 
-Reuse the existing shadcn components and semantic tokens. The personal summary
-uses the shared glass Card; the scoreboard follows the transparent table surface
+Reuse the existing shadcn components and semantic tokens. The scoreboard follows the transparent table surface
 role and shared sticky-content clipping. Avoid nested cards around each team and decorative map imagery that
 displaces the table. Keep the existing font and radius scale.
 
@@ -141,17 +158,17 @@ At desktop sizes use the workspace width, capped at a readable 1280px content
 measure. At content widths of at least 1180px, place both teams side by side for
 direct comparison. Below that threshold, stack the teams. Wrap metadata/actions
 and preserve readable statistics through a contained horizontal table scroller.
-Do not shrink type to fit all twelve original columns. In production, use
-container queries for this breakpoint and sticky headers within the workspace
-scroll context.
+Do not shrink type to fit all twelve original columns. In production, use the
+measured column widths and available workspace to choose the layout.
 
 The detail-page scroll viewport fills the workspace below the titlebar, with its
 vertical scrollbar at the window's right edge. Keep page gutters inside that
-viewport and apply the readable width limit to the detail content only. Preserve
-the sticky detail toolbar and the archive's independent scroll position. Apply
-vertical gutters to the inner detail content, not the scroll viewport, so the
-toolbar sticks directly below the titlebar without exposing content above it.
-Verify the toolbar and scrollbar at intermediate and bottom scroll positions.
+viewport and apply the readable width limit to the detail content only. Keep navigation in the workspace titlebar, outside this scrollport: the archive
+breadcrumb returns to the list, and position, Previous, Next, and Refresh form
+one group before global health and account actions. Do not add a second Back
+button or sticky toolbar. On narrow titlebars, remove the overview ancestor and
+shorten the current crumb to the match ID or local-log label before sacrificing
+navigation. Keep native caption space and a draggable gap between controls.
 
 ## Integration and validation
 
@@ -159,8 +176,7 @@ Verify the toolbar and scrollbar at intermediate and bottom scroll positions.
   match dialogs. Browser Back returns to the archive, and direct detail links
   select the archive workspace. Previous/next replaces the current detail history
   entry and follows the full filtered/sorted sequence across pagination boundaries.
-- Preserve all choices when multiple recordings exist; show an explicit empty
-  recording state. Refresh retains content and the selected tab.
+- Preserve all choices when multiple recordings exist. Omit the recording action and caption when none exist; keep loading and error states distinct. Refresh retains content and the selected tab.
 - Reserve sections and table geometry with shadcn Skeleton while loading;
   distinguish initial failure, stale cached content, and unavailable fields.
 - Localize new labels in Chinese and English. Keep the brand BARadar / 断箭蛐工具.

@@ -1,56 +1,9 @@
 import { join } from 'node:path';
-import type { AppEvent, RpcMethod } from '@ba/contracts';
-import { rpcSchemas } from '@ba/contracts';
+import { assertBrowserFixtureRequest, type AppEvent } from '@ba/contracts';
 import { Application } from '../app';
 import type { Platform } from '../ports';
 import { prepareRealData } from './real-data';
 
-const methods = new Set<RpcMethod>([
-  'app.bootstrap',
-  'config.update',
-  'cache.stats',
-  'cache.clear',
-  'updates.check',
-  'players.search',
-  'players.report',
-  'players.maggot',
-  'players.profile',
-  'session.query',
-  'matches.list',
-  'matches.scan',
-  'matches.local',
-  'matches.detail',
-  'matches.add',
-  'matches.delete',
-  'bans.list',
-  'bans.sync',
-  'accounts.list',
-  'accounts.delete',
-  'decks.list',
-  'replays.list',
-  'replays.directory',
-  'displays.list',
-  'displays.thumbnail',
-  'api.health',
-]);
-const preferences = new Set([
-  'analyticsEnabled',
-  'analyticsChoiceSaved',
-  'theme',
-  'themeMode',
-  'lightTheme',
-  'darkTheme',
-  'glassOpacity',
-  'eloColorScheme',
-  'sidebarCollapsed',
-  'sidebarWidth',
-  'lang',
-  'panelOrder',
-  'hiddenPanels',
-  'collapsedPanels',
-  'banCardVisible',
-  'multiAccountBond',
-]);
 function desktopOnly(): never {
   throw new Error('浏览器开发模式仅使用测试数据，此功能请通过桌面应用使用。');
 }
@@ -68,7 +21,7 @@ export async function createBrowserFixtures(
       return typeof version === 'function' ? version() : version;
     },
     http: {
-      offline: true,
+      offline: 'fixture-cache',
       fetch: async () => {
         throw new Error('Network disabled in browser fixture mode');
       },
@@ -109,12 +62,8 @@ export async function createBrowserFixtures(
   return {
     directory,
     async invoke(method: unknown, input: unknown) {
-      if (typeof method !== 'string' || !methods.has(method as RpcMethod)) desktopOnly();
-      if (method === 'config.update') {
-        const patch = rpcSchemas['config.update'].parse(input);
-        if (Object.keys(patch).some((key) => !preferences.has(key))) desktopOnly();
-      }
-      return app.invoke(method as RpcMethod, input);
+      assertBrowserFixtureRequest(method, input);
+      return app.invoke(method, input);
     },
     stop: () => app.stop(),
   };

@@ -202,7 +202,7 @@ The implementation now follows the shared
 
 | Area                | Updated loading behavior                                                                                                                                                           |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Overview            | Unknown metrics use value placeholders; three Item rows reserve recent matches. The known room count remains visible.                                                              |
+| Overview            | Unknown metrics use value placeholders; three table rows reserve recent matches. The known room count remains visible.                                                             |
 | Player search       | Five Item rows reserve names, IDs, ratings, and actions inside the existing result scroll container.                                                                               |
 | Player report       | The report shell, metrics, preferences, analysis, and detail sections mount immediately. Dependent analysis waits for the report; map details retain their collapsed presentation. |
 | Match archive       | Eight-column Skeleton rows preserve the table header and alignment; grid placeholders use archive cards with team rosters. Unknown sample and pagination totals are placeholders.  |

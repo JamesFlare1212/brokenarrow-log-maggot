@@ -206,7 +206,7 @@ export class Application {
               rating: number(p.rating),
             }))
             .filter((p) => /^\d+$/.test(p.id));
-          this.db.observe(players);
+          if (!this.client.fixtureCache) this.db.observe(players);
           return { players, source: r.source };
         } catch {
           return {
@@ -224,6 +224,7 @@ export class Application {
       'session.query': (input) => this.query(input),
       'matches.list': ({ accountId }) => this.tracker.list(accountId),
       'matches.local': ({ id }) => this.tracker.localDetail(id),
+      'matches.timeline': ({ fid, force }) => this.tracker.timeline(fid, force),
       'matches.scan': async () => {
         await this.archive.scan(this.db.config().logDir);
         return null;
