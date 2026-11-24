@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectCorners } from './corner-geometry';
 
 async function prepare(page: Page, locale: 'zh' | 'en' = 'zh') {
   await page.route('**/__fixtures/rpc', async (route) => {
@@ -103,6 +104,10 @@ for (const locale of ['zh', 'en'] as const) {
       .click();
     const dialog = page.getByRole('dialog', { name: /分钟数据|Minute data/ });
     await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveCSS('border-radius', '14px');
+    await expectCorners(dialog.locator('[data-corner-close]'), '[data-slot=dialog-content]', [
+      'TopRight',
+    ]);
     await dialog
       .getByRole('button', {
         name: locale === 'zh' ? '定位到 03:00' : 'Seek to 03:00',

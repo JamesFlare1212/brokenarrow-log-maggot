@@ -199,7 +199,7 @@ export function App() {
       data-ready="true"
     >
       <a
-        className="skip-link fixed top-4 left-4 z-[100] p-3 rounded-(--radius) bg-primary text-primary-foreground -translate-y-[200%] [&:focus]:translate-y-0"
+        className="skip-link fixed top-4 left-4 z-[100] p-3 rounded-lg bg-primary text-primary-foreground -translate-y-[200%] [&:focus]:translate-y-0"
         href={settingsTab ? '#settings-content' : '#main-content'}
         onClick={(event) => {
           event.preventDefault();

@@ -219,10 +219,11 @@ export function PlayersPanel() {
                           key={index}
                           size="xs"
                           aria-hidden="true"
-                          className="player-result-loading gap-1 flex-nowrap px-1"
+                          insetControls
+                          className="player-result-loading"
                         >
                           <ItemContent className="min-w-0">
-                            <div className="flex min-w-0 flex-col gap-1 border border-transparent p-2">
+                            <div className="flex min-w-0 flex-col gap-1 border border-transparent px-2 py-3">
                               <div className="flex h-5 items-center">
                                 <Skeleton className="h-3.5 w-24 max-w-full" />
                               </div>
@@ -242,12 +243,13 @@ export function PlayersPanel() {
                           key={player.id}
                           variant={selectedId === player.id ? 'muted' : 'default'}
                           size="xs"
-                          className="search-result gap-1 flex-nowrap px-1 [&_[data-slot='item-content']]:min-w-0"
+                          insetControls
+                          className="search-result [&_[data-slot='item-content']]:min-w-0"
                         >
                           <ItemContent>
                             <Button
                               variant="ghost"
-                              className="player-result-button h-auto min-w-0 w-full justify-start p-2"
+                              className="player-result-button h-auto min-w-0 w-full justify-start px-2 py-3"
                               disabled={results.pending}
                               data-player-select={player.id}
                               aria-pressed={selectedId === player.id}
@@ -345,11 +347,12 @@ export function PlayersPanel() {
                       {roster.map((player) => (
                         <Button
                           variant="outline"
+                          className="rounded-[calc(var(--radius-md)+var(--spacing)*1.5)] py-[calc(--spacing(1.5)-1px)] ps-[calc(--spacing(1.5)-1px)]"
                           key={player.id}
                           data-player-select={player.id}
                           onClick={(event) => selectPlayer(player.id, event.currentTarget)}
                         >
-                          <Avatar size="sm" aria-hidden="true">
+                          <Avatar size="sm" className="self-start rounded-md" aria-hidden="true">
                             <AvatarFallback>{player.name.slice(0, 1).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <span className="suggestion-name min-w-0 wrap-anywhere">

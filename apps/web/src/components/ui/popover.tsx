@@ -5,7 +5,7 @@ import { Popover as PopoverPrimitive } from 'radix-ui';
 
 export const popoverSurfaceClasses = cn(
   glassOverlaySurfaceClasses,
-  'z-50 flex w-72 flex-col gap-2.5 p-2.5 text-sm outline-hidden',
+  'z-50 flex w-72 flex-col gap-2.5 p-2.5 text-sm outline-hidden has-[>button:last-child]:rounded-[calc(var(--radius-sm)+var(--spacing)*2.5)] [&>button:last-child]:rounded-sm',
 );
 
 export const popoverContentClasses = cn(

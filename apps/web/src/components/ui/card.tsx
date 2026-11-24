@@ -20,7 +20,8 @@ function Card({
       data-variant={variant}
       className={cn(
         cardSurfaceClasses,
-        'group/card flex flex-col gap-(--card-spacing) overflow-hidden py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
+        'group/card flex flex-col gap-(--card-spacing) overflow-hidden py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 has-[>img:last-child]:pb-0',
+        '[--card-media-inset:calc(var(--spacing)*2.5-1px)] [--card-media-radius:var(--radius-sm)] has-[>[data-slot=card-media]:last-child]:pb-0 has-[>[data-slot=card-media]:last-child]:rounded-[calc(var(--card-media-radius)+var(--card-media-inset)+1px)]',
         variant === 'appearance' && 'transition-colors hover:border-foreground/20',
         className,
       )}
@@ -81,6 +82,19 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
+function CardMedia({ className, ...props }: React.ComponentProps<'figure'>) {
+  return (
+    <figure
+      data-slot="card-media"
+      className={cn(
+        'mx-(--card-media-inset) mt-auto mb-(--card-media-inset) overflow-hidden rounded-(--card-media-radius) bg-muted',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 function CardFooter({
   className,
   variant = 'default',
@@ -90,7 +104,7 @@ function CardFooter({
     <div
       data-slot="card-footer"
       className={cn(
-        'flex items-center rounded-b-xl p-(--card-spacing)',
+        'flex items-center p-(--card-spacing)',
         variant === 'default' && 'border-t bg-muted/50',
         className,
       )}
@@ -102,6 +116,7 @@ function CardFooter({
 export {
   Card,
   CardHeader,
+  CardMedia,
   CardFooter,
   CardTitle,
   CardAction,

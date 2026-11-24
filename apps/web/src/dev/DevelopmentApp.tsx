@@ -89,14 +89,14 @@ function DevelopmentTools({
             <PopoverAnchor asChild>
               <div
                 className={cn(
-                  'development-tools-launcher flex items-center gap-1 p-1 border border-transparent',
                   glassOverlaySurfaceClasses,
+                  'development-tools-launcher flex items-center gap-1 [--launcher-action-radius:calc(var(--radius-sm)+(var(--control-standard)-var(--spacing)*5)/2)] rounded-[calc(var(--launcher-action-radius)+var(--spacing)+1px)] p-1 border border-transparent',
                 )}
               >
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="development-tools-handle touch-none cursor-grab [&:active]:cursor-grabbing"
+                  className="development-tools-handle rounded-(--launcher-action-radius) touch-none cursor-grab [&:active]:cursor-grabbing"
                   aria-label={t('devMoveTools')}
                   aria-describedby="development-move-hint"
                   {...handle}

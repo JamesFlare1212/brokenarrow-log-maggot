@@ -64,7 +64,7 @@ export function AppearanceSettings({
                 <ToggleGroupItem
                   key={mode}
                   value={mode}
-                  className="appearance-mode-option h-auto min-w-0 flex-col items-stretch gap-2 p-2"
+                  className="appearance-mode-option h-auto min-w-0 flex-col items-stretch gap-2"
                 >
                   <ThemeWireframe
                     className="appearance-mode-preview h-35 appearance-max-28:h-20"
@@ -330,7 +330,7 @@ export function AppearanceSettings({
                               mode={mode}
                             />
                             <span
-                              className="appearance-swatch-state absolute right-0.5 bottom-0.5 flex w-5 h-5 items-center justify-center border border-border rounded-[50%] bg-background text-foreground shadow-[0_1px_2px_rgb(0_0_0_/_0.1)] opacity-0 pointer-events-none [.appearance-theme-swatch[aria-pressed='true']>&]:opacity-100 [&>svg]:w-3 [&>svg]:h-3"
+                              className="appearance-swatch-state absolute right-0.5 bottom-0.5 flex w-5 h-5 items-center justify-center border border-border rounded-full bg-background text-foreground shadow-[0_1px_2px_rgb(0_0_0_/_0.1)] opacity-0 pointer-events-none [.appearance-theme-swatch[aria-pressed='true']>&]:opacity-100 [&>svg]:w-3 [&>svg]:h-3"
                               aria-hidden="true"
                             >
                               <ModeIcon />

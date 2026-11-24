@@ -17,6 +17,7 @@ const toggleVariants = cva(
           'border border-transparent bg-transparent hover:bg-muted/40 data-[state=on]:border-ring data-[state=on]:bg-accent data-[state=on]:text-accent-foreground',
         card: cn(
           cardSurfaceClasses,
+          'has-[>[data-slot=card-preview]]:[--preview-inset:--spacing(2)] has-[>[data-slot=card-preview]]:p-(--preview-inset) has-[>[data-slot=card-preview]]:rounded-[calc(var(--radius-lg)+var(--preview-inset)+1px)]',
           'hover:border-foreground/20 hover:bg-(--glass-surface) aria-pressed:bg-(--glass-surface) data-[state=on]:border-(--appearance-selection) data-[state=on]:bg-(--glass-surface)',
         ),
         sphere:
@@ -25,7 +26,7 @@ const toggleVariants = cva(
       size: {
         default:
           'h-(--control-standard) min-w-(--control-standard) px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-        sm: "h-(--control-compact) min-w-(--control-compact) rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "h-(--control-compact) min-w-(--control-compact) rounded-md px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: 'h-(--control-large) min-w-(--control-large) px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
       },
     },

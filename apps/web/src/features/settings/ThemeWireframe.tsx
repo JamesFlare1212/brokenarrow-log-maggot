@@ -63,18 +63,19 @@ function ThemeWireframePane({
       />
 
       <span
-        className="absolute bottom-[8%] left-[26%] right-[6%] flex h-[15%] items-center justify-between rounded-md px-1"
+        data-slot="preview-composer"
+        className="absolute bottom-[8%] left-[26%] right-[6%] @container-size flex h-[15%] items-center justify-between rounded-full"
         style={{
           backgroundColor: colors.surface,
           boxShadow: `inset 0 0 0 1px ${line}`,
         }}
       >
         <span
-          className="block h-[26%] w-[34%] rounded-full"
+          className="ml-[37cqh] block h-[26%] w-[34%] rounded-full"
           style={{ backgroundColor: line, opacity: 0.7 }}
         />
         <span
-          className="block aspect-square h-[58%] rounded-full"
+          className="mr-[21cqh] block aspect-square h-[58%] rounded-full"
           style={{ backgroundColor: colors.messageAction }}
         />
       </span>
@@ -122,6 +123,7 @@ export function ThemeWireframe({
   return (
     <span
       aria-hidden
+      data-slot="card-preview"
       className={cn(
         'relative block w-full overflow-hidden rounded-lg border border-border/60',
         className,

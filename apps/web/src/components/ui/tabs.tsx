@@ -22,11 +22,11 @@ function Tabs({
 }
 
 const tabsListVariants = cva(
-  'group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none',
+  'group/tabs-list inline-flex w-fit items-center justify-center rounded-lg [--tabs-inset:3px] p-(--tabs-inset) text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none',
   {
     variants: {
       variant: {
-        default: 'bg-muted',
+        default: 'rounded-[calc(var(--radius-md)+var(--tabs-inset))] bg-muted',
         line: 'gap-1 bg-transparent',
         navigation: 'gap-1 bg-transparent',
       },
@@ -57,7 +57,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:h-full group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         'group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent',
         'data-active:bg-background data-active:text-foreground dark:group-data-[variant=default]/tabs-list:data-active:border-input dark:group-data-[variant=default]/tabs-list:data-active:bg-input/30',
         'group-data-[variant=navigation]/tabs-list:h-10 group-data-[variant=navigation]/tabs-list:w-full group-data-[variant=navigation]/tabs-list:gap-3 group-data-[variant=navigation]/tabs-list:rounded-md group-data-[variant=navigation]/tabs-list:border-0 group-data-[variant=navigation]/tabs-list:px-3 group-data-[variant=navigation]/tabs-list:font-normal group-data-[variant=navigation]/tabs-list:text-sidebar-foreground/80 group-data-[variant=navigation]/tabs-list:data-active:font-medium group-data-[variant=navigation]/tabs-list:hover:bg-sidebar-accent group-data-[variant=navigation]/tabs-list:hover:text-sidebar-accent-foreground group-data-[variant=navigation]/tabs-list:data-active:bg-sidebar-accent group-data-[variant=navigation]/tabs-list:data-active:text-sidebar-accent-foreground group-data-[variant=navigation]/tabs-list:data-active:border-transparent group-data-[variant=navigation]/tabs-list:data-active:shadow-none group-data-[variant=navigation]/tabs-list:[&>svg]:size-[18px]',

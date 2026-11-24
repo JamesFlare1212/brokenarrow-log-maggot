@@ -72,6 +72,8 @@ const overlayNames = new Set([
   'TooltipContent',
   'DropdownMenuContent',
   'DropdownMenuSubContent',
+  'SelectContent',
+  'ContextMenuContent',
   'ChartTooltipContent',
   'Toaster',
 ]);

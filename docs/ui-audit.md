@@ -2,7 +2,9 @@
 
 Date: 2026-10-27. Scope: the shared Electron/browser React interface for BARadar.
 The [design system](../design-system/broken-arrow/MASTER.md) defines the current
-standard; this record describes the component review and its verification.
+standard; this record describes the component review and its verification. For
+the subsequent review of nested outlines and their component-specific exceptions to
+the original uniform Card radius, see the [nested corner audit](nested-corners.md).
 
 ## Source coverage
 

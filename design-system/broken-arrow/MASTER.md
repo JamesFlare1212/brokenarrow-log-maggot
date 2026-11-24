@@ -108,9 +108,26 @@ feature pages arrange components without redefining their surface treatment.
 | Card internal spacing | 16px default; 12px for `size="sm"`                                  | Same sizes                            |
 
 The base radius is `--radius: 0.625rem`; the radius scale lives in `@theme inline`.
+Use `rounded-sm` (6px) for inset details, `rounded-md` (8px) for standard actions,
+`rounded-lg` (10px) for fields and rows, and `rounded-xl` (14px) for standard
+surfaces. Use `rounded-full` for genuinely circular or pill shapes. Do not add a
+new theme size just to name the result of an inset calculation.
 Use component size variants rather than copying resolved pixel values into pages.
+For adjacent painted contours, measure the inset between **border boxes**, not
+just the padding. Prefer `outer radius = inner radius + inset` at each participating
+corner. If the horizontal and vertical insets differ, align them first; if the
+result would be too round, reduce the inset or let one surface own the clip.
+Use the derived radius on all four exposed corners of the same standalone
+surface, including its hover and focus states. Only adjoining segments, flush
+content sections and screen edges may use different corner treatments.
+A control separated by content, a status badge over an avatar, an open tooltip,
+and a focus ring are not extra nested cards. See the [corner audit](../../docs/nested-corners.md).
 Use `--card-spacing` for a deliberate card density adjustment. Density changes do
 not authorize a different border, radius, background, shadow, or blur.
+
+Keep ordinary Cards at 14px. A terminal `CardMedia` derives the whole Card
+radius from the media radius and inset; flush cover images and footers use the Card
+clip instead of drawing another rounded edge.
 
 Glass opacity ranges from 40% to 100% in 5% slider steps, with 50% as the default.
 Previously saved integer values remain readable. `useAppearance` previews changes
@@ -142,8 +159,9 @@ than browser `title` bubbles; static hint triggers also support keyboard focus.
 Collapsed settings tabs and palette-pair actions use the same Tooltip material.
 
 Other Popovers, dropdowns and submenus, Dialog, AlertDialog, Sheet, and Sonner
-toast retain the raised coverage described above. Use the shared 14px outer
-radius; a screen-edge Sheet keeps flush corners against the viewport. Floating
+toast retain the raised coverage described above. The base overlay radius is 14px;
+menus containing inset highlights use `glassMenuSurfaceClasses` (8px item + 4px
+gutter = 12px). A screen-edge Sheet keeps flush corners against the viewport. Floating
 outlines use the shared glass-border color through a 1px ring, preserving dialog
 and table content budgets. Sonner's unlayered vendor shadow is explicitly
 overridden by the shared Tailwind shadow utility. Do not restore inverse tooltip
@@ -181,7 +199,9 @@ complete evaluator of feature styles.
 - Use `size="sm"` for metrics. Layout classes may change width, grid placement,
   padding, or gaps. Do not override a card's surface with page-specific CSS.
 - Use `ToggleGroup type="single" variant="card"` for full-size mutually exclusive
-  card choices. Appearance mode and ELO color choices use this variant.
+  card choices. A direct `card-preview` models the framed media in an appearance
+  mode choice: 10px preview + 8px padding + 1px border = 19px frame. Text-only
+  ELO choices retain the 14px content-card radius.
 - A card choice keeps the glass fill during hover and selection. Hover may
   strengthen its neutral border. Selection uses `--appearance-selection`, an
   alias of `--ring` in Appearance. Focus adds the shared visible focus ring.

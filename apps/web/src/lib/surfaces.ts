@@ -8,4 +8,9 @@ export const glassOverlaySurfaceClasses = cn(
   'rounded-xl bg-popover text-popover-foreground ring-1 ring-(--glass-border)',
 );
 
+export const glassMenuSurfaceClasses = cn(
+  glassOverlaySurfaceClasses,
+  'rounded-[calc(var(--radius-md)+var(--spacing))]',
+);
+
 export const glassTooltipSurfaceClasses = cn(glassOverlaySurfaceClasses, 'bg-(--glass-surface)');

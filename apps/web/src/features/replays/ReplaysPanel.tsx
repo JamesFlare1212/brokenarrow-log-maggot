@@ -7,11 +7,18 @@ import {
 } from '@/components/ui/input-group';
 import { useEffect, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { Card as ReplayCard, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import {
+  Card as ReplayCard,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+  CardMedia,
+} from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Video as faVideo,
-  Play as faPlay,
+  Play,
   FolderOpen as faFolderOpen,
   RefreshCw as faArrowsRotate,
   SlidersHorizontal as faSliders,
@@ -29,6 +36,11 @@ import { useRequest } from '../../hooks/useRequest';
 import { LoadingStatus } from '../../components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, Button, Toggle, Notice, Empty, Badge, Menu, Field } from '../../components/ui';
+const replayPlayClasses =
+  'replay-play [.replay-grid_&]:w-full [.replay-grid_&]:flex-col [.replay-grid_&]:items-stretch [.replay-grid_&]:gap-0 [.replay-grid_&]:rounded-[calc(var(--radius-xl)-1px)] [.replay-grid_&]:border-0 [.replay-grid_&]:focus-visible:inset-ring-2 [.replay-grid_&]:focus-visible:inset-ring-ring flex h-auto min-w-0 flex-1 rounded-[calc(var(--radius-lg)+1px)] items-center justify-start gap-4 p-0 text-left';
+const replayThumbnailClasses =
+  'replay-thumbnail [.replay-list:not(.replay-grid)_&]:self-stretch [.replay-grid_&]:w-full [.replay-grid_&]:min-w-0 [.replay-grid_&>svg]:size-8 [.replay-grid_&>svg]:text-muted-foreground relative flex w-24 min-w-24 aspect-video items-center justify-center gap-2 rounded-lg bg-muted [.replay-grid_&]:rounded-t-none';
+
 function ReplaySurface({
   view,
   title,
@@ -43,7 +55,7 @@ function ReplaySurface({
       <CardHeader className="sr-only">
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="replay-grid-content flex flex-1 flex-col relative p-0">
+      <CardContent className="replay-grid-content relative flex flex-1 flex-col p-0 [&>[data-slot=tooltip-trigger]]:flex-1">
         {children}
       </CardContent>
     </ReplayCard>
@@ -61,8 +73,8 @@ function ReplaySkeleton({ view }: { view: 'grid' | 'list' }) {
       aria-hidden="true"
     >
       <ReplaySurface view={view} title="">
-        <div className="replay-play [.replay-grid_&]:w-full [.replay-grid_&]:flex-col [.replay-grid_&]:items-stretch [.replay-grid_&]:gap-0 [.replay-grid_&]:p-0 flex h-auto min-w-0 flex-1 items-center justify-start gap-4 p-0 text-left">
-          <Skeleton className="replay-thumbnail [.replay-grid_&]:relative [.replay-grid_&]:w-full [.replay-grid_&]:min-w-0 [.replay-grid_&]:aspect-video [.replay-grid_&]:justify-center [.replay-grid_&]:bg-muted [.replay-grid_&>svg]:w-8 [.replay-grid_&>svg]:h-8 [.replay-grid_&>svg]:text-muted-foreground relative flex w-24 min-w-24 aspect-video items-center justify-center gap-2 rounded-md bg-muted" />
+        <div className={replayPlayClasses}>
+          <Skeleton className={replayThumbnailClasses} />
           <div className="replay-description [.replay-grid_&]:p-3.5 [&_strong]:max-w-full [&_strong]:flex-wrap [&_strong]:flex [&_strong]:items-center [&_strong]:gap-2 [&_small]:whitespace-normal [&_small]:text-muted-foreground [&_small]:text-[0.75rem] flex min-w-0 flex-col items-start gap-1.5 flex-1 [.replay-list:not(.replay-grid)_&]:grid [.replay-list:not(.replay-grid)_&]:grid-cols-[minmax(0,_1fr)_auto] [.replay-list:not(.replay-grid)_&]:items-center [.replay-list:not(.replay-grid)_&>strong]:[grid-area:1_/_1] workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex-col workspace-max-36:[.replay-list:not(.replay-grid)_&]:items-start">
             <strong>
               <Skeleton className="h-5 w-32 max-w-full" />
@@ -102,41 +114,35 @@ export function ReplaysPanel() {
     <div className="replays-panel flex min-w-0 flex-col gap-(--content-gap)">
       {recording.error && <Notice error>{recording.error}</Notice>}
       <div className="replay-workspace grid grid-cols-[minmax(0,_1.65fr)_minmax(16rem,_1fr)] gap-(--content-gap) items-stretch workspace-max-48:grid-cols-1">
-        <Card
-          title={t('preview')}
-          className="replay-preview-card"
-          description={
-            state.preview && recording.phase === 'recording'
-              ? t(state.preview.hasAudio ? 'audio' : 'audioOff')
-              : undefined
-          }
-        >
-          <figure className="recording-preview flex w-full min-w-0 flex-col gap-2 [&_figcaption]:text-[0.75rem] [&_figcaption]:text-muted-foreground">
-            <div className="recording-preview-media flex w-full aspect-video min-h-52 max-h-76 items-center justify-center overflow-hidden rounded-lg bg-muted [&_img]:w-full [&_img]:h-full [&_img]:object-contain">
-              {state.preview && recording.phase === 'recording' ? (
-                <img src={state.preview.dataUrl} alt={t('preview')} />
-              ) : (
-                <Empty
-                  icon={<Icon icon={faVideo} />}
-                  iconSize="lg"
-                  description={t('recordingHint')}
-                >
-                  {t(
-                    recording.phase === 'recording' || recording.phase === 'starting'
-                      ? 'previewWaiting'
-                      : recording.phase === 'stopping'
-                        ? 'stopping'
-                        : recording.phase === 'error'
-                          ? 'previewUnavailable'
-                          : state.config.replayEnabled
-                            ? 'previewIdle'
-                            : 'recordingOff',
-                  )}
-                </Empty>
-              )}
-            </div>
-          </figure>
-        </Card>
+        <ReplayCard className="replay-preview-card" aria-label={t('preview')}>
+          <CardHeader>
+            <CardTitle role="heading" aria-level={2}>
+              {t('preview')}
+            </CardTitle>
+            {state.preview && recording.phase === 'recording' && (
+              <CardDescription>{t(state.preview.hasAudio ? 'audio' : 'audioOff')}</CardDescription>
+            )}
+          </CardHeader>
+          <CardMedia className="recording-preview recording-preview-media flex aspect-video min-h-52 max-h-76 items-center justify-center [&_img]:w-full [&_img]:h-full [&_img]:object-contain">
+            {state.preview && recording.phase === 'recording' ? (
+              <img src={state.preview.dataUrl} alt={t('preview')} />
+            ) : (
+              <Empty icon={<Icon icon={faVideo} />} iconSize="lg" description={t('recordingHint')}>
+                {t(
+                  recording.phase === 'recording' || recording.phase === 'starting'
+                    ? 'previewWaiting'
+                    : recording.phase === 'stopping'
+                      ? 'stopping'
+                      : recording.phase === 'error'
+                        ? 'previewUnavailable'
+                        : state.config.replayEnabled
+                          ? 'previewIdle'
+                          : 'recordingOff',
+                )}
+              </Empty>
+            )}
+          </CardMedia>
+        </ReplayCard>
         <Card title={t('recordingBehavior')} className="recording-status-card">
           <div className="recording-controls flex flex-col gap-4">
             <Toggle
@@ -325,19 +331,16 @@ export function ReplaysPanel() {
                 <ReplaySurface view={view} title={r.map || r.uploaderName}>
                   <TooltipButton
                     variant="ghost"
-                    className="replay-play [.replay-grid_&]:w-full [.replay-grid_&]:flex-col [.replay-grid_&]:items-stretch [.replay-grid_&]:gap-0 [.replay-grid_&]:p-0 flex h-auto min-w-0 flex-1 items-center justify-start gap-4 p-0 text-left"
+                    className={replayPlayClasses}
                     aria-label={`${t('play')}: ${r.map || r.uploaderName}`}
                     disabled={!access.method('replays.play')}
                     onClick={() =>
                       openModal({ type: 'replay', id: r.id, title: r.map || r.uploaderName })
                     }
                   >
-                    <span
-                      className="replay-thumbnail [.replay-grid_&]:relative [.replay-grid_&]:w-full [.replay-grid_&]:min-w-0 [.replay-grid_&]:aspect-video [.replay-grid_&]:justify-center [.replay-grid_&]:bg-muted [.replay-grid_&>svg]:w-8 [.replay-grid_&>svg]:h-8 [.replay-grid_&>svg]:text-muted-foreground relative flex w-24 min-w-24 aspect-video items-center justify-center gap-2 rounded-md bg-muted"
-                      aria-hidden="true"
-                    >
-                      <Icon icon={faPlay} size={18} />
-                      <span className="replay-duration [.replay-grid_&]:absolute [.replay-grid_&]:right-2.5 [.replay-grid_&]:bottom-2 [.replay-grid_&]:py-0.5 [.replay-grid_&]:px-1.5 [.replay-grid_&]:rounded-sm [.replay-grid_&]:bg-background [.replay-grid_&]:text-foreground [.replay-thumbnail>&]:absolute [.replay-thumbnail>&]:right-1 [.replay-thumbnail>&]:bottom-1 [.replay-thumbnail>&]:py-0.25 [.replay-thumbnail>&]:px-1 [.replay-thumbnail>&]:rounded-sm [.replay-thumbnail>&]:bg-background text-muted-foreground text-[0.75rem]">
+                    <span className={replayThumbnailClasses} aria-hidden="true">
+                      <Play size={18} />
+                      <span className="replay-duration absolute right-1 bottom-1 rounded-sm bg-background px-1 py-0.25 text-[0.75rem] text-muted-foreground [.replay-grid_&]:text-foreground">
                         {formatDuration(r.durationSec)}
                       </span>
                     </span>

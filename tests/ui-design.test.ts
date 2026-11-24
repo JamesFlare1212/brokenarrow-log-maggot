@@ -70,6 +70,19 @@ export const Floating = () => <Popup ${attribute}>Details</Popup>;`,
     expect(JSON.parse(result.stderr).overlayOverrides).toHaveLength(1);
   });
 
+  it.each([
+    ['SelectContent', 'select'],
+    ['ContextMenuContent', 'context-menu'],
+  ])('protects the nested menu radius on %s', async (component, module) => {
+    const directory = await fixture(
+      `import { ${component} as Menu } from '@/components/ui/${module}';
+export const Example = () => <Menu className="w-48 rounded-xl" />;`,
+    );
+    const result = check(directory);
+    expect(result.status, result.stderr).toBe(1);
+    expect(JSON.parse(result.stderr).overlayOverrides).toHaveLength(1);
+  });
+
   it('preserves layout-only conditional classes and outline geometry', async () => {
     const directory = await fixture(
       compliantSource +

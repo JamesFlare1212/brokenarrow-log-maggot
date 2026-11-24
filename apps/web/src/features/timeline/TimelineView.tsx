@@ -56,7 +56,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import {
   Dialog,
-  DialogClose,
+  DialogCornerClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -192,22 +192,6 @@ function MethodNote() {
         </div>
       </PopoverContent>
     </Popover>
-  );
-}
-
-function LocalizedDialogClose() {
-  const { t } = useTimeline();
-  return (
-    <DialogClose asChild>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="absolute top-2 right-2"
-        aria-label={t('timeline.close')}
-      >
-        <X />
-      </Button>
-    </DialogClose>
   );
 }
 
@@ -422,7 +406,7 @@ function RecordDialog({ moment }: { moment: Moment }) {
           <DialogTitle className="pr-10">
             {t('timeline.deathRecords', { player: moment.player })}
           </DialogTitle>
-          <LocalizedDialogClose />
+          <DialogCornerClose label={t('timeline.close')} />
           <DialogDescription>
             {t('timeline.lossInterval', {
               start: clock(moment.start),
@@ -510,7 +494,7 @@ function MinuteTable({ second, onSeek }: { second: number; onSeek: (time: number
                   : `${clock(intervalStart)}–${clock(selectedMinute)}`,
             })}
           </DialogTitle>
-          <LocalizedDialogClose />
+          <DialogCornerClose label={t('timeline.close')} />
           <DialogDescription>
             {t(selectedMinute === 0 ? 'timeline.openingValues' : 'timeline.intervalValues')}
           </DialogDescription>

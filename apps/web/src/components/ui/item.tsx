@@ -44,6 +44,9 @@ const itemVariants = cva(
         sm: 'gap-2.5 px-3 py-2.5',
         xs: 'gap-2 px-2.5 py-2 in-data-[slot=dropdown-menu-content]:p-0',
       },
+      insetControls: {
+        true: 'flex-nowrap gap-1 [--item-inset:--spacing(1)] p-(--item-inset) rounded-[calc(var(--radius-md)+var(--item-inset)+1px)] [&>[data-slot=item-actions]:has(button)]:items-stretch [&>[data-slot=item-actions]:has(button)]:self-stretch [&>[data-slot=item-actions]_button]:h-auto',
+      },
     },
     defaultVariants: {
       variant: 'default',
@@ -56,6 +59,7 @@ function Item({
   className,
   variant = 'default',
   size = 'default',
+  insetControls = false,
   asChild = false,
   ...props
 }: React.ComponentProps<'div'> & VariantProps<typeof itemVariants> & { asChild?: boolean }) {
@@ -65,7 +69,7 @@ function Item({
       data-slot="item"
       data-variant={variant}
       data-size={size}
-      className={cn(itemVariants({ variant, size, className }))}
+      className={cn(itemVariants({ variant, size, insetControls, className }))}
       {...props}
     />
   );

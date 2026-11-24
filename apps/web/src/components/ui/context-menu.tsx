@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { ContextMenu as Primitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
-import { glassOverlaySurfaceClasses } from '@/lib/surfaces';
+import { glassMenuSurfaceClasses } from '@/lib/surfaces';
 
 export const ContextMenu = Primitive.Root;
 export const ContextMenuTrigger = Primitive.Trigger;
@@ -24,7 +24,7 @@ export function ContextMenuContent({
       <Primitive.Content
         data-slot="context-menu-content"
         className={cn(
-          glassOverlaySurfaceClasses,
+          glassMenuSurfaceClasses,
           'z-50 max-h-(--radix-context-menu-content-available-height) min-w-36 overflow-y-auto p-1',
           className,
         )}

@@ -298,13 +298,13 @@ export function SessionPanel({ standalone = false }: { standalone?: boolean }) {
                     <Item
                       variant={p.id === localPlayerId ? 'muted' : 'default'}
                       size="xs"
-                      className="player-card min-w-0 relative min-h-(--session-player-height) flex-nowrap py-(--session-player-padding) [border-block-width:var(--session-player-border)] [&>[data-slot='item-content']]:relative [&>[data-slot='item-content']]:pointer-events-none [&>[data-slot='item-content']]:min-w-0 [&>[data-slot='item-actions']]:relative [&>[data-slot='item-actions']]:pointer-events-none"
+                      className="player-card min-w-0 relative rounded-[calc(var(--radius-lg)+var(--session-player-border))] min-h-(--session-player-height) flex-nowrap py-(--session-player-padding) [border-block-width:var(--session-player-border)] [&>[data-slot='item-content']]:relative [&>[data-slot='item-content']]:pointer-events-none [&>[data-slot='item-content']]:min-w-0 [&>[data-slot='item-actions']]:relative [&>[data-slot='item-actions']]:pointer-events-none"
                       key={p.id}
                     >
                       <PrimitiveButton
                         type="button"
                         variant="ghost"
-                        className="player-card-trigger absolute inset-0 size-full rounded-[inherit]"
+                        className="player-card-trigger absolute inset-0 size-full rounded-lg"
                         aria-label={p.name}
                         aria-haspopup="dialog"
                         onClick={() => openModal({ type: 'profile', id: p.id, name: p.name })}
