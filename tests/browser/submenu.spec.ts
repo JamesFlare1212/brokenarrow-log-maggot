@@ -77,6 +77,9 @@ for (const mode of ['light', 'dark'] as const) {
         const content = page.locator('[data-slot="dropdown-menu-content"]');
         await page.keyboard.press('Enter');
         await expect(first).toBeFocused();
+        for (const surface of [content, first]) {
+          await expect(surface).toHaveCSS('corner-shape', 'superellipse(2)');
+        }
         await page.keyboard.press('ArrowDown');
         const more = page.getByRole('menuitem', { name: 'More actions', exact: true });
         await expect(more).toBeFocused();

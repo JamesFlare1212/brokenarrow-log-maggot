@@ -160,7 +160,7 @@ for (const [width, lang] of [
     // Small-card density is independent of the surrounding layout gap.
     await expect(page.locator('.stats > [data-slot=card]').first()).toHaveCSS(
       'padding-top',
-      '12px',
+      '16px',
     );
 
     await page.getByRole('button', { name: label('investigate'), exact: true }).click();

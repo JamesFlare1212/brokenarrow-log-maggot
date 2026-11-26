@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectCorners } from './corner-geometry';
 
 async function seedFeatures(page: Page) {
   await page.route('**/__fixtures/rpc', async (route) => {
@@ -95,7 +96,7 @@ for (const width of [1280, 900, 390]) {
     await page.locator(roster).locator('button.player-card-trigger').hover();
     expect(await corner(page, roster, '.player-card-trigger', 'topLeft')).toEqual({
       outer: 11,
-      inner: 9,
+      inner: 17,
       dx: 2,
       dy: 2,
     });
@@ -104,7 +105,7 @@ for (const width of [1280, 900, 390]) {
     const deck = '.deck-columns [data-slot=card]:has([data-slot=card-footer])';
     await expect(page.locator(deck).first()).toHaveCSS('overflow', 'hidden');
     expect(await corner(page, deck, '[data-slot=card-footer]', 'bottomRight')).toEqual({
-      outer: 14,
+      outer: 36,
       inner: 0,
       dx: 1,
       dy: 1,
@@ -112,21 +113,30 @@ for (const width of [1280, 900, 390]) {
 
     await page.goto('/#replays');
     await expect(page.locator('button.replay-play')).toHaveCount(2);
-    await expect(page.locator('.replay-preview-card')).toHaveCSS('border-radius', '16px');
+    await expect(page.locator('.replay-preview-card')).toHaveCSS('border-radius', '36px');
     expect(
       await corner(page, '.replay-preview-card', '.recording-preview-media', 'bottomRight'),
-    ).toEqual({ outer: 16, inner: 6, dx: 10, dy: 10 });
+    ).toEqual({ outer: 36, inner: 26, dx: 10, dy: 10 });
+    await expect(page.locator('.recording-controls [data-slot=badge]')).toHaveCount(0);
+    await expect(page.locator('.recording-preview-media')).toHaveCSS(
+      'corner-shape',
+      'superellipse(2)',
+    );
+    await expectCorners(page.locator('.recording-preview-media'), '.replay-preview-card', [
+      'BottomLeft',
+      'BottomRight',
+    ]);
     const tile = '.replay-grid-card';
     await expect(page.locator(tile).first()).toHaveCSS('overflow', 'hidden');
     expect(await corner(page, tile, '.replay-thumbnail', 'topLeft')).toEqual({
-      outer: 14,
+      outer: 36,
       inner: 0,
       dx: 1,
       dy: 1,
     });
     expect(await corner(page, tile, 'button.replay-play', 'bottomRight')).toEqual({
-      outer: 14,
-      inner: 13,
+      outer: 36,
+      inner: 18,
       dx: 1,
       dy: 1,
     });
@@ -136,7 +146,7 @@ for (const width of [1280, 900, 390]) {
     await expect(page.locator(tile)).toHaveCount(0);
     expect(await duration()).toEqual({ outer: 10, inner: 6, dx: 4, dy: 4 });
     expect(await corner(page, 'button.replay-play', '.replay-thumbnail', 'topLeft')).toEqual({
-      outer: 10,
+      outer: 17,
       inner: 10,
       dx: 0,
       dy: 0,

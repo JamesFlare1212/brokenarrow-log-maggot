@@ -1,4 +1,3 @@
-// Regression scenarios from docs/state-machine-risk-audit.md.
 import { randomUUID } from 'node:crypto';
 import {
   mkdtemp,

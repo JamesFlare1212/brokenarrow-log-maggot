@@ -33,32 +33,32 @@ function ThemeWireframePane({
       />
 
       <span
-        className="absolute left-[3%] top-[8%] h-[8%] w-[16%] rounded-md"
+        className="absolute left-[3%] top-[8%] h-[8%] w-[16%] rounded-md [corner-shape:squircle]"
         style={{ backgroundColor: colors.surface, boxShadow: `inset 0 0 0 1px ${line}` }}
       />
       <span
-        className="absolute left-[3%] top-[22%] h-[7%] w-[16%] rounded-md"
+        className="absolute left-[3%] top-[22%] h-[7%] w-[16%] rounded-md [corner-shape:squircle]"
         style={{ backgroundColor: colors.accentSurface }}
       />
       <span
-        className="absolute left-[3%] top-[32%] h-[7%] w-[16%] rounded-md"
+        className="absolute left-[3%] top-[32%] h-[7%] w-[16%] rounded-md [corner-shape:squircle]"
         style={{ backgroundColor: colors.messageSurface, opacity: 0.7 }}
       />
       <span
-        className="absolute left-[3%] top-[42%] h-[7%] w-[16%] rounded-md"
+        className="absolute left-[3%] top-[42%] h-[7%] w-[16%] rounded-md [corner-shape:squircle]"
         style={{ backgroundColor: colors.messageSurface, opacity: 0.5 }}
       />
 
       <span
-        className="absolute right-[28%] top-[11%] h-[9%] w-[24%] rounded-lg"
+        className="absolute right-[28%] top-[11%] h-[9%] w-[24%] rounded-lg [corner-shape:squircle]"
         style={{ backgroundColor: colors.messageSurface }}
       />
       <span
-        className="absolute left-[27%] top-[28%] h-[5%] w-[34%] rounded-sm"
+        className="absolute left-[27%] top-[28%] h-[5%] w-[34%] rounded-sm [corner-shape:squircle]"
         style={{ backgroundColor: line }}
       />
       <span
-        className="absolute left-[27%] top-[38%] h-[5%] w-[26%] rounded-sm"
+        className="absolute left-[27%] top-[38%] h-[5%] w-[26%] rounded-sm [corner-shape:squircle]"
         style={{ backgroundColor: line }}
       />
 
@@ -81,7 +81,7 @@ function ThemeWireframePane({
       </span>
 
       <span
-        className="absolute right-[5%] top-[8%] h-[46%] w-[20%] rounded-lg"
+        className="absolute right-[5%] top-[8%] h-[46%] w-[20%] rounded-lg [corner-shape:squircle]"
         style={{
           backgroundColor: colors.surface,
           boxShadow: `inset 0 0 0 1px ${line}, 0 2px 5px rgb(0 0 0 / 0.14)`,
@@ -105,7 +105,10 @@ function ThemeWireframePane({
                 opacity: 0.55,
               }}
             />
-            <span className="block h-[30%] w-[52%] rounded-sm" style={{ backgroundColor: line }} />
+            <span
+              className="block h-[30%] w-[52%] rounded-sm [corner-shape:squircle]"
+              style={{ backgroundColor: line }}
+            />
           </span>
         ))}
       </span>
@@ -125,7 +128,7 @@ export function ThemeWireframe({
       aria-hidden
       data-slot="card-preview"
       className={cn(
-        'relative block w-full overflow-hidden rounded-lg border border-border/60',
+        'relative block w-full overflow-hidden rounded-[calc(var(--radius-panel)-var(--preview-inset)-1px)] [corner-shape:squircle] border border-border/60',
         className,
       )}
     >

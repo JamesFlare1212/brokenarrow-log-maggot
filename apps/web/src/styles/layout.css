@@ -44,6 +44,9 @@ body {
   ::-webkit-scrollbar-track {
     margin: 4px;
   }
+  .panel-dialog > .dialog-body::-webkit-scrollbar-track:vertical {
+    margin-block: 8px var(--panel-dialog-radius);
+  }
   ::-webkit-scrollbar-thumb {
     min-height: 24px;
     min-width: 24px;

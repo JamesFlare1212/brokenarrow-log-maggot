@@ -23,6 +23,18 @@ test('team results stay in the scoreboard and expanded rows reach the right edge
     '胜利',
     '失败',
   ]);
+  for (const badge of await detail.locator('.match-team-heading [data-slot="badge"]').all()) {
+    await expect(badge).toHaveCSS('border-radius', '8px');
+    await expect(badge).toHaveCSS('corner-shape', 'superellipse(2)');
+  }
+  const localCell = detail.locator('[data-self] > .match-player-cell');
+  await expect(localCell).toBeVisible();
+  expect(
+    await localCell.evaluate((el) => {
+      const marker = getComputedStyle(el, '::before');
+      return [marker.width, marker.top, marker.bottom, marker.borderRadius, marker.pointerEvents];
+    }),
+  ).toEqual(['3px', '0px', '0px', '0px', 'none']);
   for (const name of ['Взгляд Крота', 'udkdjs'])
     await detail.getByRole('button', { name, exact: true }).click({ position: { x: 12, y: 16 } });
   const panels = detail.locator('.match-player-details');

@@ -1917,7 +1917,7 @@ describe('recording settings automatic saving', () => {
       expect(native.calls.filter((call) => call.method === 'replays.test')).toHaveLength(1),
     );
     expect(saves).toBe(2);
-    expect(dialog.getByText('已自动保存')).toBeTruthy();
+    expect(dialog.queryByText('已自动保存')).toBeNull();
     fireEvent.click(dialog.getByRole('switch', { name: '自动录制' }));
     await waitFor(() => expect(config.replayEnabled).toBe(!initial.config.replayEnabled));
   });
@@ -4455,13 +4455,13 @@ describe('profile refresh and report scopes', () => {
     const dataTab = screen.getByRole('tab', { name: /^对局数据/ });
     expect(dataTab.getAttribute('aria-selected')).toBe('true');
     dataTab.focus();
-    await user.keyboard('{End}');
+    await user.keyboard('{ArrowRight}');
     const mapsTab = screen.getByRole('tab', { name: /^地图表现/ });
     await waitFor(() => expect(mapsTab.getAttribute('aria-selected')).toBe('true'));
     expect(screen.getByRole('list', { name: '地图表现' })).toBeTruthy();
     expect(screen.queryByRole('table', { name: '对局数据' })).toBeNull();
-    await user.click(screen.getByRole('tab', { name: /^相遇记录/ }));
-    expect(screen.getByText('暂无相遇记录')).toBeTruthy();
+    await user.keyboard('{End}');
+    expect(await screen.findByText('暂无相遇记录')).toBeTruthy();
     await user.click(dataTab);
     expect(screen.getByRole('table', { name: '对局数据' })).toBeTruthy();
     const aliases = document.querySelector<HTMLElement>('.profile-name-history')!;

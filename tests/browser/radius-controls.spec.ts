@@ -1,4 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test';
+import { expectButtonShape } from './button-shape';
 import { fileURLToPath } from 'node:url';
 
 const fixture = fileURLToPath(new URL('./radius-controls-fixture.tsx', import.meta.url)).replaceAll(
@@ -81,8 +82,8 @@ for (const touch of [false, true]) {
             'height',
             `${frame === 'default' ? 32 : touch ? 44 : 36}px`,
           );
-          await concentric(group, group.getByRole('button').first(), left);
-          await concentric(group, group.getByRole('button').last(), right);
+          for (const action of await group.getByRole('button').all())
+            await expectButtonShape(action);
         }
       }
       const media = page.locator('#edge-media');
@@ -92,14 +93,7 @@ for (const touch of [false, true]) {
       const keycap = page.locator('#keycap');
       await concentric(keycap, keycap.locator('kbd'), right);
       const block = page.locator('#mixed-block');
-      for (const [align, corners] of [
-        ['start', ['TopLeft', 'TopRight']],
-        ['end', ['BottomLeft', 'BottomRight']],
-      ] as const) {
-        const buttons = block.locator(`[data-align=block-${align}] button`);
-        await concentric(block, buttons.first(), [corners[0]]);
-        await concentric(block, buttons.last(), [corners[1]]);
-      }
+      for (const action of await block.getByRole('button').all()) await expectButtonShape(action);
       for (const axis of ['horizontal', 'vertical']) {
         const list = page.locator(`#tabs-${axis}`).getByRole('tablist');
         const first = list.getByRole('tab').first();
@@ -117,17 +111,18 @@ for (const touch of [false, true]) {
       await page.goto('/#players');
       const suggestion = page.locator('.suggestion-list button').first();
       await expect(suggestion).toBeVisible();
-      await expect(suggestion).toHaveCSS('border-radius', '14px');
+      await expectButtonShape(suggestion);
       await expect(suggestion.locator('[data-slot=avatar-fallback]')).toHaveCSS(
         'border-radius',
         '8px',
       );
-      await concentric(suggestion, suggestion.locator('[data-slot=avatar]'), left);
       const search = page.getByRole('searchbox');
-      await search.fill('JamesFlare');
       const field = page.locator('.player-search-controls [data-slot=input-group]');
+      await expectButtonShape(field);
+      await search.fill('JamesFlare');
+      await expectButtonShape(field);
       const clear = field.getByRole('button');
-      await concentric(field, clear, right);
+      await expectButtonShape(clear);
       await clear.click();
       await expect(search).toHaveValue('');
       await search.fill('JamesFlare');
@@ -137,13 +132,10 @@ for (const touch of [false, true]) {
       await select.click();
       await expect(select).toHaveAttribute('aria-pressed', 'true');
       const actions = row.locator('[data-menu-trigger]');
-      for (const [button, corners] of [
-        [select, left],
-        [actions, right],
-      ] as const) {
+      for (const button of [select, actions]) {
         await button.hover();
         if (!touch) await expect(button).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-        await concentric(row, button, corners);
+        await expectButtonShape(button);
       }
       await actions.click();
       await expect(page.getByRole('menu')).toBeVisible();
@@ -151,14 +143,10 @@ for (const touch of [false, true]) {
       await expect(page.getByRole('menu')).toBeHidden();
       await page.goto('/#settings/connection');
       const directory = page.locator('[data-slot=input-group]:has(#settings-log)');
-      await expect(directory).toHaveCSS('border-radius', touch ? '16px' : '11px');
+      await expectButtonShape(directory);
       const buttons = directory.getByRole('button');
       await expect(buttons.first()).toBeVisible();
-      await concentric(
-        directory,
-        touch ? buttons.first() : buttons.last(),
-        touch ? ['BottomLeft'] : right,
-      );
+      for (const action of await buttons.all()) await expectButtonShape(action);
     });
   });
 }

@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { glassMaterialClasses } from '@/lib/surfaces';
+import { glassMaterialClasses, panelShapeClasses } from '@/lib/surfaces';
 
 const cardSurfaceClasses = cn(
-  'rounded-xl border border-(--glass-border) bg-(--glass-surface) text-card-foreground',
+  panelShapeClasses,
+  'border border-(--glass-border) bg-(--glass-surface) text-card-foreground',
   glassMaterialClasses,
 );
 
@@ -12,7 +13,10 @@ function Card({
   size = 'default',
   variant = 'default',
   ...props
-}: React.ComponentProps<'div'> & { size?: 'default' | 'sm'; variant?: 'default' | 'appearance' }) {
+}: React.ComponentProps<'div'> & {
+  size?: 'default' | 'sm';
+  variant?: 'default' | 'appearance';
+}) {
   return (
     <div
       data-slot="card"
@@ -20,8 +24,8 @@ function Card({
       data-variant={variant}
       className={cn(
         cardSurfaceClasses,
-        'group/card flex flex-col gap-(--card-spacing) overflow-hidden py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 has-[>img:last-child]:pb-0',
-        '[--card-media-inset:calc(var(--spacing)*2.5-1px)] [--card-media-radius:var(--radius-sm)] has-[>[data-slot=card-media]:last-child]:pb-0 has-[>[data-slot=card-media]:last-child]:rounded-[calc(var(--card-media-radius)+var(--card-media-inset)+1px)]',
+        'group/card flex flex-col gap-(--card-spacing) overflow-hidden py-(--card-block-inset) text-sm [--card-spacing:--spacing(4)] [--card-text-inset:calc(var(--card-spacing)+var(--spacing)*2)] [--card-block-inset:calc(var(--card-spacing)+var(--spacing))] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 has-[>img:last-child]:pb-0',
+        '[--card-media-inset:calc(var(--spacing)*2.5-1px)] [--card-media-radius:calc(var(--radius-panel)-var(--card-media-inset)-1px)] has-[>[data-slot=card-media]:last-child]:pb-0',
         variant === 'appearance' && 'transition-colors hover:border-foreground/20',
         className,
       )}
@@ -35,7 +39,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="card-header"
       className={cn(
-        'group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)',
+        'group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-(--card-text-inset) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)',
         className,
       )}
       {...props}
@@ -78,7 +82,7 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
 
 function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div data-slot="card-content" className={cn('px-(--card-spacing)', className)} {...props} />
+    <div data-slot="card-content" className={cn('px-(--card-text-inset)', className)} {...props} />
   );
 }
 
@@ -87,7 +91,7 @@ function CardMedia({ className, ...props }: React.ComponentProps<'figure'>) {
     <figure
       data-slot="card-media"
       className={cn(
-        'mx-(--card-media-inset) mt-auto mb-(--card-media-inset) overflow-hidden rounded-(--card-media-radius) bg-muted',
+        'mx-(--card-media-inset) mt-auto mb-(--card-media-inset) overflow-hidden rounded-(--card-media-radius) [corner-shape:squircle] bg-muted',
         className,
       )}
       {...props}
@@ -104,7 +108,7 @@ function CardFooter({
     <div
       data-slot="card-footer"
       className={cn(
-        'flex items-center p-(--card-spacing)',
+        'flex items-center px-(--card-text-inset) py-(--card-block-inset)',
         variant === 'default' && 'border-t bg-muted/50',
         className,
       )}

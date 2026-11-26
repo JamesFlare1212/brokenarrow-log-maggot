@@ -10,6 +10,10 @@ test('recent match items open the dialog from the whole row and restore keyboard
   await expect(recent.getByRole('columnheader')).toHaveText(['模式', '地图', 'ELO 变化']);
   await expect(rows).toHaveCount(3);
   await expect(rows.first().getByRole('cell')).toHaveText(['排位', 'River', '+35.76']);
+  const modeBadge = rows.first().locator('[data-slot=badge]');
+  await expect(modeBadge).toHaveCSS('height', '20px');
+  await expect(modeBadge).toHaveCSS('border-radius', '8px');
+  await expect(modeBadge).toHaveCSS('corner-shape', 'superellipse(2)');
   for (const width of [1200, 390]) {
     await page.setViewportSize({ width, height: 850 });
     expect(await recent.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);

@@ -4,9 +4,7 @@
 
 本地 Broken Arrow 对局助手，使用 React + Vite + Electron + Node.js + TypeScript + SQLite，以及 pnpm。
 
-[UI design system](design-system/broken-arrow/MASTER.md) · [UI audit](docs/ui-audit.md) · [UI/UX review](docs/ui-ux-review.md) · [Architecture](docs/architecture.md) · [Migration](docs/migration.md) · [Audit resolutions](docs/audit-resolution.md)
-
-[游戏日志目录检测：实现与调研依据](docs/log-directory-detection.md)
+[UI design system](design-system/broken-arrow/MASTER.md)
 
 ## 功能
 
@@ -14,7 +12,7 @@
 - 总览保留房间与对局工具，侧栏「蛐雷达」提供独立入口；封禁列表在「封禁追踪」页面查看。
 - 玩家搜索、粗查报告、最近对局、12 场 MVP 蛆指数、调查羁绊和改名历史。
 - 对局档案、完整评分、手动收录、刷新、删除和多个录像视角。
-- [Match timelines](docs/timeline.md) in archive details and match dialogs: estimated value trends, linked key moments, filters, and minute records when source timing data is available.
+- Match timelines show value trends, key moments, and minute records when timing data is available.
 - 卡组备份 / 部署、实时开局自动覆盖唯一的“上一局卡组包”、换号提醒。
 - Local recording: 720–2160p, 30–120 fps, quality score 1–51 (default 20; lower means higher quality), system audio and optional default microphone mixing, previews, playback, and directory migration.
 - Optional ban alerts.
@@ -30,8 +28,7 @@ BATrace 是历史数据，可能延迟数天。蛆指数需要最近 12 场有�
 Captured from the running application in browser development mode (`pnpm dev:web`), using the repository's [real-data fixtures](tests/fixtures/real/README.md). Player names, match results and statistics come from recorded data.
 
 The [UI design system](design-system/broken-arrow/MASTER.md) defines current
-surface and interaction requirements; the [UI audit](docs/ui-audit.md) records
-the latest compliance review.
+surface and interaction requirements.
 
 ### Overview
 
@@ -67,14 +64,6 @@ pnpm dev
 ```
 
 Electron 44 的运行时由 postinstall 显式安装。开发启动器先构建，再启动 Vite 和 Electron。
-
-The [Electron installation wrapper](scripts/install-electron.mjs) retries failed
-downloads up to three attempts, waiting 5 and 15 seconds between attempts. It
-keeps Electron's installed-runtime detection and checksum verification and fails
-installation if all attempts fail. Both CI workflows restore the download archive
-cache before installation and save it immediately after a successful install,
-so later test failures do not discard a usable runtime cache. See
-[CI installation details](docs/project-configuration.md#ci-electron-installation).
 
 仅在浏览器中开发前端时运行：
 
@@ -202,9 +191,7 @@ NSIS 安装版支持应用内下载、校验、差分下载和重启安装。便
 
 Independent BATrace requests run concurrently without a fixed request interval. Room player queries return each player's result as soon as it is ready. Requests for the same cache key and refresh mode share one in-flight request. Failed requests retain retry backoff and honor `Retry-After`. Cache hits do not send requests; manual refresh bypasses the cache.
 
-Service defaults live in [`app.config.json`](app.config.json), including a random `0–300ms` offset before each network attempt, request timeouts and retries, cache freshness and capacity, background intervals, and room query limits. See [project configuration](docs/project-configuration.md) for units and rebuild requirements.
-
-Temporary workaround: the desktop app disables Chromium QUIC/HTTP/3 to avoid observed BATrace stalls. See [scope and removal criteria](docs/architecture.md#temporary-quic-workaround).
+Service defaults: [`app.config.json`](app.config.json).
 
 Data remains in SQLite under the original `broken-arrow-log-assistant` user
 directory. Legacy JSON is backed up and imported transactionally without changing
@@ -212,10 +199,6 @@ the originals. New recordings use local MP4 files; existing WebM recordings rema
 playable through the controlled Range protocol.
 
 Recording is disabled by default and captures the entire selected display.
-Available encoders are tested in AV1 → HEVC → H.264 order. Video uses a quality
-score instead of fixed bitrate: default 20, with lower values requesting higher
-quality. See [recording codecs and quality](docs/recording.md) for the official
-parameter references and validation instructions.
 
 ## Optional anonymous analytics
 
@@ -226,9 +209,6 @@ turning statistics off cancels requests and clears pending events. Resource and
 long-task samples require foreground activity. Development, browser fixtures,
 offline mode, and smoke tests do not send events; `BA_DISABLE_ANALYTICS=1` also
 disables collection in packaged builds.
-
-See [anonymous analytics](docs/analytics.md) for event definitions and approximate counting
-semantics. Analytics requires no CI upload credentials.
 
 ## English
 

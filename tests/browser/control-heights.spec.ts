@@ -69,6 +69,10 @@ for (const touch of [false, true]) {
       const end = page
         .locator(touch ? '.archive-compact-actions button' : '.archive-results-actions button')
         .last();
+      if (!touch) {
+        await expect(start).toHaveCSS('border-radius', '18px');
+        await expect(start).toHaveCSS('corner-shape', 'superellipse(2)');
+      }
       expect(Math.abs((await start.boundingBox())!.x - x)).toBeLessThan(1);
       const endBox = (await end.boundingBox())!;
       expect(Math.abs(endBox.x + endBox.width - x - width)).toBeLessThan(1);

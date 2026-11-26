@@ -2,7 +2,12 @@ import { expect, type Locator } from '@playwright/test';
 
 type Corner = 'TopLeft' | 'TopRight' | 'BottomLeft' | 'BottomRight';
 
-export async function expectCorners(inner: Locator, outerSelector: string, corners: Corner[]) {
+export async function expectCorners(
+  inner: Locator,
+  outerSelector: string,
+  corners: Corner[],
+  tolerance = 0.05,
+) {
   await expect(inner).toBeVisible();
   await expect
     .poll(() =>
@@ -29,5 +34,5 @@ export async function expectCorners(inner: Locator, outerSelector: string, corne
         { outerSelector, corners },
       ),
     )
-    .toBeLessThan(0.05);
+    .toBeLessThan(tolerance);
 }

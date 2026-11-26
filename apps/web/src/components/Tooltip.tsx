@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { panelShapeClasses } from '@/lib/surfaces';
 import { cn } from '@/lib/utils';
 import {
   Tooltip as PrimitiveTooltip,
@@ -108,7 +109,7 @@ function TooltipControl({
     );
   const hintTrigger = pinOnClick ? <PopoverTrigger asChild>{trigger}</PopoverTrigger> : trigger;
   const panelClassName = richContent
-    ? 'w-80 max-w-[calc(100vw-2rem)] max-h-[70svh] overflow-y-auto p-4'
+    ? cn(panelShapeClasses, 'w-80 max-w-[calc(100vw-2rem)] max-h-[70svh] overflow-y-auto px-6 py-5')
     : undefined;
   const panelContent = (gap: string) => (
     <div className={cn('flex flex-col', richContent ? 'gap-4' : gap)}>{content}</div>

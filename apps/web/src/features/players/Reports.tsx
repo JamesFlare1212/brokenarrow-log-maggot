@@ -250,7 +250,10 @@ export function ReportMatchTable({
     <div className="report-match-region @container/report-matches min-w-0">
       <div
         ref={scroll}
-        className="table-wrap report-match-table relative min-w-0 overflow-auto [.report_&]:max-h-120 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:-outline-offset-2 [&>[data-slot='table-container']]:overflow-visible"
+        className={cn(
+          'rounded-(--radius-panel) [corner-shape:squircle]',
+          "table-wrap report-match-table relative min-w-0 overflow-auto border border-border [.report_&]:max-h-120 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:-outline-offset-2 [&>[data-slot='table-container']]:overflow-visible",
+        )}
         tabIndex={0}
         role="region"
         aria-label={`${label ?? t('matchStatistics')} · ${t('tableScrollHint')}`}
@@ -258,7 +261,7 @@ export function ReportMatchTable({
         <Table
           stickyFirstColumn
           aria-busy={pending}
-          className="table-auto [&_th]:px-2 [&_th]:py-2.5 [&_td]:px-2 [&_td]:py-2.5 [&_[data-slot='skeleton']]:w-full @[60rem]/report-matches:[&_th]:px-3 @[60rem]/report-matches:[&_td]:px-3"
+          className="table-auto [&_th]:px-2 [&_th]:py-2.5 [&_td]:px-2 [&_td]:py-2.5 [&_[data-slot='skeleton']]:w-full @[60rem]/report-matches:[&_th]:px-3 @[60rem]/report-matches:[&_td]:px-3 [&_tr>:first-child]:ps-4 @[60rem]/report-matches:[&_tr>:first-child]:ps-5"
         >
           <TableCaption className="sr-only">{label ?? t('matchStatistics')}</TableCaption>
           <colgroup>

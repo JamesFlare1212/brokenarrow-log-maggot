@@ -8,6 +8,14 @@ for (const width of [1120, 390]) {
     const prompt = card.getByText('等待游戏日志', { exact: true });
     const previous = card.getByRole('button', { name: '上一局' });
     await expect(previous).toBeEnabled();
+    const actions = card.locator('.session-actions button');
+    await expect(actions).toHaveCount(2);
+    for (const action of await actions.all()) {
+      await expect(action).toHaveCSS('corner-shape', 'superellipse(2)');
+      await expect(action).toHaveCSS('border-radius', '18px');
+    }
+    await expect(card).toHaveCSS('corner-shape', 'superellipse(2)');
+    await expect(card).toHaveCSS('border-radius', '36px');
     await expect(prompt).toBeVisible();
     const sample = (await card.boundingBox())!;
     const promptOffset = (await prompt.boundingBox())!.y - sample.y;

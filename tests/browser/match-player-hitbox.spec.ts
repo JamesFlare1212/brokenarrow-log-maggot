@@ -45,7 +45,14 @@ test('the player disclosure fills its cell without capturing awards or stats', a
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
   const award = details.locator('.match-player-cell .match-award-button').first();
+  await award.hover();
+  const hint = page.locator('[data-slot="tooltip-content"]');
+  await expect(hint).toHaveCSS('border-radius', '36px');
+  await expect(hint).toHaveCSS('corner-shape', 'superellipse(2)');
   await award.click();
+  const pinned = page.locator('[data-slot="popover-content"]');
+  await expect(pinned).toHaveCSS('border-radius', '36px');
+  await expect(pinned).toHaveCSS('corner-shape', 'superellipse(2)');
   await expect(award).toHaveAttribute('aria-expanded', 'true');
   await expect(details.locator('.match-player-expanded')).toHaveCount(0);
 });

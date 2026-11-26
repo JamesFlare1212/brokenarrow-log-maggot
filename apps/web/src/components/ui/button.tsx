@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Slot } from 'radix-ui';
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center h-(--button-height) rounded-md border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 has-[>[data-slot=avatar]:only-child]:rounded-full [--badge-height:--spacing(5)] [--badge-inset:calc((var(--button-height)-var(--badge-height))/2)] has-[>[data-slot=badge]:last-child]:rounded-[calc(var(--radius-sm)+var(--badge-inset))] has-[>[data-slot=badge]:last-child]:pe-[calc(var(--badge-inset)-1px)] [&>[data-slot=badge]:last-child]:h-(--badge-height) [&>[data-slot=badge]:last-child]:rounded-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center h-(--button-height) rounded-(--radius-button)! [corner-shape:squircle] border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [--badge-height:--spacing(5)] [--badge-inset:calc((var(--button-height)-var(--badge-height))/2)] has-[>[data-slot=badge]:last-child]:pe-[calc(var(--badge-inset)-1px)] [&>[data-slot=badge]:last-child]:h-(--badge-height) [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -23,14 +23,14 @@ const buttonVariants = cva(
       size: {
         default:
           '[--button-height:var(--control-standard)] gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-        xs: "[--button-height:var(--control-inset)] gap-1 rounded-md px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "[--button-height:var(--control-compact)] gap-1 rounded-md px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        xs: "[--button-height:var(--control-inset)] gap-1 px-2 text-xs has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "[--button-height:var(--control-compact)] gap-1 px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: '[--badge-height:--spacing(6)] [&>[data-slot=badge]:last-child]:min-w-(--badge-height) [--button-height:var(--control-large)] gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         icon: '[--button-height:var(--control-standard)] w-(--button-height)',
         'icon-xs':
-          "[--button-height:var(--control-inset)] w-(--button-height) in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+          "[--button-height:var(--control-inset)] w-(--button-height) [&_svg:not([class*='size-'])]:size-3",
         'icon-sm':
-          "[--button-height:var(--control-compact)] w-(--button-height) in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3.5",
+          "[--button-height:var(--control-compact)] w-(--button-height) [&_svg:not([class*='size-'])]:size-3.5",
         'icon-lg': '[--button-height:var(--control-large)] w-(--button-height)',
       },
     },

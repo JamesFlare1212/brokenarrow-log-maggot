@@ -43,18 +43,18 @@ export function ProfileRecords({
       pending: reportPending,
     },
     {
-      value: 'encounters',
-      label: t('encounters'),
-      icon: Swords,
-      count: encounters.length,
-      pending: profilePending,
-    },
-    {
       value: 'maps',
       label: t('mapStatistics'),
       icon: Map,
       count: report?.mapStats.length ?? 0,
       pending: reportPending,
+    },
+    {
+      value: 'encounters',
+      label: t('encounters'),
+      icon: Swords,
+      count: encounters.length,
+      pending: profilePending,
     },
   ];
 
@@ -81,9 +81,7 @@ export function ProfileRecords({
       </div>
       <TabsContent value="statistics">
         {reportPending || (report && report.recentMatches.length > 0) ? (
-          <div className="profile-table profile-statistics-table min-w-0 overflow-hidden rounded-lg border border-border">
-            <ReportMatchTable report={report} pending={reportPending} />
-          </div>
+          <ReportMatchTable report={report} pending={reportPending} />
         ) : (
           <Empty icon={<TableProperties />}>{t('noMatchStatistics')}</Empty>
         )}
@@ -110,7 +108,7 @@ export function ProfileRecords({
                   value: teammates.filter((encounter) => encounter.won === false).length,
                 },
               ].map((item) => (
-                <div key={item.label}>
+                <div key={item.label} className="ps-4">
                   <dt>{item.label}</dt>
                   <dd>
                     {profilePending ? (
@@ -122,7 +120,7 @@ export function ProfileRecords({
                 </div>
               ))}
             </dl>
-            <div className="profile-table min-w-0 overflow-hidden border border-border rounded-lg [&_table]:min-w-128 [&_th]:text-[0.75rem] [&_th]:py-2.5 [&_th]:px-4 [&_td]:py-2.5 [&_td]:px-4 [&_td:first-child_[data-slot='button']]:min-h-6 [&_td:first-child_[data-slot='button']]:h-auto [&_td:first-child_[data-slot='button']]:justify-start [&_td:first-child_[data-slot='button']]:p-0 [&_td:first-child_[data-slot='button']]:whitespace-normal [&_td:first-child_[data-slot='button']]:text-left profile-encounters-table [&_table]:table-fixed [&_th[data-column='team']]:w-24 [&_th[data-column='result']]:w-32 [&_th[data-column='time']]:w-50">
+            <div className="profile-table min-w-0 overflow-hidden border border-border rounded-(--radius-panel) [corner-shape:squircle] [&_table]:min-w-128 [&_th]:text-[0.75rem] [&_th]:py-2.5 [&_th]:px-4 [&_td]:py-2.5 [&_td]:px-4 [&_td:first-child_[data-slot='button']]:min-h-6 [&_td:first-child_[data-slot='button']]:h-auto [&_td:first-child_[data-slot='button']]:justify-start [&_td:first-child_[data-slot='button']]:p-0 [&_td:first-child_[data-slot='button']]:whitespace-normal [&_td:first-child_[data-slot='button']]:text-left profile-encounters-table [&_table]:table-fixed [&_th[data-column='team']]:w-24 [&_th[data-column='result']]:w-32 [&_th[data-column='time']]:w-50">
               <Table aria-busy={profilePending}>
                 <TableCaption className="sr-only">{t('encounters')}</TableCaption>
                 <TableHeader>

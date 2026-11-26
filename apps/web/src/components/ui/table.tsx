@@ -70,7 +70,10 @@ function Table({
     };
   }, [stickyHeader, stickyFirstColumn]);
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      data-slot="table-container"
+      className="relative w-full overflow-x-auto rounded-(--radius-panel) [corner-shape:squircle]"
+    >
       <table
         ref={table}
         data-slot="table"

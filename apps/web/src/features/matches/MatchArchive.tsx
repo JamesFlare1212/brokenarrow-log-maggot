@@ -501,7 +501,7 @@ export function MatchArchive({ actionsHost }: { actionsHost?: HTMLElement | null
             )}
           </div>
         ) : (
-          <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-lg">
+          <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-(--radius-panel) [corner-shape:squircle]">
             <DataTable
               table={dataTable}
               label={t('archive')}

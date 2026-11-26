@@ -1,5 +1,7 @@
 import { cn } from './utils';
 
+export const panelShapeClasses = 'rounded-(--radius-panel) [corner-shape:squircle]';
+
 export const glassMaterialClasses =
   'shadow-(--glass-shadow) backdrop-blur-(--glass-blur) backdrop-saturate-(--glass-saturation)';
 

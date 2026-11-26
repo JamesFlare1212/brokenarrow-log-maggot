@@ -215,7 +215,7 @@ export function Dialog({
             });
           }}
         >
-          <DialogHeader className="flex-row items-center gap-2 px-4 py-2">
+          <DialogHeader className="flex-row items-center gap-2 px-4 py-2 [.panel-dialog>&]:px-[calc(var(--panel-dialog-inset)+var(--spacing))]">
             {onBack && (
               <Button variant="ghost" size="icon" aria-label={t('dialogBack')} onClick={onBack}>
                 <ArrowLeft />
@@ -240,7 +240,7 @@ export function Dialog({
           </DialogHeader>
           <Separator />
           {banner}
-          <div className="dialog-body overscroll-contain [.profile-dialog>&]:gap-4 [.profile-dialog>&]:[scrollbar-gutter:stable] [.profile-dialog_&>*]:shrink-0 [.match-dialog>&]:[scrollbar-gutter:stable] viewport-max-767:[.profile-dialog>&]:p-4 viewport-max-767:p-4 flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
+          <div className="dialog-body overscroll-contain [.profile-dialog>&]:gap-4 [.profile-dialog>&]:[scrollbar-gutter:stable] [.profile-dialog>&]:[padding-inline-end:max(0px,calc(var(--panel-dialog-inset)-var(--profile-scrollbar-gutter,0px)))] [.profile-dialog_&>*]:shrink-0 [.match-dialog>&]:[scrollbar-gutter:stable] [.panel-dialog>&]:p-(--panel-dialog-inset) viewport-max-767:p-4 flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
             {children}
           </div>
         </DialogContent>

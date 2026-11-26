@@ -55,6 +55,9 @@ for (const scale of [1, 1.5]) {
             `/@fs/${fixturePath}`,
           );
           const viewport = page.getByRole('region', { name: 'Transparent records' });
+          const tableFrame = viewport.locator('[data-slot="table-container"]');
+          await expect(tableFrame).toHaveCSS('border-radius', '36px');
+          await expect(tableFrame).toHaveCSS('corner-shape', 'superellipse(2)');
           const table = viewport.getByRole('table');
           const identity = table.locator('tbody tr').first().locator('td').first();
           const header = table.getByRole('columnheader', { name: 'Match ID' });

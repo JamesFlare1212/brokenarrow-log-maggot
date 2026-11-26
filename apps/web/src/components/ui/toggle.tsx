@@ -17,7 +17,7 @@ const toggleVariants = cva(
           'border border-transparent bg-transparent hover:bg-muted/40 data-[state=on]:border-ring data-[state=on]:bg-accent data-[state=on]:text-accent-foreground',
         card: cn(
           cardSurfaceClasses,
-          'has-[>[data-slot=card-preview]]:[--preview-inset:--spacing(2)] has-[>[data-slot=card-preview]]:p-(--preview-inset) has-[>[data-slot=card-preview]]:rounded-[calc(var(--radius-lg)+var(--preview-inset)+1px)]',
+          'has-[>[data-slot=card-preview]]:[--preview-inset:--spacing(2)] has-[>[data-slot=card-preview]]:p-(--preview-inset)',
           'hover:border-foreground/20 hover:bg-(--glass-surface) aria-pressed:bg-(--glass-surface) data-[state=on]:border-(--appearance-selection) data-[state=on]:bg-(--glass-surface)',
         ),
         sphere:
@@ -30,6 +30,12 @@ const toggleVariants = cva(
         lg: 'h-(--control-large) min-w-(--control-large) px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
       },
     },
+    compoundVariants: [
+      {
+        variant: ['default', 'outline', 'filter'],
+        className: 'rounded-(--radius-button) [corner-shape:squircle]',
+      },
+    ],
     defaultVariants: {
       variant: 'default',
       size: 'default',

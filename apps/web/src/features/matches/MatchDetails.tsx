@@ -121,7 +121,7 @@ export function MatchDetails({
     }
   };
   const batraceAction = (
-    <TooltipButton
+    <Button
       variant={archivePage ? 'outline' : 'ghost'}
       size={archivePage ? 'default' : 'icon'}
       aria-label={t('openBatrace')}
@@ -143,7 +143,7 @@ export function MatchDetails({
         </span>
       )}
       <ExternalLink aria-hidden="true" />
-    </TooltipButton>
+    </Button>
   );
   const refreshLabel = t(archivePage ? 'matchRefreshCurrent' : 'refresh');
   const refreshAction = (

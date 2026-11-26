@@ -69,6 +69,7 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           glassOverlaySurfaceClasses,
+          '[&.panel-dialog]:[--panel-dialog-inset:--spacing(5)] viewport-max-767:[&.panel-dialog]:[--panel-dialog-inset:--spacing(4)] [&.panel-dialog]:[--panel-dialog-radius:calc(var(--radius-panel)+var(--panel-dialog-inset))] [&.panel-dialog]:rounded-(--panel-dialog-radius) [&.panel-dialog]:[corner-shape:squircle]',
           'fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 p-4 text-sm duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
           className,
         )}

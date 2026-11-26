@@ -20,6 +20,7 @@ import { OverflowHint } from '../../components/OverflowHint';
 const UNIT_PREVIEW_ROWS = 4;
 const UNIT_LOADING_ROWS = 15;
 const CATEGORY_PREVIEW_ROWS = 3;
+const CATEGORY_LOADING_ROWS = 7;
 
 export function PlayerPreferences({
   id,
@@ -54,9 +55,6 @@ export function PlayerPreferences({
   const categories =
     report?.categories ??
     (profile?.info?.category ? [{ key: profile.info.category, pct: null, totalCost: null }] : []);
-  const visibleCategories = categoriesExpanded
-    ? categories
-    : categories.slice(0, CATEGORY_PREVIEW_ROWS);
   const unitRows = loading
     ? Array.from(
         { length: Math.max(UNIT_LOADING_ROWS, units.length) },
@@ -64,11 +62,11 @@ export function PlayerPreferences({
       )
     : units;
   const categoryRows = loading
-    ? Array.from(
-        { length: Math.max(CATEGORY_PREVIEW_ROWS, visibleCategories.length) },
-        (_, index) => visibleCategories[index] ?? null,
-      )
-    : visibleCategories;
+    ? Array.from({ length: CATEGORY_LOADING_ROWS }, (_, index) => categories[index] ?? null)
+    : categories;
+  const visibleCategories = categoriesExpanded
+    ? categoryRows
+    : categoryRows.slice(0, CATEGORY_PREVIEW_ROWS);
   const categoryLabel = (key: string) => {
     const translationKey = 'cat.' + key.toLowerCase();
     const label = t(translationKey);
@@ -96,17 +94,12 @@ export function PlayerPreferences({
           <CardTitle role="heading" aria-level={3}>
             {t('units')}
           </CardTitle>
-          {unitRows.length > 0 && (
-            <CardAction>
-              <Badge>{unitRows.length}</Badge>
-            </CardAction>
-          )}
         </CardHeader>
         <CardContent className="profile-highlight-content flex min-w-0 flex-col gap-2 flex-1 min-h-0">
           <div
             ref={unitScroll}
             id={unitListId}
-            className="profile-unit-preview [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] [&>[data-slot='table-container']]:overflow-visible min-h-[calc(_2.5rem+var(--profile-unit-rows)_*_var(--profile-unit-row-height)_-_1px+var(--scrollbar-size)_)] overflow-auto flex-1 [contain:size] [.profile-highlights[data-expanded='true']_&]:flex-none [.profile-highlights[data-expanded='true']_&]:[contain:none]"
+            className="profile-unit-preview rounded-(--radius-panel) [corner-shape:squircle] [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] [&>[data-slot='table-container']]:overflow-visible min-h-[calc(_2.5rem+var(--profile-unit-rows)_*_var(--profile-unit-row-height)_-_1px+var(--scrollbar-size)_)] overflow-auto flex-1 [contain:size] [.profile-highlights[data-expanded='true']_&]:flex-none [.profile-highlights[data-expanded='true']_&]:[contain:none]"
             tabIndex={0}
             role="region"
             aria-label={`${t('units')} · ${t('tableScrollBothHint')}`}
@@ -190,7 +183,7 @@ export function PlayerPreferences({
           </div>
         </CardContent>
       </Card>
-      <div className="profile-analysis-sidebar flex flex-col gap-(--content-gap)">
+      <div className="profile-analysis-sidebar flex flex-col gap-(--content-gap) @min-[52rem]/profile-overview:[.profile-dialog_&>*+*]:mt-[max(0px,calc(var(--panel-dialog-inset)+var(--spacing)-var(--content-gap)))]">
         <Card
           size="sm"
           className="profile-preferences [.profile-analysis-sidebar>&]:flex-1 [&>[data-slot='card-header']]:min-h-7"
@@ -227,7 +220,7 @@ export function PlayerPreferences({
               >
                 {categoryRows.length > 0 ? (
                   <ul className="profile-category-list flex flex-col gap-(--profile-category-gap) [&>li]:flex [&>li]:flex-col [&>li]:gap-1.5 [&>li]:min-h-(--profile-category-row-height)">
-                    {categoryRows.map((category, index) => (
+                    {visibleCategories.map((category, index) => (
                       <li key={index} aria-hidden={!category || undefined}>
                         <div className="profile-category-label flex min-h-5 flex-wrap items-center justify-between gap-y-1 gap-x-3 text-[0.8125rem]">
                           {category ? (
@@ -271,7 +264,7 @@ export function PlayerPreferences({
                 )}
               </div>
               <div className="profile-preference-actions flex min-h-7 items-center">
-                {categories.length > CATEGORY_PREVIEW_ROWS && (
+                {categoryRows.length > CATEGORY_PREVIEW_ROWS && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -281,7 +274,7 @@ export function PlayerPreferences({
                   >
                     {categoriesExpanded
                       ? t('showLess')
-                      : t('showAllCategories', { count: categories.length })}
+                      : t('showAllCategories', { count: categoryRows.length })}
                   </Button>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { expectCorners } from './corner-geometry';
+import { expectButtonShape } from './button-shape';
 
 async function prepare(page: Page, locale: 'zh' | 'en' = 'zh') {
   await page.route('**/__fixtures/rpc', async (route) => {
@@ -22,6 +22,9 @@ test('compact overview keeps recon selection and inspection in the event row', a
   await page.goto('/#archive/match/9485454');
   await page.getByRole('tab', { name: '时间线', exact: true }).click();
   const timeline = page.getByTestId('match-timeline');
+  const card = timeline.getByTestId('timeline-card');
+  await expect(card).toHaveCSS('corner-shape', 'superellipse(2)');
+  await expect(card).toHaveCSS('border-radius', '36px');
   const row = timeline.getByTestId('moment-row').filter({ hasText: 'RQ-170 Sentinel' }).first();
   const trigger = row.getByRole('button', { name: /RQ-170 Sentinel/ });
   await trigger.click();
@@ -105,9 +108,7 @@ for (const locale of ['zh', 'en'] as const) {
     const dialog = page.getByRole('dialog', { name: /分钟数据|Minute data/ });
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveCSS('border-radius', '14px');
-    await expectCorners(dialog.locator('[data-corner-close]'), '[data-slot=dialog-content]', [
-      'TopRight',
-    ]);
+    await expectButtonShape(dialog.locator('[data-corner-close]'));
     await dialog
       .getByRole('button', {
         name: locale === 'zh' ? '定位到 03:00' : 'Seek to 03:00',

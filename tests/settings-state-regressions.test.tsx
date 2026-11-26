@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-// Regression scenarios from docs/state-machine-risk-audit.md.
 import {
   act,
   cleanup,

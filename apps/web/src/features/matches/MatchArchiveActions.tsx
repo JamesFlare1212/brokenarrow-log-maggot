@@ -78,7 +78,7 @@ export function MatchArchiveActions({
     >
       <Button
         size="sm"
-        className="rounded-r-none"
+        className="rounded-r-none!"
         disabled={refreshing}
         aria-busy={refreshing}
         aria-label={t(match.fid ? 'matchRefresh' : 'matchOpenDetail', context)}
@@ -105,7 +105,7 @@ export function MatchArchiveActions({
         <DropdownMenuTrigger asChild>
           <Button
             size="icon-sm"
-            className="rounded-l-none border-l-0"
+            className="rounded-l-none! border-l-0"
             data-menu-trigger
             data-match-open={match.id}
             aria-label={t('matchActions', context)}

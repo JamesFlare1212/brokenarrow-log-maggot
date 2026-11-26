@@ -37,7 +37,7 @@ import { LoadingStatus } from '../../components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, Button, Toggle, Notice, Empty, Badge, Menu, Field } from '../../components/ui';
 const replayPlayClasses =
-  'replay-play [.replay-grid_&]:w-full [.replay-grid_&]:flex-col [.replay-grid_&]:items-stretch [.replay-grid_&]:gap-0 [.replay-grid_&]:rounded-[calc(var(--radius-xl)-1px)] [.replay-grid_&]:border-0 [.replay-grid_&]:focus-visible:inset-ring-2 [.replay-grid_&]:focus-visible:inset-ring-ring flex h-auto min-w-0 flex-1 rounded-[calc(var(--radius-lg)+1px)] items-center justify-start gap-4 p-0 text-left';
+  'replay-play [.replay-grid_&]:w-full [.replay-grid_&]:flex-col [.replay-grid_&]:items-stretch [.replay-grid_&]:gap-0 [.replay-grid_&]:rounded-[calc(var(--radius-panel)-1px)] [.replay-grid_&]:[corner-shape:squircle] [.replay-grid_&]:border-0 [.replay-grid_&]:focus-visible:inset-ring-2 [.replay-grid_&]:focus-visible:inset-ring-ring flex h-auto min-w-0 flex-1 rounded-[calc(var(--radius-lg)+1px)] items-center justify-start gap-4 p-0 text-left';
 const replayThumbnailClasses =
   'replay-thumbnail [.replay-list:not(.replay-grid)_&]:self-stretch [.replay-grid_&]:w-full [.replay-grid_&]:min-w-0 [.replay-grid_&>svg]:size-8 [.replay-grid_&>svg]:text-muted-foreground relative flex w-24 min-w-24 aspect-video items-center justify-center gap-2 rounded-lg bg-muted [.replay-grid_&]:rounded-t-none';
 
@@ -75,7 +75,7 @@ function ReplaySkeleton({ view }: { view: 'grid' | 'list' }) {
       <ReplaySurface view={view} title="">
         <div className={replayPlayClasses}>
           <Skeleton className={replayThumbnailClasses} />
-          <div className="replay-description [.replay-grid_&]:p-3.5 [&_strong]:max-w-full [&_strong]:flex-wrap [&_strong]:flex [&_strong]:items-center [&_strong]:gap-2 [&_small]:whitespace-normal [&_small]:text-muted-foreground [&_small]:text-[0.75rem] flex min-w-0 flex-col items-start gap-1.5 flex-1 [.replay-list:not(.replay-grid)_&]:grid [.replay-list:not(.replay-grid)_&]:grid-cols-[minmax(0,_1fr)_auto] [.replay-list:not(.replay-grid)_&]:items-center [.replay-list:not(.replay-grid)_&>strong]:[grid-area:1_/_1] workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex-col workspace-max-36:[.replay-list:not(.replay-grid)_&]:items-start">
+          <div className="replay-description [.replay-grid_&]:px-(--card-text-inset) [.replay-grid_&]:py-(--card-block-inset) [&_strong]:max-w-full [&_strong]:flex-wrap [&_strong]:flex [&_strong]:items-center [&_strong]:gap-2 [&_small]:whitespace-normal [&_small]:text-muted-foreground [&_small]:text-[0.75rem] flex min-w-0 flex-col items-start gap-1.5 flex-1 [.replay-list:not(.replay-grid)_&]:grid [.replay-list:not(.replay-grid)_&]:grid-cols-[minmax(0,_1fr)_auto] [.replay-list:not(.replay-grid)_&]:items-center [.replay-list:not(.replay-grid)_&>strong]:[grid-area:1_/_1] workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex-col workspace-max-36:[.replay-list:not(.replay-grid)_&]:items-start">
             <strong>
               <Skeleton className="h-5 w-32 max-w-full" />
             </strong>
@@ -153,33 +153,28 @@ export function ReplaysPanel() {
               checked={state.config.replayEnabled}
               onChange={(value) => void patchConfig({ replayEnabled: value }).catch(() => {})}
             />
-            <div className="recording-state flex items-center gap-2 flex-wrap" role="status">
-              <Badge
-                tone={
-                  recording.phase === 'recording'
-                    ? 'danger'
-                    : recording.phase === 'error'
-                      ? 'warning'
-                      : 'muted'
-                }
+            {['starting', 'recording', 'stopping'].includes(recording.phase) && (
+              <div
+                role="status"
+                className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
               >
-                {recording.phase === 'recording'
-                  ? t('recording')
-                  : recording.phase === 'starting'
-                    ? t('starting')
-                    : recording.phase === 'stopping'
-                      ? t('stopping')
-                      : state.config.replayEnabled
-                        ? t('waiting')
-                        : t('recordingOff')}
-              </Badge>
-              {recording.phase === 'recording' && (
                 <span>
-                  {formatDuration(recording.seconds)}
-                  {recording.codec && <> · {RECORDING_CODEC_LABELS[recording.codec]}</>}
+                  {t(
+                    recording.phase === 'starting'
+                      ? 'starting'
+                      : recording.phase === 'stopping'
+                        ? 'stopping'
+                        : 'recording',
+                  )}
                 </span>
-              )}
-            </div>
+                {recording.phase === 'recording' && (
+                  <span>
+                    {formatDuration(recording.seconds)}
+                    {recording.codec && <> · {RECORDING_CODEC_LABELS[recording.codec]}</>}
+                  </span>
+                )}
+              </div>
+            )}
             <Button onClick={() => openModal({ type: 'recordingSettings' })}>
               <Icon icon={faSliders} size={16} aria-hidden="true" />
               {t('recordingSettings')}
@@ -344,7 +339,7 @@ export function ReplaysPanel() {
                         {formatDuration(r.durationSec)}
                       </span>
                     </span>
-                    <span className="replay-description [.replay-grid_&]:p-3.5 [&_strong]:max-w-full [&_strong]:flex-wrap [&_strong]:flex [&_strong]:items-center [&_strong]:gap-2 [&_small]:whitespace-normal [&_small]:text-muted-foreground [&_small]:text-[0.75rem] flex min-w-0 flex-col items-start gap-1.5 flex-1 [.replay-list:not(.replay-grid)_&]:grid [.replay-list:not(.replay-grid)_&]:grid-cols-[minmax(0,_1fr)_auto] [.replay-list:not(.replay-grid)_&]:items-center [.replay-list:not(.replay-grid)_&>strong]:[grid-area:1_/_1] workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex-col workspace-max-36:[.replay-list:not(.replay-grid)_&]:items-start">
+                    <span className="replay-description [.replay-grid_&]:px-(--card-text-inset) [.replay-grid_&]:py-(--card-block-inset) [&_strong]:max-w-full [&_strong]:flex-wrap [&_strong]:flex [&_strong]:items-center [&_strong]:gap-2 [&_small]:whitespace-normal [&_small]:text-muted-foreground [&_small]:text-[0.75rem] flex min-w-0 flex-col items-start gap-1.5 flex-1 [.replay-list:not(.replay-grid)_&]:grid [.replay-list:not(.replay-grid)_&]:grid-cols-[minmax(0,_1fr)_auto] [.replay-list:not(.replay-grid)_&]:items-center [.replay-list:not(.replay-grid)_&>strong]:[grid-area:1_/_1] workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex workspace-max-36:[.replay-list:not(.replay-grid)_&]:flex-col workspace-max-36:[.replay-list:not(.replay-grid)_&]:items-start">
                       <strong>
                         <span className="truncate">{r.map || '#' + (r.fid || '—')}</span>
                         {r.test && <Badge>{t('testReplay')}</Badge>}

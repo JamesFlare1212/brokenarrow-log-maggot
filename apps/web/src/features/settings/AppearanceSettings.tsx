@@ -202,7 +202,7 @@ export function AppearanceSettings({
                 <div className="appearance-opacity-control flex min-w-0 items-center gap-3.5">
                   <Badge
                     variant="secondary"
-                    className="h-7 min-w-14 rounded-lg tabular-nums"
+                    className="h-7 min-w-14 tabular-nums"
                     aria-hidden="true"
                   >
                     {draft.glassOpacity}%
@@ -343,7 +343,7 @@ export function AppearanceSettings({
                 </CardContent>
                 <CardFooter
                   variant="plain"
-                  className="appearance-theme-footer gap-2 pt-2 px-3 pb-3"
+                  className="appearance-theme-footer gap-2 pt-2 px-(--card-text-inset) pb-(--card-block-inset)"
                 >
                   <TooltipButton
                     variant="ghost"

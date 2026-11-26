@@ -34,6 +34,7 @@ import { TableSkeletonRows } from '../../components/LoadingState';
 import { OverflowHint } from '../../components/OverflowHint';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
+import { panelShapeClasses } from '@/lib/surfaces';
 import { cn } from '@/lib/utils';
 import { eloChangeClass } from '@/lib/elo';
 import { MatchAwards } from './MatchAwards';
@@ -237,7 +238,10 @@ export function MatchScoreboard({
           team.id === 100 ? t('spectator') : team.id === null ? t('unknown') : teamLabel(team.id);
         return (
           <section
-            className="match-team flex min-w-0 grow basis-[min(100%,var(--match-team-width,36rem))] flex-col overflow-hidden border border-border rounded-lg"
+            className={cn(
+              panelShapeClasses,
+              'match-team flex min-w-0 grow basis-[min(100%,var(--match-team-width,36rem))] flex-col overflow-hidden border border-border',
+            )}
             key={String(team.id)}
             data-match-team={String(team.id)}
             style={
@@ -250,7 +254,7 @@ export function MatchScoreboard({
             }
             aria-label={label}
           >
-            <div className="match-team-heading flex items-center gap-2 justify-between [.match-details_&]:flex-wrap [.match-details_&]:min-h-11 [.match-details_&]:py-2 [.match-details_&]:px-3 [.match-details_&]:gap-2">
+            <div className="match-team-heading flex items-center gap-2 justify-between [.match-details_&]:flex-wrap [.match-details_&]:min-h-11 [.match-details_&]:py-2 [.match-details_&]:px-5 [.match-details_&]:gap-2">
               <div className="match-team-identity flex items-center gap-2 flex-wrap text-[0.75rem] [&_svg]:w-3.5 [&_svg]:h-3.5 [&_svg]:text-muted-foreground">
                 {team.outcome === 'win' ? (
                   <Trophy aria-hidden="true" />
@@ -406,7 +410,7 @@ function MatchTeamTable({ label, children }: { label: string; children: ReactNod
     <div className="match-team-data min-w-0">
       <div
         ref={viewport}
-        className="match-team-table [--player-name-inset:--spacing(9)] overflow-x-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:min-w-[var(--match-table-width,35rem)] [&_table]:table-auto [&_th]:px-2.5 [&_th]:text-right [&_th]:tabular-nums [&_th]:h-9 [&_th]:text-[0.75rem] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:px-2.5 [&_td]:text-right [&_td]:tabular-nums [&_td]:py-1 [&_td]:text-[0.8125rem] [&_th:first-child]:text-left [&_th:first-child]:ps-(--player-name-inset) [&_td:first-child]:text-left [&_tbody_tr]:h-11 [&_[data-self]]:bg-accent/50 [&_[data-self]_.match-player-toggle]:shadow-[inset_3px_0_var(--ring)] [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px]"
+        className="match-team-table rounded-(--radius-panel) [corner-shape:squircle] [--player-name-inset:--spacing(9)] overflow-x-auto [&>[data-slot='table-container']]:overflow-visible [&_table]:min-w-[var(--match-table-width,35rem)] [&_table]:table-auto [&_th]:px-2.5 [&_th]:text-right [&_th]:tabular-nums [&_th]:h-9 [&_th]:text-[0.75rem] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:px-2.5 [&_td]:text-right [&_td]:tabular-nums [&_td]:py-1 [&_td]:text-[0.8125rem] [&_th:first-child]:text-left [&_th:first-child]:ps-(--player-name-inset) [&_td:first-child]:text-left [&_tbody_tr]:h-11 [&_[data-self]]:bg-accent/50 [&_[data-self]>.match-player-cell]:before:pointer-events-none [&_[data-self]>.match-player-cell]:before:absolute [&_[data-self]>.match-player-cell]:before:inset-y-0 [&_[data-self]>.match-player-cell]:before:start-0 [&_[data-self]>.match-player-cell]:before:z-10 [&_[data-self]>.match-player-cell]:before:w-[3px] [&_[data-self]>.match-player-cell]:before:bg-ring [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px]"
         tabIndex={0}
         role="region"
         aria-label={label}

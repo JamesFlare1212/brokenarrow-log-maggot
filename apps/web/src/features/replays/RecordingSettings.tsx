@@ -142,7 +142,7 @@ export function RecordingSettings({
     }
   };
   const content = (
-    <div className="recording-settings grid min-w-0 flex-col gap-(--content-gap) @container/recording grid-cols-2 [&>[role='alert']]:col-span-full viewport-max-767:grid-cols-1">
+    <div className="recording-settings [.recording-settings-dialog_&]:w-[calc(100cqi-2*var(--panel-dialog-inset))] [.recording-settings-dialog_&]:shrink-0 grid min-w-0 flex-col gap-(--content-gap) @container/recording grid-cols-2 [&>[role='alert']]:col-span-full viewport-max-767:grid-cols-1">
       <Card className="recording-behavior-card recording-max-28:[&>[data-slot='card-header']]:grid-cols-1 recording-max-28:[&_[data-slot='card-action']]:col-start-1 recording-max-28:[&_[data-slot='card-action']]:[grid-row:3] recording-max-28:[&_[data-slot='card-action']]:justify-self-start recording-max-28:[&_[data-slot='card-action']]:mt-2 col-span-full">
         <CardHeader>
           <CardTitle>{t('recordingBehavior')}</CardTitle>
@@ -210,7 +210,7 @@ export function RecordingSettings({
             </Field>
             <div className="recording-video-grid grid grid-cols-2 gap-6 items-center viewport-max-767:grid-cols-1">
               <div
-                className="display-preview-slot flex w-full max-w-[calc(20rem_*_var(--display-preview-ratio))] [aspect-ratio:var(--display-preview-ratio)] items-center justify-center overflow-hidden rounded-lg bg-muted"
+                className="display-preview-slot flex w-full max-w-[calc(20rem_*_var(--display-preview-ratio))] [aspect-ratio:var(--display-preview-ratio)] items-center justify-center overflow-hidden rounded-[28px] [corner-shape:squircle] bg-muted"
                 style={{ '--display-preview-ratio': previewAspectRatio } as CSSProperties}
                 aria-busy={thumbnail.pending && !thumbnail.data}
               >
@@ -390,21 +390,6 @@ export function RecordingSettings({
           <Button onClick={() => void discard()}>{t('settingsDiscard')}</Button>
         </Notice>
       )}
-      {!inline && (
-        <div
-          className="settings-save-state flex items-center gap-2 text-muted-foreground text-[0.75rem] [.recording-settings>&]:col-span-full viewport-max-767:max-w-32 viewport-max-479:shrink-0 viewport-max-479:max-w-24"
-          role="status"
-          aria-live="polite"
-        >
-          {t(
-            status === 'saved'
-              ? 'settingsAutoSaved'
-              : status === 'error'
-                ? 'settingsSaveFailed'
-                : 'settingsSaving',
-          )}
-        </div>
-      )}
     </div>
   );
 
@@ -416,7 +401,7 @@ export function RecordingSettings({
       onClose={() => void close()}
       onBack={backModal ? () => void close(true) : undefined}
       title={t('recordingSettings')}
-      className="recording-settings-dialog w-[calc(100%_-_3rem)] max-w-192 sm:max-w-192 viewport-max-767:w-[calc(100%_-_1.5rem)]"
+      className="recording-settings-dialog panel-dialog @container/recording-dialog [&>.dialog-body]:pe-0 w-[calc(100%_-_3rem)] max-w-192 sm:max-w-192 viewport-max-767:w-[calc(100%_-_1.5rem)]"
     >
       {content}
     </Dialog>

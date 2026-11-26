@@ -15,11 +15,23 @@ for (const [width, height] of [
     const cards = page.locator('.appearance-mode-option');
     await expect(cards).toHaveCount(3);
     for (const card of await cards.all()) {
-      await expect(card).toHaveCSS('border-top-left-radius', '19px');
+      await expect(card).toHaveCSS('border-top-left-radius', '36px');
       await expectCorners(card.locator('[data-slot=card-preview]'), '.appearance-mode-option', [
         'TopLeft',
         'TopRight',
       ]);
+    }
+    for (const selector of [
+      '.appearance-mode-option',
+      '[data-slot=card-preview]',
+      '[aria-labelledby=appearance-elo-heading] [data-slot=toggle-group-item]',
+      '.appearance-theme-card',
+      '.appearance-settings [data-slot=badge]',
+    ]) {
+      const shapes = page.locator(selector);
+      await expect(shapes.first()).toBeVisible();
+      for (const shape of await shapes.all())
+        await expect(shape).toHaveCSS('corner-shape', 'superellipse(2)');
     }
     const composerSelector = '[data-slot=preview-composer]';
     const composer = cards.nth(1).locator(composerSelector);
@@ -35,7 +47,8 @@ for (const [width, height] of [
       page
         .locator('[aria-labelledby=appearance-elo-heading] [data-slot=toggle-group-item]')
         .first(),
-    ).toHaveCSS('border-top-left-radius', '14px');
+    ).toHaveCSS('border-top-left-radius', '36px');
+    await expect(page.locator('.appearance-theme-card').first()).toHaveCSS('border-radius', '36px');
     await page.goto('/#settings/general');
     await page.locator('#settings-language').press('Enter');
     const options = page.getByRole('option');

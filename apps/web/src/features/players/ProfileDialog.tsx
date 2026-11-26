@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/item';
 import { BATRACE_ORIGIN } from '@ba/contracts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Fragment, useEffect } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef } from 'react';
 import { ExternalLink, RefreshCw as faArrowsRotate } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
@@ -46,13 +46,46 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
   const profilePending = !p && (profile.pending || !profile.error);
   const reportPending = !r && (report.pending || !report.error);
   const metaPending = !info && (profilePending || reportPending);
+  const headingRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const heading = headingRef.current;
+    const dialog = heading?.closest<HTMLElement>('.profile-dialog');
+    const body = heading?.closest<HTMLElement>('.dialog-body');
+    const grid = body?.querySelector<HTMLElement>('.profile-analysis-grid');
+    const card = grid?.querySelector<HTMLElement>('.profile-preferences');
+    const overview = grid?.closest('.profile-overview');
+    const header = dialog?.querySelector('[data-slot="dialog-header"]');
+    if (!dialog || !body || !grid || !card || !overview || !header || !heading) return;
+    const measure = () => {
+      dialog.style.setProperty(
+        '--profile-scrollbar-gutter',
+        `${body.offsetWidth - body.clientWidth}px`,
+      );
+      if (getComputedStyle(grid).gridTemplateColumns.split(' ').length < 2) {
+        dialog.style.removeProperty('--profile-overview-height');
+        return;
+      }
+      if (grid.querySelector('[aria-expanded="true"]')) return;
+      const bounds = dialog.getBoundingClientRect();
+      const scale = bounds.width / parseFloat(getComputedStyle(dialog).width);
+      if (!scale) return;
+      const inner = card.getBoundingClientRect();
+      const rightInset = (bounds.right - inner.right) / scale;
+      const height = (inner.bottom - bounds.top) / scale + body.scrollTop + rightInset;
+      dialog.style.setProperty('--profile-overview-height', `${height}px`);
+    };
+    const observer = new ResizeObserver(measure);
+    for (const element of [header, heading, overview, card, body]) observer.observe(element);
+    measure();
+    return () => observer.disconnect();
+  }, [id, reportPending, profilePending]);
   return (
     <Dialog
       open
       onClose={closeModal}
       onBack={backModal}
       title={`${p?.name || r?.name || name} · #${id}`}
-      className="dialog-wide profile-dialog w-[calc(100%_-_3rem)] max-w-288 sm:max-w-288 h-[min(52rem,_calc(100svh_-_var(--window-controls-height)_-_3rem))] viewport-max-767:w-[calc(100%_-_1.5rem)]"
+      className="dialog-wide profile-dialog panel-dialog w-[calc(100%_-_3rem)] max-w-288 sm:max-w-288 h-[min(var(--profile-overview-height,52rem),_calc(100svh_-_var(--window-controls-height)_-_3rem))] viewport-max-767:w-[calc(100%_-_1.5rem)]"
       headerActions={
         <>
           <Button
@@ -86,7 +119,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
         </>
       }
     >
-      <div className="profile-heading flex min-w-0 flex-col gap-1.5">
+      <div ref={headingRef} className="profile-heading flex min-w-0 flex-col gap-1.5 ps-1">
         <div className="profile-heading-title flex flex-wrap items-baseline gap-2 [&_h2]:text-[1.125rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.025em]">
           <h2>{t('profileOverview')}</h2>
           {p?.banned && <Badge tone="danger">{t('banned')}</Badge>}
@@ -153,7 +186,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
                 aria-hidden="true"
                 className={cn(
                   tableHeadClasses,
-                  'hidden shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-6 py-2.5 text-xs @sm/aliases:grid @[60rem]/aliases:px-3',
+                  'hidden shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-6 px-(--card-text-inset) py-2.5 text-xs @sm/aliases:grid',
                 )}
               >
                 <span>{t('nameHistoryAlias')}</span>
@@ -165,7 +198,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
                   <Item
                     size="xs"
                     role="listitem"
-                    className="profile-alias grid min-h-10 min-w-0 shrink-0 grid-cols-[minmax(0,1fr)] items-start gap-x-6 gap-y-1 px-2 @sm/aliases:grid-cols-[minmax(0,1fr)_auto] @sm/aliases:items-center @[60rem]/aliases:px-3"
+                    className="profile-alias grid min-h-10 min-w-0 shrink-0 grid-cols-[minmax(0,1fr)] items-start gap-x-6 gap-y-1 px-(--card-text-inset) @sm/aliases:grid-cols-[minmax(0,1fr)_auto] @sm/aliases:items-center"
                   >
                     <ItemContent className="min-w-0">
                       <ItemTitle className="block w-full line-clamp-none wrap-anywhere">

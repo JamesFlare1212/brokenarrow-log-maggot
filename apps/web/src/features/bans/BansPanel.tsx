@@ -129,7 +129,7 @@ export function BansPanel() {
       </div>
       {request.error && <Notice error>{request.error}</Notice>}
       {loading && <LoadingStatus />}
-      <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-lg">
+      <div className="data-table-surface flex min-h-0 flex-1 flex-col overflow-hidden border border-border rounded-(--radius-panel) [corner-shape:squircle]">
         <div
           className="table-wrap [.report_&]:max-h-120 min-w-0 overflow-auto [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] data-table-scroll flex-1 min-h-0 overflow-auto [scrollbar-gutter:stable] [scroll-padding-block:3rem_1rem] [&>[data-slot='table-container']]:overflow-visible [&_[data-slot='table-head']]:px-4 [&_[data-slot='table-cell']]:px-4 [&_[data-slot='table-cell']]:py-2.5 [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[-2px] bans-table [&_table]:min-w-192 [&_table]:table-fixed ban-list-paged flex-1 min-h-0 overflow-auto [&:focus-visible]:outline-2 [&:focus-visible]:outline-solid [&:focus-visible]:outline-ring [&:focus-visible]:outline-offset-[2px]"
           ref={list}

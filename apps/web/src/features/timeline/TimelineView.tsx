@@ -343,7 +343,7 @@ function TableScroll({
           }
         }}
         className={cn(
-          'grid min-h-0 grid-rows-[minmax(0,1fr)] rounded-md focus-visible:outline-2 focus-visible:outline-ring [&>[data-slot=table-container]]:min-h-0 [&>[data-slot=table-container]]:max-h-[min(20rem,var(--table-viewport-height,20rem))] [&>[data-slot=table-container]]:overflow-auto sm:[&>[data-slot=table-container]]:max-h-[min(24rem,var(--table-viewport-height,24rem))]',
+          'grid min-h-0 grid-rows-[minmax(0,1fr)] rounded-(--radius-panel) [corner-shape:squircle] focus-visible:outline-2 focus-visible:outline-ring [&>[data-slot=table-container]]:min-h-0 [&>[data-slot=table-container]]:max-h-[min(20rem,var(--table-viewport-height,20rem))] [&>[data-slot=table-container]]:overflow-auto sm:[&>[data-slot=table-container]]:max-h-[min(24rem,var(--table-viewport-height,24rem))]',
           rowsPerViewport &&
             '[&>[data-slot=table-container]]:max-h-[min(24rem,var(--table-viewport-height,24rem))]',
         )}
@@ -1808,7 +1808,7 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
                           <Button
                             variant="ghost"
                             type="button"
-                            className="group grid h-auto w-full scroll-mt-(--timeline-context-height) grid-cols-[4rem_minmax(0,1fr)_auto] items-start gap-3 whitespace-normal px-4 py-4 text-left @min-[640px]/timeline:grid-cols-[4.5rem_minmax(0,1fr)_auto]"
+                            className="group grid h-auto w-full scroll-mt-(--timeline-context-height) grid-cols-[4rem_minmax(0,1fr)_auto] items-start gap-3 whitespace-normal px-(--card-text-inset) py-4 text-left @min-[640px]/timeline:grid-cols-[4.5rem_minmax(0,1fr)_auto]"
                             ref={(element) => {
                               eventRefs.current[moment.id] = element;
                             }}

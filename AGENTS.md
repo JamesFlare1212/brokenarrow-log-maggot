@@ -5,28 +5,21 @@
 - 应用中文名，断箭蛐工具
 - 应用英文名，BARadar
 
-## Development Language
-
-- Use English for new or modified code identifiers, comments, developer documentation, commit messages,
-  pull request titles and descriptions, release notes, and CI workflow names, steps, and messages.
-- Preserve localized application text and translation resources in their intended languages.
-- Follow the existing TypeScript, React, Electron, and pnpm workspace conventions.
-
 ## UI Styling
 
-- Use Tailwind CSS v4 utilities in React `className` values for layout, spacing, typography, colors,
-  responsive behavior, and interaction states. Do not add handwritten CSS for ordinary components
-  or pages.
-- Compose existing shadcn/ui components and variants, use semantic theme tokens, and use `cn()` for
-  conditional classes.
-- Cards and floating content surfaces must use the shared glass material and semantic surface tokens.
-  Customize shared shadcn primitives instead of applying inverse tooltip fills or page-specific
-  backgrounds, borders, shadows, blur, or radius overrides.
-- Limit handwritten CSS to shared theme tokens, browser/native foundations such as Electron caption
-  geometry and scrollbars, forced colors/reduced motion, Shadow DOM hosts, and shared calculated
-  layout variables. Document the reason for any necessary exception.
-- Do not recreate component stylesheets with selector blocks or bulk `@apply` wrappers. Use CSS
-  variables with Tailwind utilities when runtime values are needed.
+- 在 React 的 `className` 值中使用 Tailwind CSS v4 工具类来实现布局、间距、排版、颜色、
+  响应式行为和交互状态。不要为普通组件或页面编写手写 CSS。
+- 组合使用现有的 shadcn/ui 组件及其变体，使用语义化主题 token，并使用 `cn()` 处理
+  条件类名。
+- 卡片和浮动内容表面必须使用共享的玻璃材质和语义化表面 token。
+  应自定义共享的 shadcn 基础组件，而不是应用反色工具提示填充，或针对特定页面覆盖
+  背景、边框、阴影、模糊或圆角。
+- 手写 CSS 仅限于共享主题 token、浏览器或原生基础样式（例如 Electron 标题栏
+  几何布局和滚动条）、强制颜色模式/减少动画、Shadow DOM 宿主，以及共享的计算布局
+  变量。对于任何必要的例外，需说明原因。
+- 不要使用选择器块或批量 `@apply` 包装来重新创建组件样式表。需要运行时值时，
+  应结合 Tailwind 工具类使用 CSS 变量。
+- 跨页面的设计规则变化时，更新[界面设计系统](design-system/broken-arrow/MASTER.md)。页面行为、业务逻辑和具体参数保留在源码中，不在规范里重复维护。
 
 ## Validation
 
@@ -68,13 +61,3 @@ Use this release notes template, adjusting validation bullets to reflect the che
 
 - <Describe checks/tests that passed/failed>
 ```
-
-## 备注
-
-- 优先使用shadcn/ui，只有在必要情况，询问用户后才可以不使用
-- 任务完成收尾时运行测试来验证改动
-- 除非用户说明，不然不要commit改动
-
-## 文档
-
-- 有改动的话检查文档有没有同步，特别是设计文档
