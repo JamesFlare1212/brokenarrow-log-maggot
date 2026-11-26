@@ -19,7 +19,7 @@ test('JamesFlare preferences align at native 150% display scaling', async ({
     await expect(page.getByRole('tooltip')).toHaveCount(0);
     await page.goto('/#radar');
     await page.locator('.session-actions button').first().click();
-    await page.getByRole('button', { name: 'JamesFlare', exact: true }).click();
+    await page.getByRole('button', { name: 'JamesFlare', exact: true }).press('Enter');
     const card = page.locator('.profile-dialog .profile-preferences');
     await expect(card).toHaveAttribute('aria-busy', 'false');
     await expect(card.locator('.profile-category-list')).toBeVisible();
