@@ -2406,7 +2406,7 @@ describe('user interaction regressions', () => {
           await user.click(trigger);
         }
         const dialog = await screen.findByRole('dialog', { name: new RegExp(`#${player.id}$`) });
-        await within(dialog).findByRole('heading', { name: '玩家概览' });
+        await within(dialog).findByText('最近一场 K/D');
         expect(native.calls).toContainEqual({
           method: 'players.profile',
           input: { id: player.id, force: false },
@@ -4107,7 +4107,7 @@ describe('profile refresh and report scopes', () => {
         wrapper: wrapper(native.api),
       });
 
-      await screen.findByRole('heading', { name: '玩家概览' });
+      await screen.findByText('最近一场 K/D');
       expect(screen.getByRole('heading', { name: '作战偏好' })).toBeTruthy();
       expect(screen.getByRole('region', { name: '蛐指数' })).toBeTruthy();
       const copy = screen.getByRole('button', { name: '复制玩家战绩摘要' });
@@ -4381,7 +4381,7 @@ describe('profile refresh and report scopes', () => {
     await screen.findByText('Analysis unavailable');
     const card = screen.getByRole('region', { name: '蛐指数' });
     expect(within(card).getByRole('alert').textContent).toContain('Analysis unavailable');
-    expect(screen.getByRole('heading', { name: '玩家概览' })).toBeTruthy();
+    expect(screen.getByText('最近一场 K/D')).toBeTruthy();
     expect(screen.getByRole('button', { name: '刷新' }).hasAttribute('disabled')).toBe(false);
     expect(attempts).toBe(1);
     fireEvent.click(within(card).getByRole('button', { name: '重试' }));
@@ -4605,7 +4605,8 @@ describe('profile refresh and report scopes', () => {
     );
     expect(screen.getByText('最近一场 K/D')).toBeTruthy();
     expect(screen.getByText('最近一场 DMR')).toBeTruthy();
-    expect(screen.getByText('总场次')).toBeTruthy();
+    expect(screen.queryByText('总场次')).toBeNull();
+    expect(screen.queryByRole('heading', { name: '玩家概览' })).toBeNull();
     await userEvent.setup().click(screen.getByRole('tab', { name: /^地图表现/ }));
     const mapsGrid = screen.getByRole('list', { name: '地图表现' });
     fireEvent.click(screen.getByRole('button', { name: '刷新' }));

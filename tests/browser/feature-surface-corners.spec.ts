@@ -127,6 +127,8 @@ for (const width of [1280, 900, 390]) {
       'BottomRight',
     ]);
     const tile = '.replay-grid-card';
+    await expect(page.locator('.replay-library')).not.toHaveCSS('backdrop-filter', 'none');
+    await expect(page.locator(tile).first()).toHaveCSS('backdrop-filter', 'none');
     await expect(page.locator(tile).first()).toHaveCSS('overflow', 'hidden');
     expect(await corner(page, tile, '.replay-thumbnail', 'topLeft')).toEqual({
       outer: 36,

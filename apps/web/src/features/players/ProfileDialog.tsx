@@ -10,12 +10,11 @@ import {
   ItemTitle,
 } from '@/components/ui/item';
 import { BATRACE_ORIGIN } from '@ba/contracts';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Fragment, useEffect, useLayoutEffect, useRef } from 'react';
 import { ExternalLink, RefreshCw as faArrowsRotate } from 'lucide-react';
 import { Icon } from '../../components/Icon';
 import type { PlayerProfile, PlayerReport } from '@ba/contracts';
-import { formatTime, formatMetric } from '@ba/shared';
+import { formatTime } from '@ba/shared';
 import { useApp } from '../../app/state';
 import { useI18n } from '../../hooks/useI18n';
 import { useRequest } from '../../hooks/useRequest';
@@ -45,17 +44,15 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
     aliases = p?.names.filter((entry) => entry.name !== p.name) || [];
   const profilePending = !p && (profile.pending || !profile.error);
   const reportPending = !r && (report.pending || !report.error);
-  const metaPending = !info && (profilePending || reportPending);
-  const headingRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
-    const heading = headingRef.current;
-    const dialog = heading?.closest<HTMLElement>('.profile-dialog');
-    const body = heading?.closest<HTMLElement>('.dialog-body');
+    const body = statusRef.current?.closest<HTMLElement>('.dialog-body');
+    const dialog = body?.closest<HTMLElement>('.profile-dialog');
     const grid = body?.querySelector<HTMLElement>('.profile-analysis-grid');
     const card = grid?.querySelector<HTMLElement>('.profile-preferences');
     const overview = grid?.closest('.profile-overview');
     const header = dialog?.querySelector('[data-slot="dialog-header"]');
-    if (!dialog || !body || !grid || !card || !overview || !header || !heading) return;
+    if (!dialog || !body || !grid || !card || !overview || !header) return;
     const measure = () => {
       dialog.style.setProperty(
         '--profile-scrollbar-gutter',
@@ -75,7 +72,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
       dialog.style.setProperty('--profile-overview-height', `${height}px`);
     };
     const observer = new ResizeObserver(measure);
-    for (const element of [header, heading, overview, card, body]) observer.observe(element);
+    for (const element of [header, overview, card, body]) observer.observe(element);
     measure();
     return () => observer.disconnect();
   }, [id, reportPending, profilePending]);
@@ -85,9 +82,10 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
       onClose={closeModal}
       onBack={backModal}
       title={`${p?.name || r?.name || name} · #${id}`}
-      className="dialog-wide profile-dialog panel-dialog w-[calc(100%_-_3rem)] max-w-288 sm:max-w-288 h-[min(var(--profile-overview-height,52rem),_calc(100svh_-_var(--window-controls-height)_-_3rem))] viewport-max-767:w-[calc(100%_-_1.5rem)]"
+      className="dialog-wide profile-dialog panel-dialog w-[calc(100%_-_3rem)] max-w-288 sm:max-w-288 h-[min(var(--profile-overview-height,48rem),_calc(100svh_-_var(--window-controls-height)_-_3rem))] viewport-max-767:w-[calc(100%_-_1.5rem)]"
       headerActions={
         <>
+          {p?.banned && <Badge tone="danger">{t('banned')}</Badge>}
           <Button
             variant="ghost"
             size="icon"
@@ -119,33 +117,7 @@ export function ProfileDialog({ id, name }: { id: string; name: string }) {
         </>
       }
     >
-      <div ref={headingRef} className="profile-heading flex min-w-0 flex-col gap-1.5 ps-1">
-        <div className="profile-heading-title flex flex-wrap items-baseline gap-2 [&_h2]:text-[1.125rem] [&_h2]:font-semibold [&_h2]:tracking-[-0.025em]">
-          <h2>{t('profileOverview')}</h2>
-          {p?.banned && <Badge tone="danger">{t('banned')}</Badge>}
-        </div>
-        <dl
-          className="profile-meta flex flex-wrap items-baseline gap-4 text-[0.75rem] [&>div]:flex [&>div]:flex-wrap [&>div]:items-center [&>div]:gap-2 [&_dt]:text-muted-foreground [&_dd]:flex [&_dd]:min-w-6 [&_dd]:min-h-4.5 [&_dd]:items-center [&_dd]:font-medium [&_dd]:tabular-nums"
-          aria-busy={metaPending}
-        >
-          {[
-            { label: t('totalMatches'), value: info?.matchCount },
-            { label: t('samples'), value: info?.sampleCount },
-          ].map(({ label, value }) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>
-                {metaPending ? (
-                  <Skeleton className="h-4 w-6" aria-hidden="true" />
-                ) : (
-                  formatMetric(value ?? null, 0)
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-      <span className="sr-only" role="status">
+      <span ref={statusRef} className="sr-only" role="status">
         {(profilePending || reportPending) && t('loading')}
       </span>
       {profile.error && <Notice error>{profile.error}</Notice>}

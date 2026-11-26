@@ -6,6 +6,7 @@ const cardSurfaceClasses = cn(
   panelShapeClasses,
   'border border-(--glass-border) bg-(--glass-surface) text-card-foreground',
   glassMaterialClasses,
+  '[[data-slot=card]_&]:backdrop-filter-none',
 );
 
 function Card({

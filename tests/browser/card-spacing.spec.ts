@@ -157,6 +157,11 @@ for (const [width, lang] of [
       '.profile-analysis-grid',
       '.map-performance-grid',
     ]);
+    await expect(page.locator('.report[data-slot=card]')).not.toHaveCSS('backdrop-filter', 'none');
+    await expect(page.locator('.report .map-performance-card').first()).toHaveCSS(
+      'backdrop-filter',
+      'none',
+    );
     // Small-card density is independent of the surrounding layout gap.
     await expect(page.locator('.stats > [data-slot=card]').first()).toHaveCSS(
       'padding-top',

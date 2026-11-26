@@ -689,7 +689,6 @@ export const messages: Record<string, readonly [string, string]> = {
   experience: ['经验', 'Experience'],
   medals: ['勋章', 'Medals'],
   encounters: ['相遇记录', 'Encounters'],
-  profileOverview: ['玩家概览', 'Player overview'],
   profileRecords: ['玩家记录', 'Player records'],
   playerPreferences: ['作战偏好', 'Combat preferences'],
   noPlayerPreferences: ['暂无作战偏好', 'No combat preferences yet'],
