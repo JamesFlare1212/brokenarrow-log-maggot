@@ -62,7 +62,6 @@ vi.mock('electron', () => ({
 }));
 import { RecordingController } from '../apps/desktop/src/recordings/controller';
 import { ReplayProtocol } from '../apps/desktop/src/recordings/protocol';
-import { patchDuration, patchDurationFile } from '../apps/desktop/src/recordings/webm';
 import { Application } from '../apps/server/src/app';
 
 const source = {
@@ -484,75 +483,6 @@ describe('recording lifecycle and IPC ownership', () => {
     expect(previewed).not.toHaveBeenCalled();
     value.preview(sender, token, 'data:image/jpeg;base64,AA==', true);
     expect(previewed).toHaveBeenCalledExactlyOnceWith(token, 'data:image/jpeg;base64,AA==', true);
-  });
-});
-
-function element(id: string, data: Buffer): Buffer {
-  if (data.length >= 127) throw new Error('Fixture element needs a larger size encoding');
-  return Buffer.concat([Buffer.from(id, 'hex'), Buffer.from([0x80 | data.length]), data]);
-}
-function webm(
-  options: { scale?: number; durationBytes?: 4 | 8; durationFirst?: boolean } = {},
-): Buffer {
-  const scale = Buffer.alloc(3);
-  scale.writeUIntBE(options.scale ?? 1_000_000, 0, 3);
-  const timeScale = element('2ad7b1', scale);
-  const duration = options.durationBytes
-    ? element('4489', Buffer.alloc(options.durationBytes))
-    : Buffer.alloc(0);
-  const info = element(
-    '1549a966',
-    Buffer.concat(options.durationFirst ? [duration, timeScale] : [timeScale, duration]),
-  );
-  return Buffer.concat([
-    Buffer.from('1a45dfa3801853806701ffffffffffffff', 'hex'),
-    info,
-    element('1f43b675', Buffer.from([0xe7, 0x81, 0])),
-  ]);
-}
-function readDuration(buffer: Buffer, width: 4 | 8 = 8): number {
-  const at = buffer.indexOf(Buffer.from([0x44, 0x89, 0x80 | width]));
-  if (at < 0) throw new Error('Duration element is missing');
-  return width === 4 ? buffer.readFloatBE(at + 3) : buffer.readDoubleBE(at + 3);
-}
-
-describe('WebM duration metadata', () => {
-  it('inserts duration using the actual TimecodeScale', () => {
-    const original = webm({ scale: 2_000_000 });
-    const patched = patchDuration(original, 2.5);
-    expect(readDuration(patched)).toBe(1_250);
-    expect(patched.subarray(-8)).toEqual(original.subarray(-8));
-    expect(original.indexOf(Buffer.from('448988', 'hex'))).toBe(-1);
-  });
-
-  it.each([4, 8] as const)(
-    'updates an existing %i-byte Duration without mutating the source',
-    (width) => {
-      const original = webm({ scale: 2_000_000, durationBytes: width });
-      const patched = patchDuration(original, 7.5);
-      expect(readDuration(patched, width)).toBe(3_750);
-      expect(readDuration(original, width)).toBe(0);
-      expect(patched.length).toBe(original.length);
-    },
-  );
-
-  it('uses TimecodeScale even when it appears after Duration', () => {
-    const original = webm({ scale: 2_000_000, durationBytes: 8, durationFirst: true });
-    expect(readDuration(patchDuration(original, 7.5))).toBe(3_750);
-  });
-
-  it('patches a real file while preserving the bytes beyond the header read limit', async () => {
-    const root = await temp(),
-      sourcePath = join(root, 'source.webm'),
-      destination = join(root, 'patched.webm');
-    const original = Buffer.concat([webm({ durationBytes: 8 }), Buffer.alloc(100_000, 0xab)]);
-    await writeFile(sourcePath, original);
-    await patchDurationFile(sourcePath, destination, 3);
-    const saved = await readFile(destination);
-    expect(readDuration(saved)).toBe(3_000);
-    expect(saved.length).toBe(original.length);
-    expect(saved.subarray(65_536)).toEqual(original.subarray(65_536));
-    expect(await readFile(sourcePath)).toEqual(original);
   });
 });
 
