@@ -63,20 +63,33 @@ import { ThemeProvider } from 'next-themes';
 
 ## Changing the Theme
 
+Apply a preset code from ui.shadcn.com.
+
 ```bash
-# Apply a preset code from ui.shadcn.com.
 npx shadcn@latest apply --preset a2r6bw
+```
 
-# Positional shorthand also works.
+Positional shorthand also works.
+
+```bash
 npx shadcn@latest apply a2r6bw
+```
 
-# Switch to a named preset and overwrite existing components.
+Switch to a named preset and overwrite existing components.
+
+```bash
 npx shadcn@latest apply --preset nova
+```
 
-# Preserve existing components instead.
+Preserve existing components instead.
+
+```bash
 npx shadcn@latest init --preset nova --force --no-reinstall
+```
 
-# Use a custom theme URL.
+Use a custom theme URL.
+
+```bash
 npx shadcn@latest apply --preset "https://ui.shadcn.com/init?base=radix&style=nova&theme=blue&..."
 ```
 
@@ -88,8 +101,9 @@ Or edit CSS variables directly in `globals.css`.
 
 Add variables to the file at `tailwindCssFile` from `npx shadcn@latest info` (typically `globals.css`). Never create a new CSS file for this.
 
+Define the light and dark values:
+
 ```css
-/* 1. Define in the global CSS file. */
 :root {
   --warning: oklch(0.84 0.16 84);
   --warning-foreground: oklch(0.28 0.07 46);
@@ -100,8 +114,9 @@ Add variables to the file at `tailwindCssFile` from `npx shadcn@latest info` (ty
 }
 ```
 
+Register the colors in Tailwind v4 with `@theme inline`:
+
 ```css
-/* 2a. Register with Tailwind v4 (@theme inline). */
 @theme inline {
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
@@ -111,7 +126,6 @@ Add variables to the file at `tailwindCssFile` from `npx shadcn@latest info` (ty
 When `tailwindVersion` is `"v3"` (check via `npx shadcn@latest info`), register in `tailwind.config.js` instead:
 
 ```js
-// 2b. Register with Tailwind v3 (tailwind.config.js).
 module.exports = {
   theme: {
     extend: {
@@ -124,8 +138,9 @@ module.exports = {
 };
 ```
 
+Use the colors in components:
+
 ```tsx
-// 3. Use in components.
 <div className="bg-warning text-warning-foreground">Warning</div>
 ```
 
@@ -163,8 +178,9 @@ Prefer these approaches in order:
 
 Edit the component source to add a variant via `cva`:
 
+In `components/ui/button.tsx`:
+
 ```tsx
-// components/ui/button.tsx
 warning: "bg-warning text-warning-foreground hover:bg-warning/90",
 ```
 
@@ -202,9 +218,16 @@ npx shadcn@latest add button --diff
 
 To preview exactly what would change before updating, use `--dry-run` and `--diff`:
 
+See all affected files:
+
 ```bash
-npx shadcn@latest add button --dry-run        # see all affected files
-npx shadcn@latest add button --diff button.tsx # see the diff for a specific file
+npx shadcn@latest add button --dry-run
+```
+
+See the diff for a specific file:
+
+```bash
+npx shadcn@latest add button --diff button.tsx
 ```
 
 See [Updating Components in SKILL.md](./SKILL.md#updating-components) for the full smart merge workflow.

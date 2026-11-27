@@ -176,15 +176,19 @@ Use `FieldSet` + `FieldLegend` for related checkboxes, radios, or switches — n
 
 Both attributes are needed — `data-invalid`/`data-disabled` styles the field (label, description), while `aria-invalid`/`disabled` styles the control.
 
+Invalid.
+
 ```tsx
-// Invalid.
 <Field data-invalid>
   <FieldLabel htmlFor="email">Email</FieldLabel>
   <Input id="email" aria-invalid />
   <FieldDescription>Invalid email address.</FieldDescription>
 </Field>
+```
 
-// Disabled.
+Disabled.
+
+```tsx
 <Field data-disabled>
   <FieldLabel htmlFor="email">Email</FieldLabel>
   <Input id="email" disabled />

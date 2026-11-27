@@ -93,39 +93,55 @@ These rules are **always enforced**. Each links to a file with Incorrect/Correct
 
 These are the most common patterns that differentiate correct shadcn/ui code. For edge cases, see the linked rule files above.
 
+Form layout: FieldGroup + Field, not div + Label.
+
 ```tsx
-// Form layout: FieldGroup + Field, not div + Label.
 <FieldGroup>
   <Field>
     <FieldLabel htmlFor="email">Email</FieldLabel>
     <Input id="email" />
   </Field>
 </FieldGroup>
+```
 
-// Validation: data-invalid on Field, aria-invalid on the control.
+Validation: data-invalid on Field, aria-invalid on the control.
+
+```tsx
 <Field data-invalid>
   <FieldLabel>Email</FieldLabel>
   <Input aria-invalid />
   <FieldDescription>Invalid email.</FieldDescription>
 </Field>
+```
 
-// Icons in buttons: data-icon, no sizing classes.
+Icons in buttons: data-icon, no sizing classes.
+
+```tsx
 <Button>
   <SearchIcon data-icon="inline-start" />
   Search
 </Button>
+```
 
-// Spacing: gap-*, not space-y-*.
-<div className="flex flex-col gap-4">  // correct
-<div className="space-y-4">           // wrong
+Spacing: `gap-*`, not `space-y-*`. The first example is correct; the second is incorrect.
 
-// Equal dimensions: size-*, not w-* h-*.
-<Avatar className="size-10">   // correct
-<Avatar className="w-10 h-10"> // wrong
+```tsx
+<div className="flex flex-col gap-4">
+<div className="space-y-4">
+```
 
-// Status colors: Badge variants or semantic tokens, not raw colors.
-<Badge variant="secondary">+20.1%</Badge>    // correct
-<span className="text-emerald-600">+20.1%</span> // wrong
+Equal dimensions: `size-*`, not `w-*` `h-*`. The first example is correct; the second is incorrect.
+
+```tsx
+<Avatar className="size-10">
+<Avatar className="w-10 h-10">
+```
+
+Status colors: Badge variants or semantic tokens, not raw colors. The first example is correct; the second is incorrect.
+
+```tsx
+<Badge variant="secondary">+20.1%</Badge>
+<span className="text-emerald-600">+20.1%</span>
 ```
 
 ## Component Selection
@@ -219,60 +235,106 @@ When the user asks to update a component from upstream while keeping their local
 
 ## Quick Reference
 
+Create a new project.
+
 ```bash
-# Create a new project.
 npx shadcn@latest init --name my-app --preset base-nova
 npx shadcn@latest init --name my-app --preset a2r6bw --template vite
+```
 
-# Create a design system app (then follow design-system.md).
+Create a design system app (then follow design-system.md).
+
+```bash
 npx shadcn@latest init --name my-ds --preset b0 --template vite --no-monorepo -y
 npx shadcn@latest init --name my-ds --base base --preset maia --template vite --no-monorepo -y
 npx shadcn@latest add --all -y
+```
 
-# Create a monorepo project.
+Create a monorepo project.
+
+```bash
 npx shadcn@latest init --name my-app --preset base-nova --monorepo
 npx shadcn@latest init --name my-app --preset base-nova --template next --monorepo
+```
 
-# Initialize existing project.
+Initialize existing project.
+
+```bash
 npx shadcn@latest init --preset base-nova
-npx shadcn@latest init --defaults  # shortcut: --template=next --preset=nova (base style implied)
+```
 
-# Apply a preset to an existing project.
+Shortcut for `--template=next --preset=nova` (base style implied):
+
+```bash
+npx shadcn@latest init --defaults
+```
+
+Apply a preset to an existing project.
+
+```bash
 npx shadcn@latest apply a2r6bw
 npx shadcn@latest apply a2r6bw --only theme
 npx shadcn@latest apply a2r6bw --only font
 npx shadcn@latest apply a2r6bw --only theme,font
+```
 
-# Inspect preset codes and project preset state.
+Inspect preset codes and project preset state.
+
+```bash
 npx shadcn@latest preset decode a2r6bw
 npx shadcn@latest preset url a2r6bw
 npx shadcn@latest preset open a2r6bw
 npx shadcn@latest preset resolve
 npx shadcn@latest preset resolve --json
+```
 
-# Add components.
+Add components.
+
+```bash
 npx shadcn@latest add button card dialog
 npx shadcn@latest add @magicui/shimmer-button
 npx shadcn@latest add owner/repo/item
 npx shadcn@latest add --all
+```
 
-# Preview changes before adding/updating.
+Preview changes before adding/updating.
+
+```bash
 npx shadcn@latest add button --dry-run
 npx shadcn@latest add button --diff button.tsx
 npx shadcn@latest add @acme/form --view button.tsx
 npx shadcn@latest add owner/repo/item --dry-run
+```
 
-# Search registries.
+Search registries.
+
+```bash
 npx shadcn@latest search @shadcn -q "sidebar"
 npx shadcn@latest search @tailark -q "stats"
 npx shadcn@latest search owner/repo -q "login"
-npx shadcn@latest search                          # all configured registries
-npx shadcn@latest search @shadcn -q "menu" -t ui  # filter by item type
+```
 
-# Get component docs and example URLs.
+All configured registries:
+
+```bash
+npx shadcn@latest search
+```
+
+Filter by item type:
+
+```bash
+npx shadcn@latest search @shadcn -q "menu" -t ui
+```
+
+Get component docs and example URLs.
+
+```bash
 npx shadcn@latest docs button dialog select
+```
 
-# View registry item details (for items not yet installed).
+View registry item details (for items not yet installed).
+
+```bash
 npx shadcn@latest view @shadcn/button
 npx shadcn@latest view owner/repo/item
 ```

@@ -140,7 +140,7 @@ Wide components (Table, NavigationMenu, Menubar, Sidebar, Chart, MessageScroller
 
 ## States Without Interaction
 
-Pin interaction states with a `data-preview` attribute. Override the hover, focus-visible and active variants so each also matches the attribute. Copy [assets/showcase/preview-states.css](./assets/showcase/preview-states.css) into `tailwindCssFile`:
+Pin interaction states with a `data-preview` attribute. Override the hover, focus-visible and active variants so each also matches the attribute. Copy [assets/showcase/preview-states.css](./assets/showcase/preview-states.css) into `tailwindCssFile` after the dark variant:
 
 ```css
 @custom-variant hover {

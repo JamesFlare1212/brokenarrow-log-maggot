@@ -88,9 +88,16 @@ Then wire up the providers in the app root:
 
 Then typecheck the app sources. In Vite apps, the root `tsc --noEmit` checks nothing because the root tsconfig only has project references:
 
+Vite:
+
 ```bash
-npx tsc -p tsconfig.app.json --noEmit   # Vite.
-npx tsc --noEmit                        # Next.js.
+npx tsc -p tsconfig.app.json --noEmit
+```
+
+Next.js:
+
+```bash
+npx tsc --noEmit
 ```
 
 Fix generated files that fail strict checks (for example, an unused `React` import) before moving on, or `vite build` will fail.
@@ -173,16 +180,17 @@ A DESIGN.md radius scale rarely fits the `--radius` multipliers. Pin each step i
 | `rounded-2xl` | Toasts, large containers                        |
 | `rounded-4xl` | Badges (pill)                                   |
 
+Map the DESIGN.md steps `xs`, `sm`, `md`, `lg`, `xl`, and `pill` to `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-xl`, `--radius-2xl`, and `--radius-4xl`, respectively.
+
 ```css
 @theme inline {
-  /* DESIGN.md step → Tailwind class used by that component. */
-  --radius-sm: 4px; /* xs: accents. */
-  --radius-md: 6px; /* sm: menu items. */
-  --radius-lg: 8px; /* md: buttons, inputs. */
-  --radius-xl: 12px; /* lg: cards, dialogs. */
-  --radius-2xl: 16px; /* xl: toasts, hero containers. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
   --radius-3xl: 16px;
-  --radius-4xl: 9999px; /* pill: badges. */
+  --radius-4xl: 9999px;
 }
 ```
 
@@ -354,9 +362,16 @@ Copy the helpers from `assets/showcase/` (`preview-states.css`, `state-matrix.ts
 
 ### Coverage check
 
+Vite:
+
 ```bash
-node <skill-dir>/scripts/showcase-coverage.mjs src/components/ui src   # Vite.
-node <skill-dir>/scripts/showcase-coverage.mjs components/ui app      # Next.js.
+node <skill-dir>/scripts/showcase-coverage.mjs src/components/ui src
+```
+
+Next.js:
+
+```bash
+node <skill-dir>/scripts/showcase-coverage.mjs components/ui app
 ```
 
 It lists every component file that no showcase file imports. Fix the list until it's empty. `add --all` installs both `toast` and `sonner` in Base UI projects; show `sonner` in Feedback next to `toast` so the list can reach zero.

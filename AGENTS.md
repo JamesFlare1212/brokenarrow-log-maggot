@@ -27,6 +27,8 @@
   regression tests, and production builds, and `pnpm format:check` for formatting.
 - For changes affecting desktop behavior, run `pnpm smoke`; use `pnpm smoke:real` when real-data
   behavior is affected.
+- Keep Vitest as a single project with Node as its default environment. When upgrading Vitest,
+  verify that it still recognizes the `'@vitest-environment jsdom'` directive in DOM test files.
 - For documentation-only changes, check the formatting of the changed files.
 - Report only checks that actually ran, including any failures or skipped checks. Use the actual
   regression test count from the current run.

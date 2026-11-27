@@ -87,29 +87,51 @@ GitHub item addresses (`owner/repo/item`), URLs, or local paths.
 
 Use `--dry-run` to preview what `add` would do without writing any files. `--diff` and `--view` both imply `--dry-run`.
 
+Preview all changes.
+
 ```bash
-# Preview all changes.
 npx shadcn@latest add button --dry-run
+```
 
-# Show diffs for all files (top 5).
+Show diffs for all files (top 5).
+
+```bash
 npx shadcn@latest add button --diff
+```
 
-# Show the diff for a specific file.
+Show the diff for a specific file.
+
+```bash
 npx shadcn@latest add button --diff button.tsx
+```
 
-# Show contents for all files (top 5).
+Show contents for all files (top 5).
+
+```bash
 npx shadcn@latest add button --view
+```
 
-# Show the full content of a specific file.
+Show the full content of a specific file.
+
+```bash
 npx shadcn@latest add button --view button.tsx
+```
 
-# Works with URLs too.
+Works with URLs too.
+
+```bash
 npx shadcn@latest add https://api.npoint.io/abc123 --dry-run
+```
 
-# Works with public GitHub registries too.
+Works with public GitHub registries too.
+
+```bash
 npx shadcn@latest add owner/repo/item --dry-run
+```
 
-# CSS diffs.
+CSS diffs.
+
+```bash
 npx shadcn@latest add button --diff globals.css
 ```
 

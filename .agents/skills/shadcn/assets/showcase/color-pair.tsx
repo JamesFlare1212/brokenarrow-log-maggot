@@ -2,8 +2,6 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-// Resolves any CSS color (hex, rgb, oklch, color-mix) to sRGB by painting one pixel.
-// Translucent colors are composited over the backdrop, as the browser would.
 function toRgb(color: string, backdrop = '#fff') {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 1;
@@ -55,7 +53,6 @@ export function ColorPair({
     if (!element) {
       return;
     }
-    // Re-measure when the theme class on <html> changes.
     const measure = () => {
       const style = getComputedStyle(element);
       const page = getComputedStyle(document.body).backgroundColor;

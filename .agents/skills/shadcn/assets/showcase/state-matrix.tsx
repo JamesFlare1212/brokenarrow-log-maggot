@@ -52,7 +52,6 @@ export function StateMatrix<Row extends string>({
   );
 }
 
-// Spread onto a component to pin a state without interaction.
 export function previewState(state: string) {
   if (state === 'disabled') {
     return { disabled: true };

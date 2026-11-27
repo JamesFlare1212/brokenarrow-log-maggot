@@ -6,9 +6,16 @@ The CLI includes an MCP server that lets AI assistants search, browse, view, and
 
 ## Setup
 
+Start the MCP server (stdio):
+
 ```bash
-shadcn mcp        # start the MCP server (stdio)
-shadcn mcp init   # write config for your editor
+shadcn mcp
+```
+
+Write config for your editor:
+
+```bash
+shadcn mcp init
 ```
 
 Editor config files:

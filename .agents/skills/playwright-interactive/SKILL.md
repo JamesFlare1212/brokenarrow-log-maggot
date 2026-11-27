@@ -28,12 +28,10 @@ js_repl = true
 ```bash
 test -f package.json || npm init -y
 npm install playwright
-# Web-only, for headed Chromium or mobile emulation:
-# npx playwright install chromium
-# Electron-only, and only if the target workspace is the app itself:
-# npm install --save-dev electron
 node -e "import('playwright').then(() => console.log('playwright import ok')).catch((error) => { console.error(error); process.exit(1); })"
 ```
+
+For headed Chromium or mobile web emulation, also run `npx playwright install chromium`. For Electron only, run `npm install --save-dev electron` only if the target workspace is the app itself.
 
 If you switch to a different workspace later, repeat setup there.
 

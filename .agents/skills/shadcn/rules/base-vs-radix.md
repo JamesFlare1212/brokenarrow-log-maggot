@@ -73,8 +73,9 @@ When `render` changes an element to a non-button (`<a>`, `<span>`), add `nativeB
 
 Same for triggers whose `render` is not a `Button`:
 
+Base:
+
 ```tsx
-// base.
 <PopoverTrigger render={<InputGroupAddon />} nativeButton={false}>
   Pick date
 </PopoverTrigger>
@@ -139,11 +140,15 @@ const items = [
 
 **Content positioning.** Base uses `alignItemWithTrigger`. Radix uses `position`.
 
-```tsx
-// base.
-<SelectContent alignItemWithTrigger={false} side="bottom">
+Base:
 
-// radix.
+```tsx
+<SelectContent alignItemWithTrigger={false} side="bottom">
+```
+
+Radix:
+
+```tsx
 <SelectContent position="popper">
 ```
 
@@ -193,14 +198,14 @@ Base uses a `multiple` boolean prop. Radix uses `type="single"` or `type="multip
 
 **Correct (base):**
 
+Single selection, then multiple selection. `defaultValue` is always an array; omit the selection prop for single selection.
+
 ```tsx
-// Single (no prop needed), defaultValue is always an array.
 <ToggleGroup defaultValue={["daily"]} spacing={2}>
   <ToggleGroupItem value="daily">Daily</ToggleGroupItem>
   <ToggleGroupItem value="weekly">Weekly</ToggleGroupItem>
 </ToggleGroup>
 
-// Multi-selection.
 <ToggleGroup multiple>
   <ToggleGroupItem value="bold">Bold</ToggleGroupItem>
   <ToggleGroupItem value="italic">Italic</ToggleGroupItem>
@@ -209,14 +214,14 @@ Base uses a `multiple` boolean prop. Radix uses `type="single"` or `type="multip
 
 **Correct (radix):**
 
+Single selection with a string `defaultValue`, then multiple selection.
+
 ```tsx
-// Single, defaultValue is a string.
 <ToggleGroup type="single" defaultValue="daily" spacing={2}>
   <ToggleGroupItem value="daily">Daily</ToggleGroupItem>
   <ToggleGroupItem value="weekly">Weekly</ToggleGroupItem>
 </ToggleGroup>
 
-// Multi-selection.
 <ToggleGroup type="multiple">
   <ToggleGroupItem value="bold">Bold</ToggleGroupItem>
   <ToggleGroupItem value="italic">Italic</ToggleGroupItem>
@@ -225,12 +230,16 @@ Base uses a `multiple` boolean prop. Radix uses `type="single"` or `type="multip
 
 **Controlled single value:**
 
+base — wrap/unwrap arrays.
+
 ```tsx
-// base — wrap/unwrap arrays.
 const [value, setValue] = React.useState("normal")
 <ToggleGroup value={[value]} onValueChange={(v) => setValue(v[0])}>
+```
 
-// radix — plain string.
+radix — plain string.
+
+```tsx
 const [value, setValue] = React.useState("normal")
 <ToggleGroup type="single" value={value} onValueChange={setValue}>
 ```
@@ -261,12 +270,16 @@ Base accepts a plain number for a single thumb. Radix always requires an array.
 
 Both use arrays for range sliders. Controlled `onValueChange` in base may need a cast:
 
+Base:
+
 ```tsx
-// base.
 const [value, setValue] = React.useState([0.3, 0.7])
 <Slider value={value} onValueChange={(v) => setValue(v as number[])} />
+```
 
-// radix.
+Radix:
+
+```tsx
 const [value, setValue] = React.useState([0.3, 0.7])
 <Slider value={value} onValueChange={setValue} />
 ```
@@ -287,12 +300,13 @@ Radix requires `type="single"` or `type="multiple"` and supports `collapsible`. 
 
 **Correct (base):**
 
+Single selection, then multiple selection.
+
 ```tsx
 <Accordion defaultValue={["item-1"]}>
   <AccordionItem value="item-1">...</AccordionItem>
 </Accordion>
 
-// Multi-select.
 <Accordion multiple defaultValue={["item-1", "item-2"]}>
   <AccordionItem value="item-1">...</AccordionItem>
   <AccordionItem value="item-2">...</AccordionItem>

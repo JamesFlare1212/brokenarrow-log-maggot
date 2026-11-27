@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// Lists installed UI components that no file in the showcase imports.
-// Usage: node showcase-coverage.mjs <ui-dir> <showcase-dir...>
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
 
@@ -24,7 +22,6 @@ function walk(path) {
 
   return readdirSync(path).flatMap((entry) => {
     const child = join(path, entry);
-    // Skip the ui directory so components don't count as using each other.
     if (entry === 'node_modules' || child === uiDir) {
       return [];
     }

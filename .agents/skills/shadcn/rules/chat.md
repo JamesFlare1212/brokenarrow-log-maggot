@@ -35,8 +35,9 @@ track visibility, and jump to it. `MessageScrollerButton` sits inside
 
 **Incorrect:**
 
+Hand-rolled scroll container with manual stick-to-bottom logic.
+
 ```tsx
-// Hand-rolled scroll container with manual stick-to-bottom logic.
 <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
   <div className="flex flex-col gap-6 p-4">
     {messages.map((m) => (
@@ -47,6 +48,8 @@ track visibility, and jump to it. `MessageScrollerButton` sits inside
 ```
 
 **Correct:**
+
+Place each message’s content inside `Message`.
 
 ```tsx
 <MessageScrollerProvider autoScroll>
@@ -59,9 +62,7 @@ track visibility, and jump to it. `MessageScrollerButton` sits inside
             messageId={message.id}
             scrollAnchor={message.role === 'user'}
           >
-            <Message align={message.role === 'user' ? 'end' : 'start'}>
-              {/* ...message content... */}
-            </Message>
+            <Message align={message.role === 'user' ? 'end' : 'start'}></Message>
           </MessageScrollerItem>
         ))}
       </MessageScrollerContent>
@@ -469,6 +470,8 @@ write a `useStickToBottom` hook, a `ResizeObserver`, or manual `scrollTop` math.
   and for client-fetched messages. Keep `suppressHydrationWarning` on the
   viewport. Pass a `nonce` if you use a Content Security Policy.
 
+Place the transcript inside `MessageScrollerContent`.
+
 ```tsx
 const scrollToEndScript = `(function () {
   var viewport = document.getElementById("messages")
@@ -481,7 +484,7 @@ const scrollToEndScript = `(function () {
 
 <MessageScroller>
   <MessageScrollerViewport id="messages" suppressHydrationWarning>
-    <MessageScrollerContent>{/* transcript */}</MessageScrollerContent>
+    <MessageScrollerContent></MessageScrollerContent>
   </MessageScrollerViewport>
   <script dangerouslySetInnerHTML={{ __html: scrollToEndScript }} />
   <MessageScrollerButton />
