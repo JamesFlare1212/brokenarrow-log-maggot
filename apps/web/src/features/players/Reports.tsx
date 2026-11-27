@@ -1,5 +1,5 @@
 import {
-  Card as ReportCard,
+  Card,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -26,7 +26,7 @@ import { BATRACE_ORIGIN } from '@ba/contracts';
 import { Copy } from 'lucide-react';
 import { formatPlayerSummary } from './report-summary';
 import type { PlayerReport } from '@ba/contracts';
-import { useRef, type ReactNode } from 'react';
+import { useRef } from 'react';
 import { formatMetric, formatDelta, formatTime } from '@ba/shared';
 import { eloChangeClass } from '@/lib/elo';
 import { Badge, Button, Notice, Stats } from '../../components/ui';
@@ -66,35 +66,13 @@ export function ReportCopyButton({
     </Button>
   );
 }
-function ReportDetails({
-  embedded,
-  label,
-  children,
-}: {
-  embedded: boolean;
-  label: string;
-  children: ReactNode;
-}) {
-  return embedded ? (
-    <Accordion type="single" collapsible className="profile-report-details">
-      <AccordionItem value="details">
-        <AccordionTrigger>{label}</AccordionTrigger>
-        <AccordionContent>{children}</AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  ) : (
-    children
-  );
-}
 export function ReportView({
   report,
-  embedded = false,
   pending = false,
   id,
   name,
 }: {
   report: PlayerReport | null;
-  embedded?: boolean;
   pending?: boolean;
   id?: string;
   name?: string;
@@ -102,57 +80,50 @@ export function ReportView({
   const { t, locale } = useI18n(),
     { api, access, openModal, notify } = useApp();
   const playerId = report?.id ?? id ?? '';
-  const ReportContainer = embedded ? 'div' : ReportCard;
-  const ReportContent = embedded ? 'div' : CardContent;
   return (
-    <ReportContainer
-      className={cn('report min-w-0', embedded && 'report-embedded')}
-      aria-busy={pending}
-    >
-      {!embedded && (
-        <CardHeader className="report-heading flex flex-wrap items-start justify-between gap-3 [&>[data-slot='card-action']]:ml-auto [&_[data-slot='card-title']]:wrap-anywhere">
-          <div className="min-w-0">
-            <CardTitle
-              role="heading"
-              aria-level={3}
-              aria-label={report ? `${report.name} #${report.id}` : undefined}
-            >
-              {report?.name ?? name ?? <Skeleton className="h-6 w-40" aria-hidden="true" />}
-            </CardTitle>
-            <CardDescription className="report-identity-meta flex flex-wrap gap-y-1 gap-x-3 mt-1">
-              <span>#{playerId}</span>
-              <span>
-                {t('totalMatches')}{' '}
-                {report ? (
-                  report.matchCount
-                ) : (
-                  <Skeleton className="inline-block h-3 w-8" aria-hidden="true" />
-                )}
-              </span>
-              <span>
-                {t('samples')}{' '}
-                {report ? (
-                  report.sampleCount
-                ) : (
-                  <Skeleton className="inline-block h-3 w-8" aria-hidden="true" />
-                )}
-              </span>
-            </CardDescription>
-          </div>
-          <CardAction className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
-            <Button
-              disabled={!report}
-              onClick={() =>
-                report && openModal({ type: 'profile', id: report.id, name: report.name })
-              }
-            >
-              {t('investigate')}
-            </Button>
-            <ReportCopyButton report={report} />
-          </CardAction>
-        </CardHeader>
-      )}
-      <ReportContent className="report-content flex min-w-0 flex-col gap-(--content-gap) @container/profile-overview [.report-embedded_&]:p-0">
+    <Card className="report min-w-0" aria-busy={pending}>
+      <CardHeader className="report-heading flex flex-wrap items-start justify-between gap-3 [&>[data-slot='card-action']]:ml-auto [&_[data-slot='card-title']]:wrap-anywhere">
+        <div className="min-w-0">
+          <CardTitle
+            role="heading"
+            aria-level={3}
+            aria-label={report ? `${report.name} #${report.id}` : undefined}
+          >
+            {report?.name ?? name ?? <Skeleton className="h-6 w-40" aria-hidden="true" />}
+          </CardTitle>
+          <CardDescription className="report-identity-meta flex flex-wrap gap-y-1 gap-x-3 mt-1">
+            <span>#{playerId}</span>
+            <span>
+              {t('totalMatches')}{' '}
+              {report ? (
+                report.matchCount
+              ) : (
+                <Skeleton className="inline-block h-3 w-8" aria-hidden="true" />
+              )}
+            </span>
+            <span>
+              {t('samples')}{' '}
+              {report ? (
+                report.sampleCount
+              ) : (
+                <Skeleton className="inline-block h-3 w-8" aria-hidden="true" />
+              )}
+            </span>
+          </CardDescription>
+        </div>
+        <CardAction className="actions flex items-center gap-2 flex-wrap [.add-match-form_&]:justify-end [.dialog-body>&:last-child]:justify-end viewport-max-767:[.profile-toolbar>&]:gap-1.5">
+          <Button
+            disabled={!report}
+            onClick={() =>
+              report && openModal({ type: 'profile', id: report.id, name: report.name })
+            }
+          >
+            {t('investigate')}
+          </Button>
+          <ReportCopyButton report={report} />
+        </CardAction>
+      </CardHeader>
+      <CardContent className="report-content flex min-w-0 flex-col gap-(--content-gap) @container/profile-overview">
         {report?.stale && (
           <Notice>
             {t('stale')} · {formatTime(report.updatedAt, locale)}
@@ -168,47 +139,38 @@ export function ReportView({
               value: report?.winRate == null ? '—' : formatMetric(report.winRate, 0) + '%',
               pending,
             },
-            ...(embedded
-              ? [
-                  { label: t('totalMatches'), value: report?.matchCount ?? '—', pending },
-                  { label: t('samples'), value: report?.sampleCount ?? '—', pending },
-                ]
-              : []),
           ]}
         />
         <PlayerPreferences id={playerId} report={report} pending={pending} showMaggot={false} />
-        {!embedded && <MaggotCard id={playerId} enabled={Boolean(report)} />}
+        <MaggotCard id={playerId} enabled={Boolean(report)} />
         {(pending || Boolean(report?.mapStats.length)) && (
-          <ReportDetails embedded label={t('mapStatistics')}>
-            <MapPerformanceGrid maps={report?.mapStats ?? []} pending={pending} />
-          </ReportDetails>
+          <Accordion type="single" collapsible className="profile-report-details">
+            <AccordionItem value="details">
+              <AccordionTrigger>{t('mapStatistics')}</AccordionTrigger>
+              <AccordionContent>
+                <MapPerformanceGrid maps={report?.mapStats ?? []} pending={pending} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         )}
         {(pending || Boolean(report?.recentMatches.length)) && (
-          <ReportDetails embedded={embedded} label={t('matchStatistics')}>
-            <ReportMatchTable
-              report={report}
-              pending={pending}
-              label={t(embedded ? 'matchStatistics' : 'recent')}
-            />
-          </ReportDetails>
+          <ReportMatchTable report={report} pending={pending} label={t('recent')} />
         )}
-        {!embedded && (
-          <Button
-            variant="ghost"
-            className="self-start"
-            disabled={!report || !access.method('external.open')}
-            onClick={() =>
-              report &&
-              void api
-                .invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${report.id}` })
-                .catch((error) => notify(String(error), true))
-            }
-          >
-            {t('openBatrace')}
-          </Button>
-        )}
-      </ReportContent>
-    </ReportContainer>
+        <Button
+          variant="ghost"
+          className="self-start"
+          disabled={!report || !access.method('external.open')}
+          onClick={() =>
+            report &&
+            void api
+              .invoke('external.open', { url: `${BATRACE_ORIGIN}/player/${report.id}` })
+              .catch((error) => notify(String(error), true))
+          }
+        >
+          {t('openBatrace')}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 export function ReportMatchTable({
