@@ -1,4 +1,3 @@
-// Adapted from ba-dragon; see THIRD_PARTY_NOTICES.txt for the MIT license.
 import type { MatchTitle } from '@ba/contracts';
 import { number } from '../values';
 import model from './model.json';

@@ -25,7 +25,6 @@ export interface TitleHistoryFixture {
   failures: Array<{ id: string; error: string }>;
 }
 
-/** Count player-title occurrences; each FID is evaluated once, including every participant. */
 export function summarizeTitleHistory(fixture: TitleHistoryFixture) {
   const counts = Object.fromEntries(
     (Object.keys(TITLES) as MatchTitleId[]).map((id) => [

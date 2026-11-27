@@ -5,14 +5,12 @@ import type { RawTitleMatch, RawTitlePlayer } from './types';
 export { titleConditionDetails } from './conditions';
 export { MAX_TITLES } from './engine';
 
-/** Evaluate completed matches only; lobby and live statistics cannot establish absence. */
 export function matchTitles(match: Match, value?: unknown): Record<string, MatchTitle[]> {
   return Object.fromEntries(
     Object.entries(matchTitleAwards(match, value)).map(([id, award]) => [id, award.titles]),
   );
 }
 
-/** Keep qualifying candidates available for audits before the two-title display limit. */
 export function matchTitleAwards(match: Match, value?: unknown): Record<string, TitleAward> {
   if (
     match.endedAt === null ||
@@ -28,7 +26,6 @@ export function matchTitleAwards(match: Match, value?: unknown): Record<string, 
   const unavailable = new Set<MatchTitleId>();
   if (raw.Data && typeof raw.Data === 'object' && !Array.isArray(raw.Data)) {
     const entries = Object.entries(object(raw.Data));
-    // An ID-only roster does not contain evidence that a player was inactive.
     if (
       !entries.some(([, p]) => {
         const player = object(p);
@@ -55,8 +52,6 @@ export function matchTitleAwards(match: Match, value?: unknown): Record<string, 
     }
     if (players.some((p) => p.objectivesCaptured === null)) unavailable.add('landlord');
     if (players.some((p) => p.supplyPoints === null)) unavailable.add('glutton');
-    // Summary records support exchange, objective and damage titles, but never infer
-    // unit deaths, supply flows, refunds, friendly fire or unit composition.
     data = {
       TotalPlayTimeInSec: match.durationSec,
       Data: Object.fromEntries(

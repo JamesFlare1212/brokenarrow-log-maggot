@@ -1,7 +1,6 @@
 import type { MatchTitleId } from '@ba/contracts';
 import { MAX_TITLES, SPECS, titleThresholds } from './engine';
 
-/** The explanation uses the same calibrated thresholds as the production evaluator. */
 export function titleConditionDetails(id: MatchTitleId) {
   const thresholds = titleThresholds();
   const spec = SPECS.find((spec) => spec.id === id);

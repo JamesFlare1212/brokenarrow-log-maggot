@@ -37,7 +37,6 @@ export interface MedalHistoryFixture {
   failures: Array<{ id: string; error: string }>;
 }
 
-/** Independently implement the pinned upstream six-dimension, team-relative badge rule. */
 export function comparisonMedals(value: unknown): Record<string, ComparisonMedalAward> | null {
   return scoreLabelAwards(value, MEDAL_TEAM_RATIO);
 }
@@ -87,7 +86,6 @@ function scoreLabelAwards(
         const score = p.breakdown[id];
         if (score >= threshold) {
           result[p.id]!.candidates.push({ id, score, threshold });
-          // Global awards have one winner; preserve analysis response order on ties.
           if (scope === 'match') break;
         }
       }
@@ -101,7 +99,6 @@ function scoreLabelAwards(
   return result;
 }
 
-/** Never attach analysis labels to live matches or a different match/roster. */
 export function matchScoreLabels(
   match: Match,
   value: unknown,
@@ -138,7 +135,6 @@ export function matchScoreLabels(
   );
 }
 
-/** Keep combat quantities separate from normalized scores used to select award recipients. */
 export function withScoreLabelEvidence(
   match: Match,
   labels: Record<string, MatchScoreLabel[]>,
@@ -163,7 +159,6 @@ export function withScoreLabelEvidence(
         roster[id] ?? Object.values(roster).find((p) => text(object(p).Id) === id),
       );
       const hasRaw = detailed && Object.keys(rawPlayer).length > 0;
-      // Complete protobuf payloads omit zero scalars; ID-only rosters do not establish zero.
       const rawMetric = (key: string): number | null =>
         hasRaw ? (rawPlayer[key] === undefined ? 0 : number(rawPlayer[key])) : null;
       const economic = object(economy.find((p) => text(object(p).playerId) === id));
@@ -217,7 +212,6 @@ const emptyCount = () => ({
   localAwarded: 0,
 });
 
-/** Compare only the intersection of complete match and analysis rosters. */
 export function compareTitleMedals(history: TitleHistoryFixture, analyses: MedalHistoryFixture) {
   const titleReport = summarizeTitleHistory(history);
   const responseMap = new Map(analyses.responses.map((response) => [response.id, response.value]));

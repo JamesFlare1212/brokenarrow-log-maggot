@@ -15,7 +15,6 @@ export type TimelineBuildResult =
   | Pick<Extract<MatchTimelineResult, { status: 'ready' }>, 'status' | 'reason' | 'data'>
   | Pick<Extract<MatchTimelineResult, { status: 'unavailable' }>, 'status' | 'reason' | 'data'>;
 
-// Bound allocation from untrusted durations; never silently truncate a match.
 const MAX_DURATION = 24 * 60 * 60;
 const MAX_PLAYERS = 100;
 const MAX_SORTIES = 100_000;
@@ -41,7 +40,6 @@ function timestamp(value: unknown): value is number {
   return finite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER - MAX_DURATION;
 }
 function metric(value: unknown): number | null {
-  // BATrace protobuf JSON omits zero scalar fields; explicit malformed values are not zero.
   if (value === undefined) return 0;
   return finite(value) && value >= 0 && value <= MAX_METRIC ? value : null;
 }
@@ -52,16 +50,6 @@ function identifier(value: unknown): string | null {
     : null;
 }
 
-/**
- * Derive a timeline lazily from a raw BATrace match response (or its matchInfo).
- * Base catalog prices are calibrated to each player's official deployment/loss totals.
- * All identifiable deployments, including refunds and late records, remain in the cost
- * denominator: removing them would redistribute their cost onto other units. Only
- * bounded, timestamped sorties enter curves. No missing timestamps are synthesized.
- * Refunds have no return timestamp, so they enter neither the field proxy nor highlights.
- * The curve is an estimate, not live combat power. Kill counts describe a sortie's full
- * interval, and recon markers establish deployment only, never causal damage windows.
- */
 export function buildMatchTimeline(raw: unknown): TimelineBuildResult {
   const wrapper = object(raw);
   const match = object('matchInfo' in wrapper ? wrapper.matchInfo : raw);
@@ -90,7 +78,6 @@ export function buildMatchTimeline(raw: unknown): TimelineBuildResult {
   let invalidTime = false;
   for (const [key, value] of roster) {
     const player = object(value);
-    // Omitted TeamId is Alpha in protobuf JSON, not an unknown/spectator team.
     const side =
       player.TeamId === undefined || [0, '0', 'Alpha'].includes(player.TeamId as string | number)
         ? 0
@@ -105,7 +92,6 @@ export function buildMatchTimeline(raw: unknown): TimelineBuildResult {
     const losses = metric(player.LossesScore);
     if (spawned === null || losses === null) return unavailable('missing-unit-data');
     const records = Object.entries(object(player.UnitData));
-    // A positive official total with no unit records cannot be reconstructed from summaries.
     if (!records.length && (spawned > 0 || losses > 0)) return unavailable('missing-unit-data');
     recordCount += records.length;
     if (recordCount > MAX_SORTIES) return unavailable('missing-unit-data');
@@ -179,7 +165,6 @@ export function buildMatchTimeline(raw: unknown): TimelineBuildResult {
   return { status: 'ready', reason: null, data };
 }
 
-/** O(sorties + duration): separate exact-second snapshots and bucket-end loss totals. */
 function buildSeries(sorties: TimelineSortie[], duration: number) {
   const last = Math.ceil(duration);
   const deltas = [new Float64Array(last + 1), new Float64Array(last + 1)];
@@ -191,7 +176,6 @@ function buildSeries(sorties: TimelineSortie[], duration: number) {
     if (!unit.refunded) deltas[unit.team]![Math.ceil(unit.spawn)]! += unit.cost;
     if (unit.death !== null) {
       deltas[unit.team]![Math.ceil(unit.death)]! -= unit.lossCost;
-      // A death at time zero is reflected in field value, not a later minute's losses.
       if (unit.death > 0) lossBuckets[unit.team]![Math.ceil(unit.death / 60)]! += unit.lossCost;
     }
   }
@@ -215,7 +199,6 @@ function buildSeries(sorties: TimelineSortie[], duration: number) {
       bravoLoss: 0,
     });
   }
-  // Only a fractional final frame lacks an integer-second rolling baseline.
   if (!Number.isInteger(duration) && duration > 60) {
     const previous = [0, 0];
     for (const unit of sorties) {
@@ -289,7 +272,6 @@ function buildMoments(sorties: TimelineSortie[], points: TimelinePoint[], durati
     let bestValue = 0;
     let end = 0;
     let value = 0;
-    // Sliding 60-second window, rather than scanning every suffix for every death.
     for (let start = 0; start < dead.length; start++) {
       while (end < dead.length && dead[end]!.death! <= dead[start]!.death! + 60) {
         value += dead[end]!.lossCost;
@@ -320,7 +302,6 @@ function buildMoments(sorties: TimelineSortie[], points: TimelinePoint[], durati
         weight: bestValue / 100,
       });
     } else {
-      // A loss peak is a factual ranking, not a claim of an exceptional collapse.
       const key = side === 0 ? 'alphaLoss' : 'bravoLoss';
       let peakIndex = 1;
       for (let index = 2; index < points.length; index++)

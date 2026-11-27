@@ -1,12 +1,3 @@
-/**
- * Bundled BATrace unit names, extracted from recorded player-analysis highlightUnits.
- * Source: tests/fixtures/batrace/offline/manifest.json
- * Manifest SHA-256: 727ace7fd68f9c39cd75837ca612a21417599b823c5f07df75f730b5aa99a601
- * Every compressed shard was SHA-256 verified before extraction. First name wins in
- * manifest/record order, matching the timeline prototype. No player data is bundled.
- * Regenerate: node packages/shared/scripts/generate-timeline-unit-names.mjs
- * Production reads only this static map, never fixtures or additional player requests.
- */
 export const TIMELINE_UNIT_NAMES: Readonly<Record<string, string>> = {
   '1': 'BTR-82',
   '2': 'M1A2 SEP v2 TUA',

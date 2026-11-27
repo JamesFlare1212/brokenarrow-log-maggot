@@ -36,13 +36,11 @@ export const PANELS = [
   'decks',
   'bans',
 ] as const;
-// Remove retired pages from saved navigation without resetting other preferences.
 const panelListSchema = z
   .array(z.enum([...PANELS, 'about', 'apm']))
   .transform((panels) => panels.filter((panel) => panel !== 'about' && panel !== 'apm'));
 export const THEMES = ['dark', 'light', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
 export const THEME_MODES = ['system', 'light', 'dark'] as const;
-// Keep legacy palette keys so existing installations retain their colors.
 export const COLOR_SCHEMES = ['dark', 'cyan', 'orange', 'violet', 'forest', 'ocean'] as const;
 export const GLASS_OPACITY = { min: 40, max: 100, step: 5, default: 50 } as const;
 export const SIDEBAR_WIDTH_LIMITS = { min: 200, max: 400, default: 256 } as const;
@@ -105,8 +103,6 @@ export const configSchema = z.object({
   replayMicrophone: z.boolean().default(true),
   replaySaveDir: z.string().max(4096).default(''),
 });
-// Zod preserves defaults inside partial objects. Patches must validate only the
-// supplied fields, or a single preference change overwrites every other setting.
 const configPatchSchema: z.ZodType<Partial<PublicConfig>> = z
   .object(
     Object.fromEntries(

@@ -1,4 +1,3 @@
-/** Fields omitted by BATrace protobuf JSON represent zero in a complete match response. */
 export interface RawTitleUnit {
   Id?: number | string;
   SpawnTime?: number;

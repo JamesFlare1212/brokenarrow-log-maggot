@@ -1,4 +1,3 @@
-/** Calibrated deployment/loss estimates, not a replay or measured field strength. */
 export interface TimelineSortie {
   id: string;
   playerId: string;
@@ -28,7 +27,6 @@ export interface TimelineMoment {
   start: number;
   end: number;
   value: number;
-  /** Recorded unit name for individual events; empty for aggregate loss events. */
   unit: string;
   sorties: TimelineSortie[];
   weight: number;
@@ -53,9 +51,7 @@ export interface TimelinePlayer {
 
 export interface TimelineData {
   duration: number;
-  /** Bucket-end values and losses in (previous boundary, boundary]. */
   points: TimelinePoint[];
-  /** Integer-second snapshots, plus the exact final time for fractional durations. */
   frames: TimelinePoint[];
   sorties: TimelineSortie[];
   moments: TimelineMoment[];

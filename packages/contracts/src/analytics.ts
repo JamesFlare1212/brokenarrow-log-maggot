@@ -52,7 +52,6 @@ export function isDiagnosticFilename(value: string): boolean {
     appModules.has(value) || /^[A-Za-z][A-Za-z0-9_-]{0,64}-[A-Za-z0-9_-]{6,32}\.js$/.test(value)
   );
 }
-/** Retain only public app module names and code positions, never paths or messages. */
 export function diagnosticFrames(stack: unknown): DiagnosticFrame[] {
   if (typeof stack !== 'string') return [];
   const frames = stack

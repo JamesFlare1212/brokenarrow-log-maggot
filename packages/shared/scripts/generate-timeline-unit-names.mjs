@@ -1,5 +1,3 @@
-// Development-only generator. Never imported by the production application.
-// Run from the repository root: node packages/shared/scripts/generate-timeline-unit-names.mjs
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -27,16 +25,7 @@ for (const file of manifest.files) {
   }
 }
 const output = new URL('packages/shared/src/timeline/unit-names.ts', root);
-const source = `/**
- * Bundled BATrace unit names, extracted from recorded player-analysis highlightUnits.
- * Source: tests/fixtures/batrace/offline/manifest.json
- * Manifest SHA-256: ${hash(manifestBytes)}
- * Every compressed shard was SHA-256 verified before extraction. First name wins in
- * manifest/record order, matching the timeline prototype. No player data is bundled.
- * Regenerate: node packages/shared/scripts/generate-timeline-unit-names.mjs
- * Production reads only this static map, never fixtures or additional player requests.
- */
-export const TIMELINE_UNIT_NAMES: Readonly<Record<string, string>> = ${JSON.stringify(names, null, 2)};
+const source = `export const TIMELINE_UNIT_NAMES: Readonly<Record<string, string>> = ${JSON.stringify(names, null, 2)};
 `;
 writeFileSync(
   output,
