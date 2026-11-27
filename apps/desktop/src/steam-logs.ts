@@ -5,8 +5,6 @@ import { parseVdf, type VdfObject } from './steam-vdf';
 
 const APP_ID = '1604270';
 const LIVE_WINDOW_MS = 120_000;
-// A static script with UTF-8 output preserves non-ASCII installation paths. No user input
-// is interpolated into PowerShell, and both registry views are opened explicitly.
 const STEAM_ROOTS_SCRIPT = String.raw`
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $baRoots = @()
@@ -64,9 +62,7 @@ export async function getSteamRoots(): Promise<string[]> {
     const values: unknown = JSON.parse(stdout.trim().replace(/^\uFEFF/, ''));
     if (Array.isArray(values))
       registered = values.filter((value): value is string => typeof value === 'string');
-  } catch {
-    // Registry access can be unavailable; known installation locations remain usable.
-  }
+  } catch {}
   const defaults = [
     process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)',
     process.env.ProgramW6432 || process.env.ProgramFiles || 'C:\\Program Files',
@@ -85,7 +81,6 @@ async function metadata(path: string): Promise<VdfObject> {
   try {
     return parseVdf(await readFile(path, 'utf8'));
   } catch {
-    // Missing, inaccessible or partially rewritten metadata must not hide other libraries.
     return {};
   }
 }
@@ -123,19 +118,14 @@ async function inspect(dir: string, installed: boolean): Promise<Candidate | nul
         } finally {
           await handle.close();
         }
-      } catch {
-        // Logs can rotate or become inaccessible between enumeration and opening.
-      }
+      } catch {}
     }
-    // An installed game may not have produced its first log yet. Unverified empty folders
-    // and folders whose existing logs are all unreadable are not successful detections.
     return installed && names.length === 0 ? { dir, installed, latestLog: null } : null;
   } catch {
     return null;
   }
 }
 
-/** Search only known Steam roots and their declared libraries, without a disk-wide scan. */
 export async function findLogDirectory(
   roots: readonly string[],
   now = Date.now(),
@@ -163,7 +153,6 @@ export async function findLogDirectory(
       const candidates = new Map<string, boolean>();
       if (manifest && typeof manifest !== 'string' && manifest.appid === APP_ID) {
         const name = manifest.installdir;
-        // Steam's installdir is a folder name underneath steamapps/common.
         if (
           typeof name === 'string' &&
           name &&

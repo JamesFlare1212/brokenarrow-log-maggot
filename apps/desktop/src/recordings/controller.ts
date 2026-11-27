@@ -67,7 +67,6 @@ export class RecordingController {
       displays = screen.getAllDisplays();
     return sources.map((s) => {
       const d = displays.find((d) => String(d.id) === s.display_id);
-      // Electron display bounds use device-independent pixels, not physical pixels.
       const width = d ? Math.round(d.bounds.width * d.scaleFactor) : 0;
       const height = d ? Math.round(d.bounds.height * d.scaleFactor) : 0;
       return {
@@ -283,7 +282,6 @@ export class RecordingController {
       if (this.current !== c) return;
       if (!(await stat(c.part)).size) throw new Error('No recording data');
       if (this.current !== c) return;
-      // Retired and replacement finalizers must never publish or remove the same destination.
       const fileTime = Math.max(Date.now(), this.lastFileTime + 1);
       this.lastFileTime = fileTime;
       const me = c.match.players.find((p) => p.id === c.match.localPlayerId),
@@ -370,7 +368,6 @@ export class RecordingController {
   private async discardCurrent(): Promise<void> {
     const c = this.current;
     this.current = null;
-    // Publish retirement before cleanup yields to a replacement capture.
     this.update({
       phase: 'idle',
       sessionId: null,

@@ -2,7 +2,6 @@ export interface VdfObject {
   [key: string]: string | VdfObject;
 }
 
-/** The text KeyValues subset used by Steam library and app manifests. */
 export function parseVdf(raw: string): VdfObject {
   if (raw.length > 1024 * 1024) throw new Error('Steam metadata is too large');
   const token = /\s+|\/\/[^\r\n]*|"(?:\\.|[^"\\])*"|[{}]|[^\s{}"]+/gy;

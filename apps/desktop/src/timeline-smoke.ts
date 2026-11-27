@@ -2,7 +2,6 @@ import type { BrowserWindow } from 'electron';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-/** Verify the shipped renderer, typed bridge and recorded data in an isolated profile. */
 export async function verifyMatchTimeline(window: BrowserWindow) {
   const size = window.getSize();
   const checks: Record<string, boolean> = {};

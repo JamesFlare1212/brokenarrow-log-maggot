@@ -2,7 +2,6 @@ import type { BrowserWindow } from 'electron';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-/** Exercise the real archive route and layout in the hidden offline smoke window. */
 export async function verifyMatchDetails(window: BrowserWindow) {
   const originalSize = window.getSize();
   await window.webContents.executeJavaScript(`(async () => {

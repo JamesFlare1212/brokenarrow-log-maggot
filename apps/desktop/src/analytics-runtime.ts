@@ -1,7 +1,6 @@
 import { app, powerMonitor, type BrowserWindow } from 'electron';
 import type { AnalyticsRuntimeSample } from '@ba/contracts';
 
-/** Capture aggregate resources and foreground/activity gates, never titles or input details. */
 export function sampleAnalyticsRuntime(window: BrowserWindow | null): AnalyticsRuntimeSample {
   const foreground =
     !!window &&

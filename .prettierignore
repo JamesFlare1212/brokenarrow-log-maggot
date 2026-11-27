@@ -6,3 +6,5 @@ dist/
 apps/*/dist/
 .test-data/
 pnpm-lock.yaml
+/tests/fixtures/batrace/match-9227650.html
+/tests/fixtures/batrace/player-8863.html

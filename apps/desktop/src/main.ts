@@ -26,8 +26,6 @@ import { selectDirectory, detectLogDirectory, openPath } from './directories';
 import { UpdateController } from './updates/controller';
 import { readInstallRecord, writeInstallRecord } from './updates/install-record';
 import { sampleAnalyticsRuntime } from './analytics-runtime';
-// Temporary workaround for BATrace QUIC/HTTP/3 stalls; revisit after Chromium/network fixes.
-// See docs/architecture.md#temporary-quic-workaround for removal criteria.
 app.commandLine.appendSwitch('disable-quic');
 protocol.registerSchemesAsPrivileged([
   {
@@ -46,7 +44,6 @@ process.on('uncaughtExceptionMonitor', (error) => service?.reportError('main', e
 const smoke = process.env.BA_SMOKE === '1';
 const offline = process.env.BA_OFFLINE === '1';
 const allowedDevUrl = process.env.BA_RENDERER_URL || '';
-// Fallback colors until the renderer supplies the active palette.
 const windowColors = {
   light: { color: '#ffffff', symbolColor: '#262626' },
   dark: { color: '#0a0a0a', symbolColor: '#fafafa' },
@@ -92,10 +89,9 @@ async function start(): Promise<void> {
       await service?.stop();
       await recordings?.abort();
       replays?.close();
-      // Keep the app alive until electron-updater starts NSIS and calls quit.
     },
     installFailed: (error) => {
-      if (!quitting) return; // Preparation failed before closing the service; retry in the UI.
+      if (!quitting) return;
       dialog.showErrorBox(
         '更新安装失败 / Update failed',
         error + '\n应用将重新启动 / The app will restart.',
@@ -249,7 +245,6 @@ async function start(): Promise<void> {
           .find(button => ['录像设置', 'Recording settings'].includes(button.textContent.trim())));
         settings.click();
         const dialog = await waitFor(() => document.querySelector('.recording-settings-dialog'));
-        // Exercise the shared dialog layout with content as wide and tall as match details.
         dialog.style.width = 'calc(100% - 3rem)';
         dialog.style.maxWidth = 'none';
         dialog.style.height = '100svh';
@@ -276,7 +271,6 @@ async function start(): Promise<void> {
         await window.assistant.setWindowTheme(theme, colors);
         await document.fonts.ready;
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        // Measure native and DOM geometry together after theme changes and layout settle.
         const area = overlay?.getTitlebarAreaRect();
         const bounds = workspace.getBoundingClientRect();
         const toolbarBounds = toolbar.getBoundingClientRect();
@@ -321,7 +315,6 @@ async function start(): Promise<void> {
             getComputedStyle(backdrop).backdropFilter !== 'none' && backdrop.contains(headerTarget),
           dialogCloseAccessible: closeBounds.top >= area?.bottom &&
             closeBounds.bottom <= dialogBounds.bottom && close.contains(closeTarget),
-          // Native viewport dimensions round to integers at fractional display scales.
           flush: Math.abs(bounds?.top) < 1 && Math.abs(bounds?.right - innerWidth) < 1 &&
             Math.abs(bounds?.bottom - innerHeight) < 1,
         };
@@ -393,9 +386,7 @@ ipcMain.handle('ba:recording:failure', (event, id: string, error: string) =>
 ipcMain.on('ba:recording:preview', (event, id: string, dataUrl: string, audio: boolean) => {
   try {
     recordings?.preview(event.sender.id, id, dataUrl, audio);
-  } catch {
-    /* Discard previews from a destroyed recording session. */
-  }
+  } catch {}
 });
 async function shutdown(): Promise<void> {
   if (quitting) return;

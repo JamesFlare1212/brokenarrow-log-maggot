@@ -29,8 +29,6 @@ interface UpdateOptions {
   notAppliedVersion?: string | null;
 }
 
-// The same scheduler checks portable builds, but only installed builds may
-// download/run an installer. No renderer-provided URLs or paths reach this layer.
 export class UpdateController {
   private state: UpdateState;
   private action: 'check' | 'download' | 'install' | null = null;
@@ -51,7 +49,6 @@ export class UpdateController {
     engine.autoInstallOnAppQuit = false;
     engine.channel = 'latest';
     engine.allowPrerelease = false;
-    // Setting channel also enables downgrades in electron-updater. Reset it.
     engine.allowDowngrade = false;
     this.listen('download-progress', (value) => {
       if (this.action !== 'download' || this.state.status !== 'downloading') return;
@@ -61,8 +58,6 @@ export class UpdateController {
     });
     this.listen('error', (error) => {
       if (this.action === 'install' && this.prepared) this.installFailure(error);
-      // Check/download promises report their own failures. Always retain an
-      // error listener: EventEmitter otherwise throws on asynchronous errors.
     });
   }
 
@@ -88,8 +83,6 @@ export class UpdateController {
 
   async check(): Promise<UpdateState> {
     const engine = this.options.engine;
-    // Keep an already verified download installable; polling must not replace
-    // the updater's selected version while it is waiting to be installed.
     if (
       !engine ||
       this.disposed ||
@@ -167,8 +160,6 @@ export class UpdateController {
       return this.status();
     this.action = 'install';
     this.set({ status: 'installing', error: null, errorContext: null });
-    // Return the RPC first. Application.stop() waits for in-flight RPCs, so
-    // awaiting shutdown from inside the install RPC would deadlock itself.
     this.installTimer = setTimeout(() => {
       this.installTimer = null;
       void this.applyInstall();
@@ -178,7 +169,6 @@ export class UpdateController {
 
   private async applyInstall(): Promise<void> {
     try {
-      // A match/recording can start between the click and this scheduled turn.
       if (!this.options.canInstall()) {
         this.action = null;
         this.set({ status: 'downloaded' });
@@ -201,8 +191,6 @@ export class UpdateController {
       error: errorMessage(error),
       errorContext: 'install',
     });
-    // The service may already be closed. The host relaunches a fresh instance
-    // instead of leaving a window backed by a disposed database.
     this.options.installFailed(errorMessage(error));
     if (!this.prepared) {
       this.recoveryStarted = false;
@@ -217,7 +205,6 @@ export class UpdateController {
     if (this.installTimer) clearTimeout(this.installTimer);
     for (const [event, listener] of this.listeners)
       this.options.engine?.removeListener(event, listener);
-    // A download being torn down may still emit an error before process exit.
     this.options.engine?.on('error', () => {});
     this.timers = [];
     this.listeners = [];
