@@ -1,5 +1,3 @@
-/* Shared browser/native foundations and calculated layout budgets.
-   Component styling lives in Tailwind utilities beside the React markup. */
 html,
 body,
 #root {
@@ -93,7 +91,6 @@ button:not(:disabled),
   --window-controls-height: env(titlebar-area-height, var(--toolbar-height));
 }
 :root[data-window-controls-overlay='true'] .page-toolbar {
-  /* Keep the separator below the native caption overlay, which paints above the renderer. */
   height: calc(var(--window-controls-height) + 1px);
   min-height: calc(var(--window-controls-height) + 1px);
   padding-right: calc(100vw - env(titlebar-area-width, 100vw) + 1.5rem);
@@ -153,14 +150,12 @@ button:not(:disabled),
   }
 }
 .session-layout {
-  /* Resolve the reservation where the container can adjust the heading height. */
   --session-roster-height: calc(
     var(--session-team-rows) *
       (var(--session-team-heading-height) + var(--session-team-heading-margin)) +
       var(--session-player-rows) * (var(--session-player-height) + var(--session-player-gap)) +
       (var(--session-team-rows) - 1) * var(--session-team-grid-gap)
   );
-  /* Reserve a standard 5v5 layout using the same dimensions as its rendered rows. */
 }
 .archive-card {
   --card-spacing: 1.25rem;
@@ -171,7 +166,6 @@ button:not(:disabled),
 
 [data-slot='dialog-content'],
 [data-slot='alert-dialog-content'] {
-  /* Native caption buttons paint above every renderer layer, including modal portals. */
   top: calc(50% + var(--window-controls-height) / 2);
   max-height: calc(100svh - var(--window-controls-height) - 3rem);
 }

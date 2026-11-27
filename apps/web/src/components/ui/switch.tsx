@@ -11,7 +11,6 @@ function Switch({
 }: React.ComponentProps<typeof SwitchPrimitive.Root> & {
   size?: 'sm' | 'default';
 }) {
-  // Center each thumb endpoint on its track end cap, independent of snapped border widths.
   return (
     <SwitchPrimitive.Root
       data-slot="switch"

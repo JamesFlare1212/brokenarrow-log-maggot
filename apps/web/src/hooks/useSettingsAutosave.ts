@@ -18,7 +18,6 @@ export function useSettingsAutosave(
   const confirmed = useRef(config);
   const observed = useRef(config);
   const versions = useRef<Partial<Record<keyof PublicConfig, number>>>({});
-  // Automatic saves drain pending fields; only explicit flush promotes draft-only fields.
   const pending = useRef<Partial<PublicConfig>>({}),
     staged = useRef<Partial<PublicConfig>>({}),
     overrides = useRef<Partial<PublicConfig>>({});
@@ -68,7 +67,6 @@ export function useSettingsAutosave(
           const result = await api.invoke('config.update', patch);
           const acknowledged = { ...confirmed.current } as PublicConfig;
           for (const key of keys) {
-            // Replies acknowledge patched fields; newer observed fields retain their authority.
             if (versions.current[key] === sentVersions[key])
               Object.assign(acknowledged, { [key]: result[key] });
             if (

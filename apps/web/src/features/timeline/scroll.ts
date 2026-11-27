@@ -1,4 +1,3 @@
-/** Resolve the host scrollport instead of moving every scrollable ancestor. */
 function scrollport(target: HTMLElement, supplied?: HTMLElement | null): HTMLElement {
   if (supplied) return supplied;
   let parent = target.parentElement;
@@ -28,7 +27,6 @@ export function scrollToElement(
     ? target.ownerDocument.documentElement.clientHeight
     : viewport.clientHeight;
   const style = documentScroll ? null : getComputedStyle(viewport);
-  // Sticky children are inset inside a padded scrollport (notably dialog bodies).
   const paddingTop = Number.parseFloat(style?.paddingTop ?? '0') || 0;
   const paddingBottom = Number.parseFloat(style?.paddingBottom ?? '0') || 0;
   const usableTop = top + paddingTop + topInset;

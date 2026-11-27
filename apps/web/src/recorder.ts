@@ -66,10 +66,8 @@ async function stop() {
   }
   const duration = (performance.now() - startedAt) / 1000;
   try {
-    // Freeze both timelines before flushing either encoder to avoid an extra audio tail.
     videoSource?.pause();
     audioSource?.pause();
-    // Finalization drains encoders, muxer fragments and acknowledged disk writes.
     await output.finalize();
     cleanup();
     if (!discard && !failed) await bridge.finish(token, duration, hasAudio);
@@ -145,7 +143,6 @@ async function start() {
       return;
     }
     const size = canvasSize(config.quality, video.videoWidth, video.videoHeight);
-    // Chroma-subsampled hardware encoders need even dimensions, including ultrawide displays.
     const dimensions = { width: Math.max(2, Math.round(size.width / 2) * 2), height: size.height };
     const selected = await selectRecordingEncoder(
       config.qualityScore,

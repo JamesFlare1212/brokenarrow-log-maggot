@@ -25,7 +25,6 @@ export function clampToolPosition(
   };
 }
 
-/** Native top-layer placement and a shadow boundary isolate the tools from the application. */
 export function useDevelopmentLayer(onEscape: () => void) {
   const [layer, setLayer] = useState<{ root: ShadowRoot; selectPortal: HTMLDivElement } | null>(
     null,

@@ -1,4 +1,3 @@
-/* Adapted from pingdotgg/t3code at 5bb54a0f77c6655fdb2ab551612ca1ca1fcd3667. Copyright (c) 2026 T3 Tools Inc. MIT; see THIRD_PARTY_NOTICES.txt. */
 import { cn } from '@/lib/utils';
 import type { ThemeCardPreviewColors } from './ThemePreviewCircle';
 

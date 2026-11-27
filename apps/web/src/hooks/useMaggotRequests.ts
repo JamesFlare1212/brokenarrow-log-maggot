@@ -32,7 +32,6 @@ export function useMaggotRequests(api: Bridge) {
       const update = (value: Omit<MaggotRequest, 'requestId'>) =>
         setMaggot((current) => ({ ...current, [id]: { ...value, requestId } }));
       update({ status: 'queued', data: previous, error: null });
-      // The analyzer accepts one calculation at a time across all player views.
       const request = queue.current.then(async () => {
         update({ status: 'loading', data: previous, error: null });
         try {

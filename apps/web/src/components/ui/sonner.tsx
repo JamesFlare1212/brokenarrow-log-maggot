@@ -33,7 +33,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          // Sonner's unlayered shadow needs an important utility to retain the shared material.
           toast: cn(
             'cn-toast',
             glassOverlaySurfaceClasses,

@@ -18,7 +18,6 @@ export interface MatchAwardGroup {
   awards: MatchAward[];
 }
 
-/** Adapt both rule families to one view model without changing their independent limits. */
 export function matchAwardGroups(
   titles: MatchTitle[],
   scoreLabels: MatchScoreLabel[],

@@ -58,7 +58,6 @@ export function clusterMoments(
       position: Math.max(start, Math.min(end, (moment.start + moment.end) / 2)),
     }))
     .sort((a, b) => a.position - b.position);
-  // Keep measured labels inside the rail, then recheck collisions after each merge.
   const center = (positions: number[], items: Moment[]) => {
     const percent =
       ((positions.reduce((sum, value) => sum + value, 0) / positions.length - start) /
@@ -122,7 +121,6 @@ export function timeWindow(duration: number, second: number, detail: boolean) {
   return { start, end: Math.min(start + 300, duration) };
 }
 
-/** At an exact boundary, a selected interval belongs to the following loss bucket. */
 export function pointAt(points: Point[], second: number, afterBoundary = false): Point {
   return (
     points.find((point) => (afterBoundary ? point.second > second : point.second >= second)) ??
@@ -130,7 +128,6 @@ export function pointAt(points: Point[], second: number, afterBoundary = false):
   );
 }
 
-/** Reuse sampled frames; derive fractional event positions from the recorded sorties. */
 export function frameAt(frames: Point[], second: number, sorties?: TimelineSortie[]): Point {
   let low = 0;
   let high = frames.length - 1;

@@ -6,7 +6,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Preserve inclusive legacy query boundaries and their cascade order. */
 @custom-variant metric-max-16 (@container metric (max-width: 16rem));
 @custom-variant session-roster-max-24 (@container session-roster (max-width: 24rem));
 @custom-variant profile-overview-max-52 (@container profile-overview (max-width: 52rem));
@@ -88,7 +87,6 @@
 
 :root,
 .theme-palette {
-  /* Primitives define each family; semantic roles preserve the same surface hierarchy. */
   --theme-hue: 255;
   --theme-chroma: 0.006;
   --theme-primary-light: oklch(0.35 0.025 255);
@@ -111,7 +109,6 @@
   );
   --card-foreground: var(--foreground);
   --glass-surface: color-mix(in srgb, var(--card) var(--glass-opacity), transparent);
-  /* Raised glass stays readable above arbitrary content and follows the opacity preference. */
   --glass-overlay-opacity: calc(80% + var(--glass-opacity) * 0.2);
   --glass-overlay-surface: color-mix(
     in srgb,

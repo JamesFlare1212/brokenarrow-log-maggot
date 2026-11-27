@@ -40,7 +40,6 @@ export async function prepareRecordingAudio(signal: AbortSignal): Promise<void> 
     timestamp: 0,
   });
   try {
-    // Warm up AAC and validate packet output before any live samples are queued.
     await withRecordingDeadline(
       (async () => {
         await output.start();
@@ -64,7 +63,6 @@ export interface RecordingEncoder {
 
 export function recordingQuantizer(codec: RecordingCodec, score: number): number {
   const value = normalizeRecordingQualityScore(score);
-  // AV1 uses a 0–255 qindex; AVC and HEVC use a 0–51 QP. These are not equal-quality scales.
   return codec === 'av1' ? value * 4 : value;
 }
 

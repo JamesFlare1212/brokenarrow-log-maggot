@@ -261,8 +261,6 @@ function TableScroll({
           0,
           rowsPerViewport,
         );
-        // A calculated native viewport budget keeps the initial minute table on
-        // complete row boundaries instead of teasing a clipped final record.
         holder.current?.style.setProperty(
           '--table-viewport-height',
           `${(header?.offsetHeight ?? 0) + rows.reduce((height, row) => height + row.offsetHeight, 0)}px`,
@@ -294,8 +292,6 @@ function TableScroll({
       update();
     };
     settle();
-    // Dialog scale transforms do not notify ResizeObserver. Recompute the shared
-    // sticky-table clips once the opening animation has reached its final geometry.
     const frame = requestAnimationFrame(() => {
       const dialog = holder.current?.closest('[data-slot="dialog-content"]');
       void Promise.all(
@@ -982,8 +978,6 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
   const focusChart = (moveFocus = true) =>
     requestAnimationFrame(() => {
       if (narrow && contextRef.current && cardRef.current) {
-        // The sticky card's visible position is not its flow position. Align from
-        // the non-sticky plot card so repeated paging cannot accumulate drift.
         const context = contextRef.current;
         const card = cardRef.current;
         const gap = Number.parseFloat(getComputedStyle(card.parentElement!).rowGap) || 0;
@@ -1005,7 +999,6 @@ function TimelineBody({ scrollContainer, stickyOffset = 0 }: Omit<TimelineViewPr
     focusChart();
   };
   const inspectDetail = (time?: number) => {
-    // Keep the original hit target until the tap's compatibility click finishes.
     requestAnimationFrame(() => {
       setChartExpanded(true);
       setDetail(true);

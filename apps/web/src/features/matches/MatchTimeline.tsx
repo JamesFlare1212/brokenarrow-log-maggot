@@ -23,7 +23,6 @@ function TimelineLoading() {
   );
 }
 
-/** Resolve the actual archive/dialog scrolling surface, not the Electron window. */
 export function timelineScrollContainer(element: HTMLElement): HTMLElement | null {
   let container: HTMLElement | null = element.parentElement;
   while (container && container !== document.body && container !== document.documentElement) {

@@ -21,7 +21,6 @@ function readWindowThemeColors(): WindowThemeColors | undefined {
   return { background: toHex(styles.backgroundColor), foreground: toHex(styles.color) };
 }
 
-/** Used for both saved preferences and the settings draft, including live OS changes. */
 export type Appearance = Pick<
   PublicConfig,
   'theme' | 'themeMode' | 'lightTheme' | 'darkTheme' | 'glassOpacity' | 'eloColorScheme'

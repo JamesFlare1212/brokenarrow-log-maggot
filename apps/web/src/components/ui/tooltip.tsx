@@ -48,7 +48,6 @@ function TooltipContent({
         )}
         {...props}
       >
-        {/* Keep glass hints stationary; animated backdrop layers can leave stale pixels. */}
         {children}
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>

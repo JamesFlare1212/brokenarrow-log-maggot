@@ -1,6 +1,5 @@
 import { developmentPreview } from './data';
 
-/** Generates synthetic footage without requesting a display, microphone or camera. */
 export async function createDevelopmentVideo(): Promise<string> {
   const canvas = document.createElement('canvas');
   canvas.width = 640;

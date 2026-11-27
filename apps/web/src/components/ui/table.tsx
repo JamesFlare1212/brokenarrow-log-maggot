@@ -19,7 +19,6 @@ function Table({
     while (viewport.parentElement && !/(auto|scroll)/.test(getComputedStyle(viewport).overflow))
       viewport = viewport.parentElement;
 
-    // Clip covered content so sticky labels need no opaque or extra glass layer.
     const update = () => {
       const cells = stickyFirstColumn
         ? Array.from(element.rows).flatMap((row) => Array.from(row.cells))

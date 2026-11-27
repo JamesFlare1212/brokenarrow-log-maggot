@@ -1,6 +1,3 @@
-/* Adapted from pingdotgg/t3code at 5bb54a0f77c6655fdb2ab551612ca1ca1fcd3667.
- * Copyright (c) 2026 T3 Tools Inc. MIT; see THIRD_PARTY_NOTICES.txt.
- */
 import type { CSSProperties } from 'react';
 import type { ColorScheme, PublicConfig } from '@ba/contracts';
 import { cn } from '@/lib/utils';
@@ -98,7 +95,6 @@ export function ThemePreviewCircle({
   mode: ThemeAppearance;
   className?: string;
 }) {
-  // Keep filtered pixels inside the swatch when neighboring glass layers repaint.
   return (
     <span
       aria-hidden

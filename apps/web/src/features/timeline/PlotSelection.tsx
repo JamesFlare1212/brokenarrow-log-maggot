@@ -17,7 +17,6 @@ interface PlotGeometry {
 
 const PlotContext = createContext<RefObject<PlotGeometry | null> | null>(null);
 
-/** Capture gestures above all SVG layers, including moving cursors and bars. */
 export function PlotSelectionRoot({
   children,
   onValueChange,
@@ -102,7 +101,6 @@ export function PlotSelectionRoot({
         }}
         onClickCapture={(event) => event.stopPropagation()}
         onMouseMoveCapture={(event) => {
-          // Keep the click confirmation stable until an intentional pointer move.
           if (touch.current || pinned.current) event.stopPropagation();
         }}
       >
@@ -112,7 +110,6 @@ export function PlotSelectionRoot({
   );
 }
 
-/** Register the actual rendered plot and its data-snap inverse scale. */
 export function PlotSelection() {
   const plot = usePlotArea();
   const inverse = useXAxisInverseDataSnapScale();

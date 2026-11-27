@@ -31,7 +31,6 @@ type Handlers = {
   [K in RpcMethod]?: (input: RpcInputs[K]) => RpcOutputs[K] | Promise<RpcOutputs[K]>;
 };
 
-/** Scene overrides live only in this browser tab; captured fixtures remain untouched. */
 export function createDevelopmentRuntime(
   base: Bridge,
   options: { now?: () => number; createVideo?: () => Promise<string> } = {},
