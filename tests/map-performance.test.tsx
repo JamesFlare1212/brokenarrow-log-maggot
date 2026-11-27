@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+'@vitest-environment jsdom';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 import type { PlayerReport } from '@ba/contracts';

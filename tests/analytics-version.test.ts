@@ -53,7 +53,6 @@ async function launch(
   const app = new Application(path, platform, () => {}, !offline);
   applications.push(app);
   app.db.updateConfig({ banPollEnabled: false, matchSyncEnabled: false });
-  // Keep analytics on the real HTTP port while isolating unrelated BATrace probes.
   vi.spyOn(app.client, 'get').mockResolvedValue({ value: {}, source: 'network', at: Date.now() });
   await app.start();
   return { app, fetchImpl };

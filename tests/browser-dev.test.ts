@@ -38,7 +38,6 @@ describe('browser development with repository fixtures', () => {
     });
   }, 30000);
 
-  // Importing the complete recorded corpus into two SQLite profiles can exceed ten seconds.
   it('cleans cache only in the writable browser profile and preserves match history', async () => {
     const service = await create();
     const before = (await service.invoke('cache.stats', null)) as CacheStats;

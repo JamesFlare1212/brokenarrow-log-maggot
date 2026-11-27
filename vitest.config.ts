@@ -16,7 +16,6 @@ export default defineConfig({
     setupFiles: ['tests/setup-dom.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     environment: 'node',
-    // Corpus-heavy suites share disk bandwidth, so extra workers can cause test timeouts.
     maxWorkers: Math.min(4, availableParallelism()),
     testTimeout: 10000,
     restoreMocks: true,

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+'@vitest-environment jsdom';
 import { useState, type ReactNode } from 'react';
 import {
   act,
@@ -82,7 +82,6 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-/** Uses captured game data and explicitly controlled native events and RPC responses. */
 function nativeFixture(
   initial = structuredClone(fixtureBootstrap),
   overrides: Partial<Handlers> = {},
@@ -165,7 +164,6 @@ function nativeFixture(
     invoke: async <K extends RpcMethod>(method: K, input: RpcInputs[K]): Promise<RpcOutputs[K]> => {
       calls.push({ method, input: structuredClone(input) });
       timeline.push(`invoke:${method}`);
-      // The method-indexed handler table is checked when fixtures are declared.
       const override = overrides[method] as Handler<K> | undefined;
       if (override) return override(input);
       if (method === 'app.bootstrap') return structuredClone(backend) as RpcOutputs[K];
@@ -801,7 +799,6 @@ describe('settings pages and automatic saving', () => {
       const initial = bootstrapForApp();
       const native = nativeFixture(initial);
       render(<App />, { wrapper: wrapper(native.api) });
-      // A cold CI worker also transforms the lazy settings module on this first navigation.
       const settings = within(await screen.findByRole('main', { name: '设置' }, { timeout: 5000 }));
       expect(location.hash).toBe('#settings/general');
       expect(screen.getByRole('tab', { name: '常规' }).getAttribute('aria-selected')).toBe('true');
@@ -1009,7 +1006,6 @@ describe('settings pages and automatic saving', () => {
     const native = nativeFixture(bootstrapForApp());
     render(<App />, { wrapper: wrapper(native.api) });
     await screen.findByRole('main', { name: '总览' });
-    // Include the players page in this fixture's navigation.
     act(() =>
       native.emit({
         type: 'config',

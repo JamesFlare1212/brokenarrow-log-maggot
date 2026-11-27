@@ -93,7 +93,7 @@ describe('lazy timeline match RPC and cache behavior', () => {
       source: 'stale',
       updatedAt: recorded.at,
     });
-    expect(fetchImpl).toHaveBeenCalledTimes(2); // Existing API and HTML fallback.
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(db.cache(`match:${fid}`, true, now)).toEqual(before);
     await expect(tracker.timeline(fid, true)).rejects.toThrow('BATrace HTTP 403');
     expect(db.cache(`match:${fid}`, true, now)).toEqual(before);

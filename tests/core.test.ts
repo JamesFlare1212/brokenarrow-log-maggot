@@ -27,7 +27,6 @@ afterEach(() => {
   for (const db of databases.splice(0)) db.close();
 });
 
-// PascalCase match DTO and camelCase analysis DTO mirror the existing BATrace adapters.
 const matchInfo = {
   MapId: 7,
   EndTime: 1_700_000_000,

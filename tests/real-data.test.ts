@@ -303,7 +303,6 @@ describe('captured local real data', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  // Both profiles import the complete recorded corpus before isolation can be checked.
   it('prepares independent writable development profiles without modifying the committed snapshot', async () => {
     const dir = await temporary();
     const one = await prepareRealData(fixtures, dir);

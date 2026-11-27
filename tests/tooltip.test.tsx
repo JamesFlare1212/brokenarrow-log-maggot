@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+'@vitest-environment jsdom';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -38,7 +38,6 @@ describe('button tooltips', () => {
       element.className
         .split(/\s+/)
         .filter(
-          // Glass hints stay stationary; pinned popovers retain their panel animation.
           (name) =>
             !/^(?:origin-|group\/tooltip$)|(?:^|:)(?:animate-|fade-|zoom-|slide-|duration-)/.test(
               name,

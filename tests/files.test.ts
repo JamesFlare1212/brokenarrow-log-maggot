@@ -370,7 +370,6 @@ describe('local recordings', () => {
         !['EPERM', 'EACCES'].includes(String((error as NodeJS.ErrnoException).code))
       )
         throw error;
-      // Windows without file-symlink privileges still supports directory junctions.
       const directory = join(root, 'linked-directory');
       await mkdir(directory);
       await symlink(directory, link, 'junction');

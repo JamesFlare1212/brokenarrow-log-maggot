@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { join, resolve } from 'node:path';
 
-/** Test-only fixture access; production imports only a generated static unit-name map. */
 export function recordedTimelineMatch() {
   const archive = resolve('tests/fixtures/batrace/offline');
   const manifest = JSON.parse(readFileSync(join(archive, 'manifest.json'), 'utf8')) as {

@@ -10,7 +10,6 @@ import { seedRecordedMatchCaches } from '../../apps/server/src/dev/match-fixture
 import { seedOfflineFixtureCaches } from '../../apps/server/src/dev/offline-fixtures';
 import { LogParser } from '../../apps/server/src/logs/parser';
 
-// Load the checksum-verified capture once, using only an in-memory database and offline responses.
 const { data } = await loadRealData(resolve('tests/fixtures/real'));
 export const capturedLocalMatch = (() => {
   const log = data.logs.find((log) => log.path === 'Gamelog__2025_06_18__05_28.log')!;
@@ -79,7 +78,6 @@ export const capturedPlayers = match.players.map((player) => ({
   rating: player.newRating,
 }));
 
-/** Overrides describe only the edge case under test; the roster and statistics stay captured. */
 export function matchFixture(overrides: Partial<Match> = {}): Match {
   return { ...structuredClone(match), ...overrides };
 }
@@ -88,7 +86,6 @@ export function reportFixture(overrides: Partial<PlayerReport> = {}): PlayerRepo
   return { ...structuredClone(captured.report), ...overrides };
 }
 
-// Native lifecycle state is controlled by UI tests; ordinary game data comes from the capture.
 export const fixtureBootstrap: Bootstrap = {
   updates: initialUpdateState('4.0.0'),
   revision: 0,

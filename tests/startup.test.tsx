@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+'@vitest-environment jsdom';
 import type { ReactElement } from 'react';
 import type { Bridge } from '@ba/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

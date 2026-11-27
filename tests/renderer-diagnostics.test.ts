@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+'@vitest-environment jsdom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Bridge } from '@ba/contracts';
 import { diagnosticFrames } from '@ba/contracts';

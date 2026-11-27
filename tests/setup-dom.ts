@@ -1,9 +1,7 @@
 import { vi } from 'vitest';
 
-// Radix, Sonner, and Recharts use browser layout APIs that jsdom does not implement.
 if (typeof window !== 'undefined') {
   const getBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
-  // Keep this fixture as the base method so individual tests can wrap it with layout spies.
   HTMLElement.prototype.getBoundingClientRect = function () {
     return this.classList.contains('recharts-responsive-container')
       ? new DOMRect(0, 0, 640, 200)

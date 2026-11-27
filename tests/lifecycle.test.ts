@@ -18,7 +18,6 @@ vi.mock('../apps/server/src/config', async (importOriginal) => {
   };
 });
 
-// Application keeps its real repositories and SQL behavior; only the DB location changes.
 vi.mock('../apps/server/src/storage/database', async (importOriginal) => {
   const original = await importOriginal<typeof import('../apps/server/src/storage/database')>();
   return {

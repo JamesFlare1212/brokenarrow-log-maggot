@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+'@vitest-environment jsdom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { scrollToElement } from '../apps/web/src/features/timeline/scroll';
 

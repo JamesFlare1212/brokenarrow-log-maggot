@@ -124,7 +124,6 @@ describe('production timeline recorded match 9485138', () => {
         .filter((moment) => moment.kind === 'highlight')
         .every((moment) => moment.sorties.every((unit) => !unit.refunded)),
     ).toBe(true);
-    // This player's late deployment remains in the cost denominator, like the prototype.
     const deployed = timeline.sorties
       .filter((unit) => unit.playerId === '554897')
       .reduce((sum, unit) => sum + unit.cost, 0);
