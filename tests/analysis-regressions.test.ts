@@ -154,6 +154,24 @@ describe('analysis report regressions', () => {
 });
 
 describe('ranked sample and ranking regressions', () => {
+  it('allows one calculation across all players and releases it after failure or success', async () => {
+    const { analyzer, client, db } = setup();
+    cacheMatches(db, ranking());
+    const request = vi.spyOn(client, 'analysisPlayer');
+    const first = analyzer.maggot('1', () => {
+      throw new Error('Progress observer stopped');
+    });
+    const overlapping = ['1', '2'].map((id) => analyzer.maggot(id, () => {}));
+    await Promise.all([
+      expect(first).rejects.toThrow('Progress observer stopped'),
+      ...overlapping.map((query) => expect(query).rejects.toThrow('already running')),
+    ]);
+    expect(request).toHaveBeenCalledTimes(1);
+    await expect(analyzer.maggot('1', () => {})).resolves.toMatchObject({ complete: true });
+    db.saveCache('analysis:2', { trend: { points: [] } }, 21600000);
+    await expect(analyzer.maggot('2', () => {})).resolves.toMatchObject({ complete: false });
+    expect(request.mock.calls).toEqual([['1'], ['1'], ['2']]);
+  });
   it.each(['spectator', 'duplicate', 'invalid-score'])(
     'rejects malformed five-versus-five sample: %s',
     async (kind) => {

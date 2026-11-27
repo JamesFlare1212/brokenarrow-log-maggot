@@ -404,7 +404,7 @@ describe('recording lifecycle and IPC ownership', () => {
     expect(stopped).toBe(false);
     expect(value.status().phase).toBe('stopping');
     expect(window.webContents.send).toHaveBeenCalledWith('ba:recording:stop', false);
-    await Promise.all([...chunks, value.finish(sender, token, 90, true), stopping]);
+    await Promise.all([...chunks, value.finish(sender, token, 90, false), stopping]);
     const files = await readdir(dir);
     expect(files).toHaveLength(1);
     expect(files[0]).toMatch(/^8049993__/);
@@ -414,7 +414,7 @@ describe('recording lifecycle and IPC ownership', () => {
       90,
       expect.objectContaining({ fid: '8049993', sessionId: current.sessionId }),
     );
-    expect(value.status().phase).toBe('idle');
+    expect(value.status()).toMatchObject({ phase: 'idle', hasAudio: true, codec: 'av1' });
     expect(window.isDestroyed()).toBe(true);
   });
 
