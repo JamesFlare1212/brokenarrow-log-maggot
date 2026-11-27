@@ -9,7 +9,6 @@ import { errorMessage } from '@ba/shared';
 import { replayName } from '@ba/server';
 interface Capture {
   token: string;
-  generation: number;
   match: Match;
   config: RecorderConfig;
   win: BrowserWindow;
@@ -23,7 +22,6 @@ interface Capture {
   resolve: () => void;
   reject: (error: Error) => void;
   stopped: boolean;
-  hasAudio: boolean;
   test: boolean;
   startedAt: number;
   timer: ReturnType<typeof setTimeout> | null;
@@ -152,7 +150,6 @@ export class RecordingController {
       });
       const capture: Capture = {
         token,
-        generation,
         match: structuredClone(match),
         config: {
           sessionId: token,
@@ -174,7 +171,6 @@ export class RecordingController {
         resolve,
         reject,
         stopped: false,
-        hasAudio: false,
         test,
         startedAt: 0,
         timer: null,
@@ -227,7 +223,6 @@ export class RecordingController {
     if (c.timer) clearTimeout(c.timer);
     c.timer = c.test ? setTimeout(() => void this.stop(), 60000) : null;
     c.startedAt = Date.now();
-    c.hasAudio = hasAudio;
     this.update({
       phase: 'recording',
       sessionId: token,
@@ -270,14 +265,14 @@ export class RecordingController {
       return;
     this.previewed(token, dataUrl, hasAudio);
   }
-  async finish(sender: number, token: string, duration: number, hasAudio: boolean): Promise<void> {
+  async finish(sender: number, token: string, duration: number, _hasAudio: boolean): Promise<void> {
     const c = this.owner(sender, token);
     if (!Number.isFinite(duration) || duration < 0 || duration > 86400)
       throw new Error('Invalid recording duration');
-    c.finalization ??= this.finalize(c, duration, hasAudio);
+    c.finalization ??= this.finalize(c, duration);
     return c.finalization;
   }
-  private async finalize(c: Capture, duration: number, hasAudio: boolean): Promise<void> {
+  private async finalize(c: Capture, duration: number): Promise<void> {
     try {
       await c.queue;
       if (this.current !== c) return;
@@ -311,7 +306,6 @@ export class RecordingController {
         await unlink(destination).catch(() => {});
         return;
       }
-      c.hasAudio = hasAudio;
       this.saved(name, duration, c.match);
       this.complete(c);
     } catch (error) {
