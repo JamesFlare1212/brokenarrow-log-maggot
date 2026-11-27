@@ -83,14 +83,7 @@ export class DeckService {
     };
   }
   backup(names: string[], packageName: string): Promise<{ name: string }> {
-    return this.createBackup(names, packageName, false);
-  }
-  private createBackup(
-    names: string[],
-    packageName: string,
-    replaceExisting: boolean,
-  ): Promise<{ name: string }> {
-    return this.exclusive(() => this.writeBackup(names, packageName, replaceExisting));
+    return this.exclusive(() => this.writeBackup(names, packageName, false));
   }
   private async writeBackup(
     names: string[],
