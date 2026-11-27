@@ -67,7 +67,7 @@ unavailable in browser mode. UI unit tests select the needed records through
 The sibling historical match and analysis captures are also checksum-verified and
 loaded into development and real-data smoke profiles. They supply title and
 score-label evidence without inserting additional archive rows. See the
-[score-label integration notes](../../../../docs/title-medal-comparison.md#integrated-score-label-display).
+[historical corpus and score-label rules](../batrace/history/README.md#upstream-medal-comparison).
 
 ## Update the corpus
 

@@ -10,7 +10,7 @@ This corpus was captured from the local application history on October 19, 2026,
 
 `manifest.json` records capture provenance, coverage, failures, and the compressed file's SHA-256. `expected.json` freezes all 28 candidate and awarded frequencies, local-player frequencies, and a hash of every match's complete per-player result, including candidate order, final title order, and evidence parameters. The two-title limit can suppress a candidate; missing matches are excluded rather than counted as matches with no titles.
 
-The normal `pnpm test` / `pnpm check` flow verifies the checksum and golden results, replays every complete response through the offline tracker, and replays every newly recorded HTTP success and failure through the production BATrace client with a stub transport. These tests never contact BATrace. The frequency report is documented in [Historical title coverage](../../../../docs/title-history.md).
+The normal `pnpm test` / `pnpm check` flow verifies the checksum and golden results, replays every complete response through the offline tracker, and replays every newly recorded HTTP success and failure through the production BATrace client with a stub transport. These tests never contact BATrace.
 
 To verify the frozen results and print all frequencies offline:
 
@@ -25,7 +25,7 @@ pnpm titles:history --capture
 pnpm titles:history --capture --user-data "C:/path/to/app-data" --out "tests/fixtures/batrace/history"
 ```
 
-Capture uses the production client's retry backoff, validation, client identification headers, and dashboard fallback. It writes only the selected output directory and an in-memory test database. Review changes to all three corpus files and update the frequency report before committing a refreshed baseline. Run `pnpm check`, `pnpm format:check`, `pnpm smoke`, and `pnpm smoke:real` after refreshing it.
+Capture uses the production client's retry backoff, validation, client identification headers, and dashboard fallback. It writes only the selected output directory and an in-memory test database. Review the manifest, response capture and expected frequencies before committing a refreshed baseline. Run `pnpm check`, `pnpm format:check`, `pnpm smoke`, and `pnpm smoke:real` after refreshing it.
 
 ## Upstream medal comparison
 
@@ -40,6 +40,6 @@ pnpm titles:compare
 pnpm titles:compare --capture
 ```
 
-The first command is offline. The capture command refreshes analysis responses for the existing match corpus and updates the medal baseline; it also downloads the pinned source file to record its checksum. It does not refresh the original match corpus or regenerate independent upstream reference hashes. See [the comparison report](../../../../docs/title-medal-comparison.md) for the pinned rules, detailed counts, and validation method.
+The first command is offline. The capture command refreshes analysis responses for the existing match corpus and updates the medal baseline; it also downloads the pinned source file to record its checksum. It does not refresh the original match corpus or regenerate independent upstream reference hashes. See the [recorded comparison](medal-expected.json) for counts and [pinned upstream reference](upstream-reference.json) for the comparison hashes.
 
 Development profiles created from `tests/fixtures/real` overlay these recorded match and analysis responses as cache entries after verifying both manifests and the source-corpus checksum. They do not insert extra match rows or modify either committed capture. Completed match detail and previous-match views can therefore display the two score labels plus two titles offline. Production installations retrieve analysis through the normal BATrace client; the fixture overlay is restricted to isolated development and smoke profiles. The upstream comparison retains its separate three-label limit.

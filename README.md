@@ -2,218 +2,82 @@
 
 <img src="apps/web/public/logo.png" width="80" height="80" alt="BARadar logo" />
 
-本地 Broken Arrow 对局助手，使用 React + Vite + Electron + Node.js + TypeScript + SQLite，以及 pnpm。
-
-[UI design system](design-system/broken-arrow/MASTER.md)
+BARadar 是本地 Broken Arrow 对局助手。它从 GameLogs 增量读取房间、队伍、地图、账号、卡组和对局记录，在 Windows 桌面显示，无需把日志上传到服务器。
 
 ## 功能
 
-- GameLogs 增量监听：房间、队伍、地图、账号、卡组、晚到的对局 ID 和真实时长。
-- 总览保留房间与对局工具，侧栏「蛐雷达」提供独立入口；封禁列表在「封禁追踪」页面查看。
-- 玩家搜索、粗查报告、最近对局、12 场 MVP 蛆指数、调查羁绊和改名历史。
-- 对局档案、完整评分、手动收录、刷新、删除和多个录像视角。
-- Match timelines show value trends, key moments, and minute records when timing data is available.
-- 卡组备份 / 部署、实时开局自动覆盖唯一的“上一局卡组包”、换号提醒。
-- Local recording: 720–2160p, 30–120 fps, quality score 1–51 (default 20; lower means higher quality), system audio and optional default microphone mixing, previews, playback, and directory migration.
-- Optional ban alerts.
-- System, light and dark appearance modes, six palette pairs, separate light/dark palettes, and Chinese/English interfaces.
-- Cards, tooltips, menus, dialogs, and notifications share the theme's glass material and opacity preference.
-- 独立设置页面、自动保存、返回原页面，以及可折叠并记住状态的侧栏。
-- Desktop sidebars resize from 200–400px and remember their width across restarts. Drag the edge, double-click to reset, or use the width control in Appearance settings.
-
-BATrace 是历史数据，可能延迟数天。蛆指数需要最近 12 场有效五人队排位；缺本人、完整 MVP 或足够样本时不生成替代分数。
+- **对局**：查看当前房间、上一局和历史档案；按账号筛选，查看评分、时间线和多个录像视角。没有在线 ID 的旧对局仍可查看本地保存的阵容、时长、点数和卡组，但不能刷新 BATrace 数据。
+- **玩家**：搜索玩家，查看粗查报告、最近对局、调查羁绊、改名历史及封禁追踪，可选封禁提醒。蛆指数需要最近 12 场有效五人队排位；缺少本人、完整 MVP 或足够样本时，不生成替代分数。BATrace 历史数据可能延迟数天。
+- **卡组**：备份与部署卡组，开局时自动覆盖唯一的「上一局卡组包」，并在换号时提醒。
+- **录像**：默认关闭；开启后录制所选显示器的整个画面，可混录系统声音和默认麦克风。支持 720–2160p、30–120 fps；质量分数越低画质越高。新录像保存为本地 MP4，旧 WebM 仍可播放、定位和迁移目录。
+- **外观**：支持中英文、跟随系统或单独设置明暗配色。设置自动保存；侧栏可折叠、拖动调宽或双击复位。跨页面的样式规则见[界面设计系统](design-system/broken-arrow/MASTER.md)。
 
 ## Screenshots
 
-Captured from the running application in browser development mode (`pnpm dev:web`), using the repository's [real-data fixtures](tests/fixtures/real/README.md). Player names, match results and statistics come from recorded data.
-
-The [UI design system](design-system/broken-arrow/MASTER.md) defines current
-surface and interaction requirements.
+以下截图来自运行中的浏览器开发版，使用[仓库内录制的数据](tests/fixtures/real/README.md)。
 
 ### Overview
-
-Saved-match metrics, recording shortcuts, and the idle room state in dark mode.
 
 ![Overview showing recorded match metrics and waiting for game logs](docs/screenshots/overview.png)
 
 ### Match archive
 
-Local match history with results, maps, ELO changes and account filters.
-
 ![Match archive showing real match results and ELO changes](docs/screenshots/match-archive.png)
 
 ### Player analysis
 
-Recorded player statistics and adaptive unit previews, with access to all units, categories, and recent matches.
-
-![Player analysis showing JamesFlare's statistics and recent matches](docs/screenshots/player-analysis.png)
+![Player analysis showing recorded player statistics and recent matches](docs/screenshots/player-analysis.png)
 
 ### Appearance settings
-
-Theme modes and all six palette pairs, shown with the light Cyan palette selected.
 
 ![Appearance settings showing theme modes and six palette pairs in light mode](docs/screenshots/appearance-settings.png)
 
 ## 开发
 
-安装 Node.js 24 LTS 与 pnpm 10.34.6（最低 Node.js 22.16）：
+使用 Node.js 24 LTS 和项目指定的 pnpm（版本见 [`package.json`](package.json)）。安装依赖时会安装对应版本的 Electron。
 
 ```sh
 pnpm install
 pnpm dev
 ```
 
-Electron 44 的运行时由 postinstall 显式安装。开发启动器先构建，再启动 Vite 和 Electron。
+`pnpm dev` 启动 Vite 和 Electron，通过 sandboxed preload 和类型化 IPC 访问本地服务。只开发前端时，运行 `pnpm dev:web`，在浏览器打开 `http://127.0.0.1:5174/`。
 
-仅在浏览器中开发前端时运行：
+两种开发模式都为真实样本创建隔离的可写副本，不修改本机应用数据库。刷新查询也使用离线响应，缺失的数据会报错。浏览器不提供原生目录选择、真实录制和安装更新。开发工具可模拟房间、录制、加载和缓存过期状态；这些控件不进入正式版。样本来源、校验及 `data:import`、`data:capture` 的用法见[真实数据说明](tests/fixtures/real/README.md)。
 
-```sh
-pnpm dev:web
-```
+| 命令                   | 用途                                      |
+| ---------------------- | ----------------------------------------- |
+| `pnpm format:check`    | 检查格式                                  |
+| `pnpm check`           | 类型、界面规范、Vitest 回归和三个生产构建 |
+| `pnpm test:ui`         | 在 Chromium 操作真实界面                  |
+| `pnpm smoke`           | 验证真实 Electron、原生桥和窗口           |
+| `pnpm smoke:real`      | 在 Electron 中重放离线档案与时间线        |
+| `pnpm smoke:recording` | 用合成画面、音频验证编码和播放            |
+| `pnpm pack:desktop`    | 生成 Windows 解包目录                     |
+| `pnpm dist`            | 生成 NSIS 安装包与便携版                  |
 
-Open the terminal's `http://127.0.0.1:5174/` URL for Vite hot updates without
-Electron. A development-only local interface loads `tests/fixtures/real` into an
-isolated `.test-data/web-dev/` copy on each launch. Queries use recorded offline
-responses and report missing data as errors. Settings and data changes affect only
-that copy; native directory selection, recording, and update installation are
-unavailable in the browser. In **Dev tools → Simulation**, the archive, players,
-reports and bans still come from the same offline fixtures. The tool replays a
-recorded 5v5 roster as a live match or a 1–5 player party. Switch recording to
-Recording, then Idle to create a playable test clip without capturing a display.
-Scene edits stay in the tab; resetting Simulation discards them. **Empty** starts
-with no history or roster. The same scene controls are available in the offline
-desktop launcher (`pnpm dev`); packaged builds do not include them. Toggle
-**Cache expiration** to control the UI independently of the actual cache age.
-On shows the expired state even for fresh entries; off (the default) hides it
-even for expired entries. The switch works across scenes without changing cache
-timestamps or lifetimes. Cache cleanup previews counts locally; reset the scene
-to restore them. Enable **Loading state** to hold request-backed views in their
-loading presentation and preview the radar refresh spinner. The Maggot Index card\nshows its calculating state even when a score is cached. Disable the switch to show
-current results without resetting the scene or delaying real requests.
-
-Both validation and Windows release CI run `pnpm format:check` and `pnpm check`.
-The shared `pnpm check` entry point covers type checking, UI design checks,
-regression tests, and all three production builds. Both workflows also install
-Playwright Chromium and run `pnpm test:ui`; failed browser tests upload screenshots
-and retained Playwright traces from `.test-data/playwright/`. Open a downloaded
-trace with `pnpm exec playwright show-trace <path-to-trace.zip>`. Desktop smoke tests remain separate:
-validation CI tests the built application, while release CI tests the packaged
-application, each in normal and real-data modes.
-
-The shared jsdom test setup gives Recharts responsive containers a fixed 640×200
-viewport because jsdom does not calculate layout. Other elements keep their default
-measurements. Chart regressions verify that the SVG renders at the measured size;
-this fixture does not validate browser layout or suppress console warnings.
-Vitest uses at most four workers to limit disk contention between captured-data
-suites on machines with many CPU cores; test timeouts remain unchanged.
-
-Browser interaction regressions use Playwright and an isolated fixture service:
-
-```sh
-pnpm exec playwright install chromium
-pnpm test:ui
-```
-
-The runner starts `pnpm dev:web` when needed and can reuse an existing fixture
-server locally. Set `BA_BROWSER_CHANNEL=chrome` to use an installed Chrome instead
-of Playwright's Chromium. Tests override bootstrap preferences per page and do not
-save theme changes. The submenu suite verifies painted pointer access, selection,
-keyboard navigation, Escape, and focus return in both themes at 40%/100% opacity.
-
-Palette hover regressions use Playwright's paused browser clock to advance the
-tooltip delay while capturing real Chromium viewport frames. Preview content and the lower row
-plus its preceding gap are compared from the same frame. Ordinary entry, rapid
-re-entry, and direct movement within and between cards run in both themes at
-40%, 50%, and 100% glass opacity, at device scale factors 1 and 1.5. The tests
-record browser-time offsets and real PNG capture durations, and assert stable scroll and stationary hints,
-without saving appearance preferences.
-
-Palette sampling verifies that every frame belongs to the same pointer entry and
-that the final captured hint matches the active swatch. Ordinary entry is checked
-at 0/80/200/380ms before the 400ms tooltip delay and at 520/720ms after it. Host
-scheduling, screenshot capture, and tracing cannot consume this controlled delay.
-PNG capture latency remains diagnostic. Pixel, geometry, and tooltip-state
-assertions still apply to every sample.
-
-Keyboard-tooltip checks scroll the information button into view and drain queued
-scroll frames before focusing it: Radix intentionally dismisses a tooltip when an
-ancestor scrolls. Short-window cases also verify that Escape dismisses the hint
-without closing the profile dialog. Rapid palette re-entry measures card geometry
-before leaving the swatch and advances browser time by 1ms before re-entering,
-verifying the 300ms skip-delay window independently of host latency. These checks
-use no test retries or extended wall-clock waits.
-
-| 命令                | 用途                                                                      |
-| ------------------- | ------------------------------------------------------------------------- |
-| `pnpm dev`          | 使用仓库内真实样本启动离线桌面开发；每次创建隔离数据库                    |
-| `pnpm dev:web`      | 浏览器前端开发，加载同一批真实测试样本，支持热更新，默认端口 5174         |
-| `pnpm data:import`  | 从本机应用数据库和 GameLogs 更新真实回归样本                              |
-| `pnpm data:capture` | Capture missing BATrace fixture responses and retain existing data        |
-| `pnpm test`         | 全部回归测试，默认包含仓库内的真实日志、档案和缓存数据                    |
-| `pnpm test:ui`      | Run browser interaction regressions against the real shared UI components |
-| `pnpm smoke:real`   | 构建并在真实 Electron 中核对全部真实档案                                  |
-| `pnpm check`        | Type checking, UI design checks, regression tests, and three app builds   |
-| `pnpm smoke`        | Run Electron with isolated data, without network access or recording      |
-| `pnpm format:check` | 格式检查                                                                  |
-| `pnpm pack:desktop` | Windows 解包目录                                                          |
-| `pnpm dist`         | NSIS 安装包与便携版                                                       |
-
-生产前端通过 sandboxed preload 的类型化 IPC 访问服务。`pnpm dev` 同时启动 Vite 和 Electron，通过原生服务加载真实样本的隔离副本；其 5173 端口在普通浏览器中访问 `/` 会提示使用桌面应用。`pnpm dev:web` 在 5174 端口为浏览器提供真实测试样本接口，不访问本机应用数据库。
-
-The repository includes 496 real matches extracted from 272 local logs, 13 API
-match archives, 600 players, and 28 cached responses, compressed to approximately
-311 KiB. The separate BATrace archive supplies recorded endpoints for fixture
-players and match IDs. `pnpm data:import --logs-only` updates the logs while keeping
-the original database snapshot; `pnpm data:capture` fills missing endpoints and
-preserves unchanged response shards. Each `pnpm dev` launch creates a writable
-`.test-data/real-dev/` copy that
-preserves recorded names, IDs, and ratings. Development runs offline with recording
-disabled by default; log, deck, and recording paths point to the isolated copy.
-Real-data regression coverage runs in `pnpm test` / `pnpm check`; CI also runs the
-real-data desktop smoke test. See the [fixture documentation](tests/fixtures/real/README.md)
-for provenance checks, extraction scope, and reimport instructions.
-
-Older matches without an online match ID can still open local log details. Saved
-players, duration, total points, and decks are shown where available; unrecorded
-values are labeled clearly. BATrace refresh and links require an online match ID.
+首次运行浏览器测试前执行 `pnpm exec playwright install chromium`；也可设置 `BA_BROWSER_CHANNEL=chrome` 使用本机 Chrome。失败时从 `.test-data/playwright/` 查看截图，使用 `pnpm exec playwright show-trace <path-to-trace.zip>` 打开追踪文件。
 
 ## 应用更新与发布
 
-Windows 正式版启动 15 秒后检查 GitHub Releases，此后每 4 分钟检查。设置和“关于”页面均有更新入口；下载和重启安装由用户主动操作，普通退出不会自动安装。安装前关闭后台任务、保存录像并关闭 SQLite；对局或录制进行中不能重启安装。更新失败可重试或打开下载页面，上次安装未生效会显示提示。
+Windows 正式版自动检查 GitHub Releases，但不会自动安装。安装版支持应用内下载、校验和重启安装；对局或录制进行中不能重启安装。便携版只提示可用版本，需退出后手动替换 EXE。开发、离线冒烟不会检查更新；`BA_DISABLE_AUTO_UPDATE=1` 可关闭正式版更新。
 
-NSIS 安装版支持应用内下载、校验、差分下载和重启安装。便携版仅检查并提示新版本，需退出后手动替换 EXE。桌面开发、浏览器开发、冒烟运行不检查更新；`BA_DISABLE_AUTO_UPDATE=1` 可关闭正式版更新。
-
-发布稳定版时，将根 `package.json` 版本更新为 `X.Y.Z`，提交后推送一致的 `vX.Y.Z` 标签。CI 校验标签、测试、打包，并将安装版、便携版、`latest.yml` 和 `.blockmap` 发布至 GitHub Releases。不要只上传 EXE；更新清单必须指向 `BrokenArrow-Setup-…exe`。`node scripts/verify-update-artifacts.mjs` 可校验产物及安装包 SHA-512。手动运行工作流只生成构建产物，不发布 Release。
-
-尚未包含更新器的旧版本需要手动安装一次新版。首次正式发布后，还应在隔离的 Windows 用户环境中从较旧的安装版升级到更高版本，验证真实下载、NSIS 安装和重启；本地冒烟不会替换已安装的应用。
+稳定版通过推送与根 `package.json` 一致的 `vX.Y.Z` 标签发布；手动运行工作流只生成产物。安装包、便携版、`latest.yml` 和 `.blockmap` 必须配套提供。见[发布与验证约定](AGENTS.md#releases)。本地冒烟不会替换已安装的应用；验证真实升级需在隔离的 Windows 用户环境中从旧安装版升级。
 
 ## 请求与数据
 
-Independent BATrace requests run concurrently without a fixed request interval. Room player queries return each player's result as soon as it is ready. Requests for the same cache key and refresh mode share one in-flight request. Failed requests retain retry backoff and honor `Retry-After`. Cache hits do not send requests; manual refresh bypasses the cache.
+BATrace 的独立请求可并发，相同缓存键与刷新模式的请求共享进行中的调用。缓存命中不发请求，手动刷新绕过缓存；失败重试遵循退避和 `Retry-After`。服务默认值见 [`app.config.json`](app.config.json)。
 
-Service defaults: [`app.config.json`](app.config.json).
-
-Data remains in SQLite under the original `broken-arrow-log-assistant` user
-directory. Legacy JSON is backed up and imported transactionally without changing
-the originals. New recordings use local MP4 files; existing WebM recordings remain
-playable through the controlled Range protocol.
-
-Recording is disabled by default and captures the entire selected display.
+数据保存在原 `broken-arrow-log-assistant` 用户目录的 SQLite 中；旧 JSON 先备份，再以事务导入，不修改原文件。
 
 ## Optional anonymous analytics
 
-Packaged online desktop builds can send optional usage and diagnostic events to
-Aptabase after consent. Analytics uses temporary sessions without account hashes,
-installation identifiers, or persistent user tags. Events queue only in memory;
-turning statistics off cancels requests and clears pending events. Resource and
-long-task samples require foreground activity. Development, browser fixtures,
-offline mode, and smoke tests do not send events; `BA_DISABLE_ANALYTICS=1` also
-disables collection in packaged builds.
+Packaged online desktop builds can send usage and diagnostic events to Aptabase only after consent. Sessions are temporary and do not use account hashes, installation IDs or persistent user tags. Events queue in memory; disabling analytics cancels requests and clears the queue. Resource and long-task sampling requires foreground activity. Development, browser fixtures, offline mode and smoke tests do not send events. `BA_DISABLE_ANALYTICS=1` also disables collection in packaged builds.
 
 ## English
 
-A local Broken Arrow assistant: match analysis, player history, deck backups, recordings, three appearance modes, six palette pairs and Chinese/English interfaces. Run `pnpm install` and `pnpm dev`; validate with `pnpm check`. Existing JSON is backed up and imported transactionally into SQLite without changing the original files. Recordings remain local and use range-based playback. BATrace data can be delayed.
+BARadar is a local Broken Arrow assistant for match analysis, player history, deck backups and recordings. Run `pnpm install` and `pnpm dev` for the offline desktop development app; `pnpm check` runs regression tests and builds. The interface supports Chinese and English.
 
 ## 致谢与参考
 
-作者 Zola；数据由 [BATrace](https://dash.batrace.top/) 提供。应用职责划分参考 [T3 Code apps](https://github.com/pingdotgg/t3code/tree/main/apps)，未复制其业务代码。旧入口保留在 Git 历史中。
+作者 Zola；数据由 [BATrace](https://dash.batrace.top/) 提供。第三方代码的来源和许可见 [Third-party notices](THIRD_PARTY_NOTICES.txt)。

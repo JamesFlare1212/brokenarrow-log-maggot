@@ -72,9 +72,9 @@ SOFTWARE.
 -------------------------------------------------------------------------------
 
 The recording MP4 muxer and WebCodecs integration include unmodified Mediabunny
-1.65.1 by Vanilagy and contributors, distributed under MPL-2.0.
+1.65.2 by Vanilagy and contributors, distributed under MPL-2.0.
 Source code for this exact version is available in the src/ directory of:
-https://registry.npmjs.org/mediabunny/-/mediabunny-1.65.1.tgz
+https://registry.npmjs.org/mediabunny/-/mediabunny-1.65.2.tgz
 Project: https://github.com/Vanilagy/mediabunny
 
 The upstream license follows verbatim.
