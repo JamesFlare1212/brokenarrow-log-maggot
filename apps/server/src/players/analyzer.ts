@@ -12,7 +12,7 @@ import {
 import type { Database } from '../storage/database';
 import type { BatraceClient } from '../network/client';
 export class Analyzer {
-  private maggotPending = new Set<string>();
+  private maggotQueryRunning = false;
   constructor(
     private client: BatraceClient,
     private db: Database,
@@ -169,8 +169,8 @@ export class Analyzer {
     id: string,
     progress: (done: number, scanned: number) => void,
   ): Promise<MaggotReport> {
-    if (this.maggotPending.size) throw new Error('A Maggot Index query is already running');
-    this.maggotPending.add(id);
+    if (this.maggotQueryRunning) throw new Error('A Maggot Index query is already running');
+    this.maggotQueryRunning = true;
     let calls = 0;
     try {
       const a = await this.client.analysisPlayer(id);
@@ -278,7 +278,7 @@ export class Analyzer {
       }
       return summarizeMaggot(id, rows, calls);
     } finally {
-      this.maggotPending.delete(id);
+      this.maggotQueryRunning = false;
     }
   }
 }
