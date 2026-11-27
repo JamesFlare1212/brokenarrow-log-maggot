@@ -5,9 +5,9 @@ export type LogEvent =
   | { type: 'session'; session: Session }
   | { type: 'started' | 'ended' | 'metadata'; match: Match; recovering: boolean }
   | { type: 'reset'; generation: number };
-export class LogParser {
-  private session: Session = {
-    generation: 0,
+function freshSession(generation: number): Session {
+  return {
+    generation,
     phase: 'idle',
     localName: '',
     localPlayerId: null,
@@ -19,6 +19,9 @@ export class LogParser {
     current: null,
     recovering: false,
   };
+}
+export class LogParser {
+  private session = freshSession(0);
   private ended: Match[] = [];
   private source = '';
   private lineNumber = 0;
@@ -36,19 +39,7 @@ export class LogParser {
   }
   reset(source = ''): void {
     const generation = this.session.generation + 1;
-    this.session = {
-      generation,
-      phase: 'idle',
-      localName: '',
-      localPlayerId: null,
-      accountKey: '',
-      loginSeen: false,
-      localDeck: '',
-      lobbyId: '',
-      lobbyPlayers: [],
-      current: null,
-      recovering: false,
-    };
+    this.session = freshSession(generation);
     this.ended = [];
     this.source = source;
     this.lineNumber = 0;
