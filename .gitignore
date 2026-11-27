@@ -1,4 +1,3 @@
-# 依赖与构建产物
 node_modules/
 dist/
 *.tgz
@@ -13,26 +12,20 @@ coverage/
 *.sqlite-wal
 .smoke-data/
 
-# 本地开发临时文件（_ 开头的脚本/数据）
 /_*.js
 /_*.txt
 /_*.json
 
-# 游戏日志样本
 /Gamelog__*.log
 
-# Packaged icon generated from apps/web/public/logo.png
 build/icon.png
 
-# 系统/编辑器
 Thumbs.db
 Desktop.ini
 .DS_Store
 .vscode/
 
-# 本地临时补丁/测试目录
 .patchtmp/
 smoke-result.txt
 
-# 本地对象存储凭证（含真实 AccessKey/SecretKey，绝不提交）
 replay-secret.json

@@ -24,7 +24,6 @@ const output = resolve(option('--out') || 'tests/fixtures/real');
 const preserved = process.argv.includes('--logs-only') ? (await loadRealData(output)).data : null;
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
-// The export has no Chromium profile, settings secrets, legacy raw JSON or arbitrary app_state.
 const secretKey =
   /authorization|cookie|password|secret|credential|privateheaders|(?:access|refresh|session|auth)[_-]?token|api[_-]?key/i;
 function sanitize(value) {
@@ -46,7 +45,6 @@ const source =
 let data;
 let configuredLogs;
 try {
-  // One read transaction includes committed WAL data without copying or changing the live DB.
   source?.exec('BEGIN');
   const settings = source?.prepare("SELECT value FROM settings WHERE key='public'").get();
   const config = settings ? JSON.parse(settings.value) : {};
@@ -213,7 +211,6 @@ for (const path of await files(logDirectory)) {
     compactMatches.set(compact.snapshot().current.sessionId, compact.snapshot().current);
   const semantic = (matches) =>
     [...matches.values()].map(({ id: _id, sessionId: _session, ...match }) => sanitize(match));
-  // Filtering must retain every match fact, not merely produce plausible fixture data.
   if (JSON.stringify(semantic(originalMatches)) !== JSON.stringify(semantic(compactMatches)))
     throw new Error(`Event extraction changed parsed match facts in ${name}`);
   const content = events.length ? events.join('\n') + '\n' : '';

@@ -164,7 +164,6 @@ for (const file of await readdir(join(root, 'batrace'))) {
   if (player) addPlayer(player[1]);
   if (match) matches.add(match[1]);
 }
-// Reconcile full root rosters on resume without recursively expanding recent opponents.
 for (const id of matches)
   for (const kind of ['match', 'amatch']) {
     const existing = initial.get(kind + ':' + id);
@@ -308,7 +307,6 @@ async function worker() {
         };
         record.requests.push(request);
         try {
-          // Queue time is separate from the HTTP transport timeout.
           const response = await fetch(url, {
             ...options,
             signal: AbortSignal.timeout(requestTimeout),
@@ -436,7 +434,6 @@ if (stopped) {
       count.requests += record.requests.length;
     }
   };
-  // Keep unchanged shards byte-for-byte, including their response timestamps and HTTP evidence.
   for (const file of previousArchive?.files ?? []) {
     const previous = await unpack(join(output, file.path), file.sha256);
     const records = await Promise.all(

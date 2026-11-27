@@ -1,7 +1,6 @@
 version: 2
 
 updates:
-  # The root pnpm lockfile covers all apps and packages in the workspace.
   - package-ecosystem: npm
     directory: /
     schedule:

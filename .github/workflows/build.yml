@@ -3,11 +3,11 @@ name: Build Windows EXE
 on:
   push:
     tags:
-      - 'v*' # Automatically build and release when pushing tags such as v4.0.1
-  workflow_dispatch: {} # Also available via Run workflow on GitHub
+      - 'v*'
+  workflow_dispatch: {}
 
 permissions:
-  contents: write # Required to create a release
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

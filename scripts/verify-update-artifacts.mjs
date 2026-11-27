@@ -4,7 +4,6 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { createRequire } from 'node:module';
 
-// Use the exact YAML parser used by the installed updater.
 const require = createRequire(import.meta.url);
 const updaterRequire = createRequire(require.resolve('electron-updater'));
 const { load } = updaterRequire('js-yaml');

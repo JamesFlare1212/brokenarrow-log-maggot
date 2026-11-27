@@ -33,7 +33,6 @@ const server = await createServer({
 await server.listen();
 server.printUrls();
 delete environment.ELECTRON_RUN_AS_NODE;
-// Electron is the visible development app; windowsHide also hides its GUI on Windows.
 const child = spawn(electron, ['.'], { stdio: 'inherit', windowsHide: false, env: environment });
 let closing = false;
 const close = async (code) => {
