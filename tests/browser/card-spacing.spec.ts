@@ -162,7 +162,6 @@ for (const [width, lang] of [
       'backdrop-filter',
       'none',
     );
-    // Small-card density is independent of the surrounding layout gap.
     await expect(page.locator('.stats > [data-slot=card]').first()).toHaveCSS(
       'padding-top',
       '16px',

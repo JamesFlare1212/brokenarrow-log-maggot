@@ -72,10 +72,7 @@ test('dropdowns, portalled submenus and player context menus use the item plus g
   const url =
     '/@fs/' +
     fileURLToPath(new URL('./submenu-fixture.tsx', import.meta.url)).replaceAll('\\', '/');
-  await page.evaluate(
-    async (url) => (await import(/* @vite-ignore */ url)).mountSubmenuFixture(),
-    url,
-  );
+  await page.evaluate(async (url) => (await import(url)).mountSubmenuFixture(), url);
   await page.getByRole('button', { name: 'Open actions' }).press('Enter');
   await expectCorners(
     page.getByRole('menuitem', { name: 'Copy ID' }),

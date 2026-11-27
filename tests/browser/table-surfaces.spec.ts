@@ -28,7 +28,6 @@ for (const scale of [1, 1.5]) {
         playwright,
         baseURL,
       }) => {
-        // Native scaling also exercises Chromium's border snapping, unlike DPR emulation.
         const browser = await playwright.chromium.launch({
           channel: process.env.BA_BROWSER_CHANNEL || undefined,
           args: [`--force-device-scale-factor=${scale}`],
@@ -51,7 +50,7 @@ for (const scale of [1, 1.5]) {
           await expect(page.locator('[data-ready=true]')).toBeVisible();
           await expect(page.locator('html')).toHaveAttribute('data-mode', mode);
           await page.evaluate(
-            async (url) => (await import(/* @vite-ignore */ url)).mountTableFixture(),
+            async (url) => (await import(url)).mountTableFixture(),
             `/@fs/${fixturePath}`,
           );
           const viewport = page.getByRole('region', { name: 'Transparent records' });

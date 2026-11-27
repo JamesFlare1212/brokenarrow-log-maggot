@@ -80,7 +80,6 @@ for (const locale of ['zh', 'en'] as const) {
       .click();
     const timeline = detail.getByTestId('match-timeline');
     await expect(timeline.getByTestId('moment-row')).toHaveCount(6);
-    // The development shell intentionally runs React StrictMode effect replay.
     expect(requests.length).toBeGreaterThan(0);
     expect(requests.length).toBeLessThanOrEqual(2);
     expect(requests.every((request) => request.fid === '9485138' && !request.force)).toBe(true);

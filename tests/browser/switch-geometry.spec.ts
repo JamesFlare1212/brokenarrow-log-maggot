@@ -37,7 +37,6 @@ for (const scale of [1, 1.25, 1.5, 2]) {
       playwright,
       baseURL,
     }, testInfo) => {
-      // Native scaling exercises border snapping; emulated DPR alone does not.
       const browser = await playwright.chromium.launch({
         channel: process.env.BA_BROWSER_CHANNEL || undefined,
         args: [`--force-device-scale-factor=${scale}`, '--window-size=1600,1400'],
@@ -61,7 +60,7 @@ for (const scale of [1, 1.25, 1.5, 2]) {
         await expect(page.locator('[data-ready=true]')).toBeVisible();
         await expect(page.locator('html')).toHaveAttribute('data-mode', mode);
         await page.evaluate(
-          async (url) => (await import(/* @vite-ignore */ url)).mountSwitchFixture(),
+          async (url) => (await import(url)).mountSwitchFixture(),
           `/@fs/${fixturePath}`,
         );
         const fixture = page.locator('#switch-fixture');
@@ -120,7 +119,6 @@ for (const scale of [1, 1.25, 1.5, 2]) {
           for (const state of ['disabled-off', 'disabled-on']) {
             const disabled = page.locator(`#switch-${size}-${state}`);
             await expect(disabled).toBeDisabled();
-            // Bypass Playwright's disabled-label guard, not the browser's native disabled behavior.
             await page.locator(`label[for=switch-${size}-${state}]`).click({ force: true });
             await expect(disabled).toHaveAttribute('aria-checked', String(state === 'disabled-on'));
           }

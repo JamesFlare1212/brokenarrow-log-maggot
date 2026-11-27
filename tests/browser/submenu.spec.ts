@@ -43,7 +43,7 @@ async function mount(page: Page, mode: 'light' | 'dark', opacity: number) {
     )
     .toBe(`${opacity}%`);
   await page.evaluate(
-    async (url) => (await import(/* @vite-ignore */ url)).mountSubmenuFixture(),
+    async (url) => (await import(url)).mountSubmenuFixture(),
     `/@fs/${fixturePath}`,
   );
 }

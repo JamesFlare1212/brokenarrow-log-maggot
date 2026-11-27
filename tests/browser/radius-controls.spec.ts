@@ -72,7 +72,7 @@ for (const touch of [false, true]) {
       await page.goto('/');
       await expect(page.locator('[data-ready=true]')).toBeVisible();
       await page.evaluate(
-        async (path) => (await import(/* @vite-ignore */ path)).mountRadiusControls(),
+        async (path) => (await import(path)).mountRadiusControls(),
         `/@fs/${fixture}`,
       );
       for (const frame of ['default', 'lg']) {

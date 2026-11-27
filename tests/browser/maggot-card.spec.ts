@@ -108,7 +108,6 @@ for (const [locale, mode, width, height] of [
     await expect(
       card.getByRole('img', { name: label('maggotScaleValue', { value: '7.5' }) }),
     ).toBeVisible();
-    // Finish modal entry and initial focus before measuring layout or focusing the explanation.
     await dialog.evaluate(async (node) => {
       await Promise.all(node.getAnimations().map((animation) => animation.finished));
     });
@@ -116,7 +115,6 @@ for (const [locale, mode, width, height] of [
     const scope = label('maggotSample', { n: 12 });
     await expect(card.getByText(scope, { exact: true })).toHaveCount(0);
     const info = card.getByRole('button', { name: label('maggotSampleInfo') });
-    // Radix dismisses hints on ancestor scroll, so finish scrolling before testing focus.
     await info.evaluate((button) =>
       button.scrollIntoView({
         block: 'center',

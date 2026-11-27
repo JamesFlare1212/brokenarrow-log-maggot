@@ -121,7 +121,6 @@ for (const dpr of [1, 1.5]) {
           await grid.evaluate((node) =>
             node.scrollIntoView({ block: 'center', behavior: 'instant' }),
           );
-          // Native captures keep rendering while tooltip timers wait for explicit advancement.
           await page.clock.pauseAt(Date.now() + 60_000);
           await page.evaluate(() => {
             document.addEventListener(
@@ -181,15 +180,12 @@ for (const dpr of [1, 1.5]) {
               width: Math.floor(box.width - 16),
               height: Math.floor(box.height - 16),
             };
-            // Measure before leaving so host round trips do not consume the re-entry window.
             if (interaction === 'rapid-reentry') {
               await page.mouse.move(out.x, out.y, { steps: 2 });
-              // Leave Radix's hover grace area before waiting for dismissal.
               await page.mouse.move(out.x + 1, out.y - 1);
               await expect(tooltip).toHaveCount(0);
               await page.clock.runFor(1);
             }
-            // Coordinates avoid locator hover's automatic scrolling during a paint trial.
             await page.mouse.move(swatch.x + swatch.width / 2, swatch.y + swatch.height / 2);
             const entered = await paintState(page);
             expect(entered.entry).not.toBeNull();
@@ -249,7 +245,6 @@ for (const dpr of [1, 1.5]) {
                 }
               }
             }
-            // Capture latency depends on the runner; verify the observed interaction phases.
             expect(
               frames.every(
                 (frame) =>
@@ -264,7 +259,6 @@ for (const dpr of [1, 1.5]) {
               [frame.before.hint, frame.after.hint].flatMap((hint) => (hint ? [hint] : [])),
             );
             expect(hints.length).toBeGreaterThan(0);
-            // Direct movement may sample the previous hint before the new root commits.
             for (const hint of hints)
               expect(hint.rect).toEqual(hints.find((other) => other.id === hint.id)!.rect);
             await expect(card.locator('.appearance-theme-swatch').nth(index)).toHaveAttribute(
