@@ -92,7 +92,6 @@ interface Spec {
 
   pool?: 'all';
   target: number;
-  min?: number;
   params: (m: TitleMetrics) => Record<string, string | number | boolean>;
 }
 
@@ -136,7 +135,6 @@ export const SPECS: Spec[] = [
     key: (m) => m.dShare,
     dir: 1,
     target: 0.15,
-    min: 0.15,
     params: (m) => ({ p: pct(m.dShare) }),
   },
   {
@@ -153,7 +151,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     filter: (m) => m.kd >= 0.75 && m.kd <= 1.33,
     target: 0.12,
-    min: 0.1,
     params: (m) => ({ k: m.kills, d: m.deaths, kd: r2(m.kd) }),
   },
   {
@@ -162,7 +159,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     filter: (m) => m.kd < 0.5,
     target: 0.12,
-    min: 0.1,
     params: (m) => ({ p: pct(m.lShare), kd: r2(m.kd) }),
   },
   {
@@ -171,7 +167,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     filter: (m) => m.dTeamRatio < 0.8,
     target: 0.1,
-    min: 0.1,
     params: (m) => ({ p: pct(m.dmgShare), x: r2(m.dTeamRatio) }),
   },
   {
@@ -205,7 +200,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     filter: (m) => m.O >= 3,
     target: 0.12,
-    min: 0.3,
     params: (m) => ({ n: m.O, p: pct(m.oTeamShare) }),
   },
   {
@@ -213,7 +207,6 @@ export const SPECS: Spec[] = [
     key: (m) => m.buildings + m.D / 1e7,
     dir: 1,
     target: 0.08,
-    min: 3,
     params: (m) => ({ n: m.buildings }),
   },
   {
@@ -222,7 +215,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     pool: 'all',
     target: 0.1,
-    min: 100,
     params: (m) => ({ n: Math.round(m.convoy) }),
   },
   {
@@ -230,7 +222,6 @@ export const SPECS: Spec[] = [
     key: (m) => m.bandit,
     dir: 1,
     target: 0.1,
-    min: 100,
     params: (m) => ({ n: Math.round(m.bandit) }),
   },
   {
@@ -238,7 +229,6 @@ export const SPECS: Spec[] = [
     key: (m) => m.canteen,
     dir: 1,
     target: 0.1,
-    min: 500,
     params: (m) => ({ n: Math.round(m.canteen) }),
   },
   {
@@ -246,7 +236,6 @@ export const SPECS: Spec[] = [
     key: (m) => m.freeloader,
     dir: 1,
     target: 0.1,
-    min: 500,
     params: (m) => ({ n: Math.round(m.freeloader) }),
   },
   {
@@ -254,7 +243,6 @@ export const SPECS: Spec[] = [
     key: (m) => m.airdrop,
     dir: 1,
     target: 0.08,
-    min: 500,
     params: (m) => ({ n: Math.round(m.airdrop) }),
   },
   {
@@ -262,7 +250,6 @@ export const SPECS: Spec[] = [
     key: (m) => m.refundRatio,
     dir: 1,
     target: 0.08,
-    min: 0.1,
     params: (m) => ({ p: pct(m.refundRatio) }),
   },
   {
@@ -271,7 +258,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     filter: (m) => m.dTeamRatio < 0.7,
     target: 0.1,
-    min: 0.12,
     params: (m) => ({ p: pct(m.spawnShare), x: r2(m.dTeamRatio) }),
   },
   {
@@ -280,7 +266,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     pool: 'all',
     target: 0.06,
-    min: 100,
     params: (m) => ({ n: Math.round(m.ffDestroyCost) }),
   },
   {
@@ -289,7 +274,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     pool: 'all',
     target: 0.06,
-    min: 100,
     params: (m) => ({ n: Math.round(m.ffLossScore) }),
   },
   {
@@ -297,7 +281,6 @@ export const SPECS: Spec[] = [
     key: (m) => m.airLoss,
     dir: 1,
     target: 0.1,
-    min: 300,
     params: (m) => ({ n: Math.round(m.airLoss) }),
   },
   {
@@ -306,7 +289,6 @@ export const SPECS: Spec[] = [
     dir: 1,
     filter: (m) => m.artyShare >= 0.3,
     target: 0.08,
-    min: 0.12,
     params: (m) => ({ p: pct(m.dShare), a: pct(m.artyShare) }),
   },
 ];
