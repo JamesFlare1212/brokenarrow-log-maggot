@@ -59,7 +59,6 @@ export interface PendingAnalyticsEvent {
   expiresAt: number;
   delivered?: () => void;
 }
-/** Only anonymous update outcome metadata survives a restart. Event payloads never do. */
 export interface PendingUpdateStore {
   load(): unknown;
   save(value: PendingUpdate | null): void;
@@ -84,7 +83,6 @@ export const pendingUpdateSchema = z
   })
   .strict();
 export type PendingUpdate = z.infer<typeof pendingUpdateSchema>;
-/** Match the Electron SDK's timestamp plus random eight-digit anonymous session format. */
 export function newSessionId(now: number): string {
   return `${Math.floor(now / 1000)}${randomInt(100000000).toString().padStart(8, '0')}`;
 }

@@ -7,7 +7,6 @@ import { errorMessage } from '@ba/shared';
 import type { Database } from '../storage/database';
 import { LogParser } from './parser';
 
-/** Historical imports never feed the live session parser or its side effects. */
 export class LogArchive {
   private active: { dir: string; abort: AbortController; promise: Promise<void> } | null = null;
 
@@ -41,7 +40,6 @@ export class LogArchive {
     let imported = false;
     const visit = async (directory: string): Promise<void> => {
       const entries = await readdir(directory, { withFileTypes: true });
-      // Ignore symbolic links so a linked directory cannot introduce cycles.
       for (const entry of entries) {
         if (signal.aborted) return;
         const path = join(directory, entry.name);
@@ -59,7 +57,6 @@ export class LogArchive {
                 this.db.observe(match.players, match.endedAt ?? match.startedAt ?? 0);
                 this.db.saveMatch(match, false);
               }
-              // Commit the checkpoint with the matches so interrupted imports can retry.
               this.db.setState(key, fingerprint);
             });
             imported ||= matches.length > 0;
@@ -107,7 +104,6 @@ export class LogArchive {
         await yieldLoop();
       }
       if (signal.aborted) return [];
-      // Older logs can end without a newline, or without a clean game-exit event.
       pending += decoder.end();
       if (pending) parser.feed([pending], true);
       const current = parser.snapshot().current;

@@ -386,9 +386,7 @@ export class Application {
         );
       }
       this.analytics.error(source, error);
-    } catch {
-      // Diagnostic reporting must never replace the original application failure.
-    }
+    } catch {}
   }
   sampleResources(): void {
     this.analytics.sampleResources();
@@ -468,9 +466,7 @@ export class Application {
           if (!this.disposed)
             this.db.setState('analytics:appVersion', { ...observed, reported: true });
         });
-      } catch {
-        // Optional analytics state must not prevent the application from starting.
-      }
+      } catch {}
     }
     const config = this.db.config();
     this.analytics.configure(config.analyticsEnabled && hasAnalyticsChoice(config), config.lang);
@@ -794,7 +790,6 @@ export class Application {
       Promise.resolve().then(() => this.client.close()),
       ...[...this.tasks, this.banPending].filter((p): p is Promise<unknown> => p !== null),
     ]);
-    // RPC/background failures already have their own reporting; disposal still drains them.
     for (const result of results.slice(0, 2))
       if (result.status === 'rejected') failures.push(result.reason);
     this.disposed = true;

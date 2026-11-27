@@ -27,7 +27,6 @@ import {
 } from './aptabase';
 export { type ErrorSource, type AppVersionMarker } from './aptabase';
 export const APTABASE_EVENTS_URL = 'https://aptabase.jamesflare.com/api/v0/events';
-// Public ingestion key, never an administrative credential.
 export const APTABASE_APP_KEY = 'A-SH-7889591672';
 const operatingSystems: Record<NodeJS.Platform, string> = {
   aix: 'AIX',
@@ -85,7 +84,6 @@ interface ErrorCounter {
   at: number;
 }
 
-/** Anonymous Aptabase events with consent gating and a short-lived memory queue. */
 export class AnalyticsService {
   private enabled = false;
   private closed = false;
@@ -119,9 +117,7 @@ export class AnalyticsService {
   private savePendingUpdate(value: PendingUpdate | null): void {
     try {
       this.options.pendingUpdates?.save(value);
-    } catch {
-      // Optional analytics storage must not affect application behavior.
-    }
+    } catch {}
   }
   configure(optedIn: boolean, locale: Locale): void {
     this.locale = locale;
@@ -147,7 +143,6 @@ export class AnalyticsService {
       }
       return;
     }
-    // Start the anonymous session before app version and update outcome events.
     if (!this.started) {
       this.started = true;
       this.track('app_started', {});
@@ -390,7 +385,6 @@ export class AnalyticsService {
   }
   matchStarted(sessionId: string): void {
     if (!sessionId || sessionId === this.lastStartedMatch) return;
-    // Keep the local match key out of analytics and suppress repeated start notifications.
     this.lastStartedMatch = sessionId;
     this.track('match_started', {});
   }
@@ -521,9 +515,7 @@ export class AnalyticsService {
       retryable = response.status === 408 || response.status === 429 || response.status >= 500;
       accepted = response.ok;
       await response.body?.cancel();
-    } catch {
-      // Optional analytics failures never enter the application error UI.
-    }
+    } catch {}
     if (!this.enabled || generation !== this.generation) return;
     for (const item of batch) {
       if (!this.queue.includes(item)) continue;

@@ -26,7 +26,6 @@ export class StatusService {
     });
   }
   health(): ApiHealth {
-    // A previous run's result says nothing about this run's connection.
     return this.currentHealth;
   }
   private update(check: ApiHealthCheck): void {

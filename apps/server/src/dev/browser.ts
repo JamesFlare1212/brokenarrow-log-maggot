@@ -8,7 +8,6 @@ function desktopOnly(): never {
   throw new Error('浏览器开发模式仅使用测试数据，此功能请通过桌面应用使用。');
 }
 
-/** Offline fixture service for the browser dev server, with no native integrations. */
 export async function createBrowserFixtures(
   fixtureDirectory: string,
   developmentRoot: string,

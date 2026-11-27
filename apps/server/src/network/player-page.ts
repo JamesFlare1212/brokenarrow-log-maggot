@@ -15,7 +15,6 @@ export function validatePlayerInfo(value: unknown, id: string): unknown {
   return value;
 }
 
-/** Read JSON from Next.js server payloads without executing page scripts. */
 export function parsePlayerPage(html: string, id: string): unknown {
   const result = findPageData(html, (value) => {
     const data = object(value.playerData),

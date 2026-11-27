@@ -181,7 +181,6 @@ export class ReplayFiles {
             const copied = await verifyCopy(source, dest);
             if (copied.source !== fingerprint(before))
               throw new Error('Recording source changed during migration');
-            // Persist ownership before removing the source, so a locked source can retry after restart.
             this.db.setState(key, copied);
             await unlink(source);
           }

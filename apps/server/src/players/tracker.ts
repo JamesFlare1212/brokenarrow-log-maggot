@@ -72,7 +72,6 @@ export class TrackerService {
     if (!match) throw new Error('Local match not found');
     return this.withAwards(match);
   }
-  /** Lazy projection of the existing raw match cache; never stored in match summaries. */
   async timeline(fid: string, force = false): Promise<MatchTimelineResult> {
     const previous = this.db.match(fid);
     if (previous?.mode === 'pve')
@@ -87,8 +86,6 @@ export class TrackerService {
     try {
       result = await this.client.match(fid, force);
     } catch (error) {
-      // Transport failures are not evidence of missing unit data. Offline fixtures
-      // never issue network requests; a missing capture is unavailable in that dataset.
       if (!this.client.offline) throw error;
       return {
         status: 'unavailable',
@@ -148,9 +145,7 @@ export class TrackerService {
             outcome = determineOutcome(match.players, match.localPlayerId, match.mode, winner);
           match = { ...match, winnerTeamId: outcome.winner, outcome: outcome.outcome };
         }
-      } catch {
-        /* Match facts and cached awards remain useful when analysis is unavailable. */
-      }
+      } catch {}
     }
     match = this.withAwards(match, result.value, analysis);
     if (result.source === 'stale')
@@ -182,9 +177,7 @@ export class TrackerService {
             outcome = determineOutcome(match.players, id, match.mode, winner);
           match.winnerTeamId = winner;
           match.outcome = outcome.outcome;
-        } catch {
-          /* Keep the local and recent data even if winner evidence is unavailable. */
-        }
+        } catch {}
       }
     return {
       matches: matches.map((match) => this.withAwards(match)),
@@ -236,16 +229,13 @@ export class TrackerService {
       .matches()
       .filter((m) => m.fid && m.mode !== 'pve' && m.outcome === 'unknown')
       .slice(0, 20);
-    // Save the recent snapshot before fetching richer, potentially newer details.
     this.db.transaction(() => {
       for (const match of result.matches) this.db.saveMatch(match);
     });
     for (const match of pending) {
       try {
         await this.detail(match.fid!);
-      } catch {
-        /* A future sync or manual refresh can retry. */
-      }
+      } catch {}
     }
     this.db.transaction(() => {
       this.db.setState('lastMatchSync', Date.now());

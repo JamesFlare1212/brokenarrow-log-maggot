@@ -190,7 +190,6 @@ export class LogParser {
       (m = /^Log: (?:\[LOBBY\] )?Enter to lobby \(id: (\d+)\)/.exec(line)) ||
       /^Log: (?:\[LOBBY\] )?Exit lobby/.test(line)
     ) {
-      // New games log both tagged and plain exit notifications.
       if (!m && !this.session.current && !this.session.lobbyId && this.session.phase === 'idle')
         return;
       if (this.session.current) this.end(recovering);
@@ -281,7 +280,6 @@ export class LogParser {
         candidates = candidates.filter(
           (match) => this.connections.get(match.sessionId) === endpoint,
         );
-      // Without connection identity, a pending ended match takes priority over a new one.
       const pending = candidates.filter((match) => match !== this.session.current);
       const match =
         pending.length === 1 ? pending[0] : candidates.length === 1 ? candidates[0] : null;

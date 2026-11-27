@@ -69,7 +69,6 @@ export async function loadOfflineFixtureManifest(
   return manifest;
 }
 
-/** Verify and stream shards so development startup never decompresses the entire archive at once. */
 export async function* readOfflineFixtureRecords(
   directory: string,
   manifest: OfflineFixtureManifest,
@@ -111,7 +110,6 @@ export async function* readOfflineFixtureRecords(
     throw new Error('Offline BATrace fixture endpoint count is invalid');
 }
 
-/** Add recorded endpoints without the production cache's 2,000-entry eviction limit. */
 export async function seedOfflineFixtureCaches(
   db: Database,
   directory: string,
@@ -159,7 +157,6 @@ export async function seedOfflineFixtureCaches(
       }
       if (record.kind === 'myMatches') recent.push(record);
     }
-    // Recent-match summaries are genuine API data and support navigation without inventing unit data.
     const summaries = new Set<string>();
     for (const record of recent) {
       const matches = object(record.value).matches;

@@ -214,7 +214,6 @@ export class Analyzer {
           )
             continue;
           const allies = active.filter((p) => team(p.teamId) === myTeam);
-          // Equal scores share the mean of their occupied positions.
           const rankOf = (values: Array<{ id: string; value: number }>, ascending = false) => {
             const mine = values.find((p) => p.id === id)!.value;
             const better = values.filter((p) =>

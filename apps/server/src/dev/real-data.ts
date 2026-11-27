@@ -52,7 +52,6 @@ export interface RealDataManifest {
   }>;
 }
 
-/** Stable golden facts exclude generated local IDs and local timezone conversion. */
 export function realMatchFacts(matches: Iterable<Match>): string {
   return JSON.stringify(
     [...matches].map((match) => ({
@@ -90,7 +89,6 @@ export async function loadRealData(
   return { data, manifest };
 }
 
-/** Import only portable game data into an empty development/test database. */
 export function seedRealData(db: Database, data: RealData, logDir: string): void {
   const profile = dirname(resolve(logDir || '.test-data/real-profile/GameLogs'));
   if (
@@ -122,7 +120,6 @@ export function seedRealData(db: Database, data: RealData, logDir: string): void
       analyticsEnabled: false,
       analyticsChoiceSaved: true,
       logDir,
-      // An empty decksDir would auto-detect the real game's writable Decks folder.
       decksDir: join(profile, 'Decks'),
       replaySaveDir: join(profile, 'recordings'),
       replayDisplayId: '',

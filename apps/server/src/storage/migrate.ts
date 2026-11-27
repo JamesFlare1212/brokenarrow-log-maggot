@@ -139,7 +139,6 @@ function validateSource(file: SourceFile, value: unknown): void {
 }
 
 async function backupSource(dir: string, source: Source): Promise<void> {
-  // Never re-read the source: the backup must represent the bytes being imported.
   for (const name of [source.file, `${source.file}.${hash(source.bytes)}`]) {
     const destination = join(dir, name);
     try {
@@ -280,7 +279,6 @@ function importTracker(db: Database, raw: Record<string, unknown>): number {
           ...emptyPlayer(id, name),
           teamId: e.spectator === true ? 100 : team(e.theirTeam),
         });
-      // A v1 encounter does not establish which local account owned the match.
       db.saveMatch(m, false);
     }
   }
@@ -457,7 +455,6 @@ export async function migrateLegacy(db: Database, dir: string): Promise<Migratio
       db.sql
         .prepare('INSERT INTO legacy_imports VALUES(?,?,?,?)')
         .run(source.file, Date.now(), hash(source.bytes), source.bytes.toString('utf8'));
-      // Count logical source records; derived placeholders and v1 match groups are not counted twice.
       imported[source.file] = count;
     }
     db.setState('migration', { completed: !blocked, imported, warnings, backupDir });

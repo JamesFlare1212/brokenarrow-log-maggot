@@ -5,7 +5,6 @@ import { gunzipSync } from 'node:zlib';
 import type { MedalHistoryFixture, TitleHistoryFixture } from '@ba/shared';
 import type { Database } from '../storage/database';
 
-/** Optional recorded match/analysis captures enrich isolated development profiles only. */
 export async function seedRecordedMatchCaches(db: Database, directory: string): Promise<void> {
   let titleManifest;
   try {
